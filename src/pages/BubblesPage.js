@@ -390,20 +390,13 @@ const BubblesPage = () => {
 
     // Функция создания пузыря
     const createBubble = (x, y, radius, tagId = null) => {
-        const defaultColors = [
-            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-            '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
-        ];
-
-        let strokeColor = '#3B7DED'; // цвет по умолчанию
+        let strokeColor = '#B0B0B0'; // светло-серый цвет по умолчанию
 
         if (tagId) {
             const tag = tags.find(t => t.id === tagId);
             if (tag) {
                 strokeColor = tag.color;
             }
-        } else {
-            strokeColor = defaultColors[Math.floor(Math.random() * defaultColors.length)];
         }
 
         const body = Matter.Bodies.circle(x, y, radius, {
@@ -432,14 +425,13 @@ const BubblesPage = () => {
             return;
         }
 
-        const minRadius = isMobile ? 25 : 30;
-        const maxRadius = isMobile ? 50 : 70;
+        const standardRadius = isMobile ? 35 : 45; // стандартный размер для всех пузырей
         const margin = isMobile ? 50 : 100;
 
         const newBubble = createBubble(
             Math.random() * (canvasSize.width - margin * 2) + margin,
             50,
-            Math.random() * (maxRadius - minRadius) + minRadius
+            standardRadius
         );
 
         Matter.World.add(engineRef.current.world, newBubble.body);
@@ -466,12 +458,8 @@ const BubblesPage = () => {
                                 bubble.body.render.strokeStyle = tag.color;
                             }
                         } else {
-                            // Если тег не выбран, используем случайный цвет
-                            const defaultColors = [
-                                '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-                                '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
-                            ];
-                            bubble.body.render.strokeStyle = defaultColors[Math.floor(Math.random() * defaultColors.length)];
+                            // Если тег не выбран, используем светло-серый цвет
+                            bubble.body.render.strokeStyle = '#B0B0B0';
                         }
 
                         return updatedBubble;
@@ -579,14 +567,8 @@ const BubblesPage = () => {
         setBubbles(prev => {
             const updatedBubbles = prev.map(bubble => {
                 if (bubble.tagId === tagId) {
-                    // Сбрасываем цвет пузыря на случайный
-                    const defaultColors = [
-                        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-                        '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
-                    ];
-                    const newColor = defaultColors[Math.floor(Math.random() * defaultColors.length)];
-
-                    bubble.body.render.strokeStyle = newColor;
+                    // Сбрасываем цвет пузыря на светло-серый
+                    bubble.body.render.strokeStyle = '#B0B0B0';
                     return { ...bubble, tagId: null };
                 }
                 return bubble;
