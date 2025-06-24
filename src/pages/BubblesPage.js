@@ -607,8 +607,7 @@ const BubblesPage = () => {
                     x: bubble.body.position.x,
                     y: bubble.body.position.y,
                     radius: bubble.radius,
-                    title: bubble.title,
-                    description: bubble.description
+                    title: bubble.title
                 }));
                 setPositions(newPositions);
             };
@@ -627,8 +626,21 @@ const BubblesPage = () => {
                 pointerEvents: 'none',
                 zIndex: 10
             }}>
-                {positions.map(bubble => (
-                    bubble.title || bubble.description ? (
+                {positions.map(bubble => {
+                    // Функция для ограничения длины текста в зависимости от размера пузыря
+                    const getMaxTitleLength = (radius) => {
+                        if (radius < 30) return 8;   // очень маленький пузырь
+                        if (radius < 40) return 12;  // маленький пузырь
+                        if (radius < 50) return 16;  // средний пузырь
+                        return 20;                   // большой пузырь
+                    };
+
+                    const maxLength = getMaxTitleLength(bubble.radius);
+                    const truncatedTitle = bubble.title && bubble.title.length > maxLength
+                        ? bubble.title.substring(0, maxLength) + '...'
+                        : bubble.title;
+
+                    return bubble.title ? (
                         <Box
                             key={bubble.id}
                             sx={{
@@ -639,42 +651,26 @@ const BubblesPage = () => {
                                 textAlign: 'center',
                                 color: 'white',
                                 textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                                maxWidth: Math.max(bubble.radius * 1.8, 60),
+                                maxWidth: Math.max(bubble.radius * 1.6, 50),
                                 overflow: 'hidden'
                             }}
                         >
-                            {bubble.title && (
-                                <Typography
-                                    sx={{
-                                        fontSize: Math.max(
-                                            isMobile ? 8 : 10,
-                                            Math.min(bubble.radius / (isMobile ? 2.5 : 3), isMobile ? 14 : 16)
-                                        ),
-                                        fontWeight: 'bold',
-                                        lineHeight: 1,
-                                        marginBottom: bubble.description ? 0.5 : 0
-                                    }}
-                                >
-                                    {bubble.title}
-                                </Typography>
-                            )}
-                            {bubble.description && (
-                                <Typography
-                                    sx={{
-                                        fontSize: Math.max(
-                                            isMobile ? 6 : 8,
-                                            Math.min(bubble.radius / (isMobile ? 3.5 : 4), isMobile ? 10 : 12)
-                                        ),
-                                        lineHeight: 1,
-                                        opacity: 0.9
-                                    }}
-                                >
-                                    {bubble.description}
-                                </Typography>
-                            )}
+                            <Typography
+                                sx={{
+                                    fontSize: Math.max(
+                                        isMobile ? 6 : 8,
+                                        Math.min(bubble.radius / (isMobile ? 3.5 : 4), isMobile ? 10 : 12)
+                                    ),
+                                    fontWeight: 'bold',
+                                    lineHeight: 1.1,
+                                    wordBreak: 'break-word'
+                                }}
+                            >
+                                {truncatedTitle}
+                            </Typography>
                         </Box>
-                    ) : null
-                ))}
+                    ) : null;
+                })}
             </Box>
         );
     };
