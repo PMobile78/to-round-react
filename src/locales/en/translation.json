@@ -1,0 +1,30 @@
+{
+    "bubbles": {
+        "title": "Interactive Bubbles",
+        "addBubble": "Add Bubble",
+        "clearAll": "Clear All",
+        "editBubble": "Edit Bubble",
+        "deleteBubble": "Delete Bubble",
+        "save": "Save",
+        "cancel": "Cancel",
+        "titleLabel": "Title",
+        "descriptionLabel": "Description",
+        "categoryLabel": "Category (tag)",
+        "noCategory": "No category",
+        "addTag": "Add Tag",
+        "manageTags": "Manage Tags",
+        "createTag": "Create New Tag",
+        "editTag": "Edit Tag",
+        "tagName": "Tag Name",
+        "color": "Color",
+        "create": "Create",
+        "clickInstruction": "🖱️ Click on a bubble to edit text",
+        "dragInstruction": "🤏 Drag bubbles with mouse",
+        "mobileClickInstruction": "👆 Tap bubble to edit • ✋ Drag with finger"
+    },
+    "common": {
+        "language": "Language",
+        "english": "English",
+        "ukrainian": "Українська"
+    }
+}

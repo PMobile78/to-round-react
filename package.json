@@ -1,0 +1,54 @@
+{
+  "name": "interactive-bubbles",
+  "version": "1.0.0",
+  "description": "Interactive Bubbles component with internationalization support",
+  "main": "src/pages/BubblesPage.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "keywords": [
+    "react",
+    "bubbles",
+    "interactive",
+    "matter-js",
+    "physics",
+    "i18n",
+    "internationalization",
+    "material-ui"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@emotion/react": "latest",
+    "@emotion/styled": "latest",
+    "@mui/icons-material": "latest",
+    "@mui/material": "latest",
+    "matter-js": "^0.20.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-i18next": "latest",
+    "i18next": "latest",
+    "i18next-browser-languagedetector": "latest",
+    "firebase": "latest",
+    "react-scripts": "^5.0.1"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
