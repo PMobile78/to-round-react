@@ -713,7 +713,7 @@ const BubblesPage = () => {
                     >
                         {t('bubbles.addBubble')}
                     </Button>
-                    <Button
+                    {/* <Button
                         variant="outlined"
                         onClick={clearAllBubbles}
                         sx={{
@@ -726,7 +726,7 @@ const BubblesPage = () => {
                         }}
                     >
                         {t('bubbles.clearAll')}
-                    </Button>
+                    </Button> */}
                 </Box>
             ) : (
                 // Мобильная версия с заголовком
