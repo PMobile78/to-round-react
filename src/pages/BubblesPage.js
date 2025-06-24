@@ -762,7 +762,7 @@ const BubblesPage = () => {
                             onClick={addBubble}
                             sx={{
                                 position: 'absolute',
-                                bottom: 20,
+                                bottom: 100, // Увеличен отступ для навигационной панели
                                 right: 20,
                                 zIndex: 1000,
                                 backgroundColor: 'rgba(59, 125, 237, 0.9)',
@@ -781,7 +781,7 @@ const BubblesPage = () => {
                             size="medium"
                             sx={{
                                 position: 'absolute',
-                                bottom: 20,
+                                bottom: 100, // Увеличен отступ для навигационной панели
                                 left: 20,
                                 zIndex: 1000,
                                 backgroundColor: 'rgba(255, 87, 87, 0.9)',
@@ -799,7 +799,7 @@ const BubblesPage = () => {
                             size="small"
                             sx={{
                                 position: 'absolute',
-                                bottom: 90,
+                                bottom: 170, // Увеличен отступ, чтобы не перекрываться с основной кнопкой
                                 right: 20,
                                 zIndex: 1000,
                                 backgroundColor: 'rgba(76, 175, 80, 0.9)',
