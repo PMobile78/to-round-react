@@ -427,7 +427,7 @@ const BubblesPage = () => {
             return;
         }
 
-        const standardRadius = isMobile ? 35 : 45; // стандартный размер для всех пузырей
+        const standardRadius = 45; // одинаковый стандартный размер для всех устройств
         const margin = isMobile ? 50 : 100;
 
         const newBubble = createBubble(
