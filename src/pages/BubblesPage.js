@@ -658,8 +658,8 @@ const BubblesPage = () => {
                             <Typography
                                 sx={{
                                     fontSize: Math.max(
-                                        isMobile ? 6 : 8,
-                                        Math.min(bubble.radius / (isMobile ? 3.5 : 4), isMobile ? 10 : 12)
+                                        isMobile ? 9 : 10,
+                                        Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? 14 : 15)
                                     ),
                                     fontWeight: 'bold',
                                     lineHeight: 1.1,
