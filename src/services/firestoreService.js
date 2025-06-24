@@ -15,7 +15,7 @@ import { db } from '../firebase';
 // Use a fixed document ID for all devices to share the same data
 const getDocumentId = () => {
     // Используем фиксированный ID, чтобы все устройства работали с одним документом
-    return 'shared_bubbles_data';
+    return 'to-round-data';
 };
 
 // Collections references
