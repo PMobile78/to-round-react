@@ -32,7 +32,8 @@ import {
     loadBubblesFromFirestore,
     clearBubblesFromFirestore,
     saveTagsToFirestore,
-    loadTagsFromFirestore
+    loadTagsFromFirestore,
+    subscribeToTagsUpdates
 } from '../services/firestoreService';
 
 const BubblesPage = () => {
@@ -138,11 +139,16 @@ const BubblesPage = () => {
                 const initialBubbles = [];
 
                 if (storedBubbles.length > 0) {
-                    // Restore bubbles from Firestore
+                    // Restore bubbles from Firestore with random positions
+                    const margin = isMobile ? 50 : 100;
                     storedBubbles.forEach(storedBubble => {
+                        // Создаем пузыри со случайными координатами
+                        const x = Math.random() * (canvasSize.width - margin * 2) + margin;
+                        const y = Math.random() * (canvasSize.height - margin * 2) + margin;
+
                         const bubble = {
                             id: storedBubble.id,
-                            body: Matter.Bodies.circle(storedBubble.x, storedBubble.y, storedBubble.radius, {
+                            body: Matter.Bodies.circle(x, y, storedBubble.radius, {
                                 restitution: 0.8,
                                 frictionAir: 0.01,
                                 render: {
@@ -359,33 +365,29 @@ const BubblesPage = () => {
         }
     }, [isMobile, isSmallScreen]);
 
-    // Load tags on initialization
-    useEffect(() => {
-        const loadInitialTags = async () => {
-            try {
-                const storedTags = await loadTagsFromFirestore();
-                setTags(storedTags);
-            } catch (error) {
-                console.error('Error loading initial tags:', error);
-                setTags([]);
-            }
-        };
 
-        loadInitialTags();
-    }, []);
 
-    // Auto-save bubble positions every 10 seconds
+    // Real-time tags synchronization
     useEffect(() => {
-        const saveInterval = setInterval(async () => {
+        const unsubscribe = subscribeToTagsUpdates((updatedTags) => {
+            setTags(updatedTags);
+            // Обновляем цвета пузырей при изменении тегов
             setBubbles(currentBubbles => {
-                if (currentBubbles.length > 0) {
-                    saveBubblesToFirestore(currentBubbles);
-                }
-                return currentBubbles;
+                return currentBubbles.map(bubble => {
+                    if (bubble.tagId) {
+                        const tag = updatedTags.find(t => t.id === bubble.tagId);
+                        if (tag && bubble.body) {
+                            bubble.body.render.strokeStyle = tag.color;
+                        }
+                    } else if (bubble.body) {
+                        bubble.body.render.strokeStyle = '#B0B0B0';
+                    }
+                    return bubble;
+                });
             });
-        }, 10000); // Increased to 10 seconds to reduce Firestore calls
+        });
 
-        return () => clearInterval(saveInterval);
+        return () => unsubscribe();
     }, []);
 
     // Функция создания пузыря

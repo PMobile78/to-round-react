@@ -28,10 +28,9 @@ export const saveBubblesToFirestore = async (bubblesData) => {
         const documentId = getDocumentId();
         const bubblesRef = doc(db, BUBBLES_COLLECTION, documentId);
 
+        // Сохраняем только контент пузырей, без координат
         const bubblesForStorage = bubblesData.map(bubble => ({
             id: bubble.id,
-            x: bubble.body?.position?.x || bubble.x || 0,
-            y: bubble.body?.position?.y || bubble.y || 0,
             radius: bubble.radius,
             title: bubble.title || '',
             description: bubble.description || '',
@@ -46,14 +45,12 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             documentId
         });
 
-        console.log('Bubbles saved to Firestore successfully');
+        console.log('Bubbles content saved to Firestore successfully');
     } catch (error) {
         console.error('Error saving bubbles to Firestore:', error);
         // Fallback to localStorage
         const bubblesForStorage = bubblesData.map(bubble => ({
             id: bubble.id,
-            x: bubble.body?.position?.x || bubble.x || 0,
-            y: bubble.body?.position?.y || bubble.y || 0,
             radius: bubble.radius,
             title: bubble.title || '',
             description: bubble.description || '',
@@ -73,7 +70,7 @@ export const loadBubblesFromFirestore = async () => {
 
         if (docSnap.exists()) {
             const data = docSnap.data();
-            console.log('Bubbles loaded from Firestore successfully');
+            console.log('Bubbles content loaded from Firestore successfully');
             return data.bubbles || [];
         }
         console.log('No bubbles document found in Firestore');
