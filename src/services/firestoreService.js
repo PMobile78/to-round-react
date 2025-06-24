@@ -19,7 +19,7 @@ const getDocumentId = () => {
 };
 
 // Collections references
-const BUBBLES_COLLECTION = 'bubbles';
+const BUBBLES_COLLECTION = 'to-round';
 const TAGS_COLLECTION = 'tags';
 
 // Bubbles operations
