@@ -774,7 +774,7 @@ const BubblesPage = () => {
                             <Add />
                         </Fab>
                     </Tooltip>
-                    <Tooltip title={t('bubbles.clearAll')}>
+                    {/* <Tooltip title={t('bubbles.clearAll')}>
                         <Fab
                             color="secondary"
                             onClick={clearAllBubbles}
@@ -792,7 +792,7 @@ const BubblesPage = () => {
                         >
                             <Clear />
                         </Fab>
-                    </Tooltip>
+                    </Tooltip> */}
                     <Tooltip title={t('bubbles.manageTags')}>
                         <Fab
                             onClick={() => handleOpenTagDialog()}
