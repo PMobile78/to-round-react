@@ -111,7 +111,7 @@ const BubblesPage = ({ user }) => {
         const canvasSize = getCanvasSize();
         setCanvasSize(canvasSize);
 
-        // Создаем рендерер
+        // Create renderer
         const render = Render.create({
             element: canvas,
             engine,
@@ -126,11 +126,11 @@ const BubblesPage = ({ user }) => {
         });
         renderRef.current = render;
 
-        // Создаем границы мира
+        // Create world boundaries
         const walls = createWorldBounds(canvasSize.width, canvasSize.height);
         wallsRef.current = walls;
 
-        // Добавляем стены в мир
+        // Add walls to the world
         World.add(engine.world, walls);
 
         // Load bubbles from Firestore
@@ -143,7 +143,7 @@ const BubblesPage = ({ user }) => {
                     // Restore bubbles from Firestore with random positions
                     const margin = isMobile ? 50 : 100;
                     storedBubbles.forEach(storedBubble => {
-                        // Создаем пузыри со случайными координатами
+                        // Create bubbles with random coordinates
                         const x = Math.random() * (canvasSize.width - margin * 2) + margin;
                         const y = Math.random() * (canvasSize.height - margin * 2) + margin;
 
@@ -177,7 +177,7 @@ const BubblesPage = ({ user }) => {
 
         loadInitialBubbles();
 
-        // Создаем мышь и ограничения для drag and drop
+        // Create mouse and constraints for drag and drop
         const mouse = Mouse.create(render.canvas);
         const mouseConstraint = MouseConstraint.create(engine, {
             mouse,
@@ -191,7 +191,7 @@ const BubblesPage = ({ user }) => {
 
         World.add(engine.world, mouseConstraint);
 
-        // Обработчик кликов по пузырям
+        // Click handler for bubbles
         let clickStartTime = 0;
         let isDragging = false;
 
@@ -238,39 +238,39 @@ const BubblesPage = ({ user }) => {
             }, 150);
         });
 
-        // Запускаем рендер и движок
+        // Start render and engine
         Render.run(render);
         const runner = Runner.create();
         Runner.run(runner, engine);
 
-        // Обработчик изменения размера окна
+        // Window resize handler
         const handleResize = () => {
             const newSize = getCanvasSize();
 
-            // Обновляем размеры рендерера
+            // Update renderer dimensions
             render.canvas.width = newSize.width;
             render.canvas.height = newSize.height;
             render.options.width = newSize.width;
             render.options.height = newSize.height;
             setCanvasSize(newSize);
 
-            // Удаляем старые границы
+            // Remove old boundaries
             if (wallsRef.current.length > 0) {
                 World.remove(engine.world, wallsRef.current);
             }
 
-            // Создаем новые границы
+            // Create new boundaries
             const newWalls = createWorldBounds(newSize.width, newSize.height);
             wallsRef.current = newWalls;
             World.add(engine.world, newWalls);
 
-            // Корректируем позиции пузырей, если они выходят за новые границы
+            // Correct bubble positions if they go beyond new boundaries
             const allBodies = engine.world.bodies.filter(body => body.label === 'Circle Body');
             allBodies.forEach(body => {
                 const radius = body.circleRadius;
                 let corrected = false;
 
-                // Проверяем и корректируем позицию по X
+                // Check and correct X position
                 if (body.position.x - radius < 0) {
                     Matter.Body.setPosition(body, { x: radius, y: body.position.y });
                     corrected = true;
@@ -279,7 +279,7 @@ const BubblesPage = ({ user }) => {
                     corrected = true;
                 }
 
-                // Проверяем и корректируем позицию по Y
+                // Check and correct Y position
                 if (body.position.y - radius < 0) {
                     Matter.Body.setPosition(body, { x: body.position.x, y: radius });
                     corrected = true;
@@ -288,14 +288,14 @@ const BubblesPage = ({ user }) => {
                     corrected = true;
                 }
 
-                // Если позиция была скорректирована, сбрасываем скорость
+                // If position was corrected, reset velocity
                 if (corrected) {
                     Matter.Body.setVelocity(body, { x: 0, y: 0 });
                 }
             });
         };
 
-        // Добавляем debounce для resize event
+        // Add debounce for resize event
         let resizeTimeout;
         const debouncedResize = () => {
             clearTimeout(resizeTimeout);
@@ -315,20 +315,20 @@ const BubblesPage = ({ user }) => {
         };
     }, [isMobile, isSmallScreen]);
 
-    // Обновляем canvas при изменении breakpoints
+    // Update canvas when breakpoints change
     useEffect(() => {
         if (engineRef.current && renderRef.current) {
             const { World } = Matter;
             const newSize = getCanvasSize();
 
-            // Обновляем размеры рендерера
+            // Update renderer dimensions
             renderRef.current.canvas.width = newSize.width;
             renderRef.current.canvas.height = newSize.height;
             renderRef.current.options.width = newSize.width;
             renderRef.current.options.height = newSize.height;
             setCanvasSize(newSize);
 
-            // Обновляем границы
+            // Update boundaries
             if (wallsRef.current.length > 0) {
                 World.remove(engineRef.current.world, wallsRef.current);
             }
@@ -337,7 +337,7 @@ const BubblesPage = ({ user }) => {
             wallsRef.current = newWalls;
             World.add(engineRef.current.world, newWalls);
 
-            // Корректируем позиции пузырей при изменении breakpoint
+            // Correct bubble positions when breakpoint changes
             const allBodies = engineRef.current.world.bodies.filter(body => body.label === 'Circle Body');
             allBodies.forEach(body => {
                 const radius = body.circleRadius;
@@ -372,7 +372,7 @@ const BubblesPage = ({ user }) => {
     useEffect(() => {
         const unsubscribe = subscribeToTagsUpdates((updatedTags) => {
             setTags(updatedTags);
-            // Обновляем цвета пузырей при изменении тегов
+            // Update bubble colors when tags change
             setBubbles(currentBubbles => {
                 return currentBubbles.map(bubble => {
                     if (bubble.tagId) {
@@ -391,9 +391,9 @@ const BubblesPage = ({ user }) => {
         return () => unsubscribe();
     }, []);
 
-    // Функция создания пузыря
+    // Bubble creation function
     const createBubble = (x, y, radius, tagId = null) => {
-        let strokeColor = '#B0B0B0'; // светло-серый цвет по умолчанию
+        let strokeColor = '#B0B0B0'; // light gray color by default
 
         if (tagId) {
             const tag = tags.find(t => t.id === tagId);
@@ -422,13 +422,13 @@ const BubblesPage = ({ user }) => {
         };
     };
 
-    // Функция добавления нового пузыря
+    // Function for adding a new bubble
     const addBubble = () => {
         if (!engineRef.current || !renderRef.current) {
             return;
         }
 
-        const standardRadius = 45; // одинаковый стандартный размер для всех устройств
+        const standardRadius = 45; // same standard size for all devices
         const margin = isMobile ? 50 : 100;
 
         const newBubble = createBubble(
@@ -445,23 +445,23 @@ const BubblesPage = ({ user }) => {
         });
     };
 
-    // Сохранение изменений в пузыре
+    // Save bubble changes
     const handleSaveBubble = () => {
         if (selectedBubble) {
-            console.log('Сохраняем пузырь:', { id: selectedBubble.id, title, description, tagId: selectedTagId });
+            console.log('Saving bubble:', { id: selectedBubble.id, title, description, tagId: selectedTagId });
             setBubbles(prev => {
                 const updatedBubbles = prev.map(bubble => {
                     if (bubble.id === selectedBubble.id) {
                         const updatedBubble = { ...bubble, title, description, tagId: selectedTagId || null };
 
-                        // Обновляем цвет бордера в зависимости от тега
+                        // Update border color based on tag
                         if (selectedTagId) {
                             const tag = tags.find(t => t.id === selectedTagId);
                             if (tag) {
                                 bubble.body.render.strokeStyle = tag.color;
                             }
                         } else {
-                            // Если тег не выбран, используем светло-серый цвет
+                            // If no tag is selected, use light gray color
                             bubble.body.render.strokeStyle = '#B0B0B0';
                         }
 
@@ -481,12 +481,12 @@ const BubblesPage = ({ user }) => {
         setSelectedTagId('');
     };
 
-    // Удаление пузыря
+    // Delete bubble
     const handleDeleteBubble = () => {
         if (selectedBubble && engineRef.current) {
-            console.log('Удаляем пузырь:', selectedBubble.id);
+            console.log('Deleting bubble:', selectedBubble.id);
 
-            // Удаляем из Matter.js мира
+            // Remove from Matter.js world
             Matter.World.remove(engineRef.current.world, selectedBubble.body);
 
             // Remove from state
@@ -502,7 +502,7 @@ const BubblesPage = ({ user }) => {
         setDescription('');
     };
 
-    // Закрытие диалога без сохранения
+    // Close dialog without saving
     const handleCloseDialog = () => {
         setEditDialog(false);
         setSelectedBubble(null);
@@ -511,10 +511,10 @@ const BubblesPage = ({ user }) => {
         setSelectedTagId('');
     };
 
-    // Очистка всех пузырей
+    // Clear all bubbles
     const clearAllBubbles = () => {
         if (engineRef.current) {
-            // Удаляем все пузыри из физического мира
+            // Remove all bubbles from the physics world
             bubbles.forEach(bubble => {
                 Matter.World.remove(engineRef.current.world, bubble.body);
             });
@@ -525,7 +525,7 @@ const BubblesPage = ({ user }) => {
         }
     };
 
-    // Функции для работы с тегами
+    // Functions for working with tags
     const handleOpenTagDialog = (tag = null) => {
         if (tag) {
             setEditingTag(tag);
