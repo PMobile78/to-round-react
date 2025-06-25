@@ -62,7 +62,7 @@ const BubblesPage = ({ user }) => {
 
     // Note: Functions moved to firestoreService.js for better organization
 
-    // Функция для получения размеров canvas в зависимости от размера экрана
+    // Function to get canvas dimensions depending on screen size
     const getCanvasSize = () => {
         const padding = isMobile ? 10 : 40;
         const headerHeight = isMobile ? 80 : 100;
@@ -73,7 +73,7 @@ const BubblesPage = ({ user }) => {
         };
     };
 
-    // Функция для создания границ мира
+    // Function for creating world boundaries
     const createWorldBounds = (width, height) => {
         const { Bodies } = Matter;
         return [
@@ -100,7 +100,7 @@ const BubblesPage = ({ user }) => {
         const canvas = canvasRef.current;
         const { Engine, Render, Runner, Bodies, World, Mouse, MouseConstraint, Events } = Matter;
 
-        // Создаем движок физики
+        // Creating a Physics Engine
         const engine = Engine.create();
         engineRef.current = engine;
 
