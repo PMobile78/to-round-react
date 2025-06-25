@@ -132,8 +132,10 @@ const AuthForm = ({ onLoginSuccess }) => {
                 }}
             >
                 <Box sx={{ textAlign: 'center', marginBottom: 3 }}>
-                    {/* <Bubble sx={{ fontSize: 48, color: '#667eea', marginBottom: 1 }} /> */}
                     <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#667eea' }}>
+                        🫧
+                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#667eea', marginBottom: 1 }}>
                         To-Round
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
