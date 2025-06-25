@@ -695,7 +695,7 @@ const BubblesPage = () => {
                     gap: 2
                 }}>
                     <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
-                        {t('bubbles.title')}
+                        🫧 {t('bubbles.title')}
                     </Typography>
                     <Button
                         variant="contained"
