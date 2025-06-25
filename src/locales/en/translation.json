@@ -22,9 +22,32 @@
         "dragInstruction": "🤏 Drag bubbles with mouse",
         "mobileClickInstruction": "👆 Tap bubble to edit • ✋ Drag with finger"
     },
+    "auth": {
+        "welcome": "Welcome",
+        "login": "Login",
+        "register": "Register",
+        "email": "Email",
+        "password": "Password",
+        "confirmPassword": "Confirm Password",
+        "displayName": "Name (optional)",
+        "loginButton": "Sign In",
+        "registerButton": "Sign Up",
+        "forgotPassword": "Forgot Password?",
+        "logout": "Logout",
+        "fillAllFields": "Please fill in all fields",
+        "passwordMismatch": "Passwords do not match",
+        "passwordTooShort": "Password must be at least 6 characters",
+        "loginSuccess": "Login successful!",
+        "registerSuccess": "Registration successful!",
+        "enterEmail": "Please enter your email",
+        "resetEmailSent": "Password reset email sent"
+    },
     "common": {
         "language": "Language",
         "english": "English",
-        "ukrainian": "Українська"
+        "ukrainian": "Українська",
+        "loading": "Loading...",
+        "error": "Error",
+        "success": "Success"
     }
 }

@@ -48,7 +48,7 @@ const AuthForm = ({ onLoginSuccess }) => {
     const handleLogin = async (e) => {
         e.preventDefault();
         if (!email || !password) {
-            setError('Заполните все поля');
+            setError(t('auth.fillAllFields'));
             return;
         }
 
@@ -58,7 +58,7 @@ const AuthForm = ({ onLoginSuccess }) => {
         const result = await loginUser(email, password);
 
         if (result.success) {
-            setSuccess('Вход выполнен успешно!');
+            setSuccess(t('auth.loginSuccess'));
             setTimeout(() => {
                 onLoginSuccess(result.user);
             }, 1000);
@@ -72,17 +72,17 @@ const AuthForm = ({ onLoginSuccess }) => {
     const handleRegister = async (e) => {
         e.preventDefault();
         if (!email || !password || !confirmPassword) {
-            setError('Заполните все поля');
+            setError(t('auth.fillAllFields'));
             return;
         }
 
         if (password !== confirmPassword) {
-            setError('Пароли не совпадают');
+            setError(t('auth.passwordMismatch'));
             return;
         }
 
         if (password.length < 6) {
-            setError('Пароль должен содержать минимум 6 символов');
+            setError(t('auth.passwordTooShort'));
             return;
         }
 
@@ -92,7 +92,7 @@ const AuthForm = ({ onLoginSuccess }) => {
         const result = await createUser(email, password, displayName);
 
         if (result.success) {
-            setSuccess('Регистрация прошла успешно!');
+            setSuccess(t('auth.registerSuccess'));
             setTimeout(() => {
                 onLoginSuccess(result.user);
             }, 1000);
@@ -137,7 +137,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                         To-Round
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
-                        Добро пожаловать
+                        {t('auth.welcome')}
                     </Typography>
                 </Box>
 
@@ -147,8 +147,8 @@ const AuthForm = ({ onLoginSuccess }) => {
                     variant="fullWidth"
                     sx={{ marginBottom: 3 }}
                 >
-                    <Tab label="Вход" />
-                    <Tab label="Регистрация" />
+                    <Tab label={t('auth.login')} />
+                    <Tab label={t('auth.register')} />
                 </Tabs>
 
                 {error && (
@@ -167,7 +167,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                         <TextField
                             fullWidth
                             type="email"
-                            label="Email"
+                            label={t('auth.email')}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             margin="normal"
@@ -178,7 +178,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                         <TextField
                             fullWidth
                             type={showPassword ? 'text' : 'password'}
-                            label="Пароль"
+                            label={t('auth.password')}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             margin="normal"
@@ -208,7 +208,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                             }}
                         >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Войти'}
+                            {loading ? <CircularProgress size={24} color="inherit" /> : t('auth.loginButton')}
                         </Button>
                     </Box>
                 )}
@@ -217,7 +217,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                     <Box component="form" onSubmit={handleRegister}>
                         <TextField
                             fullWidth
-                            label="Имя (необязательно)"
+                            label={t('auth.displayName')}
                             value={displayName}
                             onChange={(e) => setDisplayName(e.target.value)}
                             margin="normal"
@@ -228,7 +228,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                         <TextField
                             fullWidth
                             type="email"
-                            label="Email"
+                            label={t('auth.email')}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             margin="normal"
@@ -239,7 +239,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                         <TextField
                             fullWidth
                             type={showPassword ? 'text' : 'password'}
-                            label="Пароль"
+                            label={t('auth.password')}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             margin="normal"
@@ -259,7 +259,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                         <TextField
                             fullWidth
                             type={showConfirmPassword ? 'text' : 'password'}
-                            label="Подтвердите пароль"
+                            label={t('auth.confirmPassword')}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             margin="normal"
@@ -289,7 +289,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                             }}
                         >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Зарегистрироваться'}
+                            {loading ? <CircularProgress size={24} color="inherit" /> : t('auth.registerButton')}
                         </Button>
                     </Box>
                 )}

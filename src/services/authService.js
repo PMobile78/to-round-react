@@ -8,13 +8,13 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase';
 
-// Создание нового пользователя
+// Create new user
 export const createUser = async (email, password, displayName = '') => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Обновляем профиль пользователя с именем, если указано
+        // Update user profile with name if provided
         if (displayName) {
             await updateProfile(user, { displayName });
         }
@@ -27,7 +27,7 @@ export const createUser = async (email, password, displayName = '') => {
     }
 };
 
-// Вход пользователя
+// User login
 export const loginUser = async (email, password) => {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -40,7 +40,7 @@ export const loginUser = async (email, password) => {
     }
 };
 
-// Выход пользователя
+// User logout
 export const logoutUser = async () => {
     try {
         await signOut(auth);
@@ -52,7 +52,7 @@ export const logoutUser = async () => {
     }
 };
 
-// Сброс пароля
+// Password reset
 export const resetPassword = async (email) => {
     try {
         await sendPasswordResetEmail(auth, email);
@@ -64,17 +64,17 @@ export const resetPassword = async (email) => {
     }
 };
 
-// Слушатель изменения состояния аутентификации
+// Authentication state change listener
 export const onAuthStateChange = (callback) => {
     return onAuthStateChanged(auth, callback);
 };
 
-// Получение текущего пользователя
+// Get current user
 export const getCurrentUser = () => {
     return auth.currentUser;
 };
 
-// Проверка авторизации
+// Check authentication
 export const isAuthenticated = () => {
     return !!auth.currentUser;
 }; 

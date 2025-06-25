@@ -4,7 +4,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 // Your web app's Firebase configuration
-// Конфигурация на основе ваших реальных данных Firebase
+// Configuration based on your real Firebase data
 // ⚠️ ВАЖНО: Вам всё еще нужно создать Web App и получить web appId
 const firebaseConfig = {
     apiKey: "AIzaSyAat5vcOBIOeJXoGFfqkNybC9J-v0G8yA4", // ✅ Ваш реальный API ключ

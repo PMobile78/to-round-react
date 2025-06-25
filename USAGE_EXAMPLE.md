@@ -29,31 +29,31 @@ function App() {
 export default App;
 ```
 
-### 2. Копирование файлов
+### 2. Copying Files
 
-Скопируйте следующие файлы в ваш проект:
+Copy the following files to your project:
 - `src/pages/BubblesPage.js`
 - `src/components/LanguageSelector.js`
-- `src/locales/` (папка целиком)
+- `src/locales/` (entire folder)
 - `src/i18n.js`
 
-### 3. Инициализация i18n
+### 3. i18n Initialization
 
-В файле `src/index.js` или главном файле приложения:
+In the `src/index.js` file or main application file:
 
 ```javascript
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
-// Инициализация i18n
+// Initialize i18n
 import './i18n';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
 ```
 
-### 4. Использование в App.js
+### 4. Using in App.js
 
 ```javascript
 import React from 'react';
@@ -75,9 +75,9 @@ function App() {
 export default App;
 ```
 
-### 5. Интеграция в существующее приложение
+### 5. Integration into Existing Application
 
-Если у вас уже есть приложение с роутингом:
+If you already have an application with routing:
 
 ```javascript
 import { Routes, Route } from 'react-router-dom';
@@ -87,13 +87,13 @@ function App() {
   return (
     <Routes>
       <Route path="/bubbles" element={<BubblesPage />} />
-      {/* другие роуты */}
+      {/* other routes */}
     </Routes>
   );
 }
 ```
 
-### 6. Кастомизация темы (опционально)
+### 6. Theme Customization (optional)
 
 ```javascript
 import { createTheme } from '@mui/material/styles';
@@ -101,7 +101,7 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#3B7DED', // Основной цвет для пузырей
+      main: '#3B7DED', // Main color for bubbles
     },
     secondary: {
       main: '#FF5757',
@@ -110,9 +110,9 @@ const theme = createTheme({
 });
 ```
 
-### 7. Добавление своих переводов
+### 7. Adding Your Own Translations
 
-Создайте новый файл перевода `src/locales/ru/translation.json`:
+Create a new translation file `src/locales/ru/translation.json`:
 
 ```json
 {
@@ -120,7 +120,7 @@ const theme = createTheme({
     "title": "Интерактивные Пузыри",
     "addBubble": "Добавить пузырь",
     "clearAll": "Очистить все",
-    // ... остальные переводы
+    // ... other translations
   },
   "common": {
     "language": "Язык",
@@ -131,7 +131,7 @@ const theme = createTheme({
 }
 ```
 
-Обновите `src/i18n.js`:
+Update `src/i18n.js`:
 
 ```javascript
 import ruTranslation from './locales/ru/translation.json';
@@ -139,13 +139,13 @@ import ruTranslation from './locales/ru/translation.json';
 const resources = {
   en: { translation: enTranslation },
   uk: { translation: ukTranslation },
-  ru: { translation: ruTranslation } // добавить русский
+  ru: { translation: ruTranslation } // add Russian
 };
 ```
 
-## Настройка для конкретных случаев использования
+## Configuration for Specific Use Cases
 
-### Встраивание в модальное окно
+### Embedding in Modal Window
 
 ```javascript
 import { Dialog, DialogContent } from '@mui/material';
@@ -162,7 +162,7 @@ function BubblesModal({ open, onClose }) {
 }
 ```
 
-### Использование как компонента в разделе страницы
+### Using as Component in Page Section
 
 ```javascript
 import { Box } from '@mui/material';
@@ -172,7 +172,7 @@ function Dashboard() {
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
       <Box>
-        {/* Другой контент */}
+        {/* Other content */}
       </Box>
       <Box sx={{ height: 600, border: '1px solid #ddd', borderRadius: 2 }}>
         <BubblesPage />
@@ -182,9 +182,9 @@ function Dashboard() {
 }
 ```
 
-### Передача пропсов для кастомизации
+### Passing Props for Customization
 
-Если хотите сделать компонент более конфигурируемым, можете модифицировать `BubblesPage.js`:
+If you want to make the component more configurable, you can modify `BubblesPage.js`:
 
 ```javascript
 const BubblesPage = ({ 
@@ -193,41 +193,82 @@ const BubblesPage = ({
   showLanguageSelector = true,
   readonly = false 
 }) => {
-  // ... код компонента
+  // ... component code
 };
 ```
 
-## Возможные проблемы и решения
+## Possible Issues and Solutions
 
-### 1. Конфликт стилей
+### 1. Component Size Issues
+
+If the component doesn't display correctly, make sure the parent container has a defined height:
+
+```css
+.bubbles-container {
+  height: 100vh; /* or specific height */
+  width: 100%;
+}
+```
+
+### 2. Physics Not Working
+
+Make sure Matter.js is installed correctly:
+
+```bash
+npm install matter-js
+```
+
+### 3. Translation Issues
+
+Make sure all translation files are in the correct location and properly imported in `i18n.js`.
+
+### 4. Mobile Responsiveness
+
+The component automatically adapts to mobile devices, but you can override behavior:
+
 ```javascript
-// Используйте CSS-in-JS или изолируйте стили
-import { styled } from '@mui/material/styles';
+// In BubblesPage.js
+const isMobile = window.innerWidth < 768; // custom breakpoint
+```
 
-const BubblesContainer = styled(Box)({
-  '& canvas': {
-    borderRadius: 8,
+## Performance Tips
+
+### 1. Limiting Number of Bubbles
+
+```javascript
+const MAX_BUBBLES = 50; // add limitation
+
+const addBubble = () => {
+  if (bubbles.length >= MAX_BUBBLES) {
+    alert('Maximum number of bubbles reached');
+    return;
   }
-});
-```
-
-### 2. Производительность на слабых устройствах
-```javascript
-// В BubblesPage.js добавьте проверку производительности
-const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-const maxBubbles = isMobile ? 20 : 50;
-```
-
-### 3. Сохранение данных в базу данных вместо localStorage
-```javascript
-// Замените функции сохранения в BubblesPage.js
-const saveBubblesToStorage = async (bubblesData) => {
-  await fetch('/api/bubbles', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(bubblesData)
-  });
+  // ... add bubble logic
 };
+```
+
+### 2. Optimization for Large Screens
+
+```javascript
+// Adjust physics for performance
+engine.world.gravity.y = 0.3; // reduce gravity
+render.options.showDebug = false; // disable debug mode
+```
+
+### 3. Memory Management
+
+```javascript
+// Clean up on component unmount
+useEffect(() => {
+  return () => {
+    if (engineRef.current) {
+      Engine.clear(engineRef.current);
+    }
+    if (renderRef.current) {
+      Render.stop(renderRef.current);
+    }
+  };
+}, []);
 ```
 
 ## Firebase Setup
@@ -263,11 +304,11 @@ const firebaseConfig = {
 - Each browser session gets a unique ID for data separation
 - No authentication required for basic usage
 
-## Поддержка
+## Support
 
-Если возникают проблемы при интеграции, проверьте:
-1. Все ли зависимости установлены
-2. Правильно ли инициализирован i18n
-3. Подключена ли тема Material-UI
-4. Настроен ли Firebase (если используете Firestore)
-5. Нет ли конфликтов с CSS 
+If there are issues with integration, check:
+1. All dependencies are installed
+2. i18n is initialized correctly
+3. Material-UI theme is configured
+4. Firebase is set up (if using Firestore)
+5. No CSS conflicts 

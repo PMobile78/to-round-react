@@ -13,7 +13,7 @@ import {
 import { db } from '../firebase';
 import { getCurrentUser } from './authService';
 
-// Получение ID пользователя для создания документа
+// Get user ID for document creation
 const getUserDocumentId = () => {
     const user = getCurrentUser();
     if (!user) {
@@ -32,7 +32,7 @@ export const saveBubblesToFirestore = async (bubblesData) => {
         const userId = getUserDocumentId();
         const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
 
-        // Сохраняем только контент пузырей, без координат
+        // Save only bubble content, without coordinates
         const bubblesForStorage = bubblesData.map(bubble => ({
             id: bubble.id,
             radius: bubble.radius,
