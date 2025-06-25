@@ -11,26 +11,22 @@ import {
     onSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { getCurrentUser } from './authService';
 
-// Получение ID пользователя для создания документа
-const getUserDocumentId = () => {
-    const user = getCurrentUser();
-    if (!user) {
-        throw new Error('User not authenticated');
-    }
-    return user.uid;
+// Use a fixed document ID for all devices to share the same data
+const getDocumentId = () => {
+    // Use a fixed ID so that all devices work with the same document
+    return 'to-round-data';
 };
 
 // Collections references
-const BUBBLES_COLLECTION = 'user-bubbles';
-const TAGS_COLLECTION = 'user-tags';
+const BUBBLES_COLLECTION = 'to-round';
+const TAGS_COLLECTION = 'tags';
 
 // Bubbles operations
 export const saveBubblesToFirestore = async (bubblesData) => {
     try {
-        const userId = getUserDocumentId();
-        const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
+        const documentId = getDocumentId();
+        const bubblesRef = doc(db, BUBBLES_COLLECTION, documentId);
 
         // Сохраняем только контент пузырей, без координат
         const bubblesForStorage = bubblesData.map(bubble => ({
@@ -46,14 +42,13 @@ export const saveBubblesToFirestore = async (bubblesData) => {
         await setDoc(bubblesRef, {
             bubbles: bubblesForStorage,
             updatedAt: serverTimestamp(),
-            userId
+            documentId
         });
 
-        console.log('Bubbles content saved to Firestore successfully for user:', userId);
+        console.log('Bubbles content saved to Firestore successfully');
     } catch (error) {
         console.error('Error saving bubbles to Firestore:', error);
-        // Fallback to localStorage with user-specific key
-        const userId = getCurrentUser()?.uid || 'anonymous';
+        // Fallback to localStorage
         const bubblesForStorage = bubblesData.map(bubble => ({
             id: bubble.id,
             radius: bubble.radius,
@@ -63,89 +58,85 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
             tagId: bubble.tagId || null
         }));
-        localStorage.setItem(`bubbles_${userId}`, JSON.stringify(bubblesForStorage));
+        localStorage.setItem('bubbles', JSON.stringify(bubblesForStorage));
     }
 };
 
 export const loadBubblesFromFirestore = async () => {
     try {
-        const userId = getUserDocumentId();
-        const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
+        const documentId = getDocumentId();
+        const bubblesRef = doc(db, BUBBLES_COLLECTION, documentId);
         const docSnap = await getDoc(bubblesRef);
 
         if (docSnap.exists()) {
             const data = docSnap.data();
-            console.log('Bubbles content loaded from Firestore successfully for user:', userId);
+            console.log('Bubbles content loaded from Firestore successfully');
             return data.bubbles || [];
         }
-        console.log('No bubbles document found in Firestore for user:', userId);
-        // Fallback to localStorage with user-specific key
-        const stored = localStorage.getItem(`bubbles_${userId}`);
+        console.log('No bubbles document found in Firestore');
+        // Fallback to localStorage
+        const stored = localStorage.getItem('bubbles');
         return stored ? JSON.parse(stored) : [];
     } catch (error) {
         console.error('Error loading bubbles from Firestore:', error);
-        // Fallback to localStorage with user-specific key
-        const userId = getCurrentUser()?.uid || 'anonymous';
-        const stored = localStorage.getItem(`bubbles_${userId}`);
+        // Fallback to localStorage
+        const stored = localStorage.getItem('bubbles');
         return stored ? JSON.parse(stored) : [];
     }
 };
 
 export const clearBubblesFromFirestore = async () => {
     try {
-        const userId = getUserDocumentId();
-        const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
+        const documentId = getDocumentId();
+        const bubblesRef = doc(db, BUBBLES_COLLECTION, documentId);
         await deleteDoc(bubblesRef);
-        console.log('Bubbles cleared from Firestore successfully for user:', userId);
+        console.log('Bubbles cleared from Firestore successfully');
     } catch (error) {
         console.error('Error clearing bubbles from Firestore:', error);
         // Fallback to localStorage
-        const userId = getCurrentUser()?.uid || 'anonymous';
-        localStorage.removeItem(`bubbles_${userId}`);
+        localStorage.removeItem('bubbles');
     }
 };
 
 // Tags operations
 export const saveTagsToFirestore = async (tagsData) => {
     try {
-        const userId = getUserDocumentId();
-        const tagsRef = doc(db, TAGS_COLLECTION, userId);
+        const documentId = getDocumentId();
+        const tagsRef = doc(db, TAGS_COLLECTION, documentId);
 
         await setDoc(tagsRef, {
             tags: tagsData,
             updatedAt: serverTimestamp(),
-            userId
+            documentId
         });
 
-        console.log('Tags saved to Firestore successfully for user:', userId);
+        console.log('Tags saved to Firestore successfully');
     } catch (error) {
         console.error('Error saving tags to Firestore:', error);
-        // Fallback to localStorage with user-specific key
-        const userId = getCurrentUser()?.uid || 'anonymous';
-        localStorage.setItem(`tags_${userId}`, JSON.stringify(tagsData));
+        // Fallback to localStorage
+        localStorage.setItem('tags', JSON.stringify(tagsData));
     }
 };
 
 export const loadTagsFromFirestore = async () => {
     try {
-        const userId = getUserDocumentId();
-        const tagsRef = doc(db, TAGS_COLLECTION, userId);
+        const documentId = getDocumentId();
+        const tagsRef = doc(db, TAGS_COLLECTION, documentId);
         const docSnap = await getDoc(tagsRef);
 
         if (docSnap.exists()) {
             const data = docSnap.data();
-            console.log('Tags loaded from Firestore successfully for user:', userId);
+            console.log('Tags loaded from Firestore successfully');
             return data.tags || [];
         }
-        console.log('No tags document found in Firestore for user:', userId);
-        // Fallback to localStorage with user-specific key
-        const stored = localStorage.getItem(`tags_${userId}`);
+        console.log('No tags document found in Firestore');
+        // Fallback to localStorage
+        const stored = localStorage.getItem('tags');
         return stored ? JSON.parse(stored) : [];
     } catch (error) {
         console.error('Error loading tags from Firestore:', error);
-        // Fallback to localStorage with user-specific key
-        const userId = getCurrentUser()?.uid || 'anonymous';
-        const stored = localStorage.getItem(`tags_${userId}`);
+        // Fallback to localStorage
+        const stored = localStorage.getItem('tags');
         return stored ? JSON.parse(stored) : [];
     }
 };
@@ -153,8 +144,8 @@ export const loadTagsFromFirestore = async () => {
 // Real-time listeners (optional)
 export const subscribeToBubblesUpdates = (callback) => {
     try {
-        const userId = getUserDocumentId();
-        const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
+        const documentId = getDocumentId();
+        const bubblesRef = doc(db, BUBBLES_COLLECTION, documentId);
 
         return onSnapshot(bubblesRef, (doc) => {
             if (doc.exists()) {
@@ -172,8 +163,8 @@ export const subscribeToBubblesUpdates = (callback) => {
 
 export const subscribeToTagsUpdates = (callback) => {
     try {
-        const userId = getUserDocumentId();
-        const tagsRef = doc(db, TAGS_COLLECTION, userId);
+        const documentId = getDocumentId();
+        const tagsRef = doc(db, TAGS_COLLECTION, documentId);
 
         return onSnapshot(tagsRef, (doc) => {
             if (doc.exists()) {
@@ -187,4 +178,4 @@ export const subscribeToTagsUpdates = (callback) => {
         console.error('Error setting up tags listener:', error);
         return () => { }; // Return empty unsubscribe function
     }
-};
+}; 

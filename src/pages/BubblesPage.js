@@ -23,10 +23,11 @@ import {
     ListItemIcon,
     ListItemText,
 } from '@mui/material';
-import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer } from '@mui/icons-material';
+import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
+import { logoutUser } from '../services/authService';
 import {
     saveBubblesToFirestore,
     loadBubblesFromFirestore,
@@ -36,7 +37,7 @@ import {
     subscribeToTagsUpdates
 } from '../services/firestoreService';
 
-const BubblesPage = () => {
+const BubblesPage = ({ user }) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
@@ -587,6 +588,14 @@ const BubblesPage = () => {
         setTagColor('#3B7DED');
     };
 
+    // Функция выхода
+    const handleLogout = async () => {
+        const result = await logoutUser();
+        if (result.success) {
+            console.log('User logged out successfully');
+        }
+    };
+
     // Компонент для отображения текста поверх пузырей
     const TextOverlay = () => {
         const [positions, setPositions] = useState([]);
@@ -823,7 +832,25 @@ const BubblesPage = () => {
                     gap: 2,
                     alignItems: 'flex-end'
                 }}>
-                    <LanguageSelector />
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <LanguageSelector />
+                        <Button
+                            onClick={handleLogout}
+                            variant="outlined"
+                            size="small"
+                            startIcon={<Logout />}
+                            sx={{
+                                color: 'white',
+                                borderColor: 'rgba(255, 255, 255, 0.5)',
+                                '&:hover': {
+                                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }}
+                        >
+                            Выйти
+                        </Button>
+                    </Box>
                     <Box sx={{
                         backgroundColor: 'rgba(0, 0, 0, 0.3)',
                         padding: 2,
@@ -839,12 +866,29 @@ const BubblesPage = () => {
                 </Box>
             ) : (
                 <>
-                    <LanguageSelector sx={{
+                    <Box sx={{
                         position: 'absolute',
                         top: 10,
                         right: 10,
-                        zIndex: 1000
-                    }} />
+                        zIndex: 1000,
+                        display: 'flex',
+                        gap: 1,
+                        alignItems: 'center'
+                    }}>
+                        <LanguageSelector />
+                        <IconButton
+                            onClick={handleLogout}
+                            sx={{
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
+                                }
+                            }}
+                        >
+                            <Logout />
+                        </IconButton>
+                    </Box>
                     <Box sx={{
                         position: 'absolute',
                         top: isSmallScreen ? 50 : 60,
