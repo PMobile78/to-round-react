@@ -104,10 +104,10 @@ const BubblesPage = ({ user }) => {
         const engine = Engine.create();
         engineRef.current = engine;
 
-        // Отключаем гравитацию по умолчанию, чтобы настроить свою
+        // Disable default gravity to customize yours
         engine.world.gravity.y = 0.3;
 
-        // Получаем адаптивные размеры canvas
+        // Getting adaptive canvas sizes
         const canvasSize = getCanvasSize();
         setCanvasSize(canvasSize);
 
@@ -848,7 +848,7 @@ const BubblesPage = ({ user }) => {
                                 }
                             }}
                         >
-                            Выйти
+                            {t('auth.logout')}
                         </Button>
                     </Box>
                     <Box sx={{
