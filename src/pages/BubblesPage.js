@@ -22,8 +22,14 @@ import {
     Menu,
     ListItemIcon,
     ListItemText,
+    Drawer,
+    Checkbox,
+    FormControlLabel,
+    List,
+    ListItem,
+    Divider,
 } from '@mui/material';
-import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout } from '@mui/icons-material';
+import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
@@ -59,6 +65,12 @@ const BubblesPage = ({ user }) => {
     const [tagColor, setTagColor] = useState('#3B7DED');
     const [editingTag, setEditingTag] = useState(null);
     const [tagMenuAnchor, setTagMenuAnchor] = useState(null);
+    const [filterTags, setFilterTags] = useState([]); // Массив ID выбранных тегов для фильтрации  
+    const [showNoTag, setShowNoTag] = useState(true); // Показывать ли пузыри без тегов
+    const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
+    const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
+    const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
+    const [categoriesDialog, setCategoriesDialog] = useState(false); // Диалог управления категориями
 
     // Note: Functions moved to firestoreService.js for better organization
 
@@ -372,6 +384,20 @@ const BubblesPage = ({ user }) => {
     useEffect(() => {
         const unsubscribe = subscribeToTagsUpdates((updatedTags) => {
             setTags(updatedTags);
+
+            // Initialize filter with all tag IDs by default (only on first load)
+            setFilterTags(currentFilterTags => {
+                if (currentFilterTags.length === 0 && updatedTags.length > 0) {
+                    return updatedTags.map(tag => tag.id);
+                }
+                // If tags were added/removed, update filterTags accordingly
+                const existingTagIds = updatedTags.map(tag => tag.id);
+                const validFilterTags = currentFilterTags.filter(id => existingTagIds.includes(id));
+                // Add new tags to filter by default
+                const newTags = existingTagIds.filter(id => !currentFilterTags.includes(id));
+                return [...validFilterTags, ...newTags];
+            });
+
             // Update bubble colors when tags change
             setBubbles(currentBubbles => {
                 return currentBubbles.map(bubble => {
@@ -390,6 +416,30 @@ const BubblesPage = ({ user }) => {
 
         return () => unsubscribe();
     }, []);
+
+    // Filter bubbles visibility based on selected filters
+    useEffect(() => {
+        if (!engineRef.current) return;
+
+        const filteredBubbles = getFilteredBubbles();
+        const filteredIds = new Set(filteredBubbles.map(b => b.id));
+
+        bubbles.forEach(bubble => {
+            if (bubble.body) {
+                if (filteredIds.has(bubble.id)) {
+                    // Показать пузырь
+                    bubble.body.render.visible = true;
+                    // Убедиться, что пузырь не статичен
+                    Matter.Body.setStatic(bubble.body, false);
+                } else {
+                    // Скрыть пузырь
+                    bubble.body.render.visible = false;
+                    // Сделать пузырь статичным, чтобы он не влиял на физику
+                    Matter.Body.setStatic(bubble.body, true);
+                }
+            }
+        });
+    }, [bubbles, filterTags, showNoTag]);
 
     // Bubble creation function
     const createBubble = (x, y, radius, tagId = null) => {
@@ -422,8 +472,38 @@ const BubblesPage = ({ user }) => {
         };
     };
 
-    // Function for adding a new bubble
-    const addBubble = () => {
+    // Function for filtering bubbles
+    const getFilteredBubbles = () => {
+        // Check if all tags are selected and showNoTag is true - show all bubbles
+        const allTagsSelected = tags.length > 0 && filterTags.length === tags.length && showNoTag;
+
+        if (allTagsSelected) {
+            return bubbles; // Показать все пузыри
+        }
+
+        return bubbles.filter(bubble => {
+            // Если выбраны теги и пузырь имеет один из выбранных тегов
+            if (filterTags.length > 0 && bubble.tagId && filterTags.includes(bubble.tagId)) {
+                return true;
+            }
+            // Если включен фильтр "No Tag" и у пузыря нет тега
+            if (showNoTag && !bubble.tagId) {
+                return true;
+            }
+            return false;
+        });
+    };
+
+    // Function for opening create bubble dialog
+    const openCreateDialog = () => {
+        setTitle('');
+        setDescription('');
+        setSelectedTagId('');
+        setCreateDialog(true);
+    };
+
+    // Function for creating a new bubble
+    const createNewBubble = () => {
         if (!engineRef.current || !renderRef.current) {
             return;
         }
@@ -434,8 +514,13 @@ const BubblesPage = ({ user }) => {
         const newBubble = createBubble(
             Math.random() * (canvasSize.width - margin * 2) + margin,
             50,
-            standardRadius
+            standardRadius,
+            selectedTagId || null
         );
+
+        // Set title and description
+        newBubble.title = title;
+        newBubble.description = description;
 
         Matter.World.add(engineRef.current.world, newBubble.body);
         setBubbles(prev => {
@@ -443,6 +528,12 @@ const BubblesPage = ({ user }) => {
             saveBubblesToFirestore(updatedBubbles);
             return updatedBubbles;
         });
+
+        // Close dialog and reset form
+        setCreateDialog(false);
+        setTitle('');
+        setDescription('');
+        setSelectedTagId('');
     };
 
     // Save bubble changes
@@ -588,6 +679,44 @@ const BubblesPage = ({ user }) => {
         setTagColor('#3B7DED');
     };
 
+    // Functions for filter management
+    const handleTagFilterChange = (tagId) => {
+        setFilterTags(prev => {
+            if (prev.includes(tagId)) {
+                return prev.filter(id => id !== tagId);
+            } else {
+                return [...prev, tagId];
+            }
+        });
+    };
+
+    const handleNoTagFilterChange = () => {
+        setShowNoTag(prev => !prev);
+    };
+
+    const clearAllFilters = () => {
+        setFilterTags([]);
+        setShowNoTag(false);
+    };
+
+    const selectAllFilters = () => {
+        setFilterTags(tags.map(tag => tag.id));
+        setShowNoTag(true);
+    };
+
+    const isAllSelected = () => {
+        return tags.length > 0 && filterTags.length === tags.length && showNoTag;
+    };
+
+    // Function to count bubbles by category
+    const getBubbleCountByTag = (tagId) => {
+        if (tagId === null) {
+            // Count bubbles without tags
+            return bubbles.filter(bubble => !bubble.tagId).length;
+        }
+        return bubbles.filter(bubble => bubble.tagId === tagId).length;
+    };
+
     // Функция выхода
     const handleLogout = async () => {
         const result = await logoutUser();
@@ -600,18 +729,20 @@ const BubblesPage = ({ user }) => {
     const TextOverlay = () => {
         const [positions, setPositions] = useState([]);
         const bubblesRef = useRef(bubbles);
+        const filteredBubblesRef = useRef([]);
 
         // Обновляем ref при изменении bubbles
         useEffect(() => {
             bubblesRef.current = bubbles;
-        }, [bubbles]);
+            filteredBubblesRef.current = getFilteredBubbles();
+        }, [bubbles, filterTags, showNoTag]);
 
         useEffect(() => {
             if (!engineRef.current) return undefined;
 
             const updatePositions = () => {
-                const currentBubbles = bubblesRef.current;
-                const newPositions = currentBubbles.map(bubble => ({
+                const filteredBubbles = filteredBubblesRef.current;
+                const newPositions = filteredBubbles.map(bubble => ({
                     id: bubble.id,
                     x: bubble.body.position.x,
                     y: bubble.body.position.y,
@@ -623,7 +754,7 @@ const BubblesPage = ({ user }) => {
 
             const intervalId = setInterval(updatePositions, 16); // ~60fps
             return () => clearInterval(intervalId);
-        }, []);
+        }, [filterTags, showNoTag]);
 
         return (
             <Box sx={{
@@ -694,45 +825,46 @@ const BubblesPage = ({ user }) => {
         }}>
             {/* Заголовок и кнопки - адаптивный */}
             {!isMobile ? (
-                <Box sx={{
-                    position: 'absolute',
-                    top: 20,
-                    left: 20,
-                    zIndex: 1000,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2
-                }}>
-                    <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
-                        🫧 {t('bubbles.title')}
-                    </Typography>
-                    <Button
-                        variant="contained"
-                        onClick={addBubble}
-                        sx={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                            '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.3)'
-                            }
-                        }}
-                    >
-                        {t('bubbles.addBubble')}
-                    </Button>
-                    {/* <Button
-                        variant="outlined"
-                        onClick={clearAllBubbles}
-                        sx={{
-                            color: 'white',
-                            borderColor: 'rgba(255, 255, 255, 0.5)',
-                            '&:hover': {
-                                borderColor: 'rgba(255, 255, 255, 0.8)',
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        }}
-                    >
-                        {t('bubbles.clearAll')}
-                    </Button> */}
-                </Box>
+                <>
+                    <Box sx={{
+                        position: 'absolute',
+                        top: 20,
+                        left: 20,
+                        zIndex: 1000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2
+                    }}>
+                        <IconButton
+                            onClick={() => setMenuDrawerOpen(true)}
+                            sx={{
+                                color: 'white',
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
+                                },
+                                marginRight: 1
+                            }}
+                        >
+                            <MenuIcon />
+                        </IconButton>
+                        <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                            🫧 {t('bubbles.title')}
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            onClick={openCreateDialog}
+                            sx={{
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
+                                }
+                            }}
+                        >
+                            {t('bubbles.addBubble')}
+                        </Button>
+                    </Box>
+                </>
             ) : (
                 // Мобильная версия с заголовком
                 <Box sx={{
@@ -743,8 +875,23 @@ const BubblesPage = ({ user }) => {
                     zIndex: 1000,
                     display: 'flex',
                     justifyContent: 'center',
+                    alignItems: 'center',
                     padding: '0 10px'
                 }}>
+                    <IconButton
+                        onClick={() => setMenuDrawerOpen(true)}
+                        sx={{
+                            position: 'absolute',
+                            left: 10,
+                            color: 'white',
+                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                            '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.3)'
+                            }
+                        }}
+                    >
+                        <MenuIcon />
+                    </IconButton>
                     <Typography
                         variant={isSmallScreen ? "h6" : "h5"}
                         sx={{
@@ -758,13 +905,15 @@ const BubblesPage = ({ user }) => {
                 </Box>
             )}
 
+
+
             {/* Плавающие кнопки для мобильных устройств */}
             {isMobile && (
                 <>
                     <Tooltip title={t('bubbles.addBubble')}>
                         <Fab
                             color="primary"
-                            onClick={addBubble}
+                            onClick={openCreateDialog}
                             sx={{
                                 position: 'absolute',
                                 bottom: 100, // Увеличен отступ для навигационной панели
@@ -798,25 +947,7 @@ const BubblesPage = ({ user }) => {
                             <Clear />
                         </Fab>
                     </Tooltip> */}
-                    <Tooltip title={t('bubbles.manageTags')}>
-                        <Fab
-                            onClick={() => handleOpenTagDialog()}
-                            size="small"
-                            sx={{
-                                position: 'absolute',
-                                bottom: 170, // Увеличен отступ, чтобы не перекрываться с основной кнопкой
-                                right: 20,
-                                zIndex: 1000,
-                                backgroundColor: 'rgba(76, 175, 80, 0.9)',
-                                color: 'white',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(76, 175, 80, 1)'
-                                }
-                            }}
-                        >
-                            <Label />
-                        </Fab>
-                    </Tooltip>
+
                 </>
             )}
 
@@ -834,6 +965,23 @@ const BubblesPage = ({ user }) => {
                 }}>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <LanguageSelector />
+                        <Button
+                            onClick={() => setFilterDrawerOpen(true)}
+                            variant="outlined"
+                            size="small"
+                            startIcon={<FilterList />}
+                            sx={{
+                                color: 'white',
+                                borderColor: 'rgba(255, 255, 255, 0.5)',
+                                backgroundColor: !isAllSelected() ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                                '&:hover': {
+                                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }}
+                        >
+                            {t('bubbles.filterButton')}
+                        </Button>
                         <Button
                             onClick={handleLogout}
                             variant="outlined"
@@ -876,6 +1024,18 @@ const BubblesPage = ({ user }) => {
                         alignItems: 'center'
                     }}>
                         <LanguageSelector />
+                        <IconButton
+                            onClick={() => setFilterDrawerOpen(true)}
+                            sx={{
+                                backgroundColor: !isAllSelected() ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.4)'
+                                }
+                            }}
+                        >
+                            <FilterList />
+                        </IconButton>
                         <IconButton
                             onClick={handleLogout}
                             sx={{
@@ -1010,26 +1170,7 @@ const BubblesPage = ({ user }) => {
                         </Select>
                     </FormControl>
 
-                    {/* Управление тегами */}
-                    <Box sx={{ marginTop: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Button
-                            size="small"
-                            startIcon={<Add />}
-                            onClick={() => handleOpenTagDialog()}
-                            variant="outlined"
-                        >
-                            {t('bubbles.addTag')}
-                        </Button>
-                        <Button
-                            size="small"
-                            startIcon={<LocalOffer />}
-                            onClick={(e) => setTagMenuAnchor(e.currentTarget)}
-                            variant="outlined"
-                            disabled={tags.length === 0}
-                        >
-                            {t('bubbles.manageTags')}
-                        </Button>
-                    </Box>
+
                 </DialogContent>
                 <DialogActions sx={{
                     padding: isMobile ? 2 : 3,
@@ -1183,6 +1324,498 @@ const BubblesPage = ({ user }) => {
                         disabled={!tagName.trim()}
                     >
                         {editingTag ? t('bubbles.save') : t('bubbles.create')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Левое главное меню */}
+            <Drawer
+                anchor="left"
+                open={menuDrawerOpen}
+                onClose={() => setMenuDrawerOpen(false)}
+                PaperProps={{
+                    sx: {
+                        width: isMobile ? '70%' : 300,
+                        maxWidth: '85%',
+                        backgroundColor: '#FFFFFF'
+                    }
+                }}
+            >
+                <Box sx={{ padding: 0 }}>
+                    {/* Заголовок и логотип */}
+                    <Box sx={{
+                        padding: 3,
+                        paddingBottom: 2,
+                        borderBottom: '1px solid #E0E0E0'
+                    }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginBottom: 2 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>
+                                ToROUND
+                            </Typography>
+                        </Box>
+                    </Box>
+
+                    {/* Пункты меню */}
+                    <List sx={{ padding: 0 }}>
+                        {/* Task categories */}
+                        <ListItem
+                            button
+                            onClick={() => {
+                                setMenuDrawerOpen(false);
+                                setCategoriesDialog(true);
+                            }}
+                            sx={{
+                                padding: '16px 24px',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    backgroundColor: '#F8F9FA'
+                                }
+                            }}
+                        >
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                                {/* <Category sx={{ color: '#BDC3C7' }} /> */}
+                                <Sell sx={{ color: '#BDC3C7' }} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary={t('bubbles.taskCategories')}
+                                primaryTypographyProps={{
+                                    color: '#2C3E50',
+                                    fontWeight: 500
+                                }}
+                            />
+                        </ListItem>
+
+                        {/* Settings */}
+                        <ListItem
+                            button
+                            onClick={() => {
+                                setMenuDrawerOpen(false);
+                                // TODO: Добавить логику для настроек
+                            }}
+                            sx={{
+                                padding: '16px 24px',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    backgroundColor: '#F8F9FA'
+                                }
+                            }}
+                        >
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                                <Settings sx={{ color: '#BDC3C7' }} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary={t('bubbles.settings')}
+                                primaryTypographyProps={{
+                                    color: '#2C3E50',
+                                    fontWeight: 500
+                                }}
+                            />
+                        </ListItem>
+
+                        {/* About */}
+                        <ListItem
+                            button
+                            onClick={() => {
+                                setMenuDrawerOpen(false);
+                                // TODO: Добавить логику для About
+                            }}
+                            sx={{
+                                padding: '16px 24px',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    backgroundColor: '#F8F9FA'
+                                }
+                            }}
+                        >
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                                <Info sx={{ color: '#BDC3C7' }} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary={t('bubbles.about')}
+                                primaryTypographyProps={{
+                                    color: '#2C3E50',
+                                    fontWeight: 500
+                                }}
+                            />
+                        </ListItem>
+                    </List>
+                </Box>
+            </Drawer>
+
+            {/* Боковое меню фильтрации */}
+            <Drawer
+                anchor="right"
+                open={filterDrawerOpen}
+                onClose={() => setFilterDrawerOpen(false)}
+                PaperProps={{
+                    sx: {
+                        width: isMobile ? '85%' : 350,
+                        maxWidth: '90%',
+                        backgroundColor: '#2C3E50',
+                        color: 'white'
+                    }
+                }}
+            >
+                <Box sx={{ padding: 0 }}>
+                    {/* Заголовок */}
+                    <Box sx={{ padding: 2, paddingBottom: 1 }}>
+                        <IconButton
+                            onClick={() => setFilterDrawerOpen(false)}
+                            sx={{ color: 'white', padding: 0, marginBottom: 1 }}
+                        >
+                            <CloseOutlined />
+                        </IconButton>
+
+                        {/* Текст с галочкой на одной линии */}
+                        <Box sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant="body2" sx={{ color: '#BDC3C7', lineHeight: 1.3 }}>
+                                {t('bubbles.chooseCategoriesText')}
+                            </Typography>
+                            <IconButton
+                                onClick={isAllSelected() ? clearAllFilters : selectAllFilters}
+                                sx={{
+                                    color: 'white',
+                                    backgroundColor: isAllSelected() ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255,255,255,0.2)'
+                                    },
+                                    padding: '4px'
+                                }}
+                            >
+                                <Check />
+                            </IconButton>
+                        </Box>
+                    </Box>
+
+                    {/* Список категорий */}
+                    <Box sx={{ paddingX: 0 }}>
+                        {/* No tag категория */}
+                        <Box
+                            onClick={handleNoTagFilterChange}
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '16px 20px',
+                                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255,255,255,0.05)'
+                                }
+                            }}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box
+                                    sx={{
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: '50%',
+                                        backgroundColor: '#B0B0B0',
+                                        border: '2px solid #B0B0B0'
+                                    }}
+                                />
+                                <Typography sx={{ color: 'white' }}>
+                                    {t('bubbles.noTag')} <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>{getBubbleCountByTag(null)}</Box>
+                                </Typography>
+                            </Box>
+                            {showNoTag && (
+                                <Check sx={{ color: 'white', fontSize: '20px' }} />
+                            )}
+                        </Box>
+
+                        {/* Остальные теги */}
+                        {tags.map(tag => (
+                            <Box
+                                key={tag.id}
+                                onClick={() => handleTagFilterChange(tag.id)}
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '16px 20px',
+                                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255,255,255,0.05)'
+                                    }
+                                }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Box
+                                        sx={{
+                                            width: 24,
+                                            height: 24,
+                                            borderRadius: '50%',
+                                            backgroundColor: tag.color,
+                                            border: `2px solid ${tag.color}`
+                                        }}
+                                    />
+                                    <Typography sx={{ color: 'white' }}>
+                                        {tag.name} <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>{getBubbleCountByTag(tag.id)}</Box>
+                                    </Typography>
+                                </Box>
+                                {filterTags.includes(tag.id) && (
+                                    <Check sx={{ color: 'white', fontSize: '20px' }} />
+                                )}
+                            </Box>
+                        ))}
+                    </Box>
+                </Box>
+            </Drawer>
+
+            {/* Диалог создания нового пузыря */}
+            <Dialog
+                open={createDialog}
+                onClose={() => setCreateDialog(false)}
+                maxWidth="sm"
+                fullWidth
+                fullScreen={isSmallScreen}
+                PaperProps={{
+                    sx: {
+                        borderRadius: isSmallScreen ? 0 : 3,
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        margin: isMobile ? 1 : 3
+                    }
+                }}
+            >
+                <DialogTitle sx={{
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    {t('bubbles.createNewBubble')}
+                    <IconButton
+                        onClick={() => setCreateDialog(false)}
+                        sx={{ color: 'white' }}
+                    >
+                        <CloseOutlined />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ padding: isMobile ? 2 : 3 }}>
+                    <TextField
+                        autoFocus={!isMobile}
+                        margin="dense"
+                        label={t('bubbles.titleLabel')}
+                        fullWidth
+                        variant="outlined"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        sx={{
+                            marginBottom: 2,
+                            '& .MuiInputBase-input': {
+                                fontSize: isMobile ? 16 : 14
+                            }
+                        }}
+                    />
+                    <TextField
+                        margin="dense"
+                        label={t('bubbles.descriptionLabel')}
+                        fullWidth
+                        variant="outlined"
+                        multiline
+                        rows={isMobile ? 4 : 3}
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        sx={{
+                            '& .MuiInputBase-input': {
+                                fontSize: isMobile ? 16 : 14
+                            }
+                        }}
+                    />
+
+                    {/* Выбор тега */}
+                    <FormControl fullWidth margin="dense" variant="outlined">
+                        <InputLabel>{t('bubbles.categoryLabel')}</InputLabel>
+                        <Select
+                            value={selectedTagId}
+                            onChange={(e) => setSelectedTagId(e.target.value)}
+                            label={t('bubbles.categoryLabel')}
+                            sx={{
+                                '& .MuiSelect-select': {
+                                    fontSize: isMobile ? 16 : 14
+                                }
+                            }}
+                        >
+                            <MenuItem value="">
+                                <em>{t('bubbles.noCategory')}</em>
+                            </MenuItem>
+                            {tags.map(tag => (
+                                <MenuItem key={tag.id} value={tag.id}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box
+                                            sx={{
+                                                width: 16,
+                                                height: 16,
+                                                borderRadius: '50%',
+                                                backgroundColor: tag.color,
+                                                border: '1px solid #ccc'
+                                            }}
+                                        />
+                                        {tag.name}
+                                    </Box>
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions sx={{
+                    padding: isMobile ? 2 : 3,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    flexDirection: isSmallScreen ? 'column' : 'row',
+                    gap: isSmallScreen ? 1 : 0
+                }}>
+                    <Button
+                        onClick={() => setCreateDialog(false)}
+                        color="inherit"
+                        fullWidth={isSmallScreen}
+                        sx={{
+                            minHeight: isMobile ? 48 : 36
+                        }}
+                    >
+                        {t('bubbles.cancel')}
+                    </Button>
+                    <Button
+                        onClick={createNewBubble}
+                        variant="contained"
+                        fullWidth={isSmallScreen}
+                        sx={{
+                            borderRadius: 2,
+                            minHeight: isMobile ? 48 : 36
+                        }}
+                    >
+                        {t('bubbles.create')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Диалог управления категориями задач */}
+            <Dialog
+                open={categoriesDialog}
+                onClose={() => setCategoriesDialog(false)}
+                maxWidth="sm"
+                fullWidth
+                fullScreen={isSmallScreen}
+                PaperProps={{
+                    sx: {
+                        borderRadius: isSmallScreen ? 0 : 3,
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        margin: isMobile ? 1 : 3
+                    }
+                }}
+            >
+                <DialogTitle sx={{
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    {t('bubbles.taskCategories')}
+                    <IconButton
+                        onClick={() => setCategoriesDialog(false)}
+                        sx={{ color: 'white' }}
+                    >
+                        <CloseOutlined />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ padding: isMobile ? 2 : 3 }}>
+                    {/* Кнопка добавления новой категории */}
+                    <Button
+                        variant="contained"
+                        startIcon={<Add />}
+                        onClick={() => {
+                            setCategoriesDialog(false);
+                            handleOpenTagDialog();
+                        }}
+                        sx={{ marginBottom: 2, width: '100%' }}
+                    >
+                        {t('bubbles.addTag')}
+                    </Button>
+
+                    {/* Список существующих категорий */}
+                    {tags.length > 0 ? (
+                        <List sx={{ padding: 0 }}>
+                            {tags.map(tag => (
+                                <ListItem
+                                    key={tag.id}
+                                    sx={{
+                                        border: '1px solid #E0E0E0',
+                                        borderRadius: 2,
+                                        marginBottom: 1,
+                                        padding: 2
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                                        <Box
+                                            sx={{
+                                                width: 24,
+                                                height: 24,
+                                                borderRadius: '50%',
+                                                backgroundColor: tag.color,
+                                                border: '2px solid #E0E0E0'
+                                            }}
+                                        />
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                                                {tag.name}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {getBubbleCountByTag(tag.id)} {getBubbleCountByTag(tag.id) === 1 ? t('bubbles.bubble') : t('bubbles.bubbles')}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => {
+                                                    setCategoriesDialog(false);
+                                                    handleOpenTagDialog(tag);
+                                                }}
+                                                sx={{ color: 'primary.main' }}
+                                            >
+                                                <Edit fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleDeleteTag(tag.id)}
+                                                sx={{ color: 'error.main' }}
+                                            >
+                                                <DeleteOutlined fontSize="small" />
+                                            </IconButton>
+                                        </Box>
+                                    </Box>
+                                </ListItem>
+                            ))}
+                        </List>
+                    ) : (
+                        <Box sx={{
+                            textAlign: 'center',
+                            padding: 4,
+                            color: 'text.secondary'
+                        }}>
+                            <Category sx={{ fontSize: 48, marginBottom: 2, opacity: 0.5 }} />
+                            <Typography variant="h6" gutterBottom>
+                                {t('bubbles.noCategoriesYet')}
+                            </Typography>
+                            <Typography variant="body2">
+                                {t('bubbles.createFirstCategory')}
+                            </Typography>
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ padding: isMobile ? 2 : 3 }}>
+                    <Button
+                        onClick={() => setCategoriesDialog(false)}
+                        color="inherit"
+                        fullWidth={isSmallScreen}
+                    >
+                        {t('bubbles.cancel')}
                     </Button>
                 </DialogActions>
             </Dialog>
