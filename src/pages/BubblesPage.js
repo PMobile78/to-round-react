@@ -76,6 +76,7 @@ const BubblesPage = ({ user }) => {
         const savedFontSize = localStorage.getItem('bubbles-font-size');
         return savedFontSize ? parseInt(savedFontSize) : 12;
     }); // Размер шрифта для надписей в пузырях
+    const [logoutDialog, setLogoutDialog] = useState(false); // Диалог подтверждения выхода
 
     // Note: Functions moved to firestoreService.js for better organization
 
@@ -724,11 +725,17 @@ const BubblesPage = ({ user }) => {
     };
 
     // Функция выхода
-    const handleLogout = async () => {
+    const handleLogout = () => {
+        setLogoutDialog(true);
+    };
+
+    // Функция подтверждения выхода
+    const confirmLogout = async () => {
         const result = await logoutUser();
         if (result.success) {
             console.log('User logged out successfully');
         }
+        setLogoutDialog(false);
     };
 
     // Функция для сохранения настроек шрифта
@@ -2005,6 +2012,73 @@ const BubblesPage = ({ user }) => {
                         fullWidth={isSmallScreen}
                     >
                         {t('bubbles.reset')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Диалог подтверждения выхода */}
+            <Dialog
+                open={logoutDialog}
+                onClose={() => setLogoutDialog(false)}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 3,
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        margin: isMobile ? 1 : 3
+                    }
+                }}
+            >
+                <DialogTitle sx={{
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    {t('auth.logoutConfirm')}
+                    <IconButton
+                        onClick={() => setLogoutDialog(false)}
+                        sx={{ color: 'white' }}
+                    >
+                        <CloseOutlined />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ padding: isMobile ? 2 : 3 }}>
+                    <Typography variant="body1" sx={{ textAlign: 'center', padding: 2 }}>
+                        {t('auth.logoutMessage')}
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{
+                    padding: isMobile ? 2 : 3,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 2
+                }}>
+                    <Button
+                        onClick={() => setLogoutDialog(false)}
+                        color="inherit"
+                        variant="outlined"
+                        fullWidth
+                        sx={{
+                            borderRadius: 2,
+                            minHeight: isMobile ? 48 : 36
+                        }}
+                    >
+                        {t('bubbles.cancel')}
+                    </Button>
+                    <Button
+                        onClick={confirmLogout}
+                        color="primary"
+                        variant="contained"
+                        fullWidth
+                        sx={{
+                            borderRadius: 2,
+                            minHeight: isMobile ? 48 : 36
+                        }}
+                    >
+                        {t('auth.approveLogout')}
                     </Button>
                 </DialogActions>
             </Dialog>

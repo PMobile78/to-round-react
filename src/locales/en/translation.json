@@ -68,7 +68,10 @@
         "loginSuccess": "Login successful!",
         "registerSuccess": "Registration successful!",
         "enterEmail": "Please enter your email",
-        "resetEmailSent": "Password reset email sent"
+        "resetEmailSent": "Password reset email sent",
+        "logoutConfirm": "Confirm Logout",
+        "logoutMessage": "Are you sure you want to logout from your account?",
+        "approveLogout": "Approve"
     },
     "common": {
         "language": "Language",
