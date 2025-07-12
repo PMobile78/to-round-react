@@ -1222,7 +1222,7 @@ const BubblesPage = ({ user }) => {
                     flexDirection: isMobile ? 'column' : 'row'
                 }}>
                     {/* Categories filter */}
-                    <CustomizedMenus
+                    <FilterMenu
                         tags={tags}
                         filterTags={listFilterTags}
                         showNoTag={listShowNoTag}

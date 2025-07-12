@@ -139,8 +139,8 @@ export function FilterMenu({
                             <Button
                                 size="small"
                                 onClick={(e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
+                                    // e.stopPropagation();
+                                    // e.preventDefault();
                                     onSelectAll();
                                 }}
                                 startIcon={<Check />}
@@ -155,8 +155,8 @@ export function FilterMenu({
                             <Button
                                 size="small"
                                 onClick={(e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
+                                    // e.stopPropagation();
+                                    // e.preventDefault();
                                     onClearAll();
                                 }}
                                 startIcon={<Clear />}
@@ -174,9 +174,9 @@ export function FilterMenu({
                     {/* Опция "Без тега" */}
                     <Box
                         onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            onNoTagFilterChange();
+                            // e.stopPropagation();
+                            // e.preventDefault();
+                            // onNoTagFilterChange();
                         }}
                         sx={{
                             padding: '12px 16px',
@@ -191,12 +191,7 @@ export function FilterMenu({
                         <Checkbox
                             checked={showNoTag}
                             size="small"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                            }}
                             onChange={(e) => {
-                                e.stopPropagation();
                                 onNoTagFilterChange();
                             }}
                             sx={{ marginRight: 1 }}
@@ -244,12 +239,7 @@ export function FilterMenu({
                             <Checkbox
                                 checked={filterTags.includes(tag.id)}
                                 size="small"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                }}
                                 onChange={(e) => {
-                                    e.stopPropagation();
                                     onTagFilterChange(tag.id);
                                 }}
                                 sx={{ marginRight: 1 }}
