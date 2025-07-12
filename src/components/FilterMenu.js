@@ -1,59 +1,14 @@
 import * as React from 'react';
-import { styled, alpha } from '@mui/material/styles';
+import { alpha } from '@mui/material/styles';
 import Button from '@mui/material/Button';
-import Menu from '@mui/material/Menu';
+import Popover from '@mui/material/Popover';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
-
 import Checkbox from '@mui/material/Checkbox';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Chip from '@mui/material/Chip';
 import { useTranslation } from 'react-i18next';
 import { Check, Clear, FilterList } from '@mui/icons-material';
-
-const StyledMenu = styled((props) => (
-    <Menu
-        elevation={0}
-        anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-        }}
-        transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-        }}
-        {...props}
-    />
-))(({ theme }) => ({
-    '& .MuiPaper-root': {
-        borderRadius: 6,
-        marginTop: theme.spacing(1),
-        minWidth: 280,
-        color: 'rgb(55, 65, 81)',
-        boxShadow:
-            'rgb(255, 255, 255) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.05) 0px 4px 6px -2px',
-        '& .MuiMenu-list': {
-            padding: '4px 0',
-        },
-        '& .MuiMenuItem-root': {
-            '& .MuiSvgIcon-root': {
-                fontSize: 18,
-                color: theme.palette.text.secondary,
-                marginRight: theme.spacing(1.5),
-            },
-            '&:active': {
-                backgroundColor: alpha(
-                    theme.palette.primary.main,
-                    theme.palette.action.selectedOpacity,
-                ),
-            },
-        },
-        ...theme.applyStyles('dark', {
-            color: theme.palette.grey[300],
-        }),
-    },
-}));
 
 export function FilterMenu({
     tags = [],
@@ -67,9 +22,8 @@ export function FilterMenu({
 }) {
     const { t } = useTranslation();
     const [anchorEl, setAnchorEl] = React.useState(null);
-    const open = Boolean(anchorEl);
 
-    const handleClick = (event) => {
+    const handleOpen = (event) => {
         setAnchorEl(event.currentTarget);
     };
 
@@ -77,109 +31,81 @@ export function FilterMenu({
         setAnchorEl(null);
     };
 
+    const open = Boolean(anchorEl);
+    const id = open ? 'filter-popover' : undefined;
+
     return (
         <div>
             <Button
-                id="demo-customized-button"
-                aria-controls={open ? 'demo-customized-menu' : undefined}
-                aria-haspopup="true"
-                aria-expanded={open ? 'true' : undefined}
+                aria-describedby={id}
                 variant="outlined"
                 disableElevation
-                onClick={handleClick}
+                onClick={handleOpen}
                 startIcon={<FilterList />}
                 sx={{
                     minWidth: 'auto',
-                    width: 'auto',
                     padding: '8px 12px',
                     borderRadius: 1,
                     textTransform: 'none',
                     fontSize: '0.875rem',
-                    '& .MuiButton-startIcon': {
-                        marginRight: 1
-                    }
                 }}
             >
                 {t('bubbles.filterButton')}
             </Button>
-            <StyledMenu
-                id="demo-customized-menu"
-                slotProps={{
-                    list: {
-                        'aria-labelledby': 'demo-customized-button',
-                    },
-                }}
-                anchorEl={anchorEl}
+
+            <Popover
+                id={id}
                 open={open}
+                anchorEl={anchorEl}
                 onClose={handleClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{
+                    onClick: (e) => {
+                        // предотвращаем закрытие при кликах внутри
+                        e.stopPropagation();
+                    },
+                    sx: {
+                        borderRadius: 1,
+                        minWidth: 280,
+                        boxShadow: 1,
+                        '& .MuiMenuItem-root': {
+                            '&:active': {
+                                backgroundColor: alpha(
+                                    '#1976d2',
+                                    0.12
+                                ),
+                            },
+                        },
+                    }
+                }}
+            // оставляем стандартное поведение фокуса
             >
-                {/* Заголовок с кнопками управления */}
-                <Box sx={{
-                    padding: '8px 16px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderBottom: '1px solid #E0E0E0'
-                }}>
+                {/* Header */}
+                <Box sx={{ p: 1, px: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                         {t('bubbles.categories')}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Button
-                            size="small"
-                            onClick={() => {
-                                onSelectAll();
-                            }}
-                            startIcon={<Check />}
-                            sx={{
-                                minWidth: 'auto',
-                                padding: '4px 8px',
-                                fontSize: '0.75rem'
-                            }}
-                        >
+                        <Button size="small" onClick={onSelectAll} startIcon={<Check />} sx={{ minWidth: 'auto', p: '4px 8px', fontSize: '0.75rem' }}>
                             {t('bubbles.selectAll')}
                         </Button>
-                        <Button
-                            size="small"
-                            onClick={() => {
-                                onClearAll();
-                            }}
-                            startIcon={<Clear />}
-                            sx={{
-                                minWidth: 'auto',
-                                padding: '4px 8px',
-                                fontSize: '0.75rem'
-                            }}
-                        >
+                        <Button size="small" onClick={onClearAll} startIcon={<Clear />} sx={{ minWidth: 'auto', p: '4px 8px', fontSize: '0.75rem' }}>
                             {t('bubbles.clearAll')}
                         </Button>
                     </Box>
                 </Box>
 
-                {/* Опция "Без тега" */}
+                {/* No tag */}
                 <MenuItem
                     onClick={(e) => {
-                        e.stopPropagation();
                         onNoTagFilterChange();
                     }}
                     disableRipple
-                    sx={{ padding: '12px 16px' }}
+                    sx={{ p: '12px 16px' }}
                 >
-                    <Checkbox
-                        checked={showNoTag}
-                        size="small"
-                        sx={{ marginRight: 1 }}
-                    />
-                    <Box
-                        sx={{
-                            width: 16,
-                            height: 16,
-                            borderRadius: '50%',
-                            backgroundColor: '#B0B0B0',
-                            border: '1px solid #ccc',
-                            marginRight: 1
-                        }}
-                    />
+                    <Checkbox checked={showNoTag} size="small" sx={{ mr: 1 }} />
+                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: 'grey.400', border: '1px solid', borderColor: 'divider', mr: 1 }} />
                     <Typography variant="body2" sx={{ flex: 1 }}>
                         {t('bubbles.noTag')}
                     </Typography>
@@ -188,53 +114,36 @@ export function FilterMenu({
                     </Typography>
                 </MenuItem>
 
-                {/* Разделитель */}
                 {tags.length > 0 && <Divider sx={{ my: 0.5 }} />}
 
-                {/* Список тегов */}
-                {tags.map((tag) => (
-                    <MenuItem
-                        key={tag.id}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onTagFilterChange(tag.id);
-                        }}
-                        disableRipple
-                        sx={{ padding: '12px 16px' }}
-                    >
-                        <Checkbox
-                            checked={filterTags.includes(tag.id)}
-                            size="small"
-                            sx={{ marginRight: 1 }}
-                        />
-                        <Box
-                            sx={{
-                                width: 16,
-                                height: 16,
-                                borderRadius: '50%',
-                                backgroundColor: tag.color,
-                                border: '1px solid #ccc',
-                                marginRight: 1
+                {tags.length > 0 ? (
+                    tags.map(tag => (
+                        <MenuItem
+                            key={tag.id}
+                            onClick={() => {
+                                onTagFilterChange(tag.id);
                             }}
-                        />
-                        <Typography variant="body2" sx={{ flex: 1 }}>
-                            {tag.name}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            {getBubbleCountByTag ? getBubbleCountByTag(tag.id) : 0}
-                        </Typography>
-                    </MenuItem>
-                ))}
-
-                {/* Сообщение если нет тегов */}
-                {tags.length === 0 && (
-                    <MenuItem disabled sx={{ padding: '12px 16px' }}>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', width: '100%' }}>
+                            disableRipple
+                            sx={{ p: '12px 16px' }}
+                        >
+                            <Checkbox checked={filterTags.includes(tag.id)} size="small" sx={{ mr: 1 }} />
+                            <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: tag.color, border: '1px solid', borderColor: 'divider', mr: 1 }} />
+                            <Typography variant="body2" sx={{ flex: 1 }}>
+                                {tag.name}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                {getBubbleCountByTag ? getBubbleCountByTag(tag.id) : 0}
+                            </Typography>
+                        </MenuItem>
+                    ))
+                ) : (
+                    <MenuItem disabled sx={{ p: '12px 16px', justifyContent: 'center' }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                             {t('bubbles.noTagsAvailable')}
                         </Typography>
                     </MenuItem>
                 )}
-            </StyledMenu>
+            </Popover>
         </div>
     );
 }
