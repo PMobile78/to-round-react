@@ -48,6 +48,22 @@ const BubblesPage = ({ user }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // 600px and below
+
+    // Predefined color palette
+    // const COLOR_PALETTE = [
+    //     '#FF6B6B', '#FF8E8E', '#FFA07A', '#FFD700', '#C5E063',
+    //     '#98FB98', '#90EE90', '#20B2AA', '#7FFFD4', '#4682B4',
+    //     '#87CEEB', '#6495ED', '#4169E1', '#6A5ACD', '#8A2BE2',
+    //     '#DA70D6', '#C71585', '#FF69B4', '#696969', '#A9A9A9'
+    // ];
+
+    // My palette
+    const COLOR_PALETTE = [
+        '#da3833', '#ee603c', '#fd8b2b', '#e9be00', '#b7be00',
+        '#7db44e', '#46a549', '#00a47a', '#34c09d', '#007771',
+        '#00a5cf', '#0089b5', '#005ea4', '#6179cf', '#434d82',
+        '#b14dd1', '#c04097', '#f25e6a', '#4d697e', '#86a49c'
+    ];
     const canvasRef = useRef(null);
     const engineRef = useRef(null);
     const renderRef = useRef(null);
@@ -623,14 +639,26 @@ const BubblesPage = ({ user }) => {
             setTagName(tag.name);
             setTagColor(tag.color);
         } else {
+            if (!canCreateMoreTags()) {
+                return; // Не открываем диалог, если нет доступных цветов
+            }
             setEditingTag(null);
             setTagName('');
-            setTagColor('#3B7DED');
+            setTagColor(getNextAvailableColor() || '#3B7DED');
         }
         setTagDialog(true);
     };
 
     const handleSaveTag = () => {
+        // Проверяем, что цвет доступен (если это новый тег или изменился цвет)
+        if (!editingTag && !isColorAvailable(tagColor)) {
+            return; // Цвет уже занят
+        }
+
+        if (editingTag && editingTag.color !== tagColor && !isColorAvailable(tagColor)) {
+            return; // Цвет уже занят при редактировании
+        }
+
         const newTag = {
             id: editingTag ? editingTag.id : Math.random().toString(36).substr(2, 9),
             name: tagName.trim(),
@@ -649,14 +677,12 @@ const BubblesPage = ({ user }) => {
         setTagDialog(false);
         setEditingTag(null);
         setTagName('');
-        setTagColor('#3B7DED');
+        setTagColor(getNextAvailableColor() || '#3B7DED');
 
-        // Если создаем новый тег, открываем обратно диалог категорий
-        if (!editingTag) {
-            setTimeout(() => {
-                setCategoriesDialog(true);
-            }, 100);
-        }
+        // Открываем обратно диалог категорий (и для создания, и для редактирования)
+        setTimeout(() => {
+            setCategoriesDialog(true);
+        }, 100);
     };
 
     const handleDeleteTag = (tagId) => {
@@ -683,7 +709,12 @@ const BubblesPage = ({ user }) => {
         setTagDialog(false);
         setEditingTag(null);
         setTagName('');
-        setTagColor('#3B7DED');
+        setTagColor(getNextAvailableColor() || '#3B7DED');
+
+        // Открываем обратно диалог категорий при отмене
+        setTimeout(() => {
+            setCategoriesDialog(true);
+        }, 100);
     };
 
     // Functions for filter management
@@ -722,6 +753,29 @@ const BubblesPage = ({ user }) => {
             return bubbles.filter(bubble => !bubble.tagId).length;
         }
         return bubbles.filter(bubble => bubble.tagId === tagId).length;
+    };
+
+    // Функции для работы с цветами
+    const getUsedColors = () => {
+        return tags.map(tag => tag.color);
+    };
+
+    const getAvailableColors = () => {
+        const usedColors = getUsedColors();
+        return COLOR_PALETTE.filter(color => !usedColors.includes(color));
+    };
+
+    const getNextAvailableColor = () => {
+        const availableColors = getAvailableColors();
+        return availableColors.length > 0 ? availableColors[0] : null;
+    };
+
+    const isColorAvailable = (color) => {
+        return !getUsedColors().includes(color);
+    };
+
+    const canCreateMoreTags = () => {
+        return getAvailableColors().length > 0;
     };
 
     // Функция выхода
@@ -1314,29 +1368,71 @@ const BubblesPage = ({ user }) => {
                             }
                         }}
                     />
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography>{t('bubbles.color')}:</Typography>
-                        <input
-                            type="color"
-                            value={tagColor}
-                            onChange={(e) => setTagColor(e.target.value)}
-                            style={{
-                                width: 50,
-                                height: 40,
-                                border: 'none',
-                                borderRadius: 4,
-                                cursor: 'pointer'
-                            }}
-                        />
-                        <Box
-                            sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 2,
-                                backgroundColor: tagColor,
-                                border: '1px solid #ccc'
-                            }}
-                        />
+                    <Box sx={{ marginBottom: 2 }}>
+                        <Typography sx={{ marginBottom: 2 }}>{t('bubbles.selectColor')}:</Typography>
+                        <Box sx={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(5, 1fr)',
+                            gap: 1.5,
+                            maxWidth: 300,
+                            margin: '0 auto'
+                        }}>
+                            {COLOR_PALETTE.map((color, index) => {
+                                const isUsed = !isColorAvailable(color) && color !== tagColor;
+                                const isSelected = tagColor === color;
+
+                                return (
+                                    <Box
+                                        key={index}
+                                        onClick={() => {
+                                            if (!isUsed) {
+                                                setTagColor(color);
+                                            }
+                                        }}
+                                        sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: '50%',
+                                            backgroundColor: color,
+                                            border: isSelected ? '3px solid #1976d2' : '2px solid #E0E0E0',
+                                            cursor: isUsed ? 'not-allowed' : 'pointer',
+                                            opacity: isUsed ? 0.3 : 1,
+                                            position: 'relative',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                transform: !isUsed ? 'scale(1.1)' : 'none',
+                                                boxShadow: !isUsed ? '0 4px 8px rgba(0,0,0,0.2)' : 'none'
+                                            }
+                                        }}
+                                    >
+                                        {isSelected && (
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: '50%',
+                                                    left: '50%',
+                                                    transform: 'translate(-50%, -50%)',
+                                                    color: 'white',
+                                                    fontSize: '16px',
+                                                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                                                }}
+                                            >
+                                                ✓
+                                            </Box>
+                                        )}
+                                    </Box>
+                                );
+                            })}
+                        </Box>
+                        {!canCreateMoreTags() && !editingTag && (
+                            <Typography
+                                variant="body2"
+                                color="error"
+                                sx={{ textAlign: 'center', marginTop: 2 }}
+                            >
+                                {t('bubbles.noMoreColors')}
+                            </Typography>
+                        )}
                     </Box>
                 </DialogContent>
                 <DialogActions>
@@ -1344,7 +1440,11 @@ const BubblesPage = ({ user }) => {
                     <Button
                         onClick={handleSaveTag}
                         variant="contained"
-                        disabled={!tagName.trim()}
+                        disabled={
+                            !tagName.trim() ||
+                            (!editingTag && !isColorAvailable(tagColor)) ||
+                            (editingTag && editingTag.color !== tagColor && !isColorAvailable(tagColor))
+                        }
                     >
                         {editingTag ? t('bubbles.save') : t('bubbles.create')}
                     </Button>
@@ -1834,12 +1934,15 @@ const BubblesPage = ({ user }) => {
                             variant="text"
                             startIcon={<Add />}
                             onClick={() => {
-                                setCategoriesDialog(false);
-                                handleOpenTagDialog();
+                                if (canCreateMoreTags()) {
+                                    setCategoriesDialog(false);
+                                    handleOpenTagDialog();
+                                }
                             }}
+                            disabled={!canCreateMoreTags()}
                             sx={{
                                 backgroundColor: 'transparent',
-                                color: '#757575',
+                                color: canCreateMoreTags() ? '#757575' : '#B0B0B0',
                                 borderRadius: 2,
                                 padding: '12px 24px',
                                 textTransform: 'none',
@@ -1848,16 +1951,16 @@ const BubblesPage = ({ user }) => {
                                 fontSize: '14px',
                                 border: 'none',
                                 '&:hover': {
-                                    backgroundColor: 'rgba(117, 117, 117, 0.08)'
+                                    backgroundColor: canCreateMoreTags() ? 'rgba(117, 117, 117, 0.08)' : 'transparent'
                                 },
                                 '& .MuiButton-startIcon': {
-                                    color: '#757575',
+                                    color: canCreateMoreTags() ? '#757575' : '#B0B0B0',
                                     marginRight: 1.5,
                                     fontSize: '20px'
                                 }
                             }}
                         >
-                            {t('bubbles.addTag')}
+                            {canCreateMoreTags() ? t('bubbles.addTag') : t('bubbles.maxCategoriesReached')}
                         </Button>
                     </Box>
                 )}
@@ -1875,12 +1978,15 @@ const BubblesPage = ({ user }) => {
                             variant="text"
                             startIcon={<Add />}
                             onClick={() => {
-                                setCategoriesDialog(false);
-                                handleOpenTagDialog();
+                                if (canCreateMoreTags()) {
+                                    setCategoriesDialog(false);
+                                    handleOpenTagDialog();
+                                }
                             }}
+                            disabled={!canCreateMoreTags()}
                             sx={{
                                 backgroundColor: 'transparent',
-                                color: '#757575',
+                                color: canCreateMoreTags() ? '#757575' : '#B0B0B0',
                                 borderRadius: 2,
                                 padding: '12px 24px',
                                 textTransform: 'none',
@@ -1889,16 +1995,16 @@ const BubblesPage = ({ user }) => {
                                 fontSize: '14px',
                                 border: 'none',
                                 '&:hover': {
-                                    backgroundColor: 'rgba(117, 117, 117, 0.08)'
+                                    backgroundColor: canCreateMoreTags() ? 'rgba(117, 117, 117, 0.08)' : 'transparent'
                                 },
                                 '& .MuiButton-startIcon': {
-                                    color: '#757575',
+                                    color: canCreateMoreTags() ? '#757575' : '#B0B0B0',
                                     marginRight: 1.5,
                                     fontSize: '20px'
                                 }
                             }}
                         >
-                            {t('bubbles.addTag')}
+                            {canCreateMoreTags() ? t('bubbles.addTag') : t('bubbles.maxCategoriesReached')}
                         </Button>
                     </Box>
                 )}
