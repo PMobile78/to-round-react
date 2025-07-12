@@ -426,16 +426,24 @@ const BubblesPage = ({ user }) => {
 
         bubbles.forEach(bubble => {
             if (bubble.body) {
-                if (filteredIds.has(bubble.id)) {
-                    // Показать пузырь
-                    bubble.body.render.visible = true;
-                    // Убедиться, что пузырь не статичен
-                    Matter.Body.setStatic(bubble.body, false);
-                } else {
-                    // Скрыть пузырь
-                    bubble.body.render.visible = false;
-                    // Сделать пузырь статичным, чтобы он не влиял на физику
-                    Matter.Body.setStatic(bubble.body, true);
+                const isVisible = filteredIds.has(bubble.id);
+                const isCurrentlyInWorld = engineRef.current.world.bodies.includes(bubble.body);
+
+                if (isVisible && !isCurrentlyInWorld) {
+                    // Сбросить позицию пузыря наверх с случайной X координатой
+                    const margin = isMobile ? 50 : 100;
+                    const randomX = Math.random() * (canvasSize.width - margin * 2) + margin;
+                    const topY = -50; // Позиция выше видимой области
+
+                    // Установить новую позицию и обнулить скорость
+                    Matter.Body.setPosition(bubble.body, { x: randomX, y: topY });
+                    Matter.Body.setVelocity(bubble.body, { x: 0, y: 0 });
+
+                    // Добавить пузырь в физический мир
+                    Matter.World.add(engineRef.current.world, bubble.body);
+                } else if (!isVisible && isCurrentlyInWorld) {
+                    // Убрать пузырь из физического мира
+                    Matter.World.remove(engineRef.current.world, bubble.body);
                 }
             }
         });
