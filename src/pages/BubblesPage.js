@@ -28,8 +28,9 @@ import {
     List,
     ListItem,
     Divider,
+
 } from '@mui/material';
-import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward } from '@mui/icons-material';
+import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward, KeyboardArrowDown } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
@@ -48,6 +49,8 @@ import {
     getBubblesByStatus,
     cleanupOldDeletedBubbles
 } from '../services/firestoreService';
+
+
 
 const BubblesPage = ({ user }) => {
     const { t } = useTranslation();
@@ -105,7 +108,7 @@ const BubblesPage = ({ user }) => {
     const [listSortOrder, setListSortOrder] = useState('desc'); // 'asc', 'desc'
     const [listFilterTags, setListFilterTags] = useState([]); // Массив ID выбранных тегов для фильтрации в списке
     const [listShowNoTag, setListShowNoTag] = useState(true); // Показывать ли задачи без тегов в списке
-    const [listFilterMenuAnchor, setListFilterMenuAnchor] = useState(null); // Якорь для выпадающего меню фильтра списка
+    const [categoriesMenuAnchor, setCategoriesMenuAnchor] = useState(null); // Якорь для меню выбора категорий
     const [showInstructions, setShowInstructions] = useState(() => {
         const saved = localStorage.getItem('bubbles-show-instructions');
         return saved === null ? true : saved === 'true';
@@ -498,6 +501,20 @@ const BubblesPage = ({ user }) => {
             }
         });
     }, [bubbles, filterTags, showNoTag]);
+
+    // Handle clicks outside categories menu
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (categoriesMenuAnchor && !event.target.closest('[data-categories-menu]')) {
+                setCategoriesMenuAnchor(null);
+            }
+        };
+
+        if (categoriesMenuAnchor) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [categoriesMenuAnchor]);
 
     // Bubble creation function
     const createBubble = (x, y, radius, tagId = null) => {
@@ -1167,6 +1184,26 @@ const BubblesPage = ({ user }) => {
             }
         };
 
+        // Permanently delete task from list view
+        const handlePermanentDeleteTask = async (taskId) => {
+            try {
+                const updatedBubbles = bubbles.filter(bubble => bubble.id !== taskId);
+                setBubbles(updatedBubbles);
+                saveBubblesToFirestore(updatedBubbles);
+            } catch (error) {
+                console.error('Error permanently deleting task:', error);
+            }
+        };
+
+        // Edit task from list view
+        const handleEditTask = (task) => {
+            setSelectedBubble(task);
+            setTitle(task.title || '');
+            setDescription(task.description || '');
+            setSelectedTagId(task.tagId || '');
+            setEditDialog(true);
+        };
+
         const tasks = getTasksByStatus(listFilter);
         const isEmpty = tasks.length === 0;
 
@@ -1182,24 +1219,156 @@ const BubblesPage = ({ user }) => {
                     flexWrap: 'wrap',
                     flexDirection: isMobile ? 'column' : 'row'
                 }}>
-                    {/* Filter button */}
-                    <Button
-                        onClick={(e) => setListFilterMenuAnchor(e.currentTarget)}
-                        variant="outlined"
-                        startIcon={<FilterList />}
-                        endIcon={Boolean(listFilterMenuAnchor) ? <ArrowUpward /> : <ArrowDownward />}
-                        fullWidth={isMobile}
-                        sx={{
-                            backgroundColor: !isAllListFiltersSelected() ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
-                            borderColor: !isAllListFiltersSelected() ? 'primary.main' : 'rgba(0, 0, 0, 0.23)',
-                            '&:hover': {
-                                backgroundColor: 'rgba(25, 118, 210, 0.05)'
-                            },
-                            position: 'relative'
-                        }}
-                    >
-                        {t('bubbles.filterButton')}
-                    </Button>
+                    {/* Categories filter */}
+                    <Box sx={{ width: isMobile ? '100%' : 280, position: 'relative' }} data-categories-menu>
+                        <Button
+                            variant="outlined"
+                            onClick={(e) => setCategoriesMenuAnchor(e.currentTarget)}
+                            endIcon={<KeyboardArrowDown />}
+                            sx={{
+                                width: '100%',
+                                justifyContent: 'space-between',
+                                textTransform: 'none',
+                                padding: '8px 12px',
+                                borderRadius: 1,
+                                '& .MuiButton-endIcon': {
+                                    transform: Boolean(categoriesMenuAnchor) ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    transition: 'transform 0.2s ease'
+                                }
+                            }}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden' }}>
+                                {(listFilterTags.length > 0 || listShowNoTag) ? (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, overflow: 'hidden' }}>
+                                        {listShowNoTag && (
+                                            <Chip
+                                                label={t('bubbles.noTag')}
+                                                size="small"
+                                                sx={{
+                                                    backgroundColor: '#B0B0B0',
+                                                    color: 'white',
+                                                    height: 20,
+                                                    fontSize: '0.7rem'
+                                                }}
+                                            />
+                                        )}
+                                        {listFilterTags.slice(0, 2).map((tagId) => {
+                                            const tag = tags.find(t => t.id === tagId);
+                                            return tag ? (
+                                                <Chip
+                                                    key={tagId}
+                                                    label={tag.name}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: tag.color,
+                                                        color: 'white',
+                                                        height: 20,
+                                                        fontSize: '0.7rem'
+                                                    }}
+                                                />
+                                            ) : null;
+                                        })}
+                                        {listFilterTags.length > 2 && (
+                                            <Chip
+                                                label={`+${listFilterTags.length - 2}`}
+                                                size="small"
+                                                sx={{
+                                                    backgroundColor: '#E0E0E0',
+                                                    color: '#666',
+                                                    height: 20,
+                                                    fontSize: '0.7rem'
+                                                }}
+                                            />
+                                        )}
+                                    </Box>
+                                ) : (
+                                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                        {t('bubbles.categories')}
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Button>
+                        {Boolean(categoriesMenuAnchor) && (
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    width: 280,
+                                    backgroundColor: 'white',
+                                    borderRadius: 1,
+                                    boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.15)',
+                                    border: '1px solid #E0E0E0',
+                                    zIndex: 1000,
+                                    maxHeight: 300,
+                                    overflowY: 'auto',
+                                    marginTop: 0.5
+                                }}
+                            >
+                                <Box
+                                    onClick={() => {
+                                        setListShowNoTag(!listShowNoTag);
+                                    }}
+                                    sx={{
+                                        padding: '12px 16px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1.5,
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            backgroundColor: '#F5F5F5'
+                                        }
+                                    }}
+                                >
+                                    <Checkbox checked={listShowNoTag} size="small" />
+                                    <Box
+                                        sx={{
+                                            width: 16,
+                                            height: 16,
+                                            borderRadius: '50%',
+                                            backgroundColor: '#B0B0B0',
+                                            border: '1px solid #ccc'
+                                        }}
+                                    />
+                                    <Typography variant="body2">{t('bubbles.noTag')}</Typography>
+                                </Box>
+                                {tags.map((tag) => (
+                                    <Box
+                                        key={tag.id}
+                                        onClick={() => {
+                                            if (listFilterTags.includes(tag.id)) {
+                                                setListFilterTags(listFilterTags.filter(id => id !== tag.id));
+                                            } else {
+                                                setListFilterTags([...listFilterTags, tag.id]);
+                                            }
+                                        }}
+                                        sx={{
+                                            padding: '12px 16px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1.5,
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                backgroundColor: '#F5F5F5'
+                                            }
+                                        }}
+                                    >
+                                        <Checkbox checked={listFilterTags.includes(tag.id)} size="small" />
+                                        <Box
+                                            sx={{
+                                                width: 16,
+                                                height: 16,
+                                                borderRadius: '50%',
+                                                backgroundColor: tag.color,
+                                                border: '1px solid #ccc'
+                                            }}
+                                        />
+                                        <Typography variant="body2">{tag.name}</Typography>
+                                    </Box>
+                                ))}
+                            </Box>
+                        )}
+                    </Box>
 
                     {/* Sort controls */}
                     <Box sx={{
@@ -1359,6 +1528,14 @@ const BubblesPage = ({ user }) => {
                                                 <>
                                                     <IconButton
                                                         size="small"
+                                                        onClick={() => handleEditTask(task)}
+                                                        sx={{ color: 'primary.main' }}
+                                                        title={t('bubbles.editBubble')}
+                                                    >
+                                                        <Edit />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
                                                         onClick={() => handleMarkTaskAsDone(task.id)}
                                                         sx={{ color: 'success.main' }}
                                                         title={t('bubbles.markAsDone')}
@@ -1396,14 +1573,24 @@ const BubblesPage = ({ user }) => {
                                                 </>
                                             )}
                                             {task.status === BUBBLE_STATUS.DELETED && (
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleRestoreBubble(task.id)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.restoreBubble')}
-                                                >
-                                                    <Restore />
-                                                </IconButton>
+                                                <>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleRestoreBubble(task.id)}
+                                                        sx={{ color: 'primary.main' }}
+                                                        title={t('bubbles.restoreBubble')}
+                                                    >
+                                                        <Restore />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handlePermanentDeleteTask(task.id)}
+                                                        sx={{ color: 'error.main' }}
+                                                        title={t('bubbles.permanentDelete')}
+                                                    >
+                                                        <DeleteOutlined />
+                                                    </IconButton>
+                                                </>
                                             )}
                                         </Box>
                                     </Box>
@@ -1413,123 +1600,7 @@ const BubblesPage = ({ user }) => {
                     </List>
                 )}
 
-                {/* Filter Menu */}
-                <Menu
-                    anchorEl={listFilterMenuAnchor}
-                    open={Boolean(listFilterMenuAnchor)}
-                    onClose={() => setListFilterMenuAnchor(null)}
-                    anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'left',
-                    }}
-                    transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                    }}
-                    disablePortal={true}
-                    PaperProps={{
-                        sx: {
-                            maxHeight: 400,
-                            width: 300,
-                            marginTop: 0.5,
-                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
-                            borderRadius: 2,
-                            '& .MuiMenuItem-root': {
-                                padding: '8px 16px'
-                            }
-                        }
-                    }}
-                >
-                    {/* Header with select all/none */}
-                    <Box sx={{
-                        padding: '12px 16px',
-                        borderBottom: '1px solid #E0E0E0',
-                        backgroundColor: '#F5F5F5'
-                    }}>
-                        <Box sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                        }}>
-                            <Typography variant="subtitle2" color="primary">
-                                {t('bubbles.chooseCategoriesForList')}
-                            </Typography>
-                            <Button
-                                size="small"
-                                onClick={isAllListFiltersSelected() ? clearAllListFilters : selectAllListFilters}
-                                sx={{ minWidth: 'auto', padding: '4px 8px' }}
-                            >
-                                {isAllListFiltersSelected() ? t('bubbles.deselectAll') : t('bubbles.selectAll')}
-                            </Button>
-                        </Box>
-                    </Box>
 
-                    {/* No tag option */}
-                    <MenuItem onClick={handleListNoTagFilterChange}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                            <Checkbox
-                                checked={listShowNoTag}
-                                size="small"
-                            />
-                            <Box
-                                sx={{
-                                    width: 16,
-                                    height: 16,
-                                    borderRadius: '50%',
-                                    backgroundColor: '#B0B0B0',
-                                    border: '1px solid #ccc'
-                                }}
-                            />
-                            <Typography sx={{ flex: 1 }}>
-                                {t('bubbles.noTag')}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                ({getBubbleCountByTag(null)})
-                            </Typography>
-                        </Box>
-                    </MenuItem>
-
-                    {/* Category options */}
-                    {tags.map(tag => (
-                        <MenuItem
-                            key={tag.id}
-                            onClick={() => handleListTagFilterChange(tag.id)}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                                <Checkbox
-                                    checked={listFilterTags.includes(tag.id)}
-                                    size="small"
-                                />
-                                <Box
-                                    sx={{
-                                        width: 16,
-                                        height: 16,
-                                        borderRadius: '50%',
-                                        backgroundColor: tag.color,
-                                        border: '1px solid #ccc'
-                                    }}
-                                />
-                                <Typography sx={{ flex: 1 }}>
-                                    {tag.name}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    ({getBubbleCountByTag(tag.id)})
-                                </Typography>
-                            </Box>
-                        </MenuItem>
-                    ))}
-
-                    {/* Footer with help text */}
-                    <Box sx={{
-                        padding: '12px 16px',
-                        borderTop: '1px solid #E0E0E0',
-                        backgroundColor: '#FAFAFA'
-                    }}>
-                        <Typography variant="caption" color="text.secondary">
-                            {t('bubbles.filterHelpText')}
-                        </Typography>
-                    </Box>
-                </Menu>
             </Box>
         );
     };
@@ -2939,41 +3010,42 @@ const BubblesPage = ({ user }) => {
                 </DialogActions>
             </Dialog>
 
-            {/* Диалог списка задач */}
-            <Dialog
+            {/* Боковая панель списка задач */}
+            <Drawer
+                anchor="right"
                 open={listViewDialog}
                 onClose={() => setListViewDialog(false)}
-                maxWidth="md"
-                fullWidth
-                fullScreen={isMobile}
                 PaperProps={{
                     sx: {
-                        borderRadius: isMobile ? 0 : 3,
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        margin: isMobile ? 0 : 3,
-                        height: isMobile ? '100vh' : '85vh'
+                        width: isMobile ? '100%' : '60%',
+                        maxWidth: isMobile ? '100%' : '800px',
+                        backgroundColor: '#FFFFFF'
                     }
                 }}
             >
-                <DialogTitle sx={{
+                <Box sx={{
                     backgroundColor: 'primary.main',
                     color: 'white',
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    padding: '16px 24px',
+                    borderBottom: '1px solid #E0E0E0'
                 }}>
-                    {t('bubbles.listView')}
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        {t('bubbles.listView')}
+                    </Typography>
                     <IconButton
                         onClick={() => setListViewDialog(false)}
                         sx={{ color: 'white' }}
                     >
                         <CloseOutlined />
                     </IconButton>
-                </DialogTitle>
-                <DialogContent sx={{ padding: 0, height: '100%' }}>
+                </Box>
+                <Box sx={{ height: 'calc(100vh - 73px)', overflow: 'auto' }}>
                     <ListView />
-                </DialogContent>
-            </Dialog>
+                </Box>
+            </Drawer>
 
 
         </Box>
