@@ -1390,15 +1390,13 @@ const BubblesPage = ({ user }) => {
                                             }
                                         }}
                                         sx={{
-                                            width: 40,
-                                            height: 40,
+                                            width: isUsed ? 34 : 40, // Уменьшаем размер для занятых, чтобы с кольцом было 40px
+                                            height: isUsed ? 34 : 40,
                                             borderRadius: '50%',
                                             backgroundColor: isUsed ? `${color}50` : color, // Полупрозрачный фон для занятых
                                             border: isSelected
                                                 ? '3px solid #1976d2'
-                                                : isUsed
-                                                    ? 'none'
-                                                    : '2px solid #E0E0E0',
+                                                : 'none', // Убираем серые границы у всех
                                             cursor: isUsed ? 'not-allowed' : 'pointer',
                                             position: 'relative',
                                             transition: 'all 0.2s ease',
