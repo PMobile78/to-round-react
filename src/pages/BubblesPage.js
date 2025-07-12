@@ -1000,8 +1000,8 @@ const BubblesPage = ({ user }) => {
                         else baseLength = 20;                   // большой пузырь
 
                         // Корректируем количество символов в зависимости от размера шрифта
-                        // Чем меньше шрифт, тем больше символов помещается
-                        const fontSizeRatio = 12 / currentFontSize; // 12 - базовый размер
+                        // Чем меньше шрифт, тем больше символов помещается (квадратичная зависимость)
+                        const fontSizeRatio = Math.pow(12 / currentFontSize, 1.5); // Более агрессивное увеличение
                         return Math.round(baseLength * fontSizeRatio);
                     };
 
