@@ -1393,15 +1393,19 @@ const BubblesPage = ({ user }) => {
                                             width: 40,
                                             height: 40,
                                             borderRadius: '50%',
-                                            backgroundColor: color,
-                                            border: isSelected ? '3px solid #1976d2' : '2px solid #E0E0E0',
+                                            backgroundColor: isUsed ? `${color}50` : color, // Полупрозрачный фон для занятых
+                                            border: isSelected
+                                                ? '3px solid #1976d2'
+                                                : isUsed
+                                                    ? 'none'
+                                                    : '2px solid #E0E0E0',
                                             cursor: isUsed ? 'not-allowed' : 'pointer',
-                                            opacity: isUsed ? 0.3 : 1,
                                             position: 'relative',
                                             transition: 'all 0.2s ease',
+                                            boxShadow: isUsed ? `0 0 0 3px ${color}` : 'none',
                                             '&:hover': {
                                                 transform: !isUsed ? 'scale(1.1)' : 'none',
-                                                boxShadow: !isUsed ? '0 4px 8px rgba(0,0,0,0.2)' : 'none'
+                                                boxShadow: !isUsed ? '0 4px 8px rgba(0,0,0,0.2)' : `0 0 0 3px ${color}`
                                             }
                                         }}
                                     >
