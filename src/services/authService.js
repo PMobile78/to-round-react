@@ -19,7 +19,6 @@ export const createUser = async (email, password, displayName = '') => {
             await updateProfile(user, { displayName });
         }
 
-        console.log('User created successfully:', user.email);
         return { success: true, user };
     } catch (error) {
         console.error('Error creating user:', error);
@@ -32,7 +31,6 @@ export const loginUser = async (email, password) => {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        console.log('User logged in successfully:', user.email);
         return { success: true, user };
     } catch (error) {
         console.error('Error logging in:', error);
@@ -44,7 +42,6 @@ export const loginUser = async (email, password) => {
 export const logoutUser = async () => {
     try {
         await signOut(auth);
-        console.log('User logged out successfully');
         return { success: true };
     } catch (error) {
         console.error('Error logging out:', error);
@@ -56,7 +53,6 @@ export const logoutUser = async () => {
 export const resetPassword = async (email) => {
     try {
         await sendPasswordResetEmail(auth, email);
-        console.log('Password reset email sent');
         return { success: true };
     } catch (error) {
         console.error('Error sending password reset email:', error);

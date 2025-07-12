@@ -49,7 +49,6 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             userId
         });
 
-        console.log('Bubbles content saved to Firestore successfully for user:', userId);
     } catch (error) {
         console.error('Error saving bubbles to Firestore:', error);
         // Fallback to localStorage with user-specific key
@@ -77,7 +76,6 @@ export const loadBubblesFromFirestore = async () => {
             const data = docSnap.data();
             return data.bubbles || [];
         }
-        console.log('No bubbles document found in Firestore for user:', userId);
         // Fallback to localStorage with user-specific key
         const stored = localStorage.getItem(`bubbles_${userId}`);
         return stored ? JSON.parse(stored) : [];
@@ -95,7 +93,6 @@ export const clearBubblesFromFirestore = async () => {
         const userId = getUserDocumentId();
         const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
         await deleteDoc(bubblesRef);
-        console.log('Bubbles cleared from Firestore successfully for user:', userId);
     } catch (error) {
         console.error('Error clearing bubbles from Firestore:', error);
         // Fallback to localStorage
@@ -116,7 +113,6 @@ export const saveTagsToFirestore = async (tagsData) => {
             userId
         });
 
-        console.log('Tags saved to Firestore successfully for user:', userId);
     } catch (error) {
         console.error('Error saving tags to Firestore:', error);
         // Fallback to localStorage with user-specific key
@@ -133,10 +129,8 @@ export const loadTagsFromFirestore = async () => {
 
         if (docSnap.exists()) {
             const data = docSnap.data();
-            console.log('Tags loaded from Firestore successfully for user:', userId);
             return data.tags || [];
         }
-        console.log('No tags document found in Firestore for user:', userId);
         // Fallback to localStorage with user-specific key
         const stored = localStorage.getItem(`tags_${userId}`);
         return stored ? JSON.parse(stored) : [];

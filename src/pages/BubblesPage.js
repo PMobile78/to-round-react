@@ -732,9 +732,9 @@ const BubblesPage = ({ user }) => {
     // Функция подтверждения выхода
     const confirmLogout = async () => {
         const result = await logoutUser();
-        if (result.success) {
-            console.log('User logged out successfully');
-        }
+        // if (result.success) {
+        // console.log('User logged out successfully');
+        // }
         setLogoutDialog(false);
     };
 
@@ -873,6 +873,22 @@ const BubblesPage = ({ user }) => {
                         <Button
                             variant="contained"
                             onClick={openCreateDialog}
+                            startIcon={<Add />}
+                            sx={{
+                                background: 'rgba(255,255,255,0.2)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255,255,255,0.3)',
+                                color: 'white',
+                                '&:hover': {
+                                    background: 'rgba(255,255,255,0.3)'
+                                }
+                            }}
+                        >
+                            {t('bubbles.addBubble')}
+                        </Button>
+                        {/* <Button
+                            variant="contained"
+                            onClick={openCreateDialog}
                             sx={{
                                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                                 '&:hover': {
@@ -881,7 +897,7 @@ const BubblesPage = ({ user }) => {
                             }}
                         >
                             {t('bubbles.addBubble')}
-                        </Button>
+                        </Button> */}
                     </Box>
                 </>
             ) : (
