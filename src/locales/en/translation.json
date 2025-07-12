@@ -2,7 +2,6 @@
     "bubbles": {
         "title": "Interactive Bubbles",
         "addBubble": "Add Bubble",
-        "clearAll": "Clear All",
         "editBubble": "Edit Bubble",
         "deleteBubble": "Delete Bubble",
         "save": "Save",
@@ -36,6 +35,7 @@
         "selectTags": "Select Tags",
         "chooseCategoriesText": "Choose the task categories that you want to see.",
         "selectAll": "Select All",
+        "clearAll": "Clear All",
         "deselectAll": "Deselect All",
         "menu": "Menu",
         "taskCategories": "Tasks categories",
@@ -85,7 +85,8 @@
         "sortDescending": "Sort descending",
         "chooseCategoriesForList": "Choose categories for task list filtering.",
         "additionalFilters": "Additional Filters",
-        "filterHelpText": "Use categories to organize and find your tasks faster."
+        "filterHelpText": "Use categories to organize and find your tasks faster.",
+        "noTagsAvailable": "No tags available"
     },
     "auth": {
         "welcome": "Welcome",

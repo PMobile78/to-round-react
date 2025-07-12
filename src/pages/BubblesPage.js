@@ -30,7 +30,7 @@ import {
     Divider,
 
 } from '@mui/material';
-import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward, KeyboardArrowDown } from '@mui/icons-material';
+import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
@@ -49,6 +49,8 @@ import {
     getBubblesByStatus,
     cleanupOldDeletedBubbles
 } from '../services/firestoreService';
+
+import { FilterMenu } from '../components/FilterMenu';
 
 // Auto-cleanup period for deleted tasks (30 days)
 const DELETED_TASKS_CLEANUP_DAYS = 30;
@@ -111,7 +113,7 @@ const BubblesPage = ({ user }) => {
     const [listSortOrder, setListSortOrder] = useState('desc'); // 'asc', 'desc'
     const [listFilterTags, setListFilterTags] = useState([]); // Массив ID выбранных тегов для фильтрации в списке
     const [listShowNoTag, setListShowNoTag] = useState(true); // Показывать ли задачи без тегов в списке
-    const [categoriesMenuAnchor, setCategoriesMenuAnchor] = useState(null); // Якорь для меню выбора категорий
+
     const [showInstructions, setShowInstructions] = useState(() => {
         const saved = localStorage.getItem('bubbles-show-instructions');
         return saved === null ? true : saved === 'true';
@@ -505,19 +507,7 @@ const BubblesPage = ({ user }) => {
         });
     }, [bubbles, filterTags, showNoTag]);
 
-    // Handle clicks outside categories menu
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (categoriesMenuAnchor && !event.target.closest('[data-categories-menu]')) {
-                setCategoriesMenuAnchor(null);
-            }
-        };
 
-        if (categoriesMenuAnchor) {
-            document.addEventListener('mousedown', handleClickOutside);
-            return () => document.removeEventListener('mousedown', handleClickOutside);
-        }
-    }, [categoriesMenuAnchor]);
 
     // Bubble creation function
     const createBubble = (x, y, radius, tagId = null) => {
@@ -1232,155 +1222,16 @@ const BubblesPage = ({ user }) => {
                     flexDirection: isMobile ? 'column' : 'row'
                 }}>
                     {/* Categories filter */}
-                    <Box sx={{ width: isMobile ? '100%' : 280, position: 'relative' }} data-categories-menu>
-                        <Button
-                            variant="outlined"
-                            onClick={(e) => setCategoriesMenuAnchor(e.currentTarget)}
-                            endIcon={<KeyboardArrowDown />}
-                            sx={{
-                                width: '100%',
-                                justifyContent: 'space-between',
-                                textTransform: 'none',
-                                padding: '8px 12px',
-                                borderRadius: 1,
-                                '& .MuiButton-endIcon': {
-                                    transform: Boolean(categoriesMenuAnchor) ? 'rotate(180deg)' : 'rotate(0deg)',
-                                    transition: 'transform 0.2s ease'
-                                }
-                            }}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden' }}>
-                                {(listFilterTags.length > 0 || listShowNoTag) ? (
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, overflow: 'hidden' }}>
-                                        {listShowNoTag && (
-                                            <Chip
-                                                label={t('bubbles.noTag')}
-                                                size="small"
-                                                sx={{
-                                                    backgroundColor: '#B0B0B0',
-                                                    color: 'white',
-                                                    height: 20,
-                                                    fontSize: '0.7rem'
-                                                }}
-                                            />
-                                        )}
-                                        {listFilterTags.slice(0, 2).map((tagId) => {
-                                            const tag = tags.find(t => t.id === tagId);
-                                            return tag ? (
-                                                <Chip
-                                                    key={tagId}
-                                                    label={tag.name}
-                                                    size="small"
-                                                    sx={{
-                                                        backgroundColor: tag.color,
-                                                        color: 'white',
-                                                        height: 20,
-                                                        fontSize: '0.7rem'
-                                                    }}
-                                                />
-                                            ) : null;
-                                        })}
-                                        {listFilterTags.length > 2 && (
-                                            <Chip
-                                                label={`+${listFilterTags.length - 2}`}
-                                                size="small"
-                                                sx={{
-                                                    backgroundColor: '#E0E0E0',
-                                                    color: '#666',
-                                                    height: 20,
-                                                    fontSize: '0.7rem'
-                                                }}
-                                            />
-                                        )}
-                                    </Box>
-                                ) : (
-                                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                        {t('bubbles.categories')}
-                                    </Typography>
-                                )}
-                            </Box>
-                        </Button>
-                        {Boolean(categoriesMenuAnchor) && (
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: 0,
-                                    width: 280,
-                                    backgroundColor: 'white',
-                                    borderRadius: 1,
-                                    boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.15)',
-                                    border: '1px solid #E0E0E0',
-                                    zIndex: 1000,
-                                    maxHeight: 300,
-                                    overflowY: 'auto',
-                                    marginTop: 0.5
-                                }}
-                            >
-                                <Box
-                                    onClick={() => {
-                                        setListShowNoTag(!listShowNoTag);
-                                    }}
-                                    sx={{
-                                        padding: '12px 16px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1.5,
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            backgroundColor: '#F5F5F5'
-                                        }
-                                    }}
-                                >
-                                    <Checkbox checked={listShowNoTag} size="small" />
-                                    <Box
-                                        sx={{
-                                            width: 16,
-                                            height: 16,
-                                            borderRadius: '50%',
-                                            backgroundColor: '#B0B0B0',
-                                            border: '1px solid #ccc'
-                                        }}
-                                    />
-                                    <Typography variant="body2">{t('bubbles.noTag')}</Typography>
-                                </Box>
-                                {tags.map((tag) => (
-                                    <Box
-                                        key={tag.id}
-                                        onClick={() => {
-                                            if (listFilterTags.includes(tag.id)) {
-                                                setListFilterTags(listFilterTags.filter(id => id !== tag.id));
-                                            } else {
-                                                setListFilterTags([...listFilterTags, tag.id]);
-                                            }
-                                        }}
-                                        sx={{
-                                            padding: '12px 16px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 1.5,
-                                            cursor: 'pointer',
-                                            '&:hover': {
-                                                backgroundColor: '#F5F5F5'
-                                            }
-                                        }}
-                                    >
-                                        <Checkbox checked={listFilterTags.includes(tag.id)} size="small" />
-                                        <Box
-                                            sx={{
-                                                width: 16,
-                                                height: 16,
-                                                borderRadius: '50%',
-                                                backgroundColor: tag.color,
-                                                border: '1px solid #ccc'
-                                            }}
-                                        />
-                                        <Typography variant="body2">{tag.name}</Typography>
-                                    </Box>
-                                ))}
-                            </Box>
-                        )}
-                    </Box>
+                    <CustomizedMenus
+                        tags={tags}
+                        filterTags={listFilterTags}
+                        showNoTag={listShowNoTag}
+                        onTagFilterChange={handleListTagFilterChange}
+                        onNoTagFilterChange={handleListNoTagFilterChange}
+                        onSelectAll={selectAllListFilters}
+                        onClearAll={clearAllListFilters}
+                        getBubbleCountByTag={getBubbleCountByTag}
+                    />
 
                     {/* Sort controls */}
                     <Box sx={{
