@@ -71,6 +71,11 @@ const BubblesPage = ({ user }) => {
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
     const [categoriesDialog, setCategoriesDialog] = useState(false); // Диалог управления категориями
+    const [fontSettingsDialog, setFontSettingsDialog] = useState(false); // Диалог настроек шрифта
+    const [fontSize, setFontSize] = useState(() => {
+        const savedFontSize = localStorage.getItem('bubbles-font-size');
+        return savedFontSize ? parseInt(savedFontSize) : 12;
+    }); // Размер шрифта для надписей в пузырях
 
     // Note: Functions moved to firestoreService.js for better organization
 
@@ -724,6 +729,12 @@ const BubblesPage = ({ user }) => {
         }
     };
 
+    // Функция для сохранения настроек шрифта
+    const handleFontSizeChange = (newSize) => {
+        setFontSize(newSize);
+        localStorage.setItem('bubbles-font-size', newSize.toString());
+    };
+
     // Компонент для отображения текста поверх пузырей
     const TextOverlay = () => {
         const [positions, setPositions] = useState([]);
@@ -797,8 +808,8 @@ const BubblesPage = ({ user }) => {
                             <Typography
                                 sx={{
                                     fontSize: Math.max(
-                                        isMobile ? 9 : 10,
-                                        Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? 14 : 15)
+                                        isMobile ? fontSize * 0.75 : fontSize,
+                                        Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? fontSize * 1.2 : fontSize * 1.3)
                                     ),
                                     fontWeight: 'bold',
                                     lineHeight: 1.1,
@@ -1372,12 +1383,12 @@ const BubblesPage = ({ user }) => {
                             />
                         </ListItem>
 
-                        {/* Settings */}
+                        {/* Font Settings */}
                         <ListItem
                             button
                             onClick={() => {
                                 setMenuDrawerOpen(false);
-                                // TODO: Добавить логику для настроек
+                                setFontSettingsDialog(true);
                             }}
                             sx={{
                                 padding: '16px 24px',
@@ -1391,7 +1402,7 @@ const BubblesPage = ({ user }) => {
                                 <Settings sx={{ color: '#BDC3C7' }} />
                             </ListItemIcon>
                             <ListItemText
-                                primary={t('bubbles.settings')}
+                                primary={t('bubbles.fontSettings')}
                                 primaryTypographyProps={{
                                     color: '#2C3E50',
                                     fontWeight: 500
@@ -1803,6 +1814,132 @@ const BubblesPage = ({ user }) => {
                         fullWidth={isSmallScreen}
                     >
                         {t('bubbles.cancel')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Диалог настроек шрифта */}
+            <Dialog
+                open={fontSettingsDialog}
+                onClose={() => setFontSettingsDialog(false)}
+                maxWidth="sm"
+                fullWidth
+                fullScreen={isSmallScreen}
+                PaperProps={{
+                    sx: {
+                        borderRadius: isSmallScreen ? 0 : 3,
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        margin: isMobile ? 1 : 3
+                    }
+                }}
+            >
+                <DialogTitle sx={{
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    {t('bubbles.fontSettings')}
+                    <IconButton
+                        onClick={() => setFontSettingsDialog(false)}
+                        sx={{ color: 'white' }}
+                    >
+                        <CloseOutlined />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ padding: isMobile ? 2 : 3 }}>
+                    <Typography variant="h6" gutterBottom>
+                        {t('bubbles.fontSizeLabel')}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 3 }}>
+                        <Typography variant="body2" sx={{ minWidth: 40 }}>
+                            {t('bubbles.small')}
+                        </Typography>
+                        <Box sx={{ flex: 1 }}>
+                            <Box
+                                component="input"
+                                type="range"
+                                min="8"
+                                max="20"
+                                value={fontSize}
+                                onChange={(e) => handleFontSizeChange(parseInt(e.target.value))}
+                                sx={{
+                                    width: '100%',
+                                    height: 6,
+                                    borderRadius: 3,
+                                    appearance: 'none',
+                                    backgroundColor: '#E0E0E0',
+                                    outline: 'none',
+                                    cursor: 'pointer',
+                                    background: `linear-gradient(to right, #1976d2 0%, #1976d2 ${((fontSize - 8) / 12) * 100}%, #E0E0E0 ${((fontSize - 8) / 12) * 100}%, #E0E0E0 100%)`,
+                                    '&::-webkit-slider-thumb': {
+                                        appearance: 'none',
+                                        width: 20,
+                                        height: 20,
+                                        borderRadius: '50%',
+                                        backgroundColor: '#1976d2',
+                                        cursor: 'pointer',
+                                        border: '2px solid white',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                    },
+                                    '&::-moz-range-thumb': {
+                                        width: 20,
+                                        height: 20,
+                                        borderRadius: '50%',
+                                        backgroundColor: '#1976d2',
+                                        cursor: 'pointer',
+                                        border: '2px solid white',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                    }
+                                }}
+                            />
+                        </Box>
+                        <Typography variant="body2" sx={{ minWidth: 40 }}>
+                            {t('bubbles.large')}
+                        </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 2 }}>
+                        {t('bubbles.currentSize')}: {fontSize}px
+                    </Typography>
+
+                    {/* Предварительный просмотр */}
+                    <Box sx={{
+                        border: '1px solid #E0E0E0',
+                        borderRadius: 2,
+                        padding: 2,
+                        backgroundColor: '#F5F5F5',
+                        textAlign: 'center',
+                        minHeight: 60,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <Typography sx={{
+                            fontSize: isMobile ? fontSize * 0.75 : fontSize,
+                            fontWeight: 'bold',
+                            color: '#2C3E50'
+                        }}>
+                            {t('bubbles.previewText')}
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ padding: isMobile ? 2 : 3 }}>
+                    <Button
+                        onClick={() => setFontSettingsDialog(false)}
+                        color="inherit"
+                        fullWidth={isSmallScreen}
+                    >
+                        {t('bubbles.close')}
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            handleFontSizeChange(12); // Сброс к значению по умолчанию
+                        }}
+                        variant="outlined"
+                        fullWidth={isSmallScreen}
+                    >
+                        {t('bubbles.reset')}
                     </Button>
                 </DialogActions>
             </Dialog>

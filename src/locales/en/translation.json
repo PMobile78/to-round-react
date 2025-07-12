@@ -40,7 +40,15 @@
         "noCategoriesYet": "No categories yet",
         "createFirstCategory": "Create your first category to organize your tasks",
         "bubble": "bubble",
-        "bubbles": "bubbles"
+        "bubbles": "bubbles",
+        "fontSettings": "Font Settings",
+        "fontSizeLabel": "Font Size",
+        "small": "Small",
+        "large": "Large",
+        "currentSize": "Current size",
+        "previewText": "Sample Text",
+        "close": "Close",
+        "reset": "Reset"
     },
     "auth": {
         "welcome": "Welcome",
