@@ -8,7 +8,9 @@ import {
     query,
     orderBy,
     serverTimestamp,
-    onSnapshot
+    onSnapshot,
+    where,
+    writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getCurrentUser } from './authService';
@@ -26,6 +28,17 @@ const getUserDocumentId = () => {
 const BUBBLES_COLLECTION = 'user-bubbles';
 const TAGS_COLLECTION = 'user-tags';
 
+// Bubble statuses
+export const BUBBLE_STATUS = {
+    ACTIVE: 'active',
+    DONE: 'done',
+    POSTPONE: 'postpone',
+    DELETED: 'deleted'
+};
+
+// Auto-cleanup period (30 days in milliseconds)
+const CLEANUP_PERIOD = 30 * 24 * 60 * 60 * 1000;
+
 // Bubbles operations
 export const saveBubblesToFirestore = async (bubblesData) => {
     try {
@@ -40,7 +53,11 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             description: bubble.description || '',
             fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
             strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
-            tagId: bubble.tagId || null
+            tagId: bubble.tagId || null,
+            status: bubble.status || BUBBLE_STATUS.ACTIVE,
+            createdAt: bubble.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            deletedAt: bubble.deletedAt || null
         }));
 
         await setDoc(bubblesRef, {
@@ -60,7 +77,11 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             description: bubble.description || '',
             fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
             strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
-            tagId: bubble.tagId || null
+            tagId: bubble.tagId || null,
+            status: bubble.status || BUBBLE_STATUS.ACTIVE,
+            createdAt: bubble.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            deletedAt: bubble.deletedAt || null
         }));
         localStorage.setItem(`bubbles_${userId}`, JSON.stringify(bubblesForStorage));
     }
@@ -99,6 +120,92 @@ export const clearBubblesFromFirestore = async () => {
         const userId = getCurrentUser()?.uid || 'anonymous';
         localStorage.removeItem(`bubbles_${userId}`);
     }
+};
+
+// Update bubble status
+export const updateBubbleStatus = async (bubbleId, newStatus, bubblesData) => {
+    try {
+        const updatedBubbles = bubblesData.map(bubble => {
+            if (bubble.id === bubbleId) {
+                const updatedBubble = {
+                    ...bubble,
+                    status: newStatus,
+                    updatedAt: new Date().toISOString()
+                };
+
+                // Set deletedAt when status is deleted
+                if (newStatus === BUBBLE_STATUS.DELETED) {
+                    updatedBubble.deletedAt = new Date().toISOString();
+                } else if (bubble.status === BUBBLE_STATUS.DELETED && newStatus !== BUBBLE_STATUS.DELETED) {
+                    // Clear deletedAt when restoring from deleted
+                    updatedBubble.deletedAt = null;
+                }
+
+                return updatedBubble;
+            }
+            return bubble;
+        });
+
+        await saveBubblesToFirestore(updatedBubbles);
+        return updatedBubbles;
+    } catch (error) {
+        console.error('Error updating bubble status:', error);
+        throw error;
+    }
+};
+
+// Get bubbles by status
+export const getBubblesByStatus = (bubblesData, status) => {
+    if (!status) return bubblesData;
+    return bubblesData.filter(bubble => bubble.status === status);
+};
+
+// Auto-cleanup old deleted bubbles
+export const cleanupOldDeletedBubbles = async (bubblesData) => {
+    try {
+        const currentTime = Date.now();
+        const filteredBubbles = bubblesData.filter(bubble => {
+            // Keep non-deleted bubbles
+            if (bubble.status !== BUBBLE_STATUS.DELETED) {
+                return true;
+            }
+
+            // Keep deleted bubbles that are newer than 30 days
+            if (bubble.deletedAt) {
+                const deletedTime = new Date(bubble.deletedAt).getTime();
+                return (currentTime - deletedTime) < CLEANUP_PERIOD;
+            }
+
+            // Keep bubbles without deletedAt (shouldn't happen, but just in case)
+            return true;
+        });
+
+        // Only update if we actually removed some bubbles
+        if (filteredBubbles.length < bubblesData.length) {
+            await saveBubblesToFirestore(filteredBubbles);
+            return filteredBubbles;
+        }
+
+        return bubblesData;
+    } catch (error) {
+        console.error('Error cleaning up old deleted bubbles:', error);
+        return bubblesData;
+    }
+};
+
+// Mark bubble as done
+export const markBubbleAsDone = async (bubbleId, bubblesData) => {
+    return await updateBubbleStatus(bubbleId, BUBBLE_STATUS.DONE, bubblesData);
+};
+
+// Mark bubble as deleted
+export const markBubbleAsDeleted = async (bubbleId, bubblesData) => {
+    return await updateBubbleStatus(bubbleId, BUBBLE_STATUS.DELETED, bubblesData);
+};
+
+// Restore bubble from deleted
+export const restoreBubble = async (bubbleId, bubblesData) => {
+    return await updateBubbleStatus(bubbleId, BUBBLE_STATUS.ACTIVE, bubblesData);
 };
 
 // Tags operations

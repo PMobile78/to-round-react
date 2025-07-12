@@ -29,7 +29,7 @@ import {
     ListItem,
     Divider,
 } from '@mui/material';
-import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell } from '@mui/icons-material';
+import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
@@ -40,7 +40,13 @@ import {
     clearBubblesFromFirestore,
     saveTagsToFirestore,
     loadTagsFromFirestore,
-    subscribeToTagsUpdates
+    subscribeToTagsUpdates,
+    BUBBLE_STATUS,
+    markBubbleAsDone,
+    markBubbleAsDeleted,
+    restoreBubble,
+    getBubblesByStatus,
+    cleanupOldDeletedBubbles
 } from '../services/firestoreService';
 
 const BubblesPage = ({ user }) => {
@@ -93,6 +99,8 @@ const BubblesPage = ({ user }) => {
         return savedFontSize ? parseInt(savedFontSize) : 12;
     }); // Размер шрифта для надписей в пузырях
     const [logoutDialog, setLogoutDialog] = useState(false); // Диалог подтверждения выхода
+    const [viewMode, setViewMode] = useState('bubbles'); // 'bubbles' или 'list'
+    const [listFilter, setListFilter] = useState('active'); // 'active', 'done', 'postpone', 'deleted'
 
     // Note: Functions moved to firestoreService.js for better organization
 
@@ -174,9 +182,12 @@ const BubblesPage = ({ user }) => {
                 const initialBubbles = [];
 
                 if (storedBubbles.length > 0) {
+                    // Auto-cleanup old deleted bubbles
+                    const cleanedBubbles = await cleanupOldDeletedBubbles(storedBubbles);
+
                     // Restore bubbles from Firestore with random positions
                     const margin = isMobile ? 50 : 100;
-                    storedBubbles.forEach(storedBubble => {
+                    cleanedBubbles.forEach(storedBubble => {
                         // Create bubbles with random coordinates
                         const x = Math.random() * (canvasSize.width - margin * 2) + margin;
                         const y = Math.random() * (canvasSize.height - margin * 2) + margin;
@@ -195,7 +206,11 @@ const BubblesPage = ({ user }) => {
                             radius: storedBubble.radius,
                             title: storedBubble.title || '',
                             description: storedBubble.description || '',
-                            tagId: storedBubble.tagId || null
+                            tagId: storedBubble.tagId || null,
+                            status: storedBubble.status || BUBBLE_STATUS.ACTIVE,
+                            createdAt: storedBubble.createdAt || new Date().toISOString(),
+                            updatedAt: storedBubble.updatedAt || new Date().toISOString(),
+                            deletedAt: storedBubble.deletedAt || null
                         };
                         initialBubbles.push(bubble);
                     });
@@ -441,7 +456,7 @@ const BubblesPage = ({ user }) => {
 
     // Filter bubbles visibility based on selected filters
     useEffect(() => {
-        if (!engineRef.current) return;
+        if (!engineRef.current || viewMode !== 'bubbles') return;
 
         const filteredBubbles = getFilteredBubbles();
         const filteredIds = new Set(filteredBubbles.map(b => b.id));
@@ -460,7 +475,7 @@ const BubblesPage = ({ user }) => {
                 }
             }
         });
-    }, [bubbles, filterTags, showNoTag]);
+    }, [bubbles, filterTags, showNoTag, viewMode]);
 
     // Bubble creation function
     const createBubble = (x, y, radius, tagId = null) => {
@@ -490,29 +505,47 @@ const BubblesPage = ({ user }) => {
             title: '',
             description: '',
             tagId,
+            status: BUBBLE_STATUS.ACTIVE,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            deletedAt: null,
         };
     };
 
     // Function for filtering bubbles
     const getFilteredBubbles = () => {
-        // Check if all tags are selected and showNoTag is true - show all bubbles
-        const allTagsSelected = tags.length > 0 && filterTags.length === tags.length && showNoTag;
-
-        if (allTagsSelected) {
-            return bubbles; // Показать все пузыри
+        // In bubbles mode, only show active bubbles
+        let filteredByStatus = bubbles;
+        if (viewMode === 'bubbles') {
+            filteredByStatus = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
+        } else {
+            // In list mode, filter by selected status
+            filteredByStatus = getBubblesByStatus(bubbles, listFilter);
         }
 
-        return bubbles.filter(bubble => {
-            // Если выбраны теги и пузырь имеет один из выбранных тегов
-            if (filterTags.length > 0 && bubble.tagId && filterTags.includes(bubble.tagId)) {
-                return true;
+        // Apply tag filters only in bubbles mode
+        if (viewMode === 'bubbles') {
+            // Check if all tags are selected and showNoTag is true - show all bubbles
+            const allTagsSelected = tags.length > 0 && filterTags.length === tags.length && showNoTag;
+
+            if (allTagsSelected) {
+                return filteredByStatus; // Показать все активные пузыри
             }
-            // Если включен фильтр "No Tag" и у пузыря нет тега
-            if (showNoTag && !bubble.tagId) {
-                return true;
-            }
-            return false;
-        });
+
+            return filteredByStatus.filter(bubble => {
+                // Если выбраны теги и пузырь имеет один из выбранных тегов
+                if (filterTags.length > 0 && bubble.tagId && filterTags.includes(bubble.tagId)) {
+                    return true;
+                }
+                // Если включен фильтр "No Tag" и у пузыря нет тега
+                if (showNoTag && !bubble.tagId) {
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        return filteredByStatus;
     };
 
     // Function for opening create bubble dialog
@@ -563,7 +596,13 @@ const BubblesPage = ({ user }) => {
             setBubbles(prev => {
                 const updatedBubbles = prev.map(bubble => {
                     if (bubble.id === selectedBubble.id) {
-                        const updatedBubble = { ...bubble, title, description, tagId: selectedTagId || null };
+                        const updatedBubble = {
+                            ...bubble,
+                            title,
+                            description,
+                            tagId: selectedTagId || null,
+                            updatedAt: new Date().toISOString()
+                        };
 
                         // Update border color based on tag
                         if (selectedTagId) {
@@ -590,18 +629,39 @@ const BubblesPage = ({ user }) => {
         setDescription('');
     };
 
-    // Delete bubble
-    const handleDeleteBubble = () => {
+    // Delete bubble (mark as deleted)
+    const handleDeleteBubble = async () => {
         if (selectedBubble && engineRef.current) {
-            // Remove from Matter.js world
-            Matter.World.remove(engineRef.current.world, selectedBubble.body);
+            try {
+                // Remove from Matter.js world
+                Matter.World.remove(engineRef.current.world, selectedBubble.body);
 
-            // Remove from state
-            setBubbles(prev => {
-                const updatedBubbles = prev.filter(bubble => bubble.id !== selectedBubble.id);
-                saveBubblesToFirestore(updatedBubbles);
-                return updatedBubbles;
-            });
+                // Mark as deleted in Firestore
+                const updatedBubbles = await markBubbleAsDeleted(selectedBubble.id, bubbles);
+                setBubbles(updatedBubbles);
+            } catch (error) {
+                console.error('Error deleting bubble:', error);
+            }
+        }
+        setEditDialog(false);
+        setSelectedBubble(null);
+        setTitle('');
+        setDescription('');
+    };
+
+    // Mark bubble as done
+    const handleMarkAsDone = async () => {
+        if (selectedBubble && engineRef.current) {
+            try {
+                // Remove from Matter.js world
+                Matter.World.remove(engineRef.current.world, selectedBubble.body);
+
+                // Mark as done in Firestore
+                const updatedBubbles = await markBubbleAsDone(selectedBubble.id, bubbles);
+                setBubbles(updatedBubbles);
+            } catch (error) {
+                console.error('Error marking bubble as done:', error);
+            }
         }
         setEditDialog(false);
         setSelectedBubble(null);
@@ -888,6 +948,201 @@ const BubblesPage = ({ user }) => {
         );
     };
 
+    // ListView component
+    const ListView = () => {
+        const getStatusIcon = (status) => {
+            switch (status) {
+                case BUBBLE_STATUS.DONE:
+                    return <CheckCircle sx={{ color: '#4CAF50' }} />;
+                case BUBBLE_STATUS.DELETED:
+                    return <DeleteOutlined sx={{ color: '#F44336' }} />;
+                case BUBBLE_STATUS.POSTPONE:
+                    return <LocalOffer sx={{ color: '#FF9800' }} />;
+                default:
+                    // return <Bubble sx={{ color: '#2196F3' }} />;
+                    return <Check sx={{ color: '#2196F3' }} />;
+            }
+        };
+
+        const getStatusColor = (status) => {
+            switch (status) {
+                case BUBBLE_STATUS.DONE:
+                    return '#E8F5E8';
+                case BUBBLE_STATUS.DELETED:
+                    return '#FFEBEE';
+                case BUBBLE_STATUS.POSTPONE:
+                    return '#FFF3E0';
+                default:
+                    return '#E3F2FD';
+            }
+        };
+
+        const getTasksByStatus = (status) => {
+            if (status === 'active') {
+                return bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
+            } else if (status === 'done') {
+                return bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.DONE);
+            } else if (status === 'postpone') {
+                return bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.POSTPONE);
+            } else if (status === 'deleted') {
+                return bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.DELETED);
+            }
+            return [];
+        };
+
+        const formatDate = (dateString) => {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        };
+
+        const handleRestoreBubble = async (bubbleId) => {
+            try {
+                const updatedBubbles = await restoreBubble(bubbleId, bubbles);
+                setBubbles(updatedBubbles);
+            } catch (error) {
+                console.error('Error restoring bubble:', error);
+            }
+        };
+
+        const tasks = getTasksByStatus(listFilter);
+        const isEmpty = tasks.length === 0;
+
+        return (
+            <Box sx={{ padding: 2, height: '100%', overflow: 'auto' }}>
+                {/* Filter tabs */}
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    marginBottom: 3,
+                    flexWrap: 'wrap',
+                    gap: 1
+                }}>
+                    {[
+                        { key: 'active', label: t('bubbles.activeTasks'), count: getTasksByStatus('active').length },
+                        { key: 'done', label: t('bubbles.doneTasks'), count: getTasksByStatus('done').length },
+                        { key: 'postpone', label: t('bubbles.postponedTasks'), count: getTasksByStatus('postpone').length },
+                        { key: 'deleted', label: t('bubbles.deletedTasks'), count: getTasksByStatus('deleted').length }
+                    ].map(tab => (
+                        <Button
+                            key={tab.key}
+                            variant={listFilter === tab.key ? 'contained' : 'outlined'}
+                            onClick={() => setListFilter(tab.key)}
+                            sx={{
+                                borderRadius: 20,
+                                paddingX: 2,
+                                paddingY: 1,
+                                textTransform: 'none',
+                                minWidth: 'auto',
+                                fontSize: isMobile ? '0.8rem' : '0.9rem'
+                            }}
+                        >
+                            {tab.label} ({tab.count})
+                        </Button>
+                    ))}
+                </Box>
+
+                {/* Tasks list */}
+                {isEmpty ? (
+                    <Box sx={{
+                        textAlign: 'center',
+                        padding: 4,
+                        color: 'text.secondary'
+                    }}>
+                        <Typography variant="h6" gutterBottom>
+                            {listFilter === 'active' && t('bubbles.noActiveTasks')}
+                            {listFilter === 'done' && t('bubbles.noDoneTasks')}
+                            {listFilter === 'postpone' && t('bubbles.noPostponedTasks')}
+                            {listFilter === 'deleted' && t('bubbles.noDeletedTasks')}
+                        </Typography>
+                    </Box>
+                ) : (
+                    <List sx={{ padding: 0 }}>
+                        {tasks.map((task, index) => {
+                            const tag = task.tagId ? tags.find(t => t.id === task.tagId) : null;
+
+                            return (
+                                <ListItem
+                                    key={task.id}
+                                    sx={{
+                                        marginBottom: 1,
+                                        padding: 2,
+                                        borderRadius: 2,
+                                        backgroundColor: getStatusColor(task.status),
+                                        border: '1px solid #E0E0E0'
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', gap: 2 }}>
+                                        {/* Status icon */}
+                                        <Box sx={{ paddingTop: 0.5 }}>
+                                            {getStatusIcon(task.status)}
+                                        </Box>
+
+                                        {/* Task content */}
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant="h6" sx={{ marginBottom: 1 }}>
+                                                {task.title || t('bubbles.empty')}
+                                            </Typography>
+
+                                            {task.description && (
+                                                <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
+                                                    {task.description}
+                                                </Typography>
+                                            )}
+
+                                            {/* Tag */}
+                                            {tag && (
+                                                <Chip
+                                                    label={tag.name}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: tag.color,
+                                                        color: 'white',
+                                                        marginBottom: 1
+                                                    }}
+                                                />
+                                            )}
+
+                                            {/* Dates */}
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {t('bubbles.createdAt')}: {formatDate(task.createdAt)}
+                                                </Typography>
+                                                {task.updatedAt && task.updatedAt !== task.createdAt && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {t('bubbles.updatedAt')}: {formatDate(task.updatedAt)}
+                                                    </Typography>
+                                                )}
+                                                {task.deletedAt && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {t('bubbles.deletedAt')}: {formatDate(task.deletedAt)}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        </Box>
+
+                                        {/* Actions */}
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                            {task.status === BUBBLE_STATUS.DELETED && (
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleRestoreBubble(task.id)}
+                                                    sx={{ color: 'primary.main' }}
+                                                >
+                                                    <Restore />
+                                                </IconButton>
+                                            )}
+                                        </Box>
+                                    </Box>
+                                </ListItem>
+                            );
+                        })}
+                    </List>
+                )}
+            </Box>
+        );
+    };
+
     return (
         <Box sx={{
             width: '100vw',
@@ -1042,23 +1297,62 @@ const BubblesPage = ({ user }) => {
                 }}>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <LanguageSelector />
-                        <Button
-                            onClick={() => setFilterDrawerOpen(true)}
-                            variant="outlined"
-                            size="small"
-                            startIcon={<FilterList />}
-                            sx={{
-                                color: 'white',
-                                borderColor: 'rgba(255, 255, 255, 0.5)',
-                                backgroundColor: !isAllSelected() ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-                                '&:hover': {
-                                    borderColor: 'rgba(255, 255, 255, 0.8)',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                                }
-                            }}
-                        >
-                            {t('bubbles.filterButton')}
-                        </Button>
+                        {/* View Mode Toggle */}
+                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                            <Button
+                                onClick={() => setViewMode('bubbles')}
+                                variant={viewMode === 'bubbles' ? 'contained' : 'outlined'}
+                                size="small"
+                                startIcon={<ViewModule />}
+                                sx={{
+                                    color: 'white',
+                                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                                    backgroundColor: viewMode === 'bubbles' ? 'rgba(255, 255, 255, 0.3)' : 'transparent',
+                                    '&:hover': {
+                                        borderColor: 'rgba(255, 255, 255, 0.8)',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                    }
+                                }}
+                            >
+                                {t('bubbles.bubblesView')}
+                            </Button>
+                            <Button
+                                onClick={() => setViewMode('list')}
+                                variant={viewMode === 'list' ? 'contained' : 'outlined'}
+                                size="small"
+                                startIcon={<ViewList />}
+                                sx={{
+                                    color: 'white',
+                                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                                    backgroundColor: viewMode === 'list' ? 'rgba(255, 255, 255, 0.3)' : 'transparent',
+                                    '&:hover': {
+                                        borderColor: 'rgba(255, 255, 255, 0.8)',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                    }
+                                }}
+                            >
+                                {t('bubbles.listView')}
+                            </Button>
+                        </Box>
+                        {viewMode === 'bubbles' && (
+                            <Button
+                                onClick={() => setFilterDrawerOpen(true)}
+                                variant="outlined"
+                                size="small"
+                                startIcon={<FilterList />}
+                                sx={{
+                                    color: 'white',
+                                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                                    backgroundColor: !isAllSelected() ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                                    '&:hover': {
+                                        borderColor: 'rgba(255, 255, 255, 0.8)',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                    }
+                                }}
+                            >
+                                {t('bubbles.filterButton')}
+                            </Button>
+                        )}
                         <Button
                             onClick={handleLogout}
                             variant="outlined"
@@ -1101,18 +1395,33 @@ const BubblesPage = ({ user }) => {
                         alignItems: 'center'
                     }}>
                         <LanguageSelector />
+                        {/* View Mode Toggle for Mobile */}
                         <IconButton
-                            onClick={() => setFilterDrawerOpen(true)}
+                            onClick={() => setViewMode(viewMode === 'bubbles' ? 'list' : 'bubbles')}
                             sx={{
-                                backgroundColor: !isAllSelected() ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
                                 color: 'white',
                                 '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.4)'
+                                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
                                 }
                             }}
                         >
-                            <FilterList />
+                            {viewMode === 'bubbles' ? <ViewList /> : <ViewModule />}
                         </IconButton>
+                        {viewMode === 'bubbles' && (
+                            <IconButton
+                                onClick={() => setFilterDrawerOpen(true)}
+                                sx={{
+                                    backgroundColor: !isAllSelected() ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+                                    color: 'white',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.4)'
+                                    }
+                                }}
+                            >
+                                <FilterList />
+                            </IconButton>
+                        )}
                         <IconButton
                             onClick={handleLogout}
                             sx={{
@@ -1145,10 +1454,15 @@ const BubblesPage = ({ user }) => {
             )}
 
             {/* Canvas for physics */}
-            <div ref={canvasRef} style={{ width: '100%', height: '100%' }} />
-
-            {/* Текст поверх пузырей */}
-            <TextOverlay />
+            {viewMode === 'bubbles' ? (
+                <>
+                    <div ref={canvasRef} style={{ width: '100%', height: '100%' }} />
+                    {/* Текст поверх пузырей */}
+                    <TextOverlay />
+                </>
+            ) : (
+                <ListView />
+            )}
 
             {/* Диалог редактирования */}
             <Dialog
@@ -1256,20 +1570,39 @@ const BubblesPage = ({ user }) => {
                     flexDirection: isSmallScreen ? 'column' : 'row',
                     gap: isSmallScreen ? 1 : 0
                 }}>
-                    <Button
-                        onClick={handleDeleteBubble}
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteOutlined />}
-                        fullWidth={isSmallScreen}
-                        sx={{
-                            borderRadius: 2,
-                            minHeight: isMobile ? 48 : 36,
-                            order: isSmallScreen ? 3 : 1
-                        }}
-                    >
-                        {t('bubbles.deleteBubble')}
-                    </Button>
+                    <Box sx={{
+                        display: 'flex',
+                        gap: 1,
+                        flexDirection: isSmallScreen ? 'column' : 'row',
+                        order: isSmallScreen ? 3 : 1
+                    }}>
+                        <Button
+                            onClick={handleDeleteBubble}
+                            variant="outlined"
+                            color="error"
+                            startIcon={<DeleteOutlined />}
+                            fullWidth={isSmallScreen}
+                            sx={{
+                                borderRadius: 2,
+                                minHeight: isMobile ? 48 : 36
+                            }}
+                        >
+                            {t('bubbles.deleteBubble')}
+                        </Button>
+                        <Button
+                            onClick={handleMarkAsDone}
+                            variant="outlined"
+                            color="success"
+                            startIcon={<CheckCircle />}
+                            fullWidth={isSmallScreen}
+                            sx={{
+                                borderRadius: 2,
+                                minHeight: isMobile ? 48 : 36
+                            }}
+                        >
+                            {t('bubbles.markAsDone')}
+                        </Button>
+                    </Box>
                     <Box sx={{
                         display: 'flex',
                         gap: 1,
