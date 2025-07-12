@@ -990,15 +990,24 @@ const BubblesPage = ({ user }) => {
                 zIndex: 10
             }}>
                 {positions.map(bubble => {
-                    // Функция для ограничения длины текста в зависимости от размера пузыря
-                    const getMaxTitleLength = (radius) => {
-                        if (radius < 30) return 8;   // очень маленький пузырь
-                        if (radius < 40) return 12;  // маленький пузырь
-                        if (radius < 50) return 16;  // средний пузырь
-                        return 20;                   // большой пузырь
+                    // Функция для ограничения длины текста в зависимости от размера пузыря и шрифта
+                    const getMaxTitleLength = (radius, currentFontSize) => {
+                        // Базовые значения для шрифта 12px
+                        let baseLength;
+                        if (radius < 30) baseLength = 8;   // очень маленький пузырь
+                        else if (radius < 40) baseLength = 12;  // маленький пузырь
+                        else if (radius < 50) baseLength = 16;  // средний пузырь
+                        else baseLength = 20;                   // большой пузырь
+
+                        // Корректируем количество символов в зависимости от размера шрифта
+                        // Чем меньше шрифт, тем больше символов помещается
+                        const fontSizeRatio = 12 / currentFontSize; // 12 - базовый размер
+                        return Math.round(baseLength * fontSizeRatio);
                     };
 
-                    const maxLength = getMaxTitleLength(bubble.radius);
+                    // Вычисляем текущий размер шрифта с учетом мобильности
+                    const currentFontSize = isMobile ? fontSize * 0.75 : fontSize;
+                    const maxLength = getMaxTitleLength(bubble.radius, currentFontSize);
                     const truncatedTitle = bubble.title && bubble.title.length > maxLength
                         ? bubble.title.substring(0, maxLength) + '...'
                         : bubble.title;
