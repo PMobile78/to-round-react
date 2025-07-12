@@ -29,7 +29,7 @@ import {
     ListItem,
     Divider,
 } from '@mui/material';
-import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule } from '@mui/icons-material';
+import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
@@ -99,8 +99,13 @@ const BubblesPage = ({ user }) => {
         return savedFontSize ? parseInt(savedFontSize) : 12;
     }); // Размер шрифта для надписей в пузырях
     const [logoutDialog, setLogoutDialog] = useState(false); // Диалог подтверждения выхода
-    const [viewMode, setViewMode] = useState('bubbles'); // 'bubbles' или 'list'
+    const [listViewDialog, setListViewDialog] = useState(false); // Диалог списка задач
     const [listFilter, setListFilter] = useState('active'); // 'active', 'done', 'postpone', 'deleted'
+    const [listSortBy, setListSortBy] = useState('createdAt'); // 'createdAt', 'updatedAt', 'title', 'tag'
+    const [listSortOrder, setListSortOrder] = useState('desc'); // 'asc', 'desc'
+    const [listFilterTags, setListFilterTags] = useState([]); // Массив ID выбранных тегов для фильтрации в списке
+    const [listShowNoTag, setListShowNoTag] = useState(true); // Показывать ли задачи без тегов в списке
+    const [listFilterMenuAnchor, setListFilterMenuAnchor] = useState(null); // Якорь для выпадающего меню фильтра списка
     const [showInstructions, setShowInstructions] = useState(() => {
         const saved = localStorage.getItem('bubbles-show-instructions');
         return saved === null ? true : saved === 'true';
@@ -439,6 +444,19 @@ const BubblesPage = ({ user }) => {
                 return [...validFilterTags, ...newTags];
             });
 
+            // Initialize list filter with all tag IDs by default (only on first load)
+            setListFilterTags(currentListFilterTags => {
+                if (currentListFilterTags.length === 0 && updatedTags.length > 0) {
+                    return updatedTags.map(tag => tag.id);
+                }
+                // If tags were added/removed, update listFilterTags accordingly
+                const existingTagIds = updatedTags.map(tag => tag.id);
+                const validListFilterTags = currentListFilterTags.filter(id => existingTagIds.includes(id));
+                // Add new tags to filter by default
+                const newListTags = existingTagIds.filter(id => !currentListFilterTags.includes(id));
+                return [...validListFilterTags, ...newListTags];
+            });
+
             // Update bubble colors when tags change
             setBubbles(currentBubbles => {
                 return currentBubbles.map(bubble => {
@@ -460,7 +478,7 @@ const BubblesPage = ({ user }) => {
 
     // Filter bubbles visibility based on selected filters
     useEffect(() => {
-        if (!engineRef.current || viewMode !== 'bubbles') return;
+        if (!engineRef.current) return;
 
         const filteredBubbles = getFilteredBubbles();
         const filteredIds = new Set(filteredBubbles.map(b => b.id));
@@ -479,7 +497,7 @@ const BubblesPage = ({ user }) => {
                 }
             }
         });
-    }, [bubbles, filterTags, showNoTag, viewMode]);
+    }, [bubbles, filterTags, showNoTag]);
 
     // Bubble creation function
     const createBubble = (x, y, radius, tagId = null) => {
@@ -516,18 +534,12 @@ const BubblesPage = ({ user }) => {
         };
     };
 
-    // Function for filtering bubbles
+    // Function for filtering bubbles (for physics world - only active)
     const getFilteredBubbles = () => {
-        // In bubbles mode, only show active bubbles
-        let filteredByStatus = bubbles;
-        if (viewMode === 'bubbles') {
-            filteredByStatus = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
-        } else {
-            // In list mode, filter by selected status
-            filteredByStatus = getBubblesByStatus(bubbles, listFilter);
-        }
+        // Always show only active bubbles in physics world
+        const filteredByStatus = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
 
-        // Apply tag filters for both modes
+        // Apply tag filters
         // Check if all tags are selected and showNoTag is true - show all bubbles
         const allTagsSelected = tags.length > 0 && filterTags.length === tags.length && showNoTag;
 
@@ -542,6 +554,32 @@ const BubblesPage = ({ user }) => {
             }
             // Если включен фильтр "No Tag" и у пузыря нет тега
             if (showNoTag && !bubble.tagId) {
+                return true;
+            }
+            return false;
+        });
+    };
+
+    // Function for filtering bubbles for list view (supports all statuses)
+    const getFilteredBubblesForList = () => {
+        // In list mode, filter by selected status
+        const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
+
+        // Apply tag filters using separate list filter states
+        // Check if all tags are selected and showNoTag is true - show all bubbles
+        const allTagsSelected = tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
+
+        if (allTagsSelected) {
+            return filteredByStatus;
+        }
+
+        return filteredByStatus.filter(bubble => {
+            // Если выбраны теги и пузырь имеет один из выбранных тегов
+            if (listFilterTags.length > 0 && bubble.tagId && listFilterTags.includes(bubble.tagId)) {
+                return true;
+            }
+            // Если включен фильтр "No Tag" и у пузыря нет тега
+            if (listShowNoTag && !bubble.tagId) {
                 return true;
             }
             return false;
@@ -806,6 +844,35 @@ const BubblesPage = ({ user }) => {
         return tags.length > 0 && filterTags.length === tags.length && showNoTag;
     };
 
+    // Functions for list filter management
+    const handleListTagFilterChange = (tagId) => {
+        setListFilterTags(prev => {
+            if (prev.includes(tagId)) {
+                return prev.filter(id => id !== tagId);
+            } else {
+                return [...prev, tagId];
+            }
+        });
+    };
+
+    const handleListNoTagFilterChange = () => {
+        setListShowNoTag(prev => !prev);
+    };
+
+    const clearAllListFilters = () => {
+        setListFilterTags([]);
+        setListShowNoTag(false);
+    };
+
+    const selectAllListFilters = () => {
+        setListFilterTags(tags.map(tag => tag.id));
+        setListShowNoTag(true);
+    };
+
+    const isAllListFiltersSelected = () => {
+        return tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
+    };
+
     // Function to count bubbles by category
     const getBubbleCountByTag = (tagId) => {
         if (tagId === null) {
@@ -983,19 +1050,87 @@ const BubblesPage = ({ user }) => {
             }
         };
 
-        const getTasksByStatus = (status) => {
-            const filteredBubbles = getFilteredBubbles();
-            if (status === 'active') {
-                return filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
-            } else if (status === 'done') {
-                return filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.DONE);
-            } else if (status === 'postpone') {
-                return filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.POSTPONE);
-            } else if (status === 'deleted') {
-                return filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.DELETED);
-            }
-            return [];
+        const sortTasks = (tasks) => {
+            const sortedTasks = [...tasks];
+
+            sortedTasks.sort((a, b) => {
+                let aValue, bValue;
+
+                switch (listSortBy) {
+                    case 'title':
+                        aValue = (a.title || '').toLowerCase();
+                        bValue = (b.title || '').toLowerCase();
+                        break;
+                    case 'tag':
+                        const aTag = a.tagId ? tags.find(t => t.id === a.tagId) : null;
+                        const bTag = b.tagId ? tags.find(t => t.id === b.tagId) : null;
+                        aValue = aTag ? aTag.name.toLowerCase() : '';
+                        bValue = bTag ? bTag.name.toLowerCase() : '';
+                        break;
+                    case 'updatedAt':
+                        aValue = new Date(a.updatedAt || a.createdAt);
+                        bValue = new Date(b.updatedAt || b.createdAt);
+                        break;
+                    case 'createdAt':
+                    default:
+                        aValue = new Date(a.createdAt);
+                        bValue = new Date(b.createdAt);
+                        break;
+                }
+
+                if (listSortOrder === 'asc') {
+                    if (aValue < bValue) return -1;
+                    if (aValue > bValue) return 1;
+                    return 0;
+                } else {
+                    if (aValue > bValue) return -1;
+                    if (aValue < bValue) return 1;
+                    return 0;
+                }
+            });
+
+            return sortedTasks;
         };
+
+        const getTasksByStatus = (status) => {
+            const filteredBubbles = getFilteredBubblesForList();
+            return sortTasks(filteredBubbles);
+        };
+
+        const getTasksCountByStatus = (status) => {
+            // Apply tag filters to all bubbles using list filter states
+            const allTagsSelected = tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
+
+            let filteredBubbles = bubbles;
+
+            if (!allTagsSelected) {
+                filteredBubbles = bubbles.filter(bubble => {
+                    // Если выбраны теги и пузырь имеет один из выбранных тегов
+                    if (listFilterTags.length > 0 && bubble.tagId && listFilterTags.includes(bubble.tagId)) {
+                        return true;
+                    }
+                    // Если включен фильтр "No Tag" и у пузыря нет тега
+                    if (listShowNoTag && !bubble.tagId) {
+                        return true;
+                    }
+                    return false;
+                });
+            }
+
+            // Filter by status
+            if (status === 'active') {
+                return filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE).length;
+            } else if (status === 'done') {
+                return filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.DONE).length;
+            } else if (status === 'postpone') {
+                return filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.POSTPONE).length;
+            } else if (status === 'deleted') {
+                return filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.DELETED).length;
+            }
+            return 0;
+        };
+
+
 
         const formatDate = (dateString) => {
             if (!dateString) return '';
@@ -1037,6 +1172,76 @@ const BubblesPage = ({ user }) => {
 
         return (
             <Box sx={{ padding: 2, height: '100%', overflow: 'auto' }}>
+                {/* Filter and Sort controls */}
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: isMobile ? 'flex-start' : 'center',
+                    marginBottom: 2,
+                    gap: 2,
+                    flexWrap: 'wrap',
+                    flexDirection: isMobile ? 'column' : 'row'
+                }}>
+                    {/* Filter button */}
+                    <Button
+                        onClick={(e) => setListFilterMenuAnchor(e.currentTarget)}
+                        variant="outlined"
+                        startIcon={<FilterList />}
+                        endIcon={Boolean(listFilterMenuAnchor) ? <ArrowUpward /> : <ArrowDownward />}
+                        fullWidth={isMobile}
+                        sx={{
+                            backgroundColor: !isAllListFiltersSelected() ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
+                            borderColor: !isAllListFiltersSelected() ? 'primary.main' : 'rgba(0, 0, 0, 0.23)',
+                            '&:hover': {
+                                backgroundColor: 'rgba(25, 118, 210, 0.05)'
+                            },
+                            position: 'relative'
+                        }}
+                    >
+                        {t('bubbles.filterButton')}
+                    </Button>
+
+                    {/* Sort controls */}
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        width: isMobile ? '100%' : 'auto'
+                    }}>
+                        <FormControl size="small" sx={{
+                            minWidth: isMobile ? 'auto' : 140,
+                            flex: isMobile ? 1 : 'none'
+                        }}>
+                            <InputLabel>{t('bubbles.sortBy')}</InputLabel>
+                            <Select
+                                value={listSortBy}
+                                label={t('bubbles.sortBy')}
+                                onChange={(e) => setListSortBy(e.target.value)}
+                            >
+                                <MenuItem value="createdAt">{t('bubbles.createdAt')}</MenuItem>
+                                <MenuItem value="updatedAt">{t('bubbles.updatedAt')}</MenuItem>
+                                <MenuItem value="title">{t('bubbles.title')}</MenuItem>
+                                <MenuItem value="tag">{t('bubbles.category')}</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <Tooltip title={listSortOrder === 'asc' ? t('bubbles.sortAscending') : t('bubbles.sortDescending')}>
+                            <IconButton
+                                onClick={() => setListSortOrder(listSortOrder === 'asc' ? 'desc' : 'asc')}
+                                sx={{
+                                    color: 'primary.main',
+                                    border: '1px solid',
+                                    borderColor: 'rgba(25, 118, 210, 0.5)',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(25, 118, 210, 0.05)'
+                                    }
+                                }}
+                            >
+                                {listSortOrder === 'asc' ? <ArrowUpward /> : <ArrowDownward />}
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Box>
+
                 {/* Filter tabs */}
                 <Box sx={{
                     display: 'flex',
@@ -1046,10 +1251,10 @@ const BubblesPage = ({ user }) => {
                     gap: 1
                 }}>
                     {[
-                        { key: 'active', label: t('bubbles.activeTasks'), count: getTasksByStatus('active').length },
-                        { key: 'done', label: t('bubbles.doneTasks'), count: getTasksByStatus('done').length },
-                        { key: 'deleted', label: t('bubbles.deletedTasks'), count: getTasksByStatus('deleted').length },
-                        { key: 'postpone', label: t('bubbles.postponedTasks'), count: getTasksByStatus('postpone').length },
+                        { key: 'active', label: t('bubbles.activeTasks'), count: getTasksCountByStatus('active') },
+                        { key: 'done', label: t('bubbles.doneTasks'), count: getTasksCountByStatus('done') },
+                        { key: 'deleted', label: t('bubbles.deletedTasks'), count: getTasksCountByStatus('deleted') },
+                        { key: 'postpone', label: t('bubbles.postponedTasks'), count: getTasksCountByStatus('postpone') },
                     ].map(tab => (
                         <Button
                             key={tab.key}
@@ -1207,6 +1412,124 @@ const BubblesPage = ({ user }) => {
                         })}
                     </List>
                 )}
+
+                {/* Filter Menu */}
+                <Menu
+                    anchorEl={listFilterMenuAnchor}
+                    open={Boolean(listFilterMenuAnchor)}
+                    onClose={() => setListFilterMenuAnchor(null)}
+                    anchorOrigin={{
+                        vertical: 'bottom',
+                        horizontal: 'left',
+                    }}
+                    transformOrigin={{
+                        vertical: 'top',
+                        horizontal: 'left',
+                    }}
+                    disablePortal={true}
+                    PaperProps={{
+                        sx: {
+                            maxHeight: 400,
+                            width: 300,
+                            marginTop: 0.5,
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+                            borderRadius: 2,
+                            '& .MuiMenuItem-root': {
+                                padding: '8px 16px'
+                            }
+                        }
+                    }}
+                >
+                    {/* Header with select all/none */}
+                    <Box sx={{
+                        padding: '12px 16px',
+                        borderBottom: '1px solid #E0E0E0',
+                        backgroundColor: '#F5F5F5'
+                    }}>
+                        <Box sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant="subtitle2" color="primary">
+                                {t('bubbles.chooseCategoriesForList')}
+                            </Typography>
+                            <Button
+                                size="small"
+                                onClick={isAllListFiltersSelected() ? clearAllListFilters : selectAllListFilters}
+                                sx={{ minWidth: 'auto', padding: '4px 8px' }}
+                            >
+                                {isAllListFiltersSelected() ? t('bubbles.deselectAll') : t('bubbles.selectAll')}
+                            </Button>
+                        </Box>
+                    </Box>
+
+                    {/* No tag option */}
+                    <MenuItem onClick={handleListNoTagFilterChange}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                            <Checkbox
+                                checked={listShowNoTag}
+                                size="small"
+                            />
+                            <Box
+                                sx={{
+                                    width: 16,
+                                    height: 16,
+                                    borderRadius: '50%',
+                                    backgroundColor: '#B0B0B0',
+                                    border: '1px solid #ccc'
+                                }}
+                            />
+                            <Typography sx={{ flex: 1 }}>
+                                {t('bubbles.noTag')}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                ({getBubbleCountByTag(null)})
+                            </Typography>
+                        </Box>
+                    </MenuItem>
+
+                    {/* Category options */}
+                    {tags.map(tag => (
+                        <MenuItem
+                            key={tag.id}
+                            onClick={() => handleListTagFilterChange(tag.id)}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                                <Checkbox
+                                    checked={listFilterTags.includes(tag.id)}
+                                    size="small"
+                                />
+                                <Box
+                                    sx={{
+                                        width: 16,
+                                        height: 16,
+                                        borderRadius: '50%',
+                                        backgroundColor: tag.color,
+                                        border: '1px solid #ccc'
+                                    }}
+                                />
+                                <Typography sx={{ flex: 1 }}>
+                                    {tag.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    ({getBubbleCountByTag(tag.id)})
+                                </Typography>
+                            </Box>
+                        </MenuItem>
+                    ))}
+
+                    {/* Footer with help text */}
+                    <Box sx={{
+                        padding: '12px 16px',
+                        borderTop: '1px solid #E0E0E0',
+                        backgroundColor: '#FAFAFA'
+                    }}>
+                        <Typography variant="caption" color="text.secondary">
+                            {t('bubbles.filterHelpText')}
+                        </Typography>
+                    </Box>
+                </Menu>
             </Box>
         );
     };
@@ -1366,42 +1689,23 @@ const BubblesPage = ({ user }) => {
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <LanguageSelector />
                         {/* View Mode Toggle */}
-                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                            <Button
-                                onClick={() => setViewMode('bubbles')}
-                                variant={viewMode === 'bubbles' ? 'contained' : 'outlined'}
-                                size="small"
-                                startIcon={<ViewModule />}
-                                sx={{
-                                    color: 'white',
-                                    borderColor: 'rgba(255, 255, 255, 0.5)',
-                                    backgroundColor: viewMode === 'bubbles' ? 'rgba(255, 255, 255, 0.3)' : 'transparent',
-                                    '&:hover': {
-                                        borderColor: 'rgba(255, 255, 255, 0.8)',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                                    }
-                                }}
-                            >
-                                {t('bubbles.bubblesView')}
-                            </Button>
-                            <Button
-                                onClick={() => setViewMode('list')}
-                                variant={viewMode === 'list' ? 'contained' : 'outlined'}
-                                size="small"
-                                startIcon={<ViewList />}
-                                sx={{
-                                    color: 'white',
-                                    borderColor: 'rgba(255, 255, 255, 0.5)',
-                                    backgroundColor: viewMode === 'list' ? 'rgba(255, 255, 255, 0.3)' : 'transparent',
-                                    '&:hover': {
-                                        borderColor: 'rgba(255, 255, 255, 0.8)',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                                    }
-                                }}
-                            >
-                                {t('bubbles.listView')}
-                            </Button>
-                        </Box>
+                        <Button
+                            onClick={() => setListViewDialog(true)}
+                            variant="outlined"
+                            size="small"
+                            startIcon={<ViewList />}
+                            sx={{
+                                color: 'white',
+                                borderColor: 'rgba(255, 255, 255, 0.5)',
+                                backgroundColor: 'transparent',
+                                '&:hover': {
+                                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }}
+                        >
+                            {t('bubbles.listView')}
+                        </Button>
                         <Button
                             onClick={() => setFilterDrawerOpen(true)}
                             variant="outlined"
@@ -1436,7 +1740,7 @@ const BubblesPage = ({ user }) => {
                             {t('auth.logout')}
                         </Button>
                     </Box>
-                    {showInstructions && viewMode === 'bubbles' && (
+                    {showInstructions && (
                         <Box sx={{
                             backgroundColor: 'rgba(0, 0, 0, 0.3)',
                             padding: 2,
@@ -1482,7 +1786,7 @@ const BubblesPage = ({ user }) => {
                         <LanguageSelector />
                         {/* View Mode Toggle for Mobile */}
                         <IconButton
-                            onClick={() => setViewMode(viewMode === 'bubbles' ? 'list' : 'bubbles')}
+                            onClick={() => setListViewDialog(true)}
                             sx={{
                                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                                 color: 'white',
@@ -1491,7 +1795,7 @@ const BubblesPage = ({ user }) => {
                                 }
                             }}
                         >
-                            {viewMode === 'bubbles' ? <ViewList /> : <ViewModule />}
+                            <ViewList />
                         </IconButton>
                         <IconButton
                             onClick={() => setFilterDrawerOpen(true)}
@@ -1518,7 +1822,7 @@ const BubblesPage = ({ user }) => {
                             <Logout />
                         </IconButton>
                     </Box>
-                    {showInstructions && viewMode === 'bubbles' && (
+                    {showInstructions && (
                         <Box sx={{
                             position: 'absolute',
                             top: isSmallScreen ? 60 : 70,
@@ -1555,15 +1859,9 @@ const BubblesPage = ({ user }) => {
             )}
 
             {/* Canvas for physics */}
-            {viewMode === 'bubbles' ? (
-                <>
-                    <div ref={canvasRef} style={{ width: '100%', height: '100%' }} />
-                    {/* Текст поверх пузырей */}
-                    <TextOverlay />
-                </>
-            ) : (
-                <ListView />
-            )}
+            <div ref={canvasRef} style={{ width: '100%', height: '100%' }} />
+            {/* Текст поверх пузырей */}
+            <TextOverlay />
 
             {/* Диалог редактирования */}
             <Dialog
@@ -2640,6 +2938,44 @@ const BubblesPage = ({ user }) => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Диалог списка задач */}
+            <Dialog
+                open={listViewDialog}
+                onClose={() => setListViewDialog(false)}
+                maxWidth="md"
+                fullWidth
+                fullScreen={isMobile}
+                PaperProps={{
+                    sx: {
+                        borderRadius: isMobile ? 0 : 3,
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        margin: isMobile ? 0 : 3,
+                        height: isMobile ? '100vh' : '85vh'
+                    }
+                }}
+            >
+                <DialogTitle sx={{
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    {t('bubbles.listView')}
+                    <IconButton
+                        onClick={() => setListViewDialog(false)}
+                        sx={{ color: 'white' }}
+                    >
+                        <CloseOutlined />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ padding: 0, height: '100%' }}>
+                    <ListView />
+                </DialogContent>
+            </Dialog>
+
+
         </Box>
     );
 };

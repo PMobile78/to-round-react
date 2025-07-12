@@ -75,7 +75,15 @@
         "deletedAt": "Deleted",
         "empty": "Empty",
         "task": "task",
-        "tasks": "tasks"
+        "tasks": "tasks",
+        "sortBy": "Sort by",
+        "title": "Title",
+        "category": "Category",
+        "sortAscending": "Sort ascending",
+        "sortDescending": "Sort descending",
+        "chooseCategoriesForList": "Choose categories for task list filtering.",
+        "additionalFilters": "Additional Filters",
+        "filterHelpText": "Use categories to organize and find your tasks faster."
     },
     "auth": {
         "welcome": "Welcome",
