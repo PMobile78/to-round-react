@@ -50,6 +50,9 @@ import {
     cleanupOldDeletedBubbles
 } from '../services/firestoreService';
 
+// Auto-cleanup period for deleted tasks (30 days)
+const DELETED_TASKS_CLEANUP_DAYS = 30;
+
 
 
 const BubblesPage = ({ user }) => {
@@ -1451,6 +1454,25 @@ const BubblesPage = ({ user }) => {
                         </Button>
                     ))}
                 </Box>
+
+                {/* Warning for deleted tasks */}
+                {listFilter === 'deleted' && (
+                    <Box sx={{
+                        marginBottom: 2,
+                        padding: 2,
+                        backgroundColor: '#FFF3E0',
+                        border: '1px solid #FFB74D',
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1
+                    }}>
+                        <LocalOffer sx={{ color: '#FF9800', fontSize: 20 }} />
+                        <Typography variant="body2" sx={{ color: '#E65100' }}>
+                            {t('bubbles.deletedTasksWarning', { days: DELETED_TASKS_CLEANUP_DAYS })}
+                        </Typography>
+                    </Box>
+                )}
 
                 {/* Tasks list */}
                 {isEmpty ? (

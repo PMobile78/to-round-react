@@ -65,6 +65,7 @@
         "noDoneTasks": "Немає завершених завдань",
         "noPostponedTasks": "Немає відкладених завдань",
         "noDeletedTasks": "Немає видалених завдань",
+        "deletedTasksWarning": "⚠️ Видалені завдання будуть остаточно знищені через {{days}} днів",
         "restore": "Відновити",
         "restoreTask": "Відновити завдання",
         "restoreBubble": "Відновити бульбашку",

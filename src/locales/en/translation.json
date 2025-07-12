@@ -65,6 +65,7 @@
         "noDoneTasks": "No completed tasks",
         "noPostponedTasks": "No postponed tasks",
         "noDeletedTasks": "No deleted tasks",
+        "deletedTasksWarning": "⚠️ Deleted tasks will be permanently removed after {{days}} days",
         "restore": "Restore",
         "restoreTask": "Restore Task",
         "restoreBubble": "Restore Bubble",
