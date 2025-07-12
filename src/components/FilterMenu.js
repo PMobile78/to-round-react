@@ -77,8 +77,6 @@ export function FilterMenu({
         setAnchorEl(null);
     };
 
-
-
     return (
         <div>
             <Button
@@ -113,87 +111,100 @@ export function FilterMenu({
                 }}
                 anchorEl={anchorEl}
                 open={open}
-                onClose={(event, reason) => {
-                    // Закрываем только при клике вне меню или нажатии Escape
-                    if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
-                        handleClose();
-                    }
-                    // Игнорируем все остальные причины закрытия
-                }}
-                disableAutoFocusItem
-                keepMounted
+                onClose={handleClose}
             >
-                <Box onClick={(e) => e.stopPropagation()}>
-                    {/* Заголовок с кнопками управления */}
-                    <Box sx={{
-                        padding: '8px 16px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        borderBottom: '1px solid #E0E0E0'
-                    }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                            {t('bubbles.categories')}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                            <Button
-                                size="small"
-                                onClick={(e) => {
-                                    // e.stopPropagation();
-                                    // e.preventDefault();
-                                    onSelectAll();
-                                }}
-                                startIcon={<Check />}
-                                sx={{
-                                    minWidth: 'auto',
-                                    padding: '4px 8px',
-                                    fontSize: '0.75rem'
-                                }}
-                            >
-                                {t('bubbles.selectAll')}
-                            </Button>
-                            <Button
-                                size="small"
-                                onClick={(e) => {
-                                    // e.stopPropagation();
-                                    // e.preventDefault();
-                                    onClearAll();
-                                }}
-                                startIcon={<Clear />}
-                                sx={{
-                                    minWidth: 'auto',
-                                    padding: '4px 8px',
-                                    fontSize: '0.75rem'
-                                }}
-                            >
-                                {t('bubbles.clearAll')}
-                            </Button>
-                        </Box>
+                {/* Заголовок с кнопками управления */}
+                <Box sx={{
+                    padding: '8px 16px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderBottom: '1px solid #E0E0E0'
+                }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                        {t('bubbles.categories')}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                onSelectAll();
+                            }}
+                            startIcon={<Check />}
+                            sx={{
+                                minWidth: 'auto',
+                                padding: '4px 8px',
+                                fontSize: '0.75rem'
+                            }}
+                        >
+                            {t('bubbles.selectAll')}
+                        </Button>
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                onClearAll();
+                            }}
+                            startIcon={<Clear />}
+                            sx={{
+                                minWidth: 'auto',
+                                padding: '4px 8px',
+                                fontSize: '0.75rem'
+                            }}
+                        >
+                            {t('bubbles.clearAll')}
+                        </Button>
                     </Box>
+                </Box>
 
-                    {/* Опция "Без тега" */}
+                {/* Опция "Без тега" */}
+                <MenuItem
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onNoTagFilterChange();
+                    }}
+                    disableRipple
+                    sx={{ padding: '12px 16px' }}
+                >
+                    <Checkbox
+                        checked={showNoTag}
+                        size="small"
+                        sx={{ marginRight: 1 }}
+                    />
                     <Box
-                        onClick={(e) => {
-                            // e.stopPropagation();
-                            // e.preventDefault();
-                            // onNoTagFilterChange();
-                        }}
                         sx={{
-                            padding: '12px 16px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            '&:hover': {
-                                backgroundColor: '#F5F5F5'
-                            }
+                            width: 16,
+                            height: 16,
+                            borderRadius: '50%',
+                            backgroundColor: '#B0B0B0',
+                            border: '1px solid #ccc',
+                            marginRight: 1
                         }}
+                    />
+                    <Typography variant="body2" sx={{ flex: 1 }}>
+                        {t('bubbles.noTag')}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {getBubbleCountByTag ? getBubbleCountByTag(null) : 0}
+                    </Typography>
+                </MenuItem>
+
+                {/* Разделитель */}
+                {tags.length > 0 && <Divider sx={{ my: 0.5 }} />}
+
+                {/* Список тегов */}
+                {tags.map((tag) => (
+                    <MenuItem
+                        key={tag.id}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onTagFilterChange(tag.id);
+                        }}
+                        disableRipple
+                        sx={{ padding: '12px 16px' }}
                     >
                         <Checkbox
-                            checked={showNoTag}
+                            checked={filterTags.includes(tag.id)}
                             size="small"
-                            onChange={(e) => {
-                                onNoTagFilterChange();
-                            }}
                             sx={{ marginRight: 1 }}
                         />
                         <Box
@@ -201,77 +212,28 @@ export function FilterMenu({
                                 width: 16,
                                 height: 16,
                                 borderRadius: '50%',
-                                backgroundColor: '#B0B0B0',
+                                backgroundColor: tag.color,
                                 border: '1px solid #ccc',
                                 marginRight: 1
                             }}
                         />
                         <Typography variant="body2" sx={{ flex: 1 }}>
-                            {t('bubbles.noTag')}
+                            {tag.name}
                         </Typography>
                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            {getBubbleCountByTag ? getBubbleCountByTag(null) : 0}
+                            {getBubbleCountByTag ? getBubbleCountByTag(tag.id) : 0}
                         </Typography>
-                    </Box>
+                    </MenuItem>
+                ))}
 
-                    {/* Разделитель */}
-                    {tags.length > 0 && <Divider sx={{ my: 0.5 }} />}
-
-                    {/* Список тегов */}
-                    {tags.map((tag) => (
-                        <Box
-                            key={tag.id}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                onTagFilterChange(tag.id);
-                            }}
-                            sx={{
-                                padding: '12px 16px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    backgroundColor: '#F5F5F5'
-                                }
-                            }}
-                        >
-                            <Checkbox
-                                checked={filterTags.includes(tag.id)}
-                                size="small"
-                                onChange={(e) => {
-                                    onTagFilterChange(tag.id);
-                                }}
-                                sx={{ marginRight: 1 }}
-                            />
-                            <Box
-                                sx={{
-                                    width: 16,
-                                    height: 16,
-                                    borderRadius: '50%',
-                                    backgroundColor: tag.color,
-                                    border: '1px solid #ccc',
-                                    marginRight: 1
-                                }}
-                            />
-                            <Typography variant="body2" sx={{ flex: 1 }}>
-                                {tag.name}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {getBubbleCountByTag ? getBubbleCountByTag(tag.id) : 0}
-                            </Typography>
-                        </Box>
-                    ))}
-
-                    {/* Сообщение если нет тегов */}
-                    {tags.length === 0 && (
-                        <MenuItem disabled sx={{ padding: '12px 16px' }}>
-                            <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', width: '100%' }}>
-                                {t('bubbles.noTagsAvailable')}
-                            </Typography>
-                        </MenuItem>
-                    )}
-                </Box>
+                {/* Сообщение если нет тегов */}
+                {tags.length === 0 && (
+                    <MenuItem disabled sx={{ padding: '12px 16px' }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', width: '100%' }}>
+                            {t('bubbles.noTagsAvailable')}
+                        </Typography>
+                    </MenuItem>
+                )}
             </StyledMenu>
         </div>
     );

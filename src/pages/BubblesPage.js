@@ -95,8 +95,14 @@ const BubblesPage = ({ user }) => {
     const [tagColor, setTagColor] = useState('#3B7DED');
     const [editingTag, setEditingTag] = useState(null);
     const [tagMenuAnchor, setTagMenuAnchor] = useState(null);
-    const [filterTags, setFilterTags] = useState([]); // Массив ID выбранных тегов для фильтрации  
-    const [showNoTag, setShowNoTag] = useState(true); // Показывать ли пузыри без тегов
+    const [filterTags, setFilterTags] = useState(() => {
+        const saved = localStorage.getItem('bubbles-filter-tags');
+        return saved ? JSON.parse(saved) : [];
+    }); // Массив ID выбранных тегов для фильтрации  
+    const [showNoTag, setShowNoTag] = useState(() => {
+        const saved = localStorage.getItem('bubbles-show-no-tag');
+        return saved ? JSON.parse(saved) : true;
+    }); // Показывать ли пузыри без тегов
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
@@ -109,10 +115,22 @@ const BubblesPage = ({ user }) => {
     const [logoutDialog, setLogoutDialog] = useState(false); // Диалог подтверждения выхода
     const [listViewDialog, setListViewDialog] = useState(false); // Диалог списка задач
     const [listFilter, setListFilter] = useState('active'); // 'active', 'done', 'postpone', 'deleted'
-    const [listSortBy, setListSortBy] = useState('createdAt'); // 'createdAt', 'updatedAt', 'title', 'tag'
-    const [listSortOrder, setListSortOrder] = useState('desc'); // 'asc', 'desc'
-    const [listFilterTags, setListFilterTags] = useState([]); // Массив ID выбранных тегов для фильтрации в списке
-    const [listShowNoTag, setListShowNoTag] = useState(true); // Показывать ли задачи без тегов в списке
+    const [listSortBy, setListSortBy] = useState(() => {
+        const saved = localStorage.getItem('bubbles-list-sort-by');
+        return saved ? saved : 'createdAt';
+    }); // 'createdAt', 'updatedAt', 'title', 'tag'
+    const [listSortOrder, setListSortOrder] = useState(() => {
+        const saved = localStorage.getItem('bubbles-list-sort-order');
+        return saved ? saved : 'desc';
+    }); // 'asc', 'desc'
+    const [listFilterTags, setListFilterTags] = useState(() => {
+        const saved = localStorage.getItem('bubbles-list-filter-tags');
+        return saved ? JSON.parse(saved) : [];
+    }); // Массив ID выбранных тегов для фильтрации в списке
+    const [listShowNoTag, setListShowNoTag] = useState(() => {
+        const saved = localStorage.getItem('bubbles-list-show-no-tag');
+        return saved ? JSON.parse(saved) : true;
+    }); // Показывать ли задачи без тегов в списке
 
     const [showInstructions, setShowInstructions] = useState(() => {
         const saved = localStorage.getItem('bubbles-show-instructions');
@@ -439,30 +457,20 @@ const BubblesPage = ({ user }) => {
         const unsubscribe = subscribeToTagsUpdates((updatedTags) => {
             setTags(updatedTags);
 
-            // Initialize filter with all tag IDs by default (only on first load)
+            // Update filter tags to remove deleted tags
             setFilterTags(currentFilterTags => {
-                if (currentFilterTags.length === 0 && updatedTags.length > 0) {
-                    return updatedTags.map(tag => tag.id);
-                }
-                // If tags were added/removed, update filterTags accordingly
                 const existingTagIds = updatedTags.map(tag => tag.id);
                 const validFilterTags = currentFilterTags.filter(id => existingTagIds.includes(id));
-                // Add new tags to filter by default
-                const newTags = existingTagIds.filter(id => !currentFilterTags.includes(id));
-                return [...validFilterTags, ...newTags];
+                localStorage.setItem('bubbles-filter-tags', JSON.stringify(validFilterTags));
+                return validFilterTags;
             });
 
-            // Initialize list filter with all tag IDs by default (only on first load)
+            // Update list filter tags to remove deleted tags
             setListFilterTags(currentListFilterTags => {
-                if (currentListFilterTags.length === 0 && updatedTags.length > 0) {
-                    return updatedTags.map(tag => tag.id);
-                }
-                // If tags were added/removed, update listFilterTags accordingly
                 const existingTagIds = updatedTags.map(tag => tag.id);
                 const validListFilterTags = currentListFilterTags.filter(id => existingTagIds.includes(id));
-                // Add new tags to filter by default
-                const newListTags = existingTagIds.filter(id => !currentListFilterTags.includes(id));
-                return [...validListFilterTags, ...newListTags];
+                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(validListFilterTags));
+                return validListFilterTags;
             });
 
             // Update bubble colors when tags change
@@ -828,26 +836,35 @@ const BubblesPage = ({ user }) => {
     // Functions for filter management
     const handleTagFilterChange = (tagId) => {
         setFilterTags(prev => {
-            if (prev.includes(tagId)) {
-                return prev.filter(id => id !== tagId);
-            } else {
-                return [...prev, tagId];
-            }
+            const newFilterTags = prev.includes(tagId)
+                ? prev.filter(id => id !== tagId)
+                : [...prev, tagId];
+            localStorage.setItem('bubbles-filter-tags', JSON.stringify(newFilterTags));
+            return newFilterTags;
         });
     };
 
     const handleNoTagFilterChange = () => {
-        setShowNoTag(prev => !prev);
+        setShowNoTag(prev => {
+            const newShowNoTag = !prev;
+            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(newShowNoTag));
+            return newShowNoTag;
+        });
     };
 
     const clearAllFilters = () => {
         setFilterTags([]);
         setShowNoTag(false);
+        localStorage.setItem('bubbles-filter-tags', JSON.stringify([]));
+        localStorage.setItem('bubbles-show-no-tag', JSON.stringify(false));
     };
 
     const selectAllFilters = () => {
-        setFilterTags(tags.map(tag => tag.id));
+        const allTagIds = tags.map(tag => tag.id);
+        setFilterTags(allTagIds);
         setShowNoTag(true);
+        localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
+        localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
     };
 
     const isAllSelected = () => {
@@ -857,26 +874,35 @@ const BubblesPage = ({ user }) => {
     // Functions for list filter management
     const handleListTagFilterChange = (tagId) => {
         setListFilterTags(prev => {
-            if (prev.includes(tagId)) {
-                return prev.filter(id => id !== tagId);
-            } else {
-                return [...prev, tagId];
-            }
+            const newListFilterTags = prev.includes(tagId)
+                ? prev.filter(id => id !== tagId)
+                : [...prev, tagId];
+            localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(newListFilterTags));
+            return newListFilterTags;
         });
     };
 
     const handleListNoTagFilterChange = () => {
-        setListShowNoTag(prev => !prev);
+        setListShowNoTag(prev => {
+            const newListShowNoTag = !prev;
+            localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(newListShowNoTag));
+            return newListShowNoTag;
+        });
     };
 
     const clearAllListFilters = () => {
         setListFilterTags([]);
         setListShowNoTag(false);
+        localStorage.setItem('bubbles-list-filter-tags', JSON.stringify([]));
+        localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(false));
     };
 
     const selectAllListFilters = () => {
-        setListFilterTags(tags.map(tag => tag.id));
+        const allTagIds = tags.map(tag => tag.id);
+        setListFilterTags(allTagIds);
         setListShowNoTag(true);
+        localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(allTagIds));
+        localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(true));
     };
 
     const isAllListFiltersSelected = () => {
@@ -1248,7 +1274,11 @@ const BubblesPage = ({ user }) => {
                             <Select
                                 value={listSortBy}
                                 label={t('bubbles.sortBy')}
-                                onChange={(e) => setListSortBy(e.target.value)}
+                                onChange={(e) => {
+                                    const newSortBy = e.target.value;
+                                    setListSortBy(newSortBy);
+                                    localStorage.setItem('bubbles-list-sort-by', newSortBy);
+                                }}
                             >
                                 <MenuItem value="createdAt">{t('bubbles.createdAt')}</MenuItem>
                                 <MenuItem value="updatedAt">{t('bubbles.updatedAt')}</MenuItem>
@@ -1258,7 +1288,11 @@ const BubblesPage = ({ user }) => {
                         </FormControl>
                         <Tooltip title={listSortOrder === 'asc' ? t('bubbles.sortAscending') : t('bubbles.sortDescending')}>
                             <IconButton
-                                onClick={() => setListSortOrder(listSortOrder === 'asc' ? 'desc' : 'asc')}
+                                onClick={() => {
+                                    const newSortOrder = listSortOrder === 'asc' ? 'desc' : 'asc';
+                                    setListSortOrder(newSortOrder);
+                                    localStorage.setItem('bubbles-list-sort-order', newSortOrder);
+                                }}
                                 sx={{
                                     color: 'primary.main',
                                     border: '1px solid',
