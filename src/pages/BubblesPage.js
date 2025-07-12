@@ -543,7 +543,6 @@ const BubblesPage = ({ user }) => {
     // Save bubble changes
     const handleSaveBubble = () => {
         if (selectedBubble) {
-            console.log('Saving bubble:', { id: selectedBubble.id, title, description, tagId: selectedTagId });
             setBubbles(prev => {
                 const updatedBubbles = prev.map(bubble => {
                     if (bubble.id === selectedBubble.id) {
@@ -564,7 +563,6 @@ const BubblesPage = ({ user }) => {
                     }
                     return bubble;
                 });
-                console.log('Updated bubbles:', updatedBubbles);
                 saveBubblesToFirestore(updatedBubbles);
                 return updatedBubbles;
             });
@@ -573,14 +571,11 @@ const BubblesPage = ({ user }) => {
         setSelectedBubble(null);
         setTitle('');
         setDescription('');
-        setSelectedTagId('');
     };
 
     // Delete bubble
     const handleDeleteBubble = () => {
         if (selectedBubble && engineRef.current) {
-            console.log('Deleting bubble:', selectedBubble.id);
-
             // Remove from Matter.js world
             Matter.World.remove(engineRef.current.world, selectedBubble.body);
 
@@ -654,6 +649,13 @@ const BubblesPage = ({ user }) => {
         setEditingTag(null);
         setTagName('');
         setTagColor('#3B7DED');
+
+        // Если создаем новый тег, открываем обратно диалог категорий
+        if (!editingTag) {
+            setTimeout(() => {
+                setCategoriesDialog(true);
+            }, 100);
+        }
     };
 
     const handleDeleteTag = (tagId) => {
@@ -1704,7 +1706,8 @@ const BubblesPage = ({ user }) => {
                     sx: {
                         borderRadius: isSmallScreen ? 0 : 3,
                         backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        margin: isMobile ? 1 : 3
+                        margin: isMobile ? 1 : 3,
+                        position: isMobile ? 'relative' : 'static'
                     }
                 }}
             >
@@ -1723,23 +1726,10 @@ const BubblesPage = ({ user }) => {
                         <CloseOutlined />
                     </IconButton>
                 </DialogTitle>
-                <DialogContent sx={{ padding: isMobile ? 2 : 3 }}>
-                    {/* Кнопка добавления новой категории */}
-                    <Button
-                        variant="contained"
-                        startIcon={<Add />}
-                        onClick={() => {
-                            setCategoriesDialog(false);
-                            handleOpenTagDialog();
-                        }}
-                        sx={{ marginBottom: 2, width: '100%' }}
-                    >
-                        {t('bubbles.addTag')}
-                    </Button>
-
+                <DialogContent sx={{ padding: isMobile ? 2 : 3, paddingTop: isMobile ? 4 : 5, paddingBottom: isMobile ? 10 : 0 }}>
                     {/* Список существующих категорий */}
                     {tags.length > 0 ? (
-                        <List sx={{ padding: 0 }}>
+                        <List sx={{ padding: 0, marginTop: 3 }}>
                             {tags.map(tag => (
                                 <ListItem
                                     key={tag.id}
@@ -1795,6 +1785,7 @@ const BubblesPage = ({ user }) => {
                         <Box sx={{
                             textAlign: 'center',
                             padding: 4,
+                            marginTop: 3,
                             color: 'text.secondary'
                         }}>
                             <Category sx={{ fontSize: 48, marginBottom: 2, opacity: 0.5 }} />
@@ -1807,15 +1798,89 @@ const BubblesPage = ({ user }) => {
                         </Box>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ padding: isMobile ? 2 : 3 }}>
-                    <Button
-                        onClick={() => setCategoriesDialog(false)}
-                        color="inherit"
-                        fullWidth={isSmallScreen}
-                    >
-                        {t('bubbles.cancel')}
-                    </Button>
-                </DialogActions>
+
+                {/* Футер для десктопа */}
+                {!isMobile && (
+                    <Box sx={{
+                        borderTop: '1px solid #E0E0E0',
+                        padding: 3,
+                        textAlign: 'center',
+                        backgroundColor: '#FAFAFA'
+                    }}>
+                        <Button
+                            variant="text"
+                            startIcon={<Add />}
+                            onClick={() => {
+                                setCategoriesDialog(false);
+                                handleOpenTagDialog();
+                            }}
+                            sx={{
+                                backgroundColor: 'transparent',
+                                color: '#757575',
+                                borderRadius: 2,
+                                padding: '12px 24px',
+                                textTransform: 'none',
+                                fontWeight: 500,
+                                minWidth: 140,
+                                fontSize: '14px',
+                                border: 'none',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(117, 117, 117, 0.08)'
+                                },
+                                '& .MuiButton-startIcon': {
+                                    color: '#757575',
+                                    marginRight: 1.5,
+                                    fontSize: '20px'
+                                }
+                            }}
+                        >
+                            {t('bubbles.addTag')}
+                        </Button>
+                    </Box>
+                )}
+
+                {/* Плавающая кнопка для мобильного */}
+                {isMobile && (
+                    <Box sx={{
+                        position: 'absolute',
+                        bottom: 16,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 1001
+                    }}>
+                        <Button
+                            variant="text"
+                            startIcon={<Add />}
+                            onClick={() => {
+                                setCategoriesDialog(false);
+                                handleOpenTagDialog();
+                            }}
+                            sx={{
+                                backgroundColor: 'transparent',
+                                color: '#757575',
+                                borderRadius: 2,
+                                padding: '12px 24px',
+                                textTransform: 'none',
+                                fontWeight: 500,
+                                minWidth: 140,
+                                fontSize: '14px',
+                                border: 'none',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(117, 117, 117, 0.08)'
+                                },
+                                '& .MuiButton-startIcon': {
+                                    color: '#757575',
+                                    marginRight: 1.5,
+                                    fontSize: '20px'
+                                }
+                            }}
+                        >
+                            {t('bubbles.addTag')}
+                        </Button>
+                    </Box>
+                )}
+
+
             </Dialog>
 
             {/* Диалог настроек шрифта */}
