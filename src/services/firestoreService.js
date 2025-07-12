@@ -75,7 +75,6 @@ export const loadBubblesFromFirestore = async () => {
 
         if (docSnap.exists()) {
             const data = docSnap.data();
-            console.log('Bubbles content loaded from Firestore successfully for user:', userId);
             return data.bubbles || [];
         }
         console.log('No bubbles document found in Firestore for user:', userId);

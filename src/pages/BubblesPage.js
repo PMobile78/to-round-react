@@ -430,19 +430,10 @@ const BubblesPage = ({ user }) => {
                 const isCurrentlyInWorld = engineRef.current.world.bodies.includes(bubble.body);
 
                 if (isVisible && !isCurrentlyInWorld) {
-                    // Сбросить позицию пузыря наверх с случайной X координатой
-                    const margin = isMobile ? 50 : 100;
-                    const randomX = Math.random() * (canvasSize.width - margin * 2) + margin;
-                    const topY = -50; // Позиция выше видимой области
-
-                    // Установить новую позицию и обнулить скорость
-                    Matter.Body.setPosition(bubble.body, { x: randomX, y: topY });
-                    Matter.Body.setVelocity(bubble.body, { x: 0, y: 0 });
-
-                    // Добавить пузырь в физический мир
+                    // Add a bubble to the physical world
                     Matter.World.add(engineRef.current.world, bubble.body);
                 } else if (!isVisible && isCurrentlyInWorld) {
-                    // Убрать пузырь из физического мира
+                    // Remove bubble from the physical world
                     Matter.World.remove(engineRef.current.world, bubble.body);
                 }
             }
@@ -874,7 +865,7 @@ const BubblesPage = ({ user }) => {
                     </Box>
                 </>
             ) : (
-                // Мобильная версия с заголовком
+                // Mobile version without title
                 <Box sx={{
                     position: 'absolute',
                     top: 10,
@@ -882,15 +873,13 @@ const BubblesPage = ({ user }) => {
                     right: 0,
                     zIndex: 1000,
                     display: 'flex',
-                    justifyContent: 'center',
+                    justifyContent: 'flex-start',
                     alignItems: 'center',
                     padding: '0 10px'
                 }}>
                     <IconButton
                         onClick={() => setMenuDrawerOpen(true)}
                         sx={{
-                            position: 'absolute',
-                            left: 10,
                             color: 'white',
                             backgroundColor: 'rgba(255, 255, 255, 0.2)',
                             '&:hover': {
@@ -900,16 +889,6 @@ const BubblesPage = ({ user }) => {
                     >
                         <MenuIcon />
                     </IconButton>
-                    <Typography
-                        variant={isSmallScreen ? "h6" : "h5"}
-                        sx={{
-                            color: 'white',
-                            fontWeight: 'bold',
-                            textAlign: 'center'
-                        }}
-                    >
-                        {t('bubbles.title')}
-                    </Typography>
                 </Box>
             )}
 
@@ -1059,7 +1038,7 @@ const BubblesPage = ({ user }) => {
                     </Box>
                     <Box sx={{
                         position: 'absolute',
-                        top: isSmallScreen ? 50 : 60,
+                        top: isSmallScreen ? 60 : 70,
                         left: 10,
                         right: 10,
                         zIndex: 1000,
@@ -1075,7 +1054,7 @@ const BubblesPage = ({ user }) => {
                 </>
             )}
 
-            {/* Canvas для физики */}
+            {/* Canvas for physics */}
             <div ref={canvasRef} style={{ width: '100%', height: '100%' }} />
 
             {/* Текст поверх пузырей */}
