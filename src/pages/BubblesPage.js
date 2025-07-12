@@ -101,6 +101,10 @@ const BubblesPage = ({ user }) => {
     const [logoutDialog, setLogoutDialog] = useState(false); // Диалог подтверждения выхода
     const [viewMode, setViewMode] = useState('bubbles'); // 'bubbles' или 'list'
     const [listFilter, setListFilter] = useState('active'); // 'active', 'done', 'postpone', 'deleted'
+    const [showInstructions, setShowInstructions] = useState(() => {
+        const saved = localStorage.getItem('bubbles-show-instructions');
+        return saved === null ? true : saved === 'true';
+    }); // Показывать ли подсказки инструкций
 
     // Note: Functions moved to firestoreService.js for better organization
 
@@ -858,6 +862,12 @@ const BubblesPage = ({ user }) => {
         localStorage.setItem('bubbles-font-size', newSize.toString());
     };
 
+    // Функция для закрытия подсказок
+    const handleCloseInstructions = () => {
+        setShowInstructions(false);
+        localStorage.setItem('bubbles-show-instructions', 'false');
+    };
+
     // Компонент для отображения текста поверх пузырей
     const TextOverlay = () => {
         const [positions, setPositions] = useState([]);
@@ -1005,6 +1015,26 @@ const BubblesPage = ({ user }) => {
             }
         };
 
+        // Mark task as done from list view
+        const handleMarkTaskAsDone = async (taskId) => {
+            try {
+                const updatedBubbles = await markBubbleAsDone(taskId, bubbles);
+                setBubbles(updatedBubbles);
+            } catch (error) {
+                console.error('Error marking task as done:', error);
+            }
+        };
+
+        // Delete task from list view
+        const handleDeleteTask = async (taskId) => {
+            try {
+                const updatedBubbles = await markBubbleAsDeleted(taskId, bubbles);
+                setBubbles(updatedBubbles);
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        };
+
         const tasks = getTasksByStatus(listFilter);
         const isEmpty = tasks.length === 0;
 
@@ -1123,6 +1153,26 @@ const BubblesPage = ({ user }) => {
 
                                         {/* Actions */}
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                            {task.status === BUBBLE_STATUS.ACTIVE && (
+                                                <>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleMarkTaskAsDone(task.id)}
+                                                        sx={{ color: 'success.main' }}
+                                                        title={t('bubbles.markAsDone')}
+                                                    >
+                                                        <CheckCircle />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleDeleteTask(task.id)}
+                                                        sx={{ color: 'error.main' }}
+                                                        title={t('bubbles.deleteBubble')}
+                                                    >
+                                                        <DeleteOutlined />
+                                                    </IconButton>
+                                                </>
+                                            )}
                                             {task.status === BUBBLE_STATUS.DELETED && (
                                                 <IconButton
                                                     size="small"
@@ -1370,18 +1420,37 @@ const BubblesPage = ({ user }) => {
                             {t('auth.logout')}
                         </Button>
                     </Box>
-                    <Box sx={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                        padding: 2,
-                        borderRadius: 2
-                    }}>
-                        <Typography variant="body2" sx={{ color: 'white', marginBottom: 1 }}>
-                            {t('bubbles.clickInstruction')}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'white' }}>
-                            {t('bubbles.dragInstruction')}
-                        </Typography>
-                    </Box>
+                    {showInstructions && viewMode === 'bubbles' && (
+                        <Box sx={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                            padding: 2,
+                            borderRadius: 2,
+                            position: 'relative'
+                        }}>
+                            <IconButton
+                                onClick={handleCloseInstructions}
+                                sx={{
+                                    position: 'absolute',
+                                    top: 4,
+                                    right: 4,
+                                    color: 'white',
+                                    padding: 0.5,
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                    }
+                                }}
+                                size="small"
+                            >
+                                <CloseOutlined fontSize="small" />
+                            </IconButton>
+                            <Typography variant="body2" sx={{ color: 'white', marginBottom: 1, paddingRight: 2 }}>
+                                {t('bubbles.clickInstruction')}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'white', paddingRight: 2 }}>
+                                {t('bubbles.dragInstruction')}
+                            </Typography>
+                        </Box>
+                    )}
                 </Box>
             ) : (
                 <>
@@ -1435,21 +1504,39 @@ const BubblesPage = ({ user }) => {
                             <Logout />
                         </IconButton>
                     </Box>
-                    <Box sx={{
-                        position: 'absolute',
-                        top: isSmallScreen ? 60 : 70,
-                        left: 10,
-                        right: 10,
-                        zIndex: 1000,
-                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                        padding: 1.5,
-                        borderRadius: 2,
-                        textAlign: 'center'
-                    }}>
-                        <Typography variant="caption" sx={{ color: 'white', fontSize: 12 }}>
-                            {t('bubbles.mobileClickInstruction')}
-                        </Typography>
-                    </Box>
+                    {showInstructions && viewMode === 'bubbles' && (
+                        <Box sx={{
+                            position: 'absolute',
+                            top: isSmallScreen ? 60 : 70,
+                            left: 10,
+                            right: 10,
+                            zIndex: 1000,
+                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                            padding: 1.5,
+                            borderRadius: 2,
+                            textAlign: 'center'
+                        }}>
+                            <IconButton
+                                onClick={handleCloseInstructions}
+                                sx={{
+                                    position: 'absolute',
+                                    top: 2,
+                                    right: 2,
+                                    color: 'white',
+                                    padding: 0.5,
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                    }
+                                }}
+                                size="small"
+                            >
+                                <CloseOutlined fontSize="small" />
+                            </IconButton>
+                            <Typography variant="caption" sx={{ color: 'white', fontSize: 12, paddingRight: 3 }}>
+                                {t('bubbles.mobileClickInstruction')}
+                            </Typography>
+                        </Box>
+                    )}
                 </>
             )}
 
