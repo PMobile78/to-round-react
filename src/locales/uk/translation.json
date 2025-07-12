@@ -67,6 +67,7 @@
         "noDeletedTasks": "Немає видалених завдань",
         "restore": "Відновити",
         "restoreTask": "Відновити завдання",
+        "restoreBubble": "Відновити бульбашку",
         "viewMode": "Режим перегляду",
         "taskStatus": "Статус завдання",
         "createdAt": "Створено",

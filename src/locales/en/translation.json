@@ -67,6 +67,7 @@
         "noDeletedTasks": "No deleted tasks",
         "restore": "Restore",
         "restoreTask": "Restore Task",
+        "restoreBubble": "Restore Bubble",
         "viewMode": "View Mode",
         "taskStatus": "Task Status",
         "createdAt": "Created",
