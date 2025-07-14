@@ -331,7 +331,15 @@ const BubblesPage = ({ user }) => {
 
         // Window resize handler
         const handleResize = () => {
-            const newSize = getCanvasSize();
+            // Recalculate canvas size using current breakpoint values
+            const currentIsMobile = window.innerWidth <= theme.breakpoints.values.md;
+            const padding = currentIsMobile ? 10 : 40;
+            const headerHeight = currentIsMobile ? 80 : 100;
+
+            const newSize = {
+                width: window.innerWidth - padding,
+                height: window.innerHeight - headerHeight
+            };
 
             // Update renderer dimensions
             render.canvas.width = newSize.width;
@@ -399,58 +407,7 @@ const BubblesPage = ({ user }) => {
             render.canvas.remove();
             render.textures = {};
         };
-    }, [isMobile, isSmallScreen]);
-
-    // Update canvas when breakpoints change
-    useEffect(() => {
-        if (engineRef.current && renderRef.current) {
-            const { World } = Matter;
-            const newSize = getCanvasSize();
-
-            // Update renderer dimensions
-            renderRef.current.canvas.width = newSize.width;
-            renderRef.current.canvas.height = newSize.height;
-            renderRef.current.options.width = newSize.width;
-            renderRef.current.options.height = newSize.height;
-            setCanvasSize(newSize);
-
-            // Update boundaries
-            if (wallsRef.current.length > 0) {
-                World.remove(engineRef.current.world, wallsRef.current);
-            }
-
-            const newWalls = createWorldBounds(newSize.width, newSize.height);
-            wallsRef.current = newWalls;
-            World.add(engineRef.current.world, newWalls);
-
-            // Correct bubble positions when breakpoint changes
-            const allBodies = engineRef.current.world.bodies.filter(body => body.label === 'Circle Body');
-            allBodies.forEach(body => {
-                const radius = body.circleRadius;
-                let corrected = false;
-
-                if (body.position.x - radius < 0) {
-                    Matter.Body.setPosition(body, { x: radius, y: body.position.y });
-                    corrected = true;
-                } else if (body.position.x + radius > newSize.width) {
-                    Matter.Body.setPosition(body, { x: newSize.width - radius, y: body.position.y });
-                    corrected = true;
-                }
-
-                if (body.position.y - radius < 0) {
-                    Matter.Body.setPosition(body, { x: body.position.x, y: radius });
-                    corrected = true;
-                } else if (body.position.y + radius > newSize.height) {
-                    Matter.Body.setPosition(body, { x: body.position.x, y: newSize.height - radius });
-                    corrected = true;
-                }
-
-                if (corrected) {
-                    Matter.Body.setVelocity(body, { x: 0, y: 0 });
-                }
-            });
-        }
-    }, [isMobile, isSmallScreen]);
+    }, []);
 
 
 
@@ -532,36 +489,39 @@ const BubblesPage = ({ user }) => {
                 const isCurrentlyInWorld = engineRef.current.world.bodies.includes(bubble.body);
 
                 if (isVisible && !isCurrentlyInWorld) {
-                    // Create new physics body for restored bubbles to make them fall from top
-                    const margin = isMobile ? 50 : 100;
-                    const newX = Math.random() * (canvasSize.width - margin * 2) + margin;
-                    const newY = 50; // Drop from top
+                    // Only create new physics body if the bubble doesn't already have one or it was removed
+                    if (!bubble.body || !engineRef.current.world.bodies.includes(bubble.body)) {
+                        // Create new physics body for restored bubbles to make them fall from top
+                        const margin = isMobile ? 50 : 100;
+                        const newX = Math.random() * (canvasSize.width - margin * 2) + margin;
+                        const newY = 50; // Drop from top
 
-                    // Determine stroke color based on tag
-                    let strokeColor = '#B0B0B0';
-                    if (bubble.tagId) {
-                        const tag = tags.find(t => t.id === bubble.tagId);
-                        if (tag) {
-                            strokeColor = tag.color;
+                        // Determine stroke color based on tag
+                        let strokeColor = '#B0B0B0';
+                        if (bubble.tagId) {
+                            const tag = tags.find(t => t.id === bubble.tagId);
+                            if (tag) {
+                                strokeColor = tag.color;
+                            }
                         }
+
+                        // Create new physics body with new position
+                        const newBody = Matter.Bodies.circle(newX, newY, bubble.radius, {
+                            restitution: 0.8,
+                            frictionAir: 0.01,
+                            render: {
+                                fillStyle: 'transparent',
+                                strokeStyle: strokeColor,
+                                lineWidth: 3
+                            }
+                        });
+
+                        // Update bubble with new physics body
+                        bubble.body = newBody;
+
+                        // Add new bubble to the physical world
+                        Matter.World.add(engineRef.current.world, newBody);
                     }
-
-                    // Create new physics body with new position
-                    const newBody = Matter.Bodies.circle(newX, newY, bubble.radius, {
-                        restitution: 0.8,
-                        frictionAir: 0.01,
-                        render: {
-                            fillStyle: 'transparent',
-                            strokeStyle: strokeColor,
-                            lineWidth: 3
-                        }
-                    });
-
-                    // Update bubble with new physics body
-                    bubble.body = newBody;
-
-                    // Add new bubble to the physical world
-                    Matter.World.add(engineRef.current.world, newBody);
                 } else if (!isVisible && isCurrentlyInWorld) {
                     // Remove bubble from the physical world
                     Matter.World.remove(engineRef.current.world, bubble.body);
