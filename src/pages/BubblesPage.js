@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import {
     Box,
     Typography,
@@ -494,12 +494,37 @@ const BubblesPage = ({ user }) => {
         return () => unsubscribe();
     }, []);
 
-    // Filter bubbles visibility based on selected filters
+    // Memoized function for filtering bubbles (for physics world - only active)
+    const getFilteredBubbles = useMemo(() => {
+        // Always show only active bubbles in physics world
+        const filteredByStatus = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
+
+        // Apply tag filters
+        // Check if all tags are selected and showNoTag is true - show all bubbles
+        const allTagsSelected = tags.length > 0 && filterTags.length === tags.length && showNoTag;
+
+        if (allTagsSelected) {
+            return filteredByStatus;
+        }
+
+        return filteredByStatus.filter(bubble => {
+            // Если выбраны теги и пузырь имеет один из выбранных тегов
+            if (filterTags.length > 0 && bubble.tagId && filterTags.includes(bubble.tagId)) {
+                return true;
+            }
+            // Если включен фильтр "No Tag" и у пузыря нет тега
+            if (showNoTag && !bubble.tagId) {
+                return true;
+            }
+            return false;
+        });
+    }, [bubbles, tags, filterTags, showNoTag]);
+
+    // Filter bubbles visibility based on selected filters - optimized
     useEffect(() => {
         if (!engineRef.current) return;
 
-        const filteredBubbles = getFilteredBubbles();
-        const filteredIds = new Set(filteredBubbles.map(b => b.id));
+        const filteredIds = new Set(getFilteredBubbles.map(b => b.id));
 
         bubbles.forEach(bubble => {
             if (bubble.body) {
@@ -515,7 +540,7 @@ const BubblesPage = ({ user }) => {
                 }
             }
         });
-    }, [bubbles, filterTags, showNoTag]);
+    }, [getFilteredBubbles, bubbles]);
 
 
 
@@ -554,34 +579,8 @@ const BubblesPage = ({ user }) => {
         };
     };
 
-    // Function for filtering bubbles (for physics world - only active)
-    const getFilteredBubbles = () => {
-        // Always show only active bubbles in physics world
-        const filteredByStatus = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
-
-        // Apply tag filters
-        // Check if all tags are selected and showNoTag is true - show all bubbles
-        const allTagsSelected = tags.length > 0 && filterTags.length === tags.length && showNoTag;
-
-        if (allTagsSelected) {
-            return filteredByStatus;
-        }
-
-        return filteredByStatus.filter(bubble => {
-            // Если выбраны теги и пузырь имеет один из выбранных тегов
-            if (filterTags.length > 0 && bubble.tagId && filterTags.includes(bubble.tagId)) {
-                return true;
-            }
-            // Если включен фильтр "No Tag" и у пузыря нет тега
-            if (showNoTag && !bubble.tagId) {
-                return true;
-            }
-            return false;
-        });
-    };
-
-    // Function for filtering bubbles for list view (supports all statuses)
-    const getFilteredBubblesForList = () => {
+    // Function for filtering bubbles for list view (supports all statuses) - memoized
+    const getFilteredBubblesForList = useMemo(() => {
         // In list mode, filter by selected status
         const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
 
@@ -604,7 +603,7 @@ const BubblesPage = ({ user }) => {
             }
             return false;
         });
-    };
+    }, [bubbles, tags, listFilter, listFilterTags, listShowNoTag]);
 
     // Function for opening create bubble dialog
     const openCreateDialog = () => {
@@ -835,8 +834,8 @@ const BubblesPage = ({ user }) => {
         }, 100);
     };
 
-    // Functions for filter management
-    const handleTagFilterChange = (tagId) => {
+    // Memoized functions for filter management
+    const handleTagFilterChange = useCallback((tagId) => {
         setFilterTags(prev => {
             const newFilterTags = prev.includes(tagId)
                 ? prev.filter(id => id !== tagId)
@@ -844,37 +843,37 @@ const BubblesPage = ({ user }) => {
             localStorage.setItem('bubbles-filter-tags', JSON.stringify(newFilterTags));
             return newFilterTags;
         });
-    };
+    }, []);
 
-    const handleNoTagFilterChange = () => {
+    const handleNoTagFilterChange = useCallback(() => {
         setShowNoTag(prev => {
             const newShowNoTag = !prev;
             localStorage.setItem('bubbles-show-no-tag', JSON.stringify(newShowNoTag));
             return newShowNoTag;
         });
-    };
+    }, []);
 
-    const clearAllFilters = () => {
+    const clearAllFilters = useCallback(() => {
         setFilterTags([]);
         setShowNoTag(false);
         localStorage.setItem('bubbles-filter-tags', JSON.stringify([]));
         localStorage.setItem('bubbles-show-no-tag', JSON.stringify(false));
-    };
+    }, []);
 
-    const selectAllFilters = () => {
+    const selectAllFilters = useCallback(() => {
         const allTagIds = tags.map(tag => tag.id);
         setFilterTags(allTagIds);
         setShowNoTag(true);
         localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
         localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-    };
+    }, [tags]);
 
-    const isAllSelected = () => {
+    const isAllSelected = useCallback(() => {
         return tags.length > 0 && filterTags.length === tags.length && showNoTag;
-    };
+    }, [tags, filterTags, showNoTag]);
 
-    // Functions for list filter management
-    const handleListTagFilterChange = (tagId) => {
+    // Memoized functions for list filter management
+    const handleListTagFilterChange = useCallback((tagId) => {
         setListFilterTags(prev => {
             const newListFilterTags = prev.includes(tagId)
                 ? prev.filter(id => id !== tagId)
@@ -882,47 +881,47 @@ const BubblesPage = ({ user }) => {
             localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(newListFilterTags));
             return newListFilterTags;
         });
-    };
+    }, []);
 
-    const handleListNoTagFilterChange = () => {
+    const handleListNoTagFilterChange = useCallback(() => {
         setListShowNoTag(prev => {
             const newListShowNoTag = !prev;
             localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(newListShowNoTag));
             return newListShowNoTag;
         });
-    };
+    }, []);
 
-    const clearAllListFilters = () => {
+    const clearAllListFilters = useCallback(() => {
         setListFilterTags([]);
         setListShowNoTag(false);
         localStorage.setItem('bubbles-list-filter-tags', JSON.stringify([]));
         localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(false));
-    };
+    }, []);
 
-    const selectAllListFilters = () => {
+    const selectAllListFilters = useCallback(() => {
         const allTagIds = tags.map(tag => tag.id);
         setListFilterTags(allTagIds);
         setListShowNoTag(true);
         localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(allTagIds));
         localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(true));
-    };
+    }, [tags]);
 
-    const isAllListFiltersSelected = () => {
+    const isAllListFiltersSelected = useCallback(() => {
         return tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
-    };
+    }, [tags, listFilterTags, listShowNoTag]);
 
-    // Function to count bubbles by category for Bubbles View (only active bubbles)
-    const getBubbleCountByTagForBubblesView = (tagId) => {
+    // Memoized function to count bubbles by category for Bubbles View (only active bubbles)
+    const getBubbleCountByTagForBubblesView = useCallback((tagId) => {
         const activeBubbles = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
         if (tagId === null) {
             // Count active bubbles without tags
             return activeBubbles.filter(bubble => !bubble.tagId).length;
         }
         return activeBubbles.filter(bubble => bubble.tagId === tagId).length;
-    };
+    }, [bubbles]);
 
-    // Function to count bubbles by category for List View (based on selected status and search)
-    const getBubbleCountByTagForListView = (tagId) => {
+    // Function to count bubbles by category for List View (based on selected status and search) - memoized
+    const getBubbleCountByTagForListView = useCallback((tagId) => {
         const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
         let tagFilteredBubbles;
 
@@ -954,7 +953,7 @@ const BubblesPage = ({ user }) => {
         });
 
         return searchFilteredBubbles.length;
-    };
+    }, [bubbles, tags, listFilter, listSearchQuery]);
 
     // Function to count all bubbles by category (for category management dialog)
     const getBubbleCountByTag = (tagId) => {
@@ -1014,17 +1013,21 @@ const BubblesPage = ({ user }) => {
         localStorage.setItem('bubbles-show-instructions', 'false');
     };
 
-    // Компонент для отображения текста поверх пузырей
-    const TextOverlay = () => {
+    // Optimized component for displaying text over bubbles
+    const TextOverlay = useCallback(() => {
         const [positions, setPositions] = useState([]);
         const bubblesRef = useRef(bubbles);
         const filteredBubblesRef = useRef([]);
 
-        // Обновляем ref при изменении bubbles
-        useEffect(() => {
+        // Обновляем ref при изменении bubbles - мемоизируем
+        const updateRefs = useCallback(() => {
             bubblesRef.current = bubbles;
-            filteredBubblesRef.current = getFilteredBubbles();
-        }, [bubbles, filterTags, showNoTag]);
+            filteredBubblesRef.current = getFilteredBubbles;
+        }, [bubbles, getFilteredBubbles]);
+
+        useEffect(() => {
+            updateRefs();
+        }, [updateRefs]);
 
         useEffect(() => {
             if (!engineRef.current) return undefined;
@@ -1041,9 +1044,66 @@ const BubblesPage = ({ user }) => {
                 setPositions(newPositions);
             };
 
-            const intervalId = setInterval(updatePositions, 16); // ~60fps
+            // Увеличиваем интервал до 33мс (~30fps) для лучшей производительности
+            const intervalId = setInterval(updatePositions, 33);
             return () => clearInterval(intervalId);
-        }, [filterTags, showNoTag]);
+        }, []);
+
+        // Мемоизируем рендер функцию для каждого пузыря
+        const renderBubbleText = useCallback((bubble) => {
+            // Функция для ограничения длины текста в зависимости от размера пузыря и шрифта
+            const getMaxTitleLength = (radius, currentFontSize) => {
+                // Базовые значения для шрифта 12px
+                let baseLength;
+                if (radius < 30) baseLength = 8;   // очень маленький пузырь
+                else if (radius < 40) baseLength = 12;  // маленький пузырь
+                else if (radius < 50) baseLength = 16;  // средний пузырь
+                else baseLength = 20;                   // большой пузырь
+
+                // Корректируем количество символов в зависимости от размера шрифта
+                // Чем меньше шрифт, тем больше символов помещается (квадратичная зависимость)
+                const fontSizeRatio = Math.pow(12 / currentFontSize, 1.5); // Более агрессивное увеличение
+                return Math.round(baseLength * fontSizeRatio);
+            };
+
+            // Вычисляем текущий размер шрифта с учетом мобильности
+            const currentFontSize = isMobile ? fontSize * 0.75 : fontSize;
+            const maxLength = getMaxTitleLength(bubble.radius, currentFontSize);
+            const truncatedTitle = bubble.title && bubble.title.length > maxLength
+                ? bubble.title.substring(0, maxLength) + '...'
+                : bubble.title;
+
+            return bubble.title ? (
+                <Box
+                    key={bubble.id}
+                    sx={{
+                        position: 'absolute',
+                        left: bubble.x,
+                        top: bubble.y,
+                        transform: 'translate(-50%, -50%)',
+                        textAlign: 'center',
+                        color: 'white',
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                        maxWidth: Math.max(bubble.radius * 1.6, 50),
+                        overflow: 'hidden'
+                    }}
+                >
+                    <Typography
+                        sx={{
+                            fontSize: Math.max(
+                                isMobile ? fontSize * 0.75 : fontSize,
+                                Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? fontSize * 1.2 : fontSize * 1.3)
+                            ),
+                            fontWeight: 'bold',
+                            lineHeight: 1.1,
+                            wordBreak: 'break-word'
+                        }}
+                    >
+                        {truncatedTitle}
+                    </Typography>
+                </Box>
+            ) : null;
+        }, [isMobile, fontSize]);
 
         return (
             <Box sx={{
@@ -1055,63 +1115,10 @@ const BubblesPage = ({ user }) => {
                 pointerEvents: 'none',
                 zIndex: 10
             }}>
-                {positions.map(bubble => {
-                    // Функция для ограничения длины текста в зависимости от размера пузыря и шрифта
-                    const getMaxTitleLength = (radius, currentFontSize) => {
-                        // Базовые значения для шрифта 12px
-                        let baseLength;
-                        if (radius < 30) baseLength = 8;   // очень маленький пузырь
-                        else if (radius < 40) baseLength = 12;  // маленький пузырь
-                        else if (radius < 50) baseLength = 16;  // средний пузырь
-                        else baseLength = 20;                   // большой пузырь
-
-                        // Корректируем количество символов в зависимости от размера шрифта
-                        // Чем меньше шрифт, тем больше символов помещается (квадратичная зависимость)
-                        const fontSizeRatio = Math.pow(12 / currentFontSize, 1.5); // Более агрессивное увеличение
-                        return Math.round(baseLength * fontSizeRatio);
-                    };
-
-                    // Вычисляем текущий размер шрифта с учетом мобильности
-                    const currentFontSize = isMobile ? fontSize * 0.75 : fontSize;
-                    const maxLength = getMaxTitleLength(bubble.radius, currentFontSize);
-                    const truncatedTitle = bubble.title && bubble.title.length > maxLength
-                        ? bubble.title.substring(0, maxLength) + '...'
-                        : bubble.title;
-
-                    return bubble.title ? (
-                        <Box
-                            key={bubble.id}
-                            sx={{
-                                position: 'absolute',
-                                left: bubble.x,
-                                top: bubble.y,
-                                transform: 'translate(-50%, -50%)',
-                                textAlign: 'center',
-                                color: 'white',
-                                textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                                maxWidth: Math.max(bubble.radius * 1.6, 50),
-                                overflow: 'hidden'
-                            }}
-                        >
-                            <Typography
-                                sx={{
-                                    fontSize: Math.max(
-                                        isMobile ? fontSize * 0.75 : fontSize,
-                                        Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? fontSize * 1.2 : fontSize * 1.3)
-                                    ),
-                                    fontWeight: 'bold',
-                                    lineHeight: 1.1,
-                                    wordBreak: 'break-word'
-                                }}
-                            >
-                                {truncatedTitle}
-                            </Typography>
-                        </Box>
-                    ) : null;
-                })}
+                {positions.map(renderBubbleText)}
             </Box>
         );
-    };
+    }, [getFilteredBubbles, bubbles, isMobile, fontSize]);
 
 
 

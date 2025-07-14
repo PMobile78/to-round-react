@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import {
     Box,
     Typography,
@@ -72,40 +72,52 @@ const ListView = ({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    const getStatusIcon = (status) => {
-        switch (status) {
-            case BUBBLE_STATUS.DONE:
-                return <CheckCircle sx={{ color: '#4CAF50' }} />;
-            case BUBBLE_STATUS.DELETED:
-                return <DeleteOutlined sx={{ color: '#F44336' }} />;
-            case BUBBLE_STATUS.POSTPONE:
-                return <LocalOffer sx={{ color: '#FF9800' }} />;
-            default:
-                return <CheckCircle sx={{ color: '#2196F3' }} />;
-        }
-    };
+    // Debounced search query
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(listSearchQuery);
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case BUBBLE_STATUS.DONE:
-                return '#E8F5E8';
-            case BUBBLE_STATUS.DELETED:
-                return '#FFEBEE';
-            case BUBBLE_STATUS.POSTPONE:
-                return '#FFF3E0';
-            default:
-                return '#E3F2FD';
-        }
-    };
+    // Debounce search query updates
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(listSearchQuery);
+        }, 300); // 300ms delay
 
-    // Filter tasks by search query
-    const filterTasksBySearch = (tasks) => {
-        if (!listSearchQuery.trim()) {
-            return tasks;
+        return () => clearTimeout(timer);
+    }, [listSearchQuery]);
+
+    // Memoized function to get filtered bubbles for list view
+    const getFilteredBubblesForList = useMemo(() => {
+        // Filter by selected status
+        const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
+
+        // Apply tag filters using separate list filter states
+        // Check if all tags are selected and showNoTag is true - show all bubbles
+        const allTagsSelected = tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
+
+        if (allTagsSelected) {
+            return filteredByStatus;
         }
 
-        const query = listSearchQuery.toLowerCase().trim();
-        return tasks.filter(task => {
+        return filteredByStatus.filter(bubble => {
+            // Если выбраны теги и пузырь имеет один из выбранных тегов
+            if (listFilterTags.length > 0 && bubble.tagId && listFilterTags.includes(bubble.tagId)) {
+                return true;
+            }
+            // Если включен фильтр "No Tag" и у пузыря нет тега
+            if (listShowNoTag && !bubble.tagId) {
+                return true;
+            }
+            return false;
+        });
+    }, [bubbles, tags, listFilter, listFilterTags, listShowNoTag]);
+
+    // Memoized search filtering
+    const searchFilteredTasks = useMemo(() => {
+        if (!debouncedSearchQuery.trim()) {
+            return getFilteredBubblesForList;
+        }
+
+        const query = debouncedSearchQuery.toLowerCase().trim();
+        return getFilteredBubblesForList.filter(task => {
             // Search in title
             const titleMatch = (task.title || '').toLowerCase().includes(query);
 
@@ -118,10 +130,11 @@ const ListView = ({
 
             return titleMatch || descriptionMatch || tagMatch;
         });
-    };
+    }, [getFilteredBubblesForList, debouncedSearchQuery, tags]);
 
-    const sortTasks = (tasks) => {
-        const sortedTasks = [...tasks];
+    // Memoized sorting
+    const sortedAndFilteredTasks = useMemo(() => {
+        const sortedTasks = [...searchFilteredTasks];
 
         sortedTasks.sort((a, b) => {
             let aValue, bValue;
@@ -160,40 +173,38 @@ const ListView = ({
         });
 
         return sortedTasks;
-    };
+    }, [searchFilteredTasks, listSortBy, listSortOrder, tags]);
 
-    const getFilteredBubblesForList = () => {
-        // Filter by selected status
-        const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
-
-        // Apply tag filters using separate list filter states
-        // Check if all tags are selected and showNoTag is true - show all bubbles
-        const allTagsSelected = tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
-
-        if (allTagsSelected) {
-            return filteredByStatus;
+    // Memoized status icons
+    const getStatusIcon = useCallback((status) => {
+        switch (status) {
+            case BUBBLE_STATUS.DONE:
+                return <CheckCircle sx={{ color: '#4CAF50' }} />;
+            case BUBBLE_STATUS.DELETED:
+                return <DeleteOutlined sx={{ color: '#F44336' }} />;
+            case BUBBLE_STATUS.POSTPONE:
+                return <LocalOffer sx={{ color: '#FF9800' }} />;
+            default:
+                return <CheckCircle sx={{ color: '#2196F3' }} />;
         }
+    }, []);
 
-        return filteredByStatus.filter(bubble => {
-            // Если выбраны теги и пузырь имеет один из выбранных тегов
-            if (listFilterTags.length > 0 && bubble.tagId && listFilterTags.includes(bubble.tagId)) {
-                return true;
-            }
-            // Если включен фильтр "No Tag" и у пузыря нет тега
-            if (listShowNoTag && !bubble.tagId) {
-                return true;
-            }
-            return false;
-        });
-    };
+    // Memoized status colors
+    const getStatusColor = useCallback((status) => {
+        switch (status) {
+            case BUBBLE_STATUS.DONE:
+                return '#E8F5E8';
+            case BUBBLE_STATUS.DELETED:
+                return '#FFEBEE';
+            case BUBBLE_STATUS.POSTPONE:
+                return '#FFF3E0';
+            default:
+                return '#E3F2FD';
+        }
+    }, []);
 
-    const getTasksByStatus = (status) => {
-        const filteredBubbles = getFilteredBubblesForList();
-        const sortedTasks = sortTasks(filteredBubbles);
-        return filterTasksBySearch(sortedTasks);
-    };
-
-    const getTasksCountByStatus = (status) => {
+    // Memoized task count calculation
+    const getTasksCountByStatus = useCallback((status) => {
         // Apply tag filters to all bubbles using list filter states
         const allTagsSelected = tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
 
@@ -227,48 +238,67 @@ const ListView = ({
             statusFilteredBubbles = filteredBubbles;
         }
 
-        // Apply search filter
-        const searchFilteredBubbles = filterTasksBySearch(statusFilteredBubbles);
-        return searchFilteredBubbles.length;
-    };
+        // Apply search filter with debounced query
+        if (!debouncedSearchQuery.trim()) {
+            return statusFilteredBubbles.length;
+        }
 
-    const formatDate = (dateString) => {
+        const query = debouncedSearchQuery.toLowerCase().trim();
+        const searchFilteredBubbles = statusFilteredBubbles.filter(bubble => {
+            // Search in title
+            const titleMatch = (bubble.title || '').toLowerCase().includes(query);
+
+            // Search in description
+            const descriptionMatch = (bubble.description || '').toLowerCase().includes(query);
+
+            // Search in tag name
+            const tag = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
+            const tagMatch = tag ? tag.name.toLowerCase().includes(query) : false;
+
+            return titleMatch || descriptionMatch || tagMatch;
+        });
+
+        return searchFilteredBubbles.length;
+    }, [bubbles, tags, listFilterTags, listShowNoTag, debouncedSearchQuery]);
+
+    const formatDate = useCallback((dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
+    }, []);
 
-    const handleRestoreBubble = async (bubbleId) => {
+    // Memoized action handlers
+    const handleRestoreBubble = useCallback(async (bubbleId) => {
         try {
             const updatedBubbles = await restoreBubble(bubbleId, bubbles);
             setBubbles(updatedBubbles);
         } catch (error) {
             console.error('Error restoring bubble:', error);
         }
-    };
+    }, [bubbles, setBubbles]);
 
     // Mark task as done from list view
-    const handleMarkTaskAsDone = async (taskId) => {
+    const handleMarkTaskAsDone = useCallback(async (taskId) => {
         try {
             const updatedBubbles = await markBubbleAsDone(taskId, bubbles);
             setBubbles(updatedBubbles);
         } catch (error) {
             console.error('Error marking task as done:', error);
         }
-    };
+    }, [bubbles, setBubbles]);
 
     // Delete task from list view
-    const handleDeleteTask = async (taskId) => {
+    const handleDeleteTask = useCallback(async (taskId) => {
         try {
             const updatedBubbles = await markBubbleAsDeleted(taskId, bubbles);
             setBubbles(updatedBubbles);
         } catch (error) {
             console.error('Error deleting task:', error);
         }
-    };
+    }, [bubbles, setBubbles]);
 
     // Permanently delete task from list view
-    const handlePermanentDeleteTask = async (taskId) => {
+    const handlePermanentDeleteTask = useCallback(async (taskId) => {
         try {
             const updatedBubbles = bubbles.filter(bubble => bubble.id !== taskId);
             setBubbles(updatedBubbles);
@@ -276,18 +306,18 @@ const ListView = ({
         } catch (error) {
             console.error('Error permanently deleting task:', error);
         }
-    };
+    }, [bubbles, setBubbles]);
 
     // Edit task from list view
-    const handleEditTask = (task) => {
+    const handleEditTask = useCallback((task) => {
         setSelectedBubble(task);
         setTitle(task.title || '');
         setDescription(task.description || '');
         setSelectedTagId(task.tagId || '');
         setEditDialog(true);
-    };
+    }, [setSelectedBubble, setTitle, setDescription, setSelectedTagId, setEditDialog]);
 
-    const tasks = getTasksByStatus(listFilter);
+    const tasks = sortedAndFilteredTasks;
     const isEmpty = tasks.length === 0;
 
     return (
