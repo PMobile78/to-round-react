@@ -1710,20 +1710,24 @@ const BubblesPage = ({ user }) => {
                                             }
                                         }}
                                         sx={{
-                                            width: isUsed ? 34 : 40, // Уменьшаем размер для занятых, чтобы с кольцом было 40px
-                                            height: isUsed ? 34 : 40,
+                                            width: 40,
+                                            height: 40,
                                             borderRadius: '50%',
                                             backgroundColor: isUsed ? `${color}50` : color, // Полупрозрачный фон для занятых
                                             border: isSelected
                                                 ? '3px solid #1976d2'
-                                                : 'none', // Убираем серые границы у всех
+                                                : isUsed
+                                                    ? `3px solid ${color}`
+                                                    : 'none',
                                             cursor: isUsed ? 'not-allowed' : 'pointer',
                                             position: 'relative',
                                             transition: 'all 0.2s ease',
-                                            boxShadow: isUsed ? `0 0 0 3px ${color}` : 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
                                             '&:hover': {
                                                 transform: !isUsed ? 'scale(1.1)' : 'none',
-                                                boxShadow: !isUsed ? '0 4px 8px rgba(0,0,0,0.2)' : `0 0 0 3px ${color}`
+                                                boxShadow: !isUsed ? '0 4px 8px rgba(0,0,0,0.2)' : 'none'
                                             }
                                         }}
                                     >
