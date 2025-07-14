@@ -532,15 +532,43 @@ const BubblesPage = ({ user }) => {
                 const isCurrentlyInWorld = engineRef.current.world.bodies.includes(bubble.body);
 
                 if (isVisible && !isCurrentlyInWorld) {
-                    // Add a bubble to the physical world
-                    Matter.World.add(engineRef.current.world, bubble.body);
+                    // Create new physics body for restored bubbles to make them fall from top
+                    const margin = isMobile ? 50 : 100;
+                    const newX = Math.random() * (canvasSize.width - margin * 2) + margin;
+                    const newY = 50; // Drop from top
+
+                    // Determine stroke color based on tag
+                    let strokeColor = '#B0B0B0';
+                    if (bubble.tagId) {
+                        const tag = tags.find(t => t.id === bubble.tagId);
+                        if (tag) {
+                            strokeColor = tag.color;
+                        }
+                    }
+
+                    // Create new physics body with new position
+                    const newBody = Matter.Bodies.circle(newX, newY, bubble.radius, {
+                        restitution: 0.8,
+                        frictionAir: 0.01,
+                        render: {
+                            fillStyle: 'transparent',
+                            strokeStyle: strokeColor,
+                            lineWidth: 3
+                        }
+                    });
+
+                    // Update bubble with new physics body
+                    bubble.body = newBody;
+
+                    // Add new bubble to the physical world
+                    Matter.World.add(engineRef.current.world, newBody);
                 } else if (!isVisible && isCurrentlyInWorld) {
                     // Remove bubble from the physical world
                     Matter.World.remove(engineRef.current.world, bubble.body);
                 }
             }
         });
-    }, [getFilteredBubbles, bubbles]);
+    }, [getFilteredBubbles, bubbles, canvasSize, isMobile, tags]);
 
 
 
