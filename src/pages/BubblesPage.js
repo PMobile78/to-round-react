@@ -909,7 +909,27 @@ const BubblesPage = ({ user }) => {
         return tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
     };
 
-    // Function to count bubbles by category
+    // Function to count bubbles by category for Bubbles View (only active bubbles)
+    const getBubbleCountByTagForBubblesView = (tagId) => {
+        const activeBubbles = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
+        if (tagId === null) {
+            // Count active bubbles without tags
+            return activeBubbles.filter(bubble => !bubble.tagId).length;
+        }
+        return activeBubbles.filter(bubble => bubble.tagId === tagId).length;
+    };
+
+    // Function to count bubbles by category for List View (based on selected status)
+    const getBubbleCountByTagForListView = (tagId) => {
+        const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
+        if (tagId === null) {
+            // Count bubbles without tags in selected status
+            return filteredByStatus.filter(bubble => !bubble.tagId).length;
+        }
+        return filteredByStatus.filter(bubble => bubble.tagId === tagId).length;
+    };
+
+    // Function to count all bubbles by category (for category management dialog)
     const getBubbleCountByTag = (tagId) => {
         if (tagId === null) {
             // Count bubbles without tags
@@ -1256,7 +1276,7 @@ const BubblesPage = ({ user }) => {
                         onNoTagFilterChange={handleListNoTagFilterChange}
                         onSelectAll={selectAllListFilters}
                         onClearAll={clearAllListFilters}
-                        getBubbleCountByTag={getBubbleCountByTag}
+                        getBubbleCountByTag={getBubbleCountByTagForListView}
                     />
 
                     {/* Sort controls */}
@@ -2363,7 +2383,7 @@ const BubblesPage = ({ user }) => {
                                     }}
                                 />
                                 <Typography sx={{ color: 'white' }}>
-                                    {t('bubbles.noTag')} <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>{getBubbleCountByTag(null)}</Box>
+                                    {t('bubbles.noTag')} <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>{getBubbleCountByTagForBubblesView(null)}</Box>
                                 </Typography>
                             </Box>
                             {showNoTag && (
@@ -2399,7 +2419,7 @@ const BubblesPage = ({ user }) => {
                                         }}
                                     />
                                     <Typography sx={{ color: 'white' }}>
-                                        {tag.name} <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>{getBubbleCountByTag(tag.id)}</Box>
+                                        {tag.name} <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>{getBubbleCountByTagForBubblesView(tag.id)}</Box>
                                     </Typography>
                                 </Box>
                                 {filterTags.includes(tag.id) && (
