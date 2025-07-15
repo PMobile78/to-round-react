@@ -1796,7 +1796,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     sx: {
                         width: isMobile ? '70%' : 300,
                         maxWidth: '85%',
-                        backgroundColor: '#FFFFFF'
+                        backgroundColor: themeMode === 'light' ? '#FFFFFF' : '#1e1e1e'
                     }
                 }}
             >
@@ -1805,10 +1805,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     <Box sx={{
                         padding: 3,
                         paddingBottom: 2,
-                        borderBottom: '1px solid #E0E0E0'
+                        borderBottom: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333'
                     }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginBottom: 2 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2C3E50' }}>
+                            <Typography variant="h6" sx={{
+                                fontWeight: 'bold',
+                                color: themeMode === 'light' ? '#2C3E50' : '#ffffff'
+                            }}>
                                 ToROUND
                             </Typography>
                         </Box>
@@ -1827,18 +1830,18 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 padding: '16px 24px',
                                 cursor: 'pointer',
                                 '&:hover': {
-                                    backgroundColor: '#F8F9FA'
+                                    backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                                 }
                             }}
                         >
                             <ListItemIcon sx={{ minWidth: 40 }}>
                                 {/* <Category sx={{ color: '#BDC3C7' }} /> */}
-                                <Sell sx={{ color: '#BDC3C7' }} />
+                                <Sell sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <ListItemText
                                 primary={t('bubbles.taskCategories')}
                                 primaryTypographyProps={{
-                                    color: '#2C3E50',
+                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
                                     fontWeight: 500
                                 }}
                             />
@@ -1855,17 +1858,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 padding: '16px 24px',
                                 cursor: 'pointer',
                                 '&:hover': {
-                                    backgroundColor: '#F8F9FA'
+                                    backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                                 }
                             }}
                         >
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Settings sx={{ color: '#BDC3C7' }} />
+                                <Settings sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <ListItemText
                                 primary={t('bubbles.fontSettings')}
                                 primaryTypographyProps={{
-                                    color: '#2C3E50',
+                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
                                     fontWeight: 500
                                 }}
                             />
@@ -1882,17 +1885,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 padding: '16px 24px',
                                 cursor: 'pointer',
                                 '&:hover': {
-                                    backgroundColor: '#F8F9FA'
+                                    backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                                 }
                             }}
                         >
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Info sx={{ color: '#BDC3C7' }} />
+                                <Info sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <ListItemText
                                 primary={t('bubbles.about')}
                                 primaryTypographyProps={{
-                                    color: '#2C3E50',
+                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
                                     fontWeight: 500
                                 }}
                             />
@@ -2264,7 +2267,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         borderTop: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333',
                         padding: 3,
                         textAlign: 'center',
-                        backgroundColor: themeMode === 'light' ? '#FAFAFA' : '#2C2C2C'
+                        backgroundColor: 'transparent'
                     }}>
                         <Button
                             variant="text"
@@ -2278,7 +2281,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             disabled={!canCreateMoreTags()}
                             sx={{
                                 backgroundColor: 'transparent',
-                                color: canCreateMoreTags() ? '#757575' : '#B0B0B0',
+                                color: canCreateMoreTags()
+                                    ? (themeMode === 'light' ? '#757575' : '#aaaaaa')
+                                    : (themeMode === 'light' ? '#B0B0B0' : '#666666'),
                                 borderRadius: 2,
                                 padding: '12px 24px',
                                 textTransform: 'none',
@@ -2287,10 +2292,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 fontSize: '14px',
                                 border: 'none',
                                 '&:hover': {
-                                    backgroundColor: canCreateMoreTags() ? 'rgba(117, 117, 117, 0.08)' : 'transparent'
+                                    backgroundColor: canCreateMoreTags()
+                                        ? (themeMode === 'light' ? 'rgba(117, 117, 117, 0.08)' : 'rgba(255, 255, 255, 0.1)')
+                                        : 'transparent'
                                 },
                                 '& .MuiButton-startIcon': {
-                                    color: canCreateMoreTags() ? '#757575' : '#B0B0B0',
+                                    color: canCreateMoreTags()
+                                        ? (themeMode === 'light' ? '#757575' : '#aaaaaa')
+                                        : (themeMode === 'light' ? '#B0B0B0' : '#666666'),
                                     marginRight: 1.5,
                                     fontSize: '20px'
                                 }
@@ -2322,7 +2331,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             disabled={!canCreateMoreTags()}
                             sx={{
                                 backgroundColor: 'transparent',
-                                color: canCreateMoreTags() ? '#757575' : '#B0B0B0',
+                                color: canCreateMoreTags()
+                                    ? (themeMode === 'light' ? '#757575' : '#aaaaaa')
+                                    : (themeMode === 'light' ? '#B0B0B0' : '#666666'),
                                 borderRadius: 2,
                                 padding: '12px 24px',
                                 textTransform: 'none',
@@ -2331,10 +2342,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 fontSize: '14px',
                                 border: 'none',
                                 '&:hover': {
-                                    backgroundColor: canCreateMoreTags() ? 'rgba(117, 117, 117, 0.08)' : 'transparent'
+                                    backgroundColor: canCreateMoreTags()
+                                        ? (themeMode === 'light' ? 'rgba(117, 117, 117, 0.08)' : 'rgba(255, 255, 255, 0.1)')
+                                        : 'transparent'
                                 },
                                 '& .MuiButton-startIcon': {
-                                    color: canCreateMoreTags() ? '#757575' : '#B0B0B0',
+                                    color: canCreateMoreTags()
+                                        ? (themeMode === 'light' ? '#757575' : '#aaaaaa')
+                                        : (themeMode === 'light' ? '#B0B0B0' : '#666666'),
                                     marginRight: 1.5,
                                     fontSize: '20px'
                                 }
