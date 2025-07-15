@@ -123,7 +123,9 @@
     "theme": {
         "switchToDark": "Перемкнути на темну тему",
         "switchToLight": "Перемкнути на світлу тему",
+        "switchToSystem": "Перемкнути на системну тему",
         "darkMode": "Темна тема",
-        "lightMode": "Світла тема"
+        "lightMode": "Світла тема",
+        "systemMode": "Системна тема"
     }
 }

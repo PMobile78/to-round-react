@@ -123,7 +123,9 @@
     "theme": {
         "switchToDark": "Switch to Dark Theme",
         "switchToLight": "Switch to Light Theme",
+        "switchToSystem": "Switch to System Theme",
         "darkMode": "Dark Mode",
-        "lightMode": "Light Mode"
+        "lightMode": "Light Mode",
+        "systemMode": "System Theme"
     }
 }

@@ -4,18 +4,52 @@ import { createTheme } from '@mui/material/styles';
 export const useThemeMode = () => {
     const [themeMode, setThemeMode] = useState(() => {
         const savedTheme = localStorage.getItem('app-theme-mode');
-        return savedTheme || 'light';
+        return savedTheme || 'system';
     });
 
+    // Функция для получения системной темы
+    const getSystemTheme = () => {
+        if (typeof window !== 'undefined' && window.matchMedia) {
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        return 'light';
+    };
+
+    // Получаем актуальную тему (если system, то берем системную)
+    const getActualTheme = () => {
+        return themeMode === 'system' ? getSystemTheme() : themeMode;
+    };
+
     const toggleTheme = () => {
-        const newMode = themeMode === 'light' ? 'dark' : 'light';
+        let newMode;
+        if (themeMode === 'light') {
+            newMode = 'dark';
+        } else if (themeMode === 'dark') {
+            newMode = 'system';
+        } else {
+            newMode = 'light';
+        }
         setThemeMode(newMode);
         localStorage.setItem('app-theme-mode', newMode);
     };
 
+    // Слушаем изменения системной темы
     useEffect(() => {
         localStorage.setItem('app-theme-mode', themeMode);
+
+        if (themeMode === 'system') {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const handleChange = () => {
+                // Принудительно перерендерим компонент при изменении системной темы
+                setThemeMode('system');
+            };
+
+            mediaQuery.addEventListener('change', handleChange);
+            return () => mediaQuery.removeEventListener('change', handleChange);
+        }
     }, [themeMode]);
+
+    const actualTheme = getActualTheme();
 
     const createAppTheme = (mode) => {
         return createTheme({
@@ -90,10 +124,11 @@ export const useThemeMode = () => {
         });
     };
 
-    const theme = createAppTheme(themeMode);
+    const theme = createAppTheme(actualTheme);
 
     return {
         themeMode,
+        actualTheme,
         toggleTheme,
         theme,
     };

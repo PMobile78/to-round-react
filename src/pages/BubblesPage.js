@@ -59,7 +59,7 @@ const DELETED_TASKS_CLEANUP_DAYS = 30;
 
 
 
-const BubblesPage = ({ user, themeMode, toggleTheme }) => {
+const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
@@ -1315,7 +1315,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme }) => {
                 }}>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <LanguageSelector themeMode={themeMode} />
-                        <ThemeToggle themeMode={themeMode} toggleTheme={toggleTheme} />
+                        <ThemeToggle {...themeToggleProps} toggleTheme={toggleTheme} />
                         {/* View Mode Toggle */}
                         <Button
                             onClick={() => setListViewDialog(true)}
@@ -1394,7 +1394,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme }) => {
                         alignItems: 'center'
                     }}>
                         <LanguageSelector themeMode={themeMode} />
-                        <ThemeToggle themeMode={themeMode} toggleTheme={toggleTheme} />
+                        <ThemeToggle {...themeToggleProps} toggleTheme={toggleTheme} />
                         {/* View Mode Toggle for Mobile */}
                         <IconButton
                             onClick={() => setListViewDialog(true)}

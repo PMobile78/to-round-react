@@ -10,7 +10,7 @@ import { useThemeMode } from './hooks/useThemeMode';
 function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const { themeMode, toggleTheme, theme } = useThemeMode();
+    const { themeMode, actualTheme, toggleTheme, theme } = useThemeMode();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChange((currentUser) => {
@@ -50,14 +50,16 @@ function App() {
             {user ? (
                 <BubblesPage
                     user={user}
-                    themeMode={themeMode}
+                    themeMode={actualTheme}
                     toggleTheme={toggleTheme}
+                    themeToggleProps={{ themeMode, actualTheme }}
                 />
             ) : (
                 <AuthForm
                     onLoginSuccess={handleLoginSuccess}
-                    themeMode={themeMode}
+                    themeMode={actualTheme}
                     toggleTheme={toggleTheme}
+                    themeToggleProps={{ themeMode, actualTheme }}
                 />
             )}
         </ThemeProvider>

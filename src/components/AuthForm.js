@@ -20,7 +20,7 @@ import { createUser, loginUser, resetPassword } from '../services/authService';
 import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
 
-const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme }) => {
+const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -125,7 +125,7 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme }) => {
                 alignItems: 'center'
             }}>
                 <LanguageSelector themeMode={themeMode} />
-                <ThemeToggle themeMode={themeMode} toggleTheme={toggleTheme} />
+                <ThemeToggle {...themeToggleProps} toggleTheme={toggleTheme} />
             </Box>
 
             <Paper
