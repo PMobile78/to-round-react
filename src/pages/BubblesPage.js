@@ -1288,19 +1288,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         maxWidth: Math.max(bubble.radius * 1.6, 50),
                         overflow: 'hidden',
                         opacity: textOpacity,
-                        transition: 'opacity 0.3s ease, color 0.3s ease, text-shadow 0.3s ease',
-                        // Добавляем пульсацию для найденных пузырей
-                        animation: hasSearchQuery && isFound ? 'bubblePulse 2s ease-in-out infinite alternate' : 'none',
-                        '@keyframes bubblePulse': {
-                            '0%': {
-                                transform: 'translate(-50%, -50%) scale(1)',
-                                filter: 'brightness(1)'
-                            },
-                            '100%': {
-                                transform: 'translate(-50%, -50%) scale(1.05)',
-                                filter: 'brightness(1.15)'
-                            }
-                        }
+                        transition: 'opacity 0.3s ease, color 0.3s ease, text-shadow 0.3s ease'
                     }}
                 >
                     <Typography
