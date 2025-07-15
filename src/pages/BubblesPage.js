@@ -1314,8 +1314,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     alignItems: 'flex-end'
                 }}>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <LanguageSelector themeMode={themeMode} />
-                        <ThemeToggle {...themeToggleProps} toggleTheme={toggleTheme} />
                         {/* View Mode Toggle */}
                         <Button
                             onClick={() => setListViewDialog(true)}
@@ -1340,15 +1338,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         >
                             {t('bubbles.filterButton')}
                         </Button>
-                        <Button
-                            onClick={handleLogout}
-                            variant="outlined"
-                            size="small"
-                            startIcon={<Logout />}
-                            sx={getOutlinedButtonStyles()}
-                        >
-                            {t('auth.logout')}
-                        </Button>
+
                     </Box>
                     {showInstructions && (
                         <Box sx={{
@@ -1393,8 +1383,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         gap: 1,
                         alignItems: 'center'
                     }}>
-                        <LanguageSelector themeMode={themeMode} />
-                        <ThemeToggle {...themeToggleProps} toggleTheme={toggleTheme} />
                         {/* View Mode Toggle for Mobile */}
                         <IconButton
                             onClick={() => setListViewDialog(true)}
@@ -1413,12 +1401,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         >
                             <FilterList />
                         </IconButton>
-                        <IconButton
-                            onClick={handleLogout}
-                            sx={getButtonStyles()}
-                        >
-                            <Logout />
-                        </IconButton>
+
                     </Box>
                     {showInstructions && (
                         <Box sx={{
@@ -1819,6 +1802,60 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                     {/* Пункты меню */}
                     <List sx={{ padding: 0 }}>
+                        {/* Language Selector */}
+                        <ListItem sx={{ padding: '16px 24px' }}>
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                                <Typography sx={{
+                                    color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
+                                    fontSize: '20px'
+                                }}>
+                                    🌐
+                                </Typography>
+                            </ListItemIcon>
+                            <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" sx={{
+                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                    fontWeight: 500,
+                                    marginBottom: 1
+                                }}>
+                                    {t('language.title')}
+                                </Typography>
+                                <LanguageSelector themeMode={themeMode} />
+                            </Box>
+                        </ListItem>
+
+                        <Divider sx={{
+                            backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
+                            margin: '8px 0'
+                        }} />
+
+                        {/* Theme Toggle */}
+                        <ListItem sx={{ padding: '16px 24px' }}>
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                                <Typography sx={{
+                                    color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
+                                    fontSize: '20px'
+                                }}>
+                                    🎨
+                                </Typography>
+                            </ListItemIcon>
+                            <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" sx={{
+                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                    fontWeight: 500,
+                                    marginBottom: 1
+                                }}>
+                                    {t('theme.title')}
+                                </Typography>
+                                <ThemeToggle {...themeToggleProps} toggleTheme={toggleTheme} size="small" />
+                            </Box>
+                        </ListItem>
+
+                        <Divider sx={{
+                            backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
+                            margin: '8px 0'
+                        }} />
+
                         {/* Task categories */}
                         <ListItem
                             button
@@ -1896,6 +1933,38 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 primary={t('bubbles.about')}
                                 primaryTypographyProps={{
                                     color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                    fontWeight: 500
+                                }}
+                            />
+                        </ListItem>
+
+                        <Divider sx={{
+                            backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
+                            margin: '8px 0'
+                        }} />
+
+                        {/* Logout */}
+                        <ListItem
+                            button
+                            onClick={() => {
+                                setMenuDrawerOpen(false);
+                                handleLogout();
+                            }}
+                            sx={{
+                                padding: '16px 24px',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    backgroundColor: themeMode === 'light' ? '#FFEBEE' : '#4A1418'
+                                }
+                            }}
+                        >
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                                <Logout sx={{ color: themeMode === 'light' ? '#D32F2F' : '#FF8A80' }} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary={t('auth.logout')}
+                                primaryTypographyProps={{
+                                    color: themeMode === 'light' ? '#D32F2F' : '#FF8A80',
                                     fontWeight: 500
                                 }}
                             />

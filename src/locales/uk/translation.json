@@ -126,6 +126,10 @@
         "switchToSystem": "Перемкнути на системну тему",
         "darkMode": "Темна тема",
         "lightMode": "Світла тема",
-        "systemMode": "Системна тема"
+        "systemMode": "Системна тема",
+        "title": "Тема"
+    },
+    "language": {
+        "title": "Мова"
     }
 }

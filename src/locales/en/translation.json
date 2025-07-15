@@ -126,6 +126,10 @@
         "switchToSystem": "Switch to System Theme",
         "darkMode": "Dark Mode",
         "lightMode": "Light Mode",
-        "systemMode": "System Theme"
+        "systemMode": "System Theme",
+        "title": "Theme"
+    },
+    "language": {
+        "title": "Language"
     }
 }
