@@ -442,9 +442,24 @@ const BubblesPage = ({ user, themeMode, toggleTheme }) => {
             render.canvas.remove();
             render.textures = {};
         };
+    }, []); // Убираем themeMode из зависимостей
+
+    // Separate useEffect for theme change - only update background
+    useEffect(() => {
+        if (renderRef.current && renderRef.current.canvas) {
+            const canvas = renderRef.current.canvas;
+
+            if (themeMode === 'light') {
+                // Для светлой темы - белый фон
+                renderRef.current.options.background = '#ffffff';
+                canvas.style.background = '#ffffff';
+            } else {
+                // Для темной темы - градиент фон
+                renderRef.current.options.background = '#2c3e50';
+                canvas.style.background = 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)';
+            }
+        }
     }, [themeMode]);
-
-
 
     // Real-time tags synchronization
     useEffect(() => {
@@ -1128,7 +1143,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme }) => {
                     </Typography>
                 </Box>
             ) : null;
-        }, [isMobile, fontSize]);
+        }, [isMobile, fontSize, themeMode]);
 
         return (
             <Box sx={{
@@ -1143,7 +1158,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme }) => {
                 {positions.map(renderBubbleText)}
             </Box>
         );
-    }, [getFilteredBubbles, bubbles, isMobile, fontSize]);
+    }, [getFilteredBubbles, bubbles, isMobile, fontSize, themeMode]);
 
 
 
