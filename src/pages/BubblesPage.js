@@ -1262,17 +1262,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
             // Определяем стили в зависимости от поиска
             const textOpacity = hasSearchQuery ? (isFound ? 1 : 0.4) : 1;
-            const textColor = hasSearchQuery && isFound
-                ? (themeMode === 'light' ? '#0d47a1' : '#90caf9')  // Более яркий синий для найденных
-                : (themeMode === 'light' ? '#2C3E50' : 'white');   // Обычный цвет
+            const textColor = themeMode === 'light' ? '#2C3E50' : 'white';   // Обычный цвет для всех
 
-            const textShadow = hasSearchQuery && isFound
-                ? (themeMode === 'light'
-                    ? '0px 0px 12px rgba(13, 71, 161, 0.8), 0px 0px 20px rgba(25, 118, 210, 0.6), 1px 1px 2px rgba(255,255,255,0.9)'  // Двойное свечение + обычная тень
-                    : '0px 0px 15px rgba(144, 202, 249, 0.9), 0px 0px 25px rgba(100, 181, 246, 0.7), 1px 1px 2px rgba(0,0,0,0.8)')    // Двойное свечение + обычная тень
-                : (themeMode === 'light'
-                    ? '1px 1px 2px rgba(255,255,255,0.8)'
-                    : '1px 1px 2px rgba(0,0,0,0.8)');
+            const textShadow = themeMode === 'light'
+                ? '1px 1px 2px rgba(255,255,255,0.8)'
+                : '1px 1px 2px rgba(0,0,0,0.8)';
 
             return bubble.title ? (
                 <Box
@@ -1288,7 +1282,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         maxWidth: Math.max(bubble.radius * 1.6, 50),
                         overflow: 'hidden',
                         opacity: textOpacity,
-                        transition: 'opacity 0.3s ease, color 0.3s ease, text-shadow 0.3s ease'
+                        transition: 'opacity 0.3s ease'
                     }}
                 >
                     <Typography
@@ -1297,7 +1291,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 isMobile ? fontSize * 0.75 : fontSize,
                                 Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? fontSize * 1.2 : fontSize * 1.3)
                             ),
-                            fontWeight: hasSearchQuery && isFound ? 'bolder' : 'bold',
+                            fontWeight: 'bold',
                             lineHeight: 1.1,
                             wordBreak: 'break-word'
                         }}
