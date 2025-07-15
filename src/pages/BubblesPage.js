@@ -172,6 +172,19 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Note: Functions moved to firestoreService.js for better organization
 
+    // Function to get bubble fill style based on theme
+    const getBubbleFillStyle = (tagColor = null) => {
+        if (themeMode === 'light') {
+            // В светлой теме добавляем легкий фон
+            if (tagColor) {
+                // Используем цвет тега с низкой прозрачностью
+                return tagColor + '15'; // добавляем 15 для 8% прозрачности
+            }
+            return 'rgba(59, 125, 237, 0.08)'; // легкий синий фон по умолчанию
+        }
+        return 'transparent'; // в темной теме остается прозрачным
+    };
+
     // Function to get canvas dimensions depending on screen size
     const getCanvasSize = () => {
         const padding = isMobile ? 10 : 40;
@@ -264,13 +277,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         const x = Math.random() * (canvasSize.width - margin * 2) + margin;
                         const y = Math.random() * (canvasSize.height - margin * 2) + margin;
 
+                        // Определяем цвет тега для правильного fillStyle
+                        let tagColor = null;
+                        if (storedBubble.tagId) {
+                            const tag = tags.find(t => t.id === storedBubble.tagId);
+                            if (tag) {
+                                tagColor = tag.color;
+                            }
+                        }
+
                         const bubble = {
                             id: storedBubble.id,
                             body: Matter.Bodies.circle(x, y, storedBubble.radius, {
                                 restitution: 0.8,
                                 frictionAir: 0.01,
                                 render: {
-                                    fillStyle: storedBubble.fillStyle || 'transparent',
+                                    fillStyle: getBubbleFillStyle(tagColor),
                                     strokeStyle: storedBubble.strokeStyle || '#3B7DED',
                                     lineWidth: 3
                                 }
@@ -444,7 +466,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         };
     }, []); // Убираем themeMode из зависимостей
 
-    // Separate useEffect for theme change - only update background
+    // Separate useEffect for theme change - update background and bubble fill styles
     useEffect(() => {
         if (renderRef.current && renderRef.current.canvas) {
             const canvas = renderRef.current.canvas;
@@ -459,7 +481,23 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 canvas.style.background = 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)';
             }
         }
-    }, [themeMode]);
+
+        // Update existing bubbles fill style based on theme
+        if (engineRef.current) {
+            bubbles.forEach(bubble => {
+                if (bubble.body && bubble.body.render) {
+                    let tagColor = null;
+                    if (bubble.tagId) {
+                        const tag = tags.find(t => t.id === bubble.tagId);
+                        if (tag) {
+                            tagColor = tag.color;
+                        }
+                    }
+                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                }
+            });
+        }
+    }, [themeMode, bubbles, tags]);
 
     // Real-time tags synchronization
     useEffect(() => {
@@ -482,16 +520,18 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 return validListFilterTags;
             });
 
-            // Update bubble colors when tags change
+            // Update bubble colors and fill styles when tags change
             setBubbles(currentBubbles => {
                 return currentBubbles.map(bubble => {
                     if (bubble.tagId) {
                         const tag = updatedTags.find(t => t.id === bubble.tagId);
                         if (tag && bubble.body) {
                             bubble.body.render.strokeStyle = tag.color;
+                            bubble.body.render.fillStyle = getBubbleFillStyle(tag.color);
                         }
                     } else if (bubble.body) {
                         bubble.body.render.strokeStyle = '#B0B0B0';
+                        bubble.body.render.fillStyle = getBubbleFillStyle(null);
                     }
                     return bubble;
                 });
@@ -546,12 +586,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         const newX = Math.random() * (canvasSize.width - margin * 2) + margin;
                         const newY = 50; // Drop from top
 
-                        // Determine stroke color based on tag
+                        // Determine stroke color and tag color based on tag
                         let strokeColor = '#B0B0B0';
+                        let tagColor = null;
                         if (bubble.tagId) {
                             const tag = tags.find(t => t.id === bubble.tagId);
                             if (tag) {
                                 strokeColor = tag.color;
+                                tagColor = tag.color;
                             }
                         }
 
@@ -560,7 +602,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             restitution: 0.8,
                             frictionAir: 0.01,
                             render: {
-                                fillStyle: 'transparent',
+                                fillStyle: getBubbleFillStyle(tagColor),
                                 strokeStyle: strokeColor,
                                 lineWidth: 3
                             }
@@ -585,11 +627,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Bubble creation function
     const createBubble = (x, y, radius, tagId = null) => {
         let strokeColor = '#B0B0B0'; // light gray color by default
+        let tagColor = null;
 
         if (tagId) {
             const tag = tags.find(t => t.id === tagId);
             if (tag) {
                 strokeColor = tag.color;
+                tagColor = tag.color;
             }
         }
 
@@ -597,7 +641,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             restitution: 0.8,
             frictionAir: 0.01,
             render: {
-                fillStyle: 'transparent',
+                fillStyle: getBubbleFillStyle(tagColor),
                 strokeStyle: strokeColor,
                 lineWidth: 3
             }
@@ -699,15 +743,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             updatedAt: new Date().toISOString()
                         };
 
-                        // Update border color based on tag
+                        // Update border color and fill style based on tag
                         if (selectedTagId) {
                             const tag = tags.find(t => t.id === selectedTagId);
                             if (tag) {
                                 bubble.body.render.strokeStyle = tag.color;
+                                bubble.body.render.fillStyle = getBubbleFillStyle(tag.color);
                             }
                         } else {
                             // If no tag is selected, use light gray color
                             bubble.body.render.strokeStyle = '#B0B0B0';
+                            bubble.body.render.fillStyle = getBubbleFillStyle(null);
                         }
 
                         return updatedBubble;
@@ -849,8 +895,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setBubbles(prev => {
             const updatedBubbles = prev.map(bubble => {
                 if (bubble.tagId === tagId) {
-                    // Сбрасываем цвет пузыря на светло-серый
+                    // Сбрасываем цвет пузыря на светло-серый и обновляем fillStyle
                     bubble.body.render.strokeStyle = '#B0B0B0';
+                    bubble.body.render.fillStyle = getBubbleFillStyle(null);
                     return { ...bubble, tagId: null };
                 }
                 return bubble;
