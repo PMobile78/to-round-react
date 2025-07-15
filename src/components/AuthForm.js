@@ -216,7 +216,15 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                                 marginBottom: 2,
                                 height: 48,
                                 fontSize: 16,
-                                background: theme.palette.background.bubbleView
+                                backgroundColor: themeMode === 'light' ? '#3B7DED' : 'rgba(255, 255, 255, 0.2)',
+                                color: themeMode === 'light' ? '#ffffff' : '#ffffff',
+                                '&:hover': {
+                                    backgroundColor: themeMode === 'light' ? '#2C5ED1' : 'rgba(255, 255, 255, 0.3)'
+                                },
+                                '&:disabled': {
+                                    backgroundColor: themeMode === 'light' ? '#B0B0B0' : 'rgba(255, 255, 255, 0.1)',
+                                    color: themeMode === 'light' ? '#ffffff' : 'rgba(255, 255, 255, 0.5)'
+                                }
                             }}
                         >
                             {loading ? <CircularProgress size={24} color="inherit" /> : t('auth.loginButton')}
@@ -297,7 +305,15 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                                 marginBottom: 2,
                                 height: 48,
                                 fontSize: 16,
-                                background: theme.palette.background.bubbleView
+                                backgroundColor: themeMode === 'light' ? '#3B7DED' : 'rgba(255, 255, 255, 0.2)',
+                                color: themeMode === 'light' ? '#ffffff' : '#ffffff',
+                                '&:hover': {
+                                    backgroundColor: themeMode === 'light' ? '#2C5ED1' : 'rgba(255, 255, 255, 0.3)'
+                                },
+                                '&:disabled': {
+                                    backgroundColor: themeMode === 'light' ? '#B0B0B0' : 'rgba(255, 255, 255, 0.1)',
+                                    color: themeMode === 'light' ? '#ffffff' : 'rgba(255, 255, 255, 0.5)'
+                                }
                             }}
                         >
                             {loading ? <CircularProgress size={24} color="inherit" /> : t('auth.registerButton')}
