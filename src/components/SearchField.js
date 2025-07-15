@@ -19,6 +19,8 @@ import { useTranslation } from 'react-i18next';
  * @param {boolean} fullWidth - занимать всю доступную ширину (по умолчанию true)
  * @param {string} size - размер поля (small, medium, large)
  * @param {Object} sx - дополнительные стили
+ * @param {boolean} autoFocus - автофокус на поле
+ * @param {Function} onBlur - обработчик потери фокуса
  */
 const SearchField = ({
     searchQuery,
@@ -26,7 +28,10 @@ const SearchField = ({
     placeholder,
     fullWidth = true,
     size = 'small',
-    sx = {}
+    sx = {},
+    autoFocus = false,
+    onBlur,
+    ...otherProps
 }) => {
     const { t } = useTranslation();
     const theme = useTheme();
@@ -42,6 +47,8 @@ const SearchField = ({
             placeholder={defaultPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            autoFocus={autoFocus}
+            onBlur={onBlur}
             InputProps={{
                 startAdornment: (
                     <Search sx={{ color: 'text.secondary', marginRight: 1 }} />
@@ -65,6 +72,7 @@ const SearchField = ({
                 },
                 ...sx
             }}
+            {...otherProps}
         />
     );
 };

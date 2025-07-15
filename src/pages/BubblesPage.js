@@ -144,6 +144,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Состояние поиска для Bubbles View
     const [bubblesSearchQuery, setBubblesSearchQuery] = useState('');
+    const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
     // Function to get button styles based on theme
     const getButtonStyles = () => {
@@ -1595,6 +1596,28 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         gap: 1,
                         alignItems: 'center'
                     }}>
+                        {/* Search icon for Mobile */}
+                        <IconButton
+                            onClick={() => {
+                                if (isSearchExpanded) {
+                                    // Если строка поиска открыта, закрываем её и очищаем
+                                    setBubblesSearchQuery('');
+                                    setIsSearchExpanded(false);
+                                } else {
+                                    // Если строка поиска закрыта, открываем её
+                                    setIsSearchExpanded(true);
+                                }
+                            }}
+                            sx={{
+                                ...getButtonStyles(),
+                                backgroundColor: isSearchExpanded
+                                    ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)')
+                                    : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
+                            }}
+                        >
+                            <Search />
+                        </IconButton>
+
                         {/* View Mode Toggle for Mobile */}
                         <IconButton
                             onClick={() => setListViewDialog(true)}
@@ -1616,45 +1639,56 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                     </Box>
 
-                    {/* Search field for mobile */}
-                    <Box sx={{
-                        position: 'absolute',
-                        top: isSmallScreen ? 60 : 70,
-                        left: 10,
-                        right: 10,
-                        zIndex: 1000,
-                        marginTop: showInstructions ? (isSmallScreen ? 100 : 80) : 0,
-                        transition: 'margin-top 0.3s ease'
-                    }}>
-                        <SearchField
-                            searchQuery={bubblesSearchQuery}
-                            setSearchQuery={setBubblesSearchQuery}
-                            size="small"
-                            sx={{
-                                backgroundColor: themeMode === 'light'
-                                    ? 'rgba(255, 255, 255, 0.95)'
-                                    : 'rgba(30, 30, 30, 0.95)',
-                                backdropFilter: 'blur(10px)'
-                            }}
-                        />
-                        {debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim() && (
-                            <Typography variant="caption" sx={{
-                                color: 'text.secondary',
-                                marginTop: 0.5,
-                                display: 'block',
-                                textAlign: 'center',
-                                backgroundColor: themeMode === 'light'
-                                    ? 'rgba(255, 255, 255, 0.85)'
-                                    : 'rgba(30, 30, 30, 0.85)',
-                                backdropFilter: 'blur(5px)',
-                                padding: '2px 8px',
-                                borderRadius: 1,
-                                fontSize: '11px'
-                            }}>
-                                {t('bubbles.searchResults', { count: searchFoundBubbles.length })}
-                            </Typography>
-                        )}
-                    </Box>
+                    {/* Search field for mobile - expanded state */}
+                    {isSearchExpanded && (
+                        <Box sx={{
+                            position: 'absolute',
+                            top: isSmallScreen ? 60 : 70,
+                            left: 10,
+                            right: 10,
+                            zIndex: 1000,
+                            marginTop: showInstructions ? (isSmallScreen ? 100 : 80) : 0,
+                            transition: 'margin-top 0.3s ease'
+                        }}>
+                            <SearchField
+                                searchQuery={bubblesSearchQuery}
+                                setSearchQuery={setBubblesSearchQuery}
+                                size="small"
+                                autoFocus={true}
+                                onBlur={() => {
+                                    // Задержка для предотвращения закрытия при переключении фокуса
+                                    setTimeout(() => {
+                                        if (!bubblesSearchQuery.trim()) {
+                                            setIsSearchExpanded(false);
+                                        }
+                                    }, 150);
+                                }}
+                                sx={{
+                                    backgroundColor: themeMode === 'light'
+                                        ? 'rgba(255, 255, 255, 0.95)'
+                                        : 'rgba(30, 30, 30, 0.95)',
+                                    backdropFilter: 'blur(10px)'
+                                }}
+                            />
+                            {debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim() && (
+                                <Typography variant="caption" sx={{
+                                    color: 'text.secondary',
+                                    marginTop: 0.5,
+                                    display: 'block',
+                                    textAlign: 'center',
+                                    backgroundColor: themeMode === 'light'
+                                        ? 'rgba(255, 255, 255, 0.85)'
+                                        : 'rgba(30, 30, 30, 0.85)',
+                                    backdropFilter: 'blur(5px)',
+                                    padding: '2px 8px',
+                                    borderRadius: 1,
+                                    fontSize: '11px'
+                                }}>
+                                    {t('bubbles.searchResults', { count: searchFoundBubbles.length })}
+                                </Typography>
+                            )}
+                        </Box>
+                    )}
                     {showInstructions && (
                         <Box sx={{
                             position: 'absolute',
