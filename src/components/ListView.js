@@ -1,8 +1,7 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import {
     Box,
     Typography,
-    TextField,
     Button,
     IconButton,
     useMediaQuery,
@@ -24,11 +23,11 @@ import {
     Restore,
     ArrowUpward,
     ArrowDownward,
-    Search,
-    Clear,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { FilterMenu } from './FilterMenu';
+import SearchField from './SearchField';
+import useSearch from '../hooks/useSearch';
 import {
     BUBBLE_STATUS,
     markBubbleAsDone,
@@ -73,19 +72,7 @@ const ListView = ({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    // Debounced search query
-    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(listSearchQuery);
-
-    // Debounce search query updates
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearchQuery(listSearchQuery);
-        }, 300); // 300ms delay
-
-        return () => clearTimeout(timer);
-    }, [listSearchQuery]);
-
-    // Memoized function to get filtered bubbles for list view
+    // Memoized function to get filtered bubbles for list view (без поиска)
     const getFilteredBubblesForList = useMemo(() => {
         // Filter by selected status
         const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
@@ -111,27 +98,20 @@ const ListView = ({
         });
     }, [bubbles, tags, listFilter, listFilterTags, listShowNoTag]);
 
-    // Memoized search filtering
-    const searchFilteredTasks = useMemo(() => {
-        if (!debouncedSearchQuery.trim()) {
-            return getFilteredBubblesForList;
-        }
+    // Используем хук поиска для фильтрации задач
+    const {
+        filteredItems: searchFilteredTasks,
+        searchQuery: currentSearchQuery,
+        setSearchQuery: setCurrentSearchQuery,
+        debouncedSearchQuery
+    } = useSearch(getFilteredBubblesForList, tags);
 
-        const query = debouncedSearchQuery.toLowerCase().trim();
-        return getFilteredBubblesForList.filter(task => {
-            // Search in title
-            const titleMatch = (task.title || '').toLowerCase().includes(query);
+    // Синхронизируем состояние поиска с родительским компонентом
+    useEffect(() => {
+        setCurrentSearchQuery(listSearchQuery);
+    }, [listSearchQuery, setCurrentSearchQuery]);
 
-            // Search in description
-            const descriptionMatch = (task.description || '').toLowerCase().includes(query);
 
-            // Search in tag name
-            const tag = task.tagId ? tags.find(t => t.id === task.tagId) : null;
-            const tagMatch = tag ? tag.name.toLowerCase().includes(query) : false;
-
-            return titleMatch || descriptionMatch || tagMatch;
-        });
-    }, [getFilteredBubblesForList, debouncedSearchQuery, tags]);
 
     // Memoized sorting
     const sortedAndFilteredTasks = useMemo(() => {
@@ -417,34 +397,11 @@ const ListView = ({
 
             {/* Search field */}
             <Box sx={{ marginBottom: 2 }}>
-                <TextField
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    placeholder={t('bubbles.searchPlaceholder')}
-                    value={listSearchQuery}
-                    onChange={(e) => setListSearchQuery(e.target.value)}
-                    InputProps={{
-                        startAdornment: (
-                            <Search sx={{ color: 'text.secondary', marginRight: 1 }} />
-                        ),
-                        endAdornment: listSearchQuery && (
-                            <IconButton
-                                size="small"
-                                onClick={() => setListSearchQuery('')}
-                                sx={{ padding: 0.5 }}
-                            >
-                                <Clear fontSize="small" />
-                            </IconButton>
-                        )
-                    }}
-                    sx={{
-                        '& .MuiInputBase-input': {
-                            fontSize: isMobile ? 16 : 14 // Предотвращает zoom на iOS
-                        },
-                        '& .MuiOutlinedInput-root': {
-                            borderRadius: 2
-                        }
+                <SearchField
+                    searchQuery={currentSearchQuery}
+                    setSearchQuery={(query) => {
+                        setCurrentSearchQuery(query);
+                        setListSearchQuery(query);
                     }}
                 />
             </Box>

@@ -53,6 +53,8 @@ import {
 
 import { FilterMenu } from '../components/FilterMenu';
 import ListView from '../components/ListView';
+import SearchField from '../components/SearchField';
+import useSearch from '../hooks/useSearch';
 
 // Auto-cleanup period for deleted tasks (30 days)
 const DELETED_TASKS_CLEANUP_DAYS = 30;
@@ -139,6 +141,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const saved = localStorage.getItem('bubbles-show-instructions');
         return saved === null ? true : saved === 'true';
     }); // Показывать ли подсказки инструкций
+
+    // Состояние поиска для Bubbles View
+    const [bubblesSearchQuery, setBubblesSearchQuery] = useState('');
 
     // Function to get button styles based on theme
     const getButtonStyles = () => {
@@ -541,8 +546,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         return () => unsubscribe();
     }, []);
 
-    // Memoized function for filtering bubbles (for physics world - only active)
-    const getFilteredBubbles = useMemo(() => {
+    // Memoized function for filtering bubbles (for physics world - only active, без поиска)
+    const getFilteredBubblesWithoutSearch = useMemo(() => {
         // Always show only active bubbles in physics world
         const filteredByStatus = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
 
@@ -566,6 +571,19 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             return false;
         });
     }, [bubbles, tags, filterTags, showNoTag]);
+
+    // Используем хук поиска для фильтрации пузырей в Bubbles View
+    const {
+        filteredItems: getFilteredBubbles,
+        searchQuery: currentBubblesSearchQuery,
+        setSearchQuery: setCurrentBubblesSearchQuery,
+        debouncedSearchQuery: debouncedBubblesSearchQuery
+    } = useSearch(getFilteredBubblesWithoutSearch, tags);
+
+    // Синхронизируем состояние поиска
+    React.useEffect(() => {
+        setCurrentBubblesSearchQuery(bubblesSearchQuery);
+    }, [bubblesSearchQuery, setCurrentBubblesSearchQuery]);
 
     // Filter bubbles visibility based on selected filters - optimized
     useEffect(() => {
@@ -995,15 +1013,32 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         return tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
     }, [tags, listFilterTags, listShowNoTag]);
 
-    // Memoized function to count bubbles by category for Bubbles View (only active bubbles)
+    // Memoized function to count bubbles by category for Bubbles View (only active bubbles, с учетом поиска)
     const getBubbleCountByTagForBubblesView = useCallback((tagId) => {
         const activeBubbles = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
+
+        // Применяем поиск, если есть запрос
+        let searchFilteredBubbles = activeBubbles;
+        if (debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim()) {
+            const query = debouncedBubblesSearchQuery.toLowerCase().trim();
+            searchFilteredBubbles = activeBubbles.filter(bubble => {
+                // Search in title
+                const titleMatch = (bubble.title || '').toLowerCase().includes(query);
+                // Search in description
+                const descriptionMatch = (bubble.description || '').toLowerCase().includes(query);
+                // Search in tag name
+                const tag = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
+                const tagMatch = tag ? tag.name.toLowerCase().includes(query) : false;
+                return titleMatch || descriptionMatch || tagMatch;
+            });
+        }
+
         if (tagId === null) {
             // Count active bubbles without tags
-            return activeBubbles.filter(bubble => !bubble.tagId).length;
+            return searchFilteredBubbles.filter(bubble => !bubble.tagId).length;
         }
-        return activeBubbles.filter(bubble => bubble.tagId === tagId).length;
-    }, [bubbles]);
+        return searchFilteredBubbles.filter(bubble => bubble.tagId === tagId).length;
+    }, [bubbles, tags, debouncedBubblesSearchQuery]);
 
     // Function to count bubbles by category for List View (based on selected status and search) - memoized
     const getBubbleCountByTagForListView = useCallback((tagId) => {
@@ -1385,6 +1420,19 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         >
                             {t('bubbles.filterButton')}
                         </Button>
+                    </Box>
+
+                    {/* Search field for desktop */}
+                    <Box sx={{
+                        maxWidth: 350,
+                        width: '100%',
+                        marginTop: 1
+                    }}>
+                        <SearchField
+                            searchQuery={bubblesSearchQuery}
+                            setSearchQuery={setBubblesSearchQuery}
+                            size="small"
+                        />
 
                     </Box>
                     {showInstructions && (
@@ -1449,6 +1497,29 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             <FilterList />
                         </IconButton>
 
+                    </Box>
+
+                    {/* Search field for mobile */}
+                    <Box sx={{
+                        position: 'absolute',
+                        top: isSmallScreen ? 60 : 70,
+                        left: 10,
+                        right: 10,
+                        zIndex: 1000,
+                        marginTop: showInstructions ? (isSmallScreen ? 100 : 80) : 0,
+                        transition: 'margin-top 0.3s ease'
+                    }}>
+                        <SearchField
+                            searchQuery={bubblesSearchQuery}
+                            setSearchQuery={setBubblesSearchQuery}
+                            size="small"
+                            sx={{
+                                backgroundColor: themeMode === 'light'
+                                    ? 'rgba(255, 255, 255, 0.95)'
+                                    : 'rgba(30, 30, 30, 0.95)',
+                                backdropFilter: 'blur(10px)'
+                            }}
+                        />
                     </Box>
                     {showInstructions && (
                         <Box sx={{
