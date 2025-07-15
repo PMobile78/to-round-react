@@ -628,12 +628,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             frictionAir: 0.01,
                             render: {
                                 fillStyle: getBubbleFillStyle(tagColor),
-                                strokeStyle: strokeColor,
-                                lineWidth: 3,
+                                strokeStyle: hasSearchQuery && isFound
+                                    ? '#1976d2'  // Яркий синий для найденных
+                                    : strokeColor,
+                                lineWidth: hasSearchQuery && isFound ? 4 : 3,
                                 // Прозрачность в зависимости от поиска
                                 opacity: hasSearchQuery ? (isFound ? 1 : 0.3) : 1
                             }
                         });
+
+                        // Добавляем эффект свечения для найденных пузырей
+                        if (hasSearchQuery && isFound) {
+                            newBody.render.shadowColor = '#1976d2';
+                            newBody.render.shadowBlur = 15;
+                            newBody.render.shadowOffsetX = 0;
+                            newBody.render.shadowOffsetY = 0;
+                        }
 
                         // Update bubble with new physics body
                         bubble.body = newBody;
@@ -641,15 +651,65 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         // Add new bubble to the physical world
                         Matter.World.add(engineRef.current.world, newBody);
                     } else {
-                        // Update opacity for existing bubbles
+                        // Update styles for existing bubbles
                         bubble.body.render.opacity = hasSearchQuery ? (isFound ? 1 : 0.3) : 1;
+
+                        // Обновляем обводку
+                        if (hasSearchQuery && isFound) {
+                            bubble.body.render.strokeStyle = '#1976d2';
+                            bubble.body.render.lineWidth = 4;
+                            // Добавляем свечение
+                            bubble.body.render.shadowColor = '#1976d2';
+                            bubble.body.render.shadowBlur = 15;
+                            bubble.body.render.shadowOffsetX = 0;
+                            bubble.body.render.shadowOffsetY = 0;
+                        } else {
+                            // Возвращаем оригинальный цвет обводки
+                            let originalStrokeColor = '#B0B0B0';
+                            if (bubble.tagId) {
+                                const tag = tags.find(t => t.id === bubble.tagId);
+                                if (tag) {
+                                    originalStrokeColor = tag.color;
+                                }
+                            }
+                            bubble.body.render.strokeStyle = originalStrokeColor;
+                            bubble.body.render.lineWidth = 3;
+                            // Убираем свечение
+                            bubble.body.render.shadowColor = 'transparent';
+                            bubble.body.render.shadowBlur = 0;
+                        }
                     }
                 } else if (!isVisible && isCurrentlyInWorld) {
                     // Remove bubble from the physical world
                     Matter.World.remove(engineRef.current.world, bubble.body);
                 } else if (isVisible && isCurrentlyInWorld) {
-                    // Update opacity for visible bubbles based on search
+                    // Update styles for visible bubbles based on search
                     bubble.body.render.opacity = hasSearchQuery ? (isFound ? 1 : 0.3) : 1;
+
+                    // Обновляем стили для найденных пузырей
+                    if (hasSearchQuery && isFound) {
+                        bubble.body.render.strokeStyle = '#1976d2';
+                        bubble.body.render.lineWidth = 4;
+                        // Добавляем свечение
+                        bubble.body.render.shadowColor = '#1976d2';
+                        bubble.body.render.shadowBlur = 15;
+                        bubble.body.render.shadowOffsetX = 0;
+                        bubble.body.render.shadowOffsetY = 0;
+                    } else {
+                        // Возвращаем оригинальный цвет обводки
+                        let originalStrokeColor = '#B0B0B0';
+                        if (bubble.tagId) {
+                            const tag = tags.find(t => t.id === bubble.tagId);
+                            if (tag) {
+                                originalStrokeColor = tag.color;
+                            }
+                        }
+                        bubble.body.render.strokeStyle = originalStrokeColor;
+                        bubble.body.render.lineWidth = 3;
+                        // Убираем свечение
+                        bubble.body.render.shadowColor = 'transparent';
+                        bubble.body.render.shadowBlur = 0;
+                    }
                 }
             }
         });
@@ -1202,13 +1262,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             // Определяем стили в зависимости от поиска
             const textOpacity = hasSearchQuery ? (isFound ? 1 : 0.4) : 1;
             const textColor = hasSearchQuery && isFound
-                ? (themeMode === 'light' ? '#1976d2' : '#64b5f6')  // Синий для найденных
+                ? (themeMode === 'light' ? '#0d47a1' : '#90caf9')  // Более яркий синий для найденных
                 : (themeMode === 'light' ? '#2C3E50' : 'white');   // Обычный цвет
 
             const textShadow = hasSearchQuery && isFound
                 ? (themeMode === 'light'
-                    ? '0px 0px 8px rgba(25, 118, 210, 0.6), 1px 1px 2px rgba(255,255,255,0.8)'  // Синее свечение + обычная тень
-                    : '0px 0px 8px rgba(100, 181, 246, 0.8), 1px 1px 2px rgba(0,0,0,0.8)')      // Синее свечение + обычная тень
+                    ? '0px 0px 12px rgba(13, 71, 161, 0.8), 0px 0px 20px rgba(25, 118, 210, 0.6), 1px 1px 2px rgba(255,255,255,0.9)'  // Двойное свечение + обычная тень
+                    : '0px 0px 15px rgba(144, 202, 249, 0.9), 0px 0px 25px rgba(100, 181, 246, 0.7), 1px 1px 2px rgba(0,0,0,0.8)')    // Двойное свечение + обычная тень
                 : (themeMode === 'light'
                     ? '1px 1px 2px rgba(255,255,255,0.8)'
                     : '1px 1px 2px rgba(0,0,0,0.8)');
@@ -1227,7 +1287,19 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         maxWidth: Math.max(bubble.radius * 1.6, 50),
                         overflow: 'hidden',
                         opacity: textOpacity,
-                        transition: 'opacity 0.3s ease, color 0.3s ease, text-shadow 0.3s ease'
+                        transition: 'opacity 0.3s ease, color 0.3s ease, text-shadow 0.3s ease',
+                        // Добавляем пульсацию для найденных пузырей
+                        animation: hasSearchQuery && isFound ? 'bubblePulse 2s ease-in-out infinite alternate' : 'none',
+                        '@keyframes bubblePulse': {
+                            '0%': {
+                                transform: 'translate(-50%, -50%) scale(1)',
+                                filter: 'brightness(1)'
+                            },
+                            '100%': {
+                                transform: 'translate(-50%, -50%) scale(1.05)',
+                                filter: 'brightness(1.15)'
+                            }
+                        }
                     }}
                 >
                     <Typography
