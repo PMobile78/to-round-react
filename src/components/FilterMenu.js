@@ -18,7 +18,8 @@ export function FilterMenu({
     onNoTagFilterChange,
     onSelectAll,
     onClearAll,
-    getBubbleCountByTag
+    getBubbleCountByTag,
+    themeMode = 'light'
 }) {
     const { t } = useTranslation();
     const [anchorEl, setAnchorEl] = React.useState(null);
@@ -69,6 +70,8 @@ export function FilterMenu({
                         borderRadius: 1,
                         minWidth: 280,
                         boxShadow: 1,
+                        backgroundColor: themeMode === 'light' ? '#ffffff' : '#1e1e1e',
+                        color: themeMode === 'light' ? '#000000' : '#ffffff',
                         '& .MuiMenuItem-root': {
                             '&:active': {
                                 backgroundColor: alpha(
@@ -82,15 +85,47 @@ export function FilterMenu({
             // оставляем стандартное поведение фокуса
             >
                 {/* Header */}
-                <Box sx={{ p: 1, px: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                <Box sx={{
+                    p: 1,
+                    px: 2,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderBottom: '1px solid',
+                    borderColor: themeMode === 'light' ? '#e0e0e0' : '#333333',
+                    backgroundColor: themeMode === 'light' ? '#ffffff' : '#1e1e1e'
+                }}>
+                    <Typography variant="subtitle2" sx={{
+                        fontWeight: 'bold',
+                        color: themeMode === 'light' ? '#000000' : '#ffffff'
+                    }}>
                         {t('bubbles.categories')}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Button size="small" onClick={onSelectAll} startIcon={<Check />} sx={{ minWidth: 'auto', p: '4px 8px', fontSize: '0.75rem' }}>
+                        <Button
+                            size="small"
+                            onClick={onSelectAll}
+                            startIcon={<Check />}
+                            sx={{
+                                minWidth: 'auto',
+                                p: '4px 8px',
+                                fontSize: '0.75rem',
+                                color: themeMode === 'light' ? '#1976d2' : '#90caf9'
+                            }}
+                        >
                             {t('bubbles.selectAll')}
                         </Button>
-                        <Button size="small" onClick={onClearAll} startIcon={<Clear />} sx={{ minWidth: 'auto', p: '4px 8px', fontSize: '0.75rem' }}>
+                        <Button
+                            size="small"
+                            onClick={onClearAll}
+                            startIcon={<Clear />}
+                            sx={{
+                                minWidth: 'auto',
+                                p: '4px 8px',
+                                fontSize: '0.75rem',
+                                color: themeMode === 'light' ? '#1976d2' : '#90caf9'
+                            }}
+                        >
                             {t('bubbles.clearAll')}
                         </Button>
                     </Box>
@@ -102,14 +137,25 @@ export function FilterMenu({
                         onNoTagFilterChange();
                     }}
                     disableRipple
-                    sx={{ p: '12px 16px' }}
+                    sx={{
+                        p: '12px 16px',
+                        backgroundColor: themeMode === 'light' ? '#ffffff' : '#1e1e1e',
+                        '&:hover': {
+                            backgroundColor: themeMode === 'light' ? '#f5f5f5' : '#333333'
+                        }
+                    }}
                 >
                     <Checkbox checked={showNoTag} size="small" sx={{ mr: 1 }} />
                     <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: 'grey.400', border: '1px solid', borderColor: 'divider', mr: 1 }} />
-                    <Typography variant="body2" sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{
+                        flex: 1,
+                        color: themeMode === 'light' ? '#000000' : '#ffffff'
+                    }}>
                         {t('bubbles.noTag')}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    <Typography variant="caption" sx={{
+                        color: themeMode === 'light' ? '#666666' : '#aaaaaa'
+                    }}>
                         {getBubbleCountByTag ? getBubbleCountByTag(null) : 0}
                     </Typography>
                 </MenuItem>
@@ -124,21 +170,34 @@ export function FilterMenu({
                                 onTagFilterChange(tag.id);
                             }}
                             disableRipple
-                            sx={{ p: '12px 16px' }}
+                            sx={{
+                                p: '12px 16px',
+                                backgroundColor: themeMode === 'light' ? '#ffffff' : '#1e1e1e',
+                                '&:hover': {
+                                    backgroundColor: themeMode === 'light' ? '#f5f5f5' : '#333333'
+                                }
+                            }}
                         >
                             <Checkbox checked={filterTags.includes(tag.id)} size="small" sx={{ mr: 1 }} />
                             <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: tag.color, border: '1px solid', borderColor: 'divider', mr: 1 }} />
-                            <Typography variant="body2" sx={{ flex: 1 }}>
+                            <Typography variant="body2" sx={{
+                                flex: 1,
+                                color: themeMode === 'light' ? '#000000' : '#ffffff'
+                            }}>
                                 {tag.name}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            <Typography variant="caption" sx={{
+                                color: themeMode === 'light' ? '#666666' : '#aaaaaa'
+                            }}>
                                 {getBubbleCountByTag ? getBubbleCountByTag(tag.id) : 0}
                             </Typography>
                         </MenuItem>
                     ))
                 ) : (
                     <MenuItem disabled sx={{ p: '12px 16px', justifyContent: 'center' }}>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        <Typography variant="body2" sx={{
+                            color: themeMode === 'light' ? '#666666' : '#aaaaaa'
+                        }}>
                             {t('bubbles.noTagsAvailable')}
                         </Typography>
                     </MenuItem>

@@ -67,6 +67,7 @@ const ListView = ({
     clearAllListFilters,
     selectAllListFilters,
     getBubbleCountByTagForListView,
+    themeMode
 }) => {
     const { t } = useTranslation();
     const theme = useTheme();
@@ -191,17 +192,31 @@ const ListView = ({
 
     // Memoized status colors
     const getStatusColor = useCallback((status) => {
-        switch (status) {
-            case BUBBLE_STATUS.DONE:
-                return '#E8F5E8';
-            case BUBBLE_STATUS.DELETED:
-                return '#FFEBEE';
-            case BUBBLE_STATUS.POSTPONE:
-                return '#FFF3E0';
-            default:
-                return '#E3F2FD';
+        if (themeMode === 'light') {
+            switch (status) {
+                case BUBBLE_STATUS.DONE:
+                    return '#E8F5E8';
+                case BUBBLE_STATUS.DELETED:
+                    return '#FFEBEE';
+                case BUBBLE_STATUS.POSTPONE:
+                    return '#FFF3E0';
+                default:
+                    return '#E3F2FD';
+            }
+        } else {
+            // Dark theme colors
+            switch (status) {
+                case BUBBLE_STATUS.DONE:
+                    return '#1B5E20';
+                case BUBBLE_STATUS.DELETED:
+                    return '#4A1418';
+                case BUBBLE_STATUS.POSTPONE:
+                    return '#4A3B00';
+                default:
+                    return '#1A237E';
+            }
         }
-    }, []);
+    }, [themeMode]);
 
     // Memoized task count calculation
     const getTasksCountByStatus = useCallback((status) => {
@@ -321,7 +336,13 @@ const ListView = ({
     const isEmpty = tasks.length === 0;
 
     return (
-        <Box sx={{ padding: 2, height: '100%', overflow: 'auto' }}>
+        <Box sx={{
+            padding: 2,
+            height: '100%',
+            overflow: 'auto',
+            backgroundColor: themeMode === 'light' ? '#ffffff' : '#1e1e1e',
+            color: themeMode === 'light' ? '#000000' : '#ffffff'
+        }}>
             {/* Filter and Sort controls */}
             <Box sx={{
                 display: 'flex',
@@ -342,6 +363,7 @@ const ListView = ({
                     onSelectAll={selectAllListFilters}
                     onClearAll={clearAllListFilters}
                     getBubbleCountByTag={getBubbleCountByTagForListView}
+                    themeMode={themeMode}
                 />
 
                 {/* Sort controls */}
@@ -464,15 +486,17 @@ const ListView = ({
                 <Box sx={{
                     marginBottom: 2,
                     padding: 2,
-                    backgroundColor: '#FFF3E0',
-                    border: '1px solid #FFB74D',
+                    backgroundColor: themeMode === 'light' ? '#FFF3E0' : '#4A3B00',
+                    border: themeMode === 'light' ? '1px solid #FFB74D' : '1px solid #FF9800',
                     borderRadius: 2,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1
                 }}>
                     <LocalOffer sx={{ color: '#FF9800', fontSize: 20 }} />
-                    <Typography variant="body2" sx={{ color: '#E65100' }}>
+                    <Typography variant="body2" sx={{
+                        color: themeMode === 'light' ? '#E65100' : '#FFB74D'
+                    }}>
                         {t('bubbles.deletedTasksWarning', { days: DELETED_TASKS_CLEANUP_DAYS })}
                     </Typography>
                 </Box>
@@ -483,7 +507,7 @@ const ListView = ({
                 <Box sx={{
                     textAlign: 'center',
                     padding: 4,
-                    color: 'text.secondary'
+                    color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
                 }}>
                     <Typography variant="h6" gutterBottom>
                         {listFilter === 'active' && t('bubbles.noActiveTasks')}
@@ -505,7 +529,7 @@ const ListView = ({
                                     padding: 2,
                                     borderRadius: 2,
                                     backgroundColor: getStatusColor(task.status),
-                                    border: '1px solid #E0E0E0'
+                                    border: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333'
                                 }}
                             >
                                 <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', gap: 2 }}>
@@ -516,12 +540,18 @@ const ListView = ({
 
                                     {/* Task content */}
                                     <Box sx={{ flex: 1 }}>
-                                        <Typography variant="h6" sx={{ marginBottom: 1 }}>
+                                        <Typography variant="h6" sx={{
+                                            marginBottom: 1,
+                                            color: themeMode === 'light' ? '#000000' : '#ffffff'
+                                        }}>
                                             {task.title || t('bubbles.empty')}
                                         </Typography>
 
                                         {task.description && (
-                                            <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
+                                            <Typography variant="body2" sx={{
+                                                marginBottom: 1,
+                                                color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                                            }}>
                                                 {task.description}
                                             </Typography>
                                         )}
@@ -541,16 +571,22 @@ const ListView = ({
 
                                         {/* Dates */}
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                            <Typography variant="caption" color="text.secondary">
+                                            <Typography variant="caption" sx={{
+                                                color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                                            }}>
                                                 {t('bubbles.createdAt')}: {formatDate(task.createdAt)}
                                             </Typography>
                                             {task.updatedAt && task.updatedAt !== task.createdAt && (
-                                                <Typography variant="caption" color="text.secondary">
+                                                <Typography variant="caption" sx={{
+                                                    color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                                                }}>
                                                     {t('bubbles.updatedAt')}: {formatDate(task.updatedAt)}
                                                 </Typography>
                                             )}
                                             {task.deletedAt && (
-                                                <Typography variant="caption" color="text.secondary">
+                                                <Typography variant="caption" sx={{
+                                                    color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                                                }}>
                                                     {t('bubbles.deletedAt')}: {formatDate(task.deletedAt)}
                                                 </Typography>
                                             )}

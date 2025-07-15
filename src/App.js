@@ -1,32 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box, CircularProgress } from '@mui/material';
 import BubblesPage from './pages/BubblesPage';
 import AuthForm from './components/AuthForm';
 import { onAuthStateChange } from './services/authService';
-
-const theme = createTheme({
-    palette: {
-        mode: 'light',
-        primary: {
-            main: '#3B7DED',
-        },
-        secondary: {
-            main: '#FF6B6B',
-        },
-        background: {
-            default: '#f5f5f5',
-        },
-    },
-    typography: {
-        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    },
-});
+import { useThemeMode } from './hooks/useThemeMode';
 
 function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const { themeMode, toggleTheme, theme } = useThemeMode();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChange((currentUser) => {
@@ -51,7 +35,7 @@ function App() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                        background: theme.palette.background.bubbleView
                     }}
                 >
                     <CircularProgress size={60} sx={{ color: 'white' }} />
@@ -64,9 +48,17 @@ function App() {
         <ThemeProvider theme={theme}>
             <CssBaseline />
             {user ? (
-                <BubblesPage user={user} />
+                <BubblesPage
+                    user={user}
+                    themeMode={themeMode}
+                    toggleTheme={toggleTheme}
+                />
             ) : (
-                <AuthForm onLoginSuccess={handleLoginSuccess} />
+                <AuthForm
+                    onLoginSuccess={handleLoginSuccess}
+                    themeMode={themeMode}
+                    toggleTheme={toggleTheme}
+                />
             )}
         </ThemeProvider>
     );

@@ -34,6 +34,7 @@ import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Log
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
+import ThemeToggle from '../components/ThemeToggle';
 import { logoutUser } from '../services/authService';
 import {
     saveBubblesToFirestore,
@@ -58,7 +59,7 @@ const DELETED_TASKS_CLEANUP_DAYS = 30;
 
 
 
-const BubblesPage = ({ user }) => {
+const BubblesPage = ({ user, themeMode, toggleTheme }) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
@@ -139,6 +140,36 @@ const BubblesPage = ({ user }) => {
         return saved === null ? true : saved === 'true';
     }); // Показывать ли подсказки инструкций
 
+    // Function to get button styles based on theme
+    const getButtonStyles = () => {
+        return {
+            backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)',
+            color: themeMode === 'light' ? '#3B7DED' : 'white',
+            '&:hover': {
+                backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)'
+            }
+        };
+    };
+
+    const getOutlinedButtonStyles = () => {
+        return {
+            color: themeMode === 'light' ? '#3B7DED' : 'white',
+            borderColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.5)' : 'rgba(255, 255, 255, 0.5)',
+            backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent',
+            '&:hover': {
+                borderColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.1)'
+            }
+        };
+    };
+
+    const getDialogPaperStyles = () => {
+        return {
+            backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)',
+            color: themeMode === 'light' ? '#000000' : '#ffffff'
+        };
+    };
+
     // Note: Functions moved to firestoreService.js for better organization
 
     // Function to get canvas dimensions depending on screen size
@@ -191,6 +222,10 @@ const BubblesPage = ({ user }) => {
         setCanvasSize(canvasSize);
 
         // Create renderer
+        const bubbleViewBackground = themeMode === 'light'
+            ? '#ffffff'
+            : 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)';
+
         const render = Render.create({
             element: canvas,
             engine,
@@ -198,7 +233,7 @@ const BubblesPage = ({ user }) => {
                 width: canvasSize.width,
                 height: canvasSize.height,
                 wireframes: false,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: bubbleViewBackground,
                 showAngleIndicator: false,
                 showVelocity: false,
             }
@@ -407,7 +442,7 @@ const BubblesPage = ({ user }) => {
             render.canvas.remove();
             render.textures = {};
         };
-    }, []);
+    }, [themeMode]);
 
 
 
@@ -1070,8 +1105,10 @@ const BubblesPage = ({ user }) => {
                         top: bubble.y,
                         transform: 'translate(-50%, -50%)',
                         textAlign: 'center',
-                        color: 'white',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                        color: themeMode === 'light' ? '#2C3E50' : 'white',
+                        textShadow: themeMode === 'light'
+                            ? '1px 1px 2px rgba(255,255,255,0.8)'
+                            : '1px 1px 2px rgba(0,0,0,0.8)',
                         maxWidth: Math.max(bubble.radius * 1.6, 50),
                         overflow: 'hidden'
                     }}
@@ -1116,7 +1153,7 @@ const BubblesPage = ({ user }) => {
             height: '100vh',
             overflow: 'hidden',
             position: 'relative',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            background: theme.palette.background.bubbleView
         }}>
             {/* Заголовок и кнопки - адаптивный */}
             {!isMobile ? (
@@ -1133,17 +1170,16 @@ const BubblesPage = ({ user }) => {
                         <IconButton
                             onClick={() => setMenuDrawerOpen(true)}
                             sx={{
-                                color: 'white',
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
-                                },
+                                ...getButtonStyles(),
                                 marginRight: 1
                             }}
                         >
                             <MenuIcon />
                         </IconButton>
-                        <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                        <Typography variant="h4" sx={{
+                            color: themeMode === 'light' ? '#2C3E50' : 'white',
+                            fontWeight: 'bold'
+                        }}>
                             🫧 {t('bubbles.title')}
                         </Typography>
                         <Button
@@ -1151,12 +1187,18 @@ const BubblesPage = ({ user }) => {
                             onClick={openCreateDialog}
                             startIcon={<Add />}
                             sx={{
-                                background: 'rgba(255,255,255,0.2)',
+                                background: themeMode === 'light'
+                                    ? 'rgba(59, 125, 237, 0.9)'
+                                    : 'rgba(255,255,255,0.2)',
                                 backdropFilter: 'blur(10px)',
-                                border: '1px solid rgba(255,255,255,0.3)',
-                                color: 'white',
+                                border: themeMode === 'light'
+                                    ? '1px solid rgba(59, 125, 237, 0.5)'
+                                    : '1px solid rgba(255,255,255,0.3)',
+                                color: themeMode === 'light' ? 'white' : 'white',
                                 '&:hover': {
-                                    background: 'rgba(255,255,255,0.3)'
+                                    background: themeMode === 'light'
+                                        ? 'rgba(59, 125, 237, 1)'
+                                        : 'rgba(255,255,255,0.3)'
                                 }
                             }}
                         >
@@ -1191,13 +1233,7 @@ const BubblesPage = ({ user }) => {
                 }}>
                     <IconButton
                         onClick={() => setMenuDrawerOpen(true)}
-                        sx={{
-                            color: 'white',
-                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                            '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.3)'
-                            }
-                        }}
+                        sx={getButtonStyles()}
                     >
                         <MenuIcon />
                     </IconButton>
@@ -1263,22 +1299,15 @@ const BubblesPage = ({ user }) => {
                     alignItems: 'flex-end'
                 }}>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <LanguageSelector />
+                        <LanguageSelector themeMode={themeMode} />
+                        <ThemeToggle themeMode={themeMode} toggleTheme={toggleTheme} />
                         {/* View Mode Toggle */}
                         <Button
                             onClick={() => setListViewDialog(true)}
                             variant="outlined"
                             size="small"
                             startIcon={<ViewList />}
-                            sx={{
-                                color: 'white',
-                                borderColor: 'rgba(255, 255, 255, 0.5)',
-                                backgroundColor: 'transparent',
-                                '&:hover': {
-                                    borderColor: 'rgba(255, 255, 255, 0.8)',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                                }
-                            }}
+                            sx={getOutlinedButtonStyles()}
                         >
                             {t('bubbles.listView')}
                         </Button>
@@ -1288,13 +1317,10 @@ const BubblesPage = ({ user }) => {
                             size="small"
                             startIcon={<FilterList />}
                             sx={{
-                                color: 'white',
-                                borderColor: 'rgba(255, 255, 255, 0.5)',
-                                backgroundColor: !isAllSelected() ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-                                '&:hover': {
-                                    borderColor: 'rgba(255, 255, 255, 0.8)',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                                }
+                                ...getOutlinedButtonStyles(),
+                                backgroundColor: !isAllSelected()
+                                    ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
+                                    : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent')
                             }}
                         >
                             {t('bubbles.filterButton')}
@@ -1304,14 +1330,7 @@ const BubblesPage = ({ user }) => {
                             variant="outlined"
                             size="small"
                             startIcon={<Logout />}
-                            sx={{
-                                color: 'white',
-                                borderColor: 'rgba(255, 255, 255, 0.5)',
-                                '&:hover': {
-                                    borderColor: 'rgba(255, 255, 255, 0.8)',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                                }
-                            }}
+                            sx={getOutlinedButtonStyles()}
                         >
                             {t('auth.logout')}
                         </Button>
@@ -1359,41 +1378,29 @@ const BubblesPage = ({ user }) => {
                         gap: 1,
                         alignItems: 'center'
                     }}>
-                        <LanguageSelector />
+                        <LanguageSelector themeMode={themeMode} />
+                        <ThemeToggle themeMode={themeMode} toggleTheme={toggleTheme} />
                         {/* View Mode Toggle for Mobile */}
                         <IconButton
                             onClick={() => setListViewDialog(true)}
-                            sx={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                color: 'white',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
-                                }
-                            }}
+                            sx={getButtonStyles()}
                         >
                             <ViewList />
                         </IconButton>
                         <IconButton
                             onClick={() => setFilterDrawerOpen(true)}
                             sx={{
-                                backgroundColor: !isAllSelected() ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
-                                color: 'white',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.4)'
-                                }
+                                ...getButtonStyles(),
+                                backgroundColor: !isAllSelected()
+                                    ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)')
+                                    : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
                             }}
                         >
                             <FilterList />
                         </IconButton>
                         <IconButton
                             onClick={handleLogout}
-                            sx={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                color: 'white',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
-                                }
-                            }}
+                            sx={getButtonStyles()}
                         >
                             <Logout />
                         </IconButton>
@@ -1449,7 +1456,7 @@ const BubblesPage = ({ user }) => {
                 PaperProps={{
                     sx: {
                         borderRadius: isSmallScreen ? 0 : 3,
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        ...getDialogPaperStyles(),
                         margin: isMobile ? 1 : 3
                     }
                 }}
@@ -2014,7 +2021,7 @@ const BubblesPage = ({ user }) => {
                 PaperProps={{
                     sx: {
                         borderRadius: isSmallScreen ? 0 : 3,
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        ...getDialogPaperStyles(),
                         margin: isMobile ? 1 : 3
                     }
                 }}
@@ -2142,7 +2149,7 @@ const BubblesPage = ({ user }) => {
                 PaperProps={{
                     sx: {
                         borderRadius: isSmallScreen ? 0 : 3,
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        ...getDialogPaperStyles(),
                         margin: isMobile ? 1 : 3,
                         position: isMobile ? 'relative' : 'static'
                     }
@@ -2239,10 +2246,10 @@ const BubblesPage = ({ user }) => {
                 {/* Футер для десктопа */}
                 {!isMobile && (
                     <Box sx={{
-                        borderTop: '1px solid #E0E0E0',
+                        borderTop: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333',
                         padding: 3,
                         textAlign: 'center',
-                        backgroundColor: '#FAFAFA'
+                        backgroundColor: themeMode === 'light' ? '#FAFAFA' : '#2C2C2C'
                     }}>
                         <Button
                             variant="text"
@@ -2336,7 +2343,7 @@ const BubblesPage = ({ user }) => {
                 PaperProps={{
                     sx: {
                         borderRadius: isSmallScreen ? 0 : 3,
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        ...getDialogPaperStyles(),
                         margin: isMobile ? 1 : 3
                     }
                 }}
@@ -2461,7 +2468,7 @@ const BubblesPage = ({ user }) => {
                 PaperProps={{
                     sx: {
                         borderRadius: 3,
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        ...getDialogPaperStyles(),
                         margin: isMobile ? 1 : 3
                     }
                 }}
@@ -2528,7 +2535,7 @@ const BubblesPage = ({ user }) => {
                     sx: {
                         width: isMobile ? '100%' : '60%',
                         maxWidth: isMobile ? '100%' : '800px',
-                        backgroundColor: '#FFFFFF'
+                        backgroundColor: themeMode === 'light' ? '#FFFFFF' : '#1e1e1e'
                     }
                 }}
             >
@@ -2539,7 +2546,7 @@ const BubblesPage = ({ user }) => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '16px 24px',
-                    borderBottom: '1px solid #E0E0E0'
+                    borderBottom: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333'
                 }}>
                     <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                         {t('bubbles.listView')}
@@ -2578,6 +2585,7 @@ const BubblesPage = ({ user }) => {
                         clearAllListFilters={clearAllListFilters}
                         selectAllListFilters={selectAllListFilters}
                         getBubbleCountByTagForListView={getBubbleCountByTagForListView}
+                        themeMode={themeMode}
                     />
                 </Box>
             </Drawer>

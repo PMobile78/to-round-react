@@ -18,8 +18,9 @@ import { Visibility, VisibilityOff, Bubble } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { createUser, loginUser, resetPassword } from '../services/authService';
 import LanguageSelector from './LanguageSelector';
+import ThemeToggle from './ThemeToggle';
 
-const AuthForm = ({ onLoginSuccess }) => {
+const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme }) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -107,19 +108,25 @@ const AuthForm = ({ onLoginSuccess }) => {
         <Box
             sx={{
                 minHeight: '100vh',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: theme.palette.background.bubbleView,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: 2
             }}
         >
-            <LanguageSelector sx={{
+            <Box sx={{
                 position: 'absolute',
                 top: 20,
                 right: 20,
-                zIndex: 1000
-            }} />
+                zIndex: 1000,
+                display: 'flex',
+                gap: 1,
+                alignItems: 'center'
+            }}>
+                <LanguageSelector themeMode={themeMode} />
+                <ThemeToggle themeMode={themeMode} toggleTheme={toggleTheme} />
+            </Box>
 
             <Paper
                 elevation={10}
@@ -128,7 +135,8 @@ const AuthForm = ({ onLoginSuccess }) => {
                     maxWidth: 400,
                     padding: isMobile ? 3 : 4,
                     borderRadius: 3,
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                    backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)',
+                    color: themeMode === 'light' ? '#000000' : '#ffffff'
                 }}
             >
                 <Box sx={{ textAlign: 'center', marginBottom: 3 }}>
@@ -208,7 +216,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                                 marginBottom: 2,
                                 height: 48,
                                 fontSize: 16,
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                background: theme.palette.background.bubbleView
                             }}
                         >
                             {loading ? <CircularProgress size={24} color="inherit" /> : t('auth.loginButton')}
@@ -289,7 +297,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                                 marginBottom: 2,
                                 height: 48,
                                 fontSize: 16,
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                background: theme.palette.background.bubbleView
                             }}
                         >
                             {loading ? <CircularProgress size={24} color="inherit" /> : t('auth.registerButton')}

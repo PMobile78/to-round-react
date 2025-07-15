@@ -13,7 +13,7 @@ import {
 import { Language, Check } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
-const LanguageSelector = ({ sx = {} }) => {
+const LanguageSelector = ({ themeMode = 'light', sx = {} }) => {
     const { i18n, t } = useTranslation();
     const [anchorEl, setAnchorEl] = useState(null);
     const theme = useTheme();
@@ -56,10 +56,14 @@ const LanguageSelector = ({ sx = {} }) => {
             <IconButton
                 onClick={handleClick}
                 sx={{
-                    color: 'white',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    color: themeMode === 'light' ? '#3B7DED' : 'white',
+                    backgroundColor: themeMode === 'light'
+                        ? 'rgba(59, 125, 237, 0.15)'
+                        : 'rgba(255, 255, 255, 0.1)',
                     '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)'
+                        backgroundColor: themeMode === 'light'
+                            ? 'rgba(59, 125, 237, 0.25)'
+                            : 'rgba(255, 255, 255, 0.2)'
                     },
                     width: isMobile ? 40 : 48,
                     height: isMobile ? 40 : 48
@@ -75,7 +79,10 @@ const LanguageSelector = ({ sx = {} }) => {
                 onClose={handleClose}
                 PaperProps={{
                     sx: {
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        backgroundColor: themeMode === 'light'
+                            ? 'rgba(255, 255, 255, 0.95)'
+                            : 'rgba(30, 30, 30, 0.95)',
+                        color: themeMode === 'light' ? '#000000' : '#ffffff',
                         backdropFilter: 'blur(10px)',
                         borderRadius: 2,
                         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',

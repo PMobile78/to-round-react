@@ -119,5 +119,11 @@
         "loading": "Loading...",
         "error": "Error",
         "success": "Success"
+    },
+    "theme": {
+        "switchToDark": "Switch to Dark Theme",
+        "switchToLight": "Switch to Light Theme",
+        "darkMode": "Dark Mode",
+        "lightMode": "Light Mode"
     }
 }
