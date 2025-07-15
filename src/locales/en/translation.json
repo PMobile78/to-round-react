@@ -87,7 +87,9 @@
         "additionalFilters": "Additional Filters",
         "filterHelpText": "Use categories to organize and find your tasks faster.",
         "noTagsAvailable": "No tags available",
-        "searchPlaceholder": "Search tasks by title, description or category..."
+        "searchPlaceholder": "Search tasks by title, description or category...",
+        "searchResults": "Found {{count}} result",
+        "searchResults_other": "Found {{count}} results"
     },
     "auth": {
         "welcome": "Welcome",

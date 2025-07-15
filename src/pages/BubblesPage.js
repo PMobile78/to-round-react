@@ -546,8 +546,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         return () => unsubscribe();
     }, []);
 
-    // Memoized function for filtering bubbles (for physics world - only active, без поиска)
-    const getFilteredBubblesWithoutSearch = useMemo(() => {
+    // Memoized function for filtering bubbles (for physics world - only active)
+    const getFilteredBubbles = useMemo(() => {
         // Always show only active bubbles in physics world
         const filteredByStatus = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
 
@@ -572,20 +572,25 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         });
     }, [bubbles, tags, filterTags, showNoTag]);
 
-    // Используем хук поиска для фильтрации пузырей в Bubbles View
+    // Используем хук поиска только для определения найденных пузырей (не для фильтрации)
     const {
-        filteredItems: getFilteredBubbles,
+        filteredItems: searchFoundBubbles,
         searchQuery: currentBubblesSearchQuery,
         setSearchQuery: setCurrentBubblesSearchQuery,
         debouncedSearchQuery: debouncedBubblesSearchQuery
-    } = useSearch(getFilteredBubblesWithoutSearch, tags);
+    } = useSearch(getFilteredBubbles, tags);
+
+    // Создаем Set ID найденных пузырей для быстрого поиска
+    const foundBubblesIds = useMemo(() => {
+        return new Set(searchFoundBubbles.map(bubble => bubble.id));
+    }, [searchFoundBubbles]);
 
     // Синхронизируем состояние поиска
     React.useEffect(() => {
         setCurrentBubblesSearchQuery(bubblesSearchQuery);
     }, [bubblesSearchQuery, setCurrentBubblesSearchQuery]);
 
-    // Filter bubbles visibility based on selected filters - optimized
+    // Filter bubbles visibility and highlight search results
     useEffect(() => {
         if (!engineRef.current) return;
 
@@ -595,6 +600,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             if (bubble.body) {
                 const isVisible = filteredIds.has(bubble.id);
                 const isCurrentlyInWorld = engineRef.current.world.bodies.includes(bubble.body);
+                const isFound = foundBubblesIds.has(bubble.id);
+                const hasSearchQuery = debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim();
 
                 if (isVisible && !isCurrentlyInWorld) {
                     // Only create new physics body if the bubble doesn't already have one or it was removed
@@ -622,7 +629,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             render: {
                                 fillStyle: getBubbleFillStyle(tagColor),
                                 strokeStyle: strokeColor,
-                                lineWidth: 3
+                                lineWidth: 3,
+                                // Прозрачность в зависимости от поиска
+                                opacity: hasSearchQuery ? (isFound ? 1 : 0.3) : 1
                             }
                         });
 
@@ -631,14 +640,20 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                         // Add new bubble to the physical world
                         Matter.World.add(engineRef.current.world, newBody);
+                    } else {
+                        // Update opacity for existing bubbles
+                        bubble.body.render.opacity = hasSearchQuery ? (isFound ? 1 : 0.3) : 1;
                     }
                 } else if (!isVisible && isCurrentlyInWorld) {
                     // Remove bubble from the physical world
                     Matter.World.remove(engineRef.current.world, bubble.body);
+                } else if (isVisible && isCurrentlyInWorld) {
+                    // Update opacity for visible bubbles based on search
+                    bubble.body.render.opacity = hasSearchQuery ? (isFound ? 1 : 0.3) : 1;
                 }
             }
         });
-    }, [getFilteredBubbles, bubbles, canvasSize, isMobile, tags]);
+    }, [getFilteredBubbles, bubbles, canvasSize, isMobile, tags, foundBubblesIds, debouncedBubblesSearchQuery]);
 
 
 
@@ -1015,30 +1030,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Memoized function to count bubbles by category for Bubbles View (only active bubbles, с учетом поиска)
     const getBubbleCountByTagForBubblesView = useCallback((tagId) => {
-        const activeBubbles = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
-
-        // Применяем поиск, если есть запрос
-        let searchFilteredBubbles = activeBubbles;
-        if (debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim()) {
-            const query = debouncedBubblesSearchQuery.toLowerCase().trim();
-            searchFilteredBubbles = activeBubbles.filter(bubble => {
-                // Search in title
-                const titleMatch = (bubble.title || '').toLowerCase().includes(query);
-                // Search in description
-                const descriptionMatch = (bubble.description || '').toLowerCase().includes(query);
-                // Search in tag name
-                const tag = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
-                const tagMatch = tag ? tag.name.toLowerCase().includes(query) : false;
-                return titleMatch || descriptionMatch || tagMatch;
-            });
-        }
+        // Если есть поиск, показываем только найденные пузыри
+        const bubblesForCount = debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim()
+            ? searchFoundBubbles
+            : getFilteredBubbles;
 
         if (tagId === null) {
-            // Count active bubbles without tags
-            return searchFilteredBubbles.filter(bubble => !bubble.tagId).length;
+            // Count bubbles without tags
+            return bubblesForCount.filter(bubble => !bubble.tagId).length;
         }
-        return searchFilteredBubbles.filter(bubble => bubble.tagId === tagId).length;
-    }, [bubbles, tags, debouncedBubblesSearchQuery]);
+        return bubblesForCount.filter(bubble => bubble.tagId === tagId).length;
+    }, [getFilteredBubbles, searchFoundBubbles, debouncedBubblesSearchQuery]);
 
     // Function to count bubbles by category for List View (based on selected status and search) - memoized
     const getBubbleCountByTagForListView = useCallback((tagId) => {
@@ -1186,12 +1188,30 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 return Math.round(baseLength * fontSizeRatio);
             };
 
+            // Проверяем, найден ли пузырь в поиске
+            const isFound = foundBubblesIds.has(bubble.id);
+            const hasSearchQuery = debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim();
+
             // Вычисляем текущий размер шрифта с учетом мобильности
             const currentFontSize = isMobile ? fontSize * 0.75 : fontSize;
             const maxLength = getMaxTitleLength(bubble.radius, currentFontSize);
             const truncatedTitle = bubble.title && bubble.title.length > maxLength
                 ? bubble.title.substring(0, maxLength) + '...'
                 : bubble.title;
+
+            // Определяем стили в зависимости от поиска
+            const textOpacity = hasSearchQuery ? (isFound ? 1 : 0.4) : 1;
+            const textColor = hasSearchQuery && isFound
+                ? (themeMode === 'light' ? '#1976d2' : '#64b5f6')  // Синий для найденных
+                : (themeMode === 'light' ? '#2C3E50' : 'white');   // Обычный цвет
+
+            const textShadow = hasSearchQuery && isFound
+                ? (themeMode === 'light'
+                    ? '0px 0px 8px rgba(25, 118, 210, 0.6), 1px 1px 2px rgba(255,255,255,0.8)'  // Синее свечение + обычная тень
+                    : '0px 0px 8px rgba(100, 181, 246, 0.8), 1px 1px 2px rgba(0,0,0,0.8)')      // Синее свечение + обычная тень
+                : (themeMode === 'light'
+                    ? '1px 1px 2px rgba(255,255,255,0.8)'
+                    : '1px 1px 2px rgba(0,0,0,0.8)');
 
             return bubble.title ? (
                 <Box
@@ -1202,12 +1222,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         top: bubble.y,
                         transform: 'translate(-50%, -50%)',
                         textAlign: 'center',
-                        color: themeMode === 'light' ? '#2C3E50' : 'white',
-                        textShadow: themeMode === 'light'
-                            ? '1px 1px 2px rgba(255,255,255,0.8)'
-                            : '1px 1px 2px rgba(0,0,0,0.8)',
+                        color: textColor,
+                        textShadow: textShadow,
                         maxWidth: Math.max(bubble.radius * 1.6, 50),
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        opacity: textOpacity,
+                        transition: 'opacity 0.3s ease, color 0.3s ease, text-shadow 0.3s ease'
                     }}
                 >
                     <Typography
@@ -1216,7 +1236,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 isMobile ? fontSize * 0.75 : fontSize,
                                 Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? fontSize * 1.2 : fontSize * 1.3)
                             ),
-                            fontWeight: 'bold',
+                            fontWeight: hasSearchQuery && isFound ? 'bolder' : 'bold',
                             lineHeight: 1.1,
                             wordBreak: 'break-word'
                         }}
@@ -1225,7 +1245,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     </Typography>
                 </Box>
             ) : null;
-        }, [isMobile, fontSize, themeMode]);
+        }, [isMobile, fontSize, themeMode, foundBubblesIds, debouncedBubblesSearchQuery]);
 
         return (
             <Box sx={{
@@ -1395,44 +1415,69 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     gap: 2,
                     alignItems: 'flex-end'
                 }}>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        {/* View Mode Toggle */}
-                        <Button
-                            onClick={() => setListViewDialog(true)}
-                            variant="outlined"
-                            size="small"
-                            startIcon={<ViewList />}
-                            sx={getOutlinedButtonStyles()}
-                        >
-                            {t('bubbles.listView')}
-                        </Button>
-                        <Button
-                            onClick={() => setFilterDrawerOpen(true)}
-                            variant="outlined"
-                            size="small"
-                            startIcon={<FilterList />}
-                            sx={{
-                                ...getOutlinedButtonStyles(),
-                                backgroundColor: !isAllSelected()
-                                    ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
-                                    : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent')
-                            }}
-                        >
-                            {t('bubbles.filterButton')}
-                        </Button>
-                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                        {/* Search field for desktop */}
+                        <Box sx={{
+                            maxWidth: 280,
+                            minWidth: 200,
+                            position: 'relative'
+                        }}>
+                            <SearchField
+                                searchQuery={bubblesSearchQuery}
+                                setSearchQuery={setBubblesSearchQuery}
+                                size="small"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        height: 36
+                                    }
+                                }}
+                            />
+                            {debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim() && (
+                                <Typography variant="caption" sx={{
+                                    color: 'text.secondary',
+                                    marginTop: 0.5,
+                                    display: 'block',
+                                    textAlign: 'center',
+                                    position: 'absolute',
+                                    left: 0,
+                                    right: 0,
+                                    fontSize: '11px'
+                                }}>
+                                    {t('bubbles.searchResults', { count: searchFoundBubbles.length })}
+                                </Typography>
+                            )}
+                        </Box>
 
-                    {/* Search field for desktop */}
-                    <Box sx={{
-                        maxWidth: 350,
-                        width: '100%',
-                        marginTop: 1
-                    }}>
-                        <SearchField
-                            searchQuery={bubblesSearchQuery}
-                            setSearchQuery={setBubblesSearchQuery}
-                            size="small"
-                        />
+                        {/* View Mode Toggle */}
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                            <Button
+                                onClick={() => setListViewDialog(true)}
+                                variant="outlined"
+                                size="small"
+                                startIcon={<ViewList />}
+                                sx={{
+                                    ...getOutlinedButtonStyles(),
+                                    height: 36
+                                }}
+                            >
+                                {t('bubbles.listView')}
+                            </Button>
+                            <Button
+                                onClick={() => setFilterDrawerOpen(true)}
+                                variant="outlined"
+                                size="small"
+                                startIcon={<FilterList />}
+                                sx={{
+                                    ...getOutlinedButtonStyles(),
+                                    height: 36,
+                                    backgroundColor: !isAllSelected()
+                                        ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
+                                        : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent')
+                                }}
+                            >
+                                {t('bubbles.filterButton')}
+                            </Button>
+                        </Box>
 
                     </Box>
                     {showInstructions && (
@@ -1520,6 +1565,23 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 backdropFilter: 'blur(10px)'
                             }}
                         />
+                        {debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim() && (
+                            <Typography variant="caption" sx={{
+                                color: 'text.secondary',
+                                marginTop: 0.5,
+                                display: 'block',
+                                textAlign: 'center',
+                                backgroundColor: themeMode === 'light'
+                                    ? 'rgba(255, 255, 255, 0.85)'
+                                    : 'rgba(30, 30, 30, 0.85)',
+                                backdropFilter: 'blur(5px)',
+                                padding: '2px 8px',
+                                borderRadius: 1,
+                                fontSize: '11px'
+                            }}>
+                                {t('bubbles.searchResults', { count: searchFoundBubbles.length })}
+                            </Typography>
+                        )}
                     </Box>
                     {showInstructions && (
                         <Box sx={{
