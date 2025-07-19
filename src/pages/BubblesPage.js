@@ -1846,7 +1846,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         <CloseOutlined />
                     </IconButton>
                 </DialogTitle>
-                <DialogContent sx={{ padding: isMobile ? 2 : 3 }}>
+                <DialogContent sx={{
+                    padding: isMobile ? 2 : 3,
+                    maxWidth: '100%',
+                    overflow: 'hidden'
+                }}>
                     <TextField
                         autoFocus={!isMobile}
                         margin="dense"
@@ -1856,7 +1860,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         sx={{
-                            marginBottom: 2,
+                            marginTop: 3,
                             '& .MuiInputBase-input': {
                                 fontSize: isMobile ? 16 : 14 // Предотвращает zoom на iOS
                             }
@@ -1873,8 +1877,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         onChange={(e) => setDescription(e.target.value)}
                         sx={{
                             '& .MuiInputBase-input': {
-                                fontSize: isMobile ? 16 : 14 // Предотвращает zoom на iOS
-                            }
+                                fontSize: isMobile ? 16 : 14, // Предотвращает zoom на iOS
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                whiteSpace: 'pre-wrap'
+                            },
+                            '& .MuiInputBase-root': {
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word'
+                            },
+                            '& .MuiOutlinedInput-root': {
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word'
+                            },
+                            maxWidth: '100%',
+                            marginTop: 2,
+                            marginBottom: 2,
                         }}
                     />
 
@@ -2536,7 +2554,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         <CloseOutlined />
                     </IconButton>
                 </DialogTitle>
-                <DialogContent sx={{ padding: isMobile ? 2 : 3 }}>
+                <DialogContent sx={{
+                    padding: isMobile ? 2 : 3,
+                    maxWidth: '100%',
+                    overflow: 'hidden'
+                }}>
                     <TextField
                         autoFocus={!isMobile}
                         margin="dense"
@@ -2563,8 +2585,21 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         onChange={(e) => setDescription(e.target.value)}
                         sx={{
                             '& .MuiInputBase-input': {
-                                fontSize: isMobile ? 16 : 14
-                            }
+                                fontSize: isMobile ? 16 : 14,
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                whiteSpace: 'pre-wrap'
+                            },
+                            '& .MuiInputBase-root': {
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word'
+                            },
+                            '& .MuiOutlinedInput-root': {
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word'
+                            },
+                            maxWidth: '100%',
+                            overflow: 'hidden'
                         }}
                     />
 
