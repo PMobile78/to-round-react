@@ -1116,7 +1116,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 newMap.delete(tagId);
                 return newMap;
             });
-        }, 5000);
+        }, 7000);
 
         // Сохраняем таймер
         setDeleteTimers(prev => new Map(prev).set(tagId, timer));
@@ -2808,21 +2808,23 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                         }}
                                     >
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                                            <Box
-                                                sx={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    borderRadius: '50%',
-                                                    backgroundColor: tag.color,
-                                                    border: '2px solid #E0E0E0'
-                                                }}
-                                            />
+                                            {!isDeleting && (
+                                                <Box
+                                                    sx={{
+                                                        width: 24,
+                                                        height: 24,
+                                                        borderRadius: '50%',
+                                                        backgroundColor: tag.color,
+                                                        border: '2px solid #E0E0E0'
+                                                    }}
+                                                />
+                                            )}
                                             <Box sx={{ flex: 1 }}>
                                                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                                                     {isDeleting ? (
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <DeleteOutlined sx={{ fontSize: 16, color: 'error.main' }} />
-                                                            {tag.name} - {t('bubbles.tagDeleted')}
+                                                            <DeleteOutlined sx={{ fontSize: 20, color: 'text.secondary' }} />
+                                                            {t('bubbles.tagDeleted')}
                                                         </Box>
                                                     ) : (
                                                         tag.name
