@@ -181,7 +181,7 @@ const ListView = ({
                 case BUBBLE_STATUS.POSTPONE:
                     return '#FFF3E0';
                 default:
-                    return '#E3F2FD';
+                    return 'transparent'; // Прозрачный фон для активных задач
             }
         } else {
             // Dark theme colors
@@ -193,7 +193,7 @@ const ListView = ({
                 case BUBBLE_STATUS.POSTPONE:
                     return '#4A3B00';
                 default:
-                    return '#1A237E';
+                    return 'transparent'; // Прозрачный фон для активных задач
             }
         }
     }, [themeMode]);
@@ -320,7 +320,7 @@ const ListView = ({
             padding: 2,
             height: '100%',
             overflow: 'auto',
-            backgroundColor: themeMode === 'light' ? '#ffffff' : '#1e1e1e',
+            backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)',
             color: themeMode === 'light' ? '#000000' : '#ffffff'
         }}>
             {/* Filter and Sort controls */}
@@ -488,6 +488,7 @@ const ListView = ({
                                     padding: 2,
                                     borderRadius: 2,
                                     backgroundColor: getStatusColor(task.status),
+                                    // border: '1px solid #E0E0E0'
                                     border: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333'
                                 }}
                             >
