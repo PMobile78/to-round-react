@@ -424,13 +424,15 @@ const ListView = ({
                         key={tab.key}
                         variant={listFilter === tab.key ? 'contained' : 'outlined'}
                         onClick={() => setListFilter(tab.key)}
+                        disabled={tab.key === 'postpone' && getTasksCountByStatus('postpone') === 0}
                         sx={{
                             borderRadius: 20,
                             paddingX: 2,
                             paddingY: 1,
                             textTransform: 'none',
                             minWidth: 'auto',
-                            fontSize: isMobile ? '0.8rem' : '0.9rem'
+                            fontSize: isMobile ? '0.8rem' : '0.9rem',
+                            opacity: tab.key === 'postpone' && getTasksCountByStatus('postpone') === 0 ? 0.5 : 1
                         }}
                     >
                         {tab.label} ({tab.count})
@@ -590,6 +592,14 @@ const ListView = ({
                                             <>
                                                 <IconButton
                                                     size="small"
+                                                    onClick={() => handleEditTask(task)}
+                                                    sx={{ color: 'primary.main' }}
+                                                    title={t('bubbles.editBubble')}
+                                                >
+                                                    <Edit />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
                                                     onClick={() => handleRestoreBubble(task.id)}
                                                     sx={{ color: 'primary.main' }}
                                                     title={t('bubbles.restoreBubble')}
@@ -610,6 +620,14 @@ const ListView = ({
                                             <>
                                                 <IconButton
                                                     size="small"
+                                                    onClick={() => handleEditTask(task)}
+                                                    sx={{ color: 'primary.main' }}
+                                                    title={t('bubbles.editBubble')}
+                                                >
+                                                    <Edit />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
                                                     onClick={() => handleRestoreBubble(task.id)}
                                                     sx={{ color: 'primary.main' }}
                                                     title={t('bubbles.restoreBubble')}
@@ -621,6 +639,34 @@ const ListView = ({
                                                     onClick={() => handlePermanentDeleteTask(task.id)}
                                                     sx={{ color: 'error.main' }}
                                                     title={t('bubbles.permanentDelete')}
+                                                >
+                                                    <DeleteOutlined />
+                                                </IconButton>
+                                            </>
+                                        )}
+                                        {task.status === BUBBLE_STATUS.POSTPONE && (
+                                            <>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleEditTask(task)}
+                                                    sx={{ color: 'primary.main' }}
+                                                    title={t('bubbles.editBubble')}
+                                                >
+                                                    <Edit />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleRestoreBubble(task.id)}
+                                                    sx={{ color: 'primary.main' }}
+                                                    title={t('bubbles.restoreBubble')}
+                                                >
+                                                    <Restore />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleDeleteTask(task.id)}
+                                                    sx={{ color: 'error.main' }}
+                                                    title={t('bubbles.deleteBubble')}
                                                 >
                                                     <DeleteOutlined />
                                                 </IconButton>
