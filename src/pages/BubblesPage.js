@@ -28,6 +28,7 @@ import {
     List,
     ListItem,
     Divider,
+    Slider,
 
 } from '@mui/material';
 import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward, Search } from '@mui/icons-material';
@@ -146,6 +147,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [bubblesSearchQuery, setBubblesSearchQuery] = useState('');
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
+    // Состояние скорости падения пузырей
+    const [dropSpeed, setDropSpeed] = useState(() => {
+        const saved = localStorage.getItem('bubbles-drop-speed');
+        return saved ? parseFloat(saved) : 0.3;
+    });
+
     // Function to get button styles based on theme
     const getButtonStyles = () => {
         return {
@@ -202,6 +209,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         };
     };
 
+    // Function to handle drop speed change
+    const handleDropSpeedChange = (newSpeed) => {
+        setDropSpeed(newSpeed);
+        localStorage.setItem('bubbles-drop-speed', newSpeed.toString());
+
+        // Update engine gravity
+        if (engineRef.current) {
+            engineRef.current.world.gravity.y = newSpeed;
+        }
+    };
+
     // Function for creating world boundaries
     const createWorldBounds = (width, height) => {
         const { Bodies } = Matter;
@@ -234,7 +252,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         engineRef.current = engine;
 
         // Disable default gravity to customize yours
-        engine.world.gravity.y = 0.3;
+        engine.world.gravity.y = dropSpeed;
 
         // Getting adaptive canvas sizes
         const canvasSize = getCanvasSize();
@@ -1590,6 +1608,46 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             </Button>
                         </Box>
 
+                        {/* Drop Speed Slider */}
+                        <Box sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            minWidth: 120,
+                            padding: '0 8px'
+                        }}>
+                            <Typography variant="caption" sx={{
+                                color: themeMode === 'light' ? 'text.secondary' : 'rgba(255,255,255,0.7)',
+                                marginBottom: 0.5,
+                                fontSize: '10px'
+                            }}>
+                                Speed
+                            </Typography>
+                            <Slider
+                                value={dropSpeed}
+                                onChange={(event, newValue) => handleDropSpeedChange(newValue)}
+                                min={0.1}
+                                max={1.0}
+                                step={0.1}
+                                size="small"
+                                sx={{
+                                    color: themeMode === 'light' ? '#3B7DED' : '#90caf9',
+                                    height: 4,
+                                    '& .MuiSlider-thumb': {
+                                        width: 12,
+                                        height: 12,
+                                    },
+                                    '& .MuiSlider-track': {
+                                        height: 4,
+                                    },
+                                    '& .MuiSlider-rail': {
+                                        height: 4,
+                                        opacity: 0.3,
+                                    }
+                                }}
+                            />
+                        </Box>
+
                     </Box>
                     {showInstructions && (
                         <Box sx={{
@@ -1674,6 +1732,46 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         >
                             <FilterList />
                         </IconButton>
+
+                        {/* Drop Speed Slider for Mobile */}
+                        <Box sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            minWidth: 80,
+                            padding: '0 4px'
+                        }}>
+                            <Typography variant="caption" sx={{
+                                color: themeMode === 'light' ? 'text.secondary' : 'rgba(255,255,255,0.7)',
+                                marginBottom: 0.5,
+                                fontSize: '8px'
+                            }}>
+                                Speed
+                            </Typography>
+                            <Slider
+                                value={dropSpeed}
+                                onChange={(event, newValue) => handleDropSpeedChange(newValue)}
+                                min={0.1}
+                                max={1.0}
+                                step={0.1}
+                                size="small"
+                                sx={{
+                                    color: themeMode === 'light' ? '#3B7DED' : '#90caf9',
+                                    height: 3,
+                                    '& .MuiSlider-thumb': {
+                                        width: 10,
+                                        height: 10,
+                                    },
+                                    '& .MuiSlider-track': {
+                                        height: 3,
+                                    },
+                                    '& .MuiSlider-rail': {
+                                        height: 3,
+                                        opacity: 0.3,
+                                    }
+                                }}
+                            />
+                        </Box>
 
                     </Box>
 
