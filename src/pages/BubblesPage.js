@@ -142,6 +142,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const saved = localStorage.getItem('bubbles-show-instructions');
         return saved === null ? true : saved === 'true';
     }); // Показывать ли подсказки инструкций
+    const [deletingTags, setDeletingTags] = useState(new Set()); // Теги в процессе удаления
+    const [deleteTimers, setDeleteTimers] = useState(new Map()); // Таймеры удаления тегов
 
     // Состояние поиска для Bubbles View
     const [bubblesSearchQuery, setBubblesSearchQuery] = useState('');
@@ -1078,24 +1080,46 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     };
 
     const handleDeleteTag = (tagId) => {
-        const updatedTags = tags.filter(tag => tag.id !== tagId);
-        setTags(updatedTags);
-        saveTagsToFirestore(updatedTags);
+        // Добавляем тег в состояние удаления
+        setDeletingTags(prev => new Set([...prev, tagId]));
 
-        // Удаляем ссылки на этот тег из пузырей
-        setBubbles(prev => {
-            const updatedBubbles = prev.map(bubble => {
-                if (bubble.tagId === tagId) {
-                    // Сбрасываем цвет пузыря на светло-серый и обновляем fillStyle
-                    bubble.body.render.strokeStyle = '#B0B0B0';
-                    bubble.body.render.fillStyle = getBubbleFillStyle(null);
-                    return { ...bubble, tagId: null };
-                }
-                return bubble;
+        // Создаем таймер и сохраняем его
+        const timer = setTimeout(() => {
+            setDeletingTags(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(tagId);
+                return newSet;
             });
-            saveBubblesToFirestore(updatedBubbles);
-            return updatedBubbles;
-        });
+
+            const updatedTags = tags.filter(tag => tag.id !== tagId);
+            setTags(updatedTags);
+            saveTagsToFirestore(updatedTags);
+
+            // Удаляем ссылки на этот тег из пузырей
+            setBubbles(prev => {
+                const updatedBubbles = prev.map(bubble => {
+                    if (bubble.tagId === tagId) {
+                        // Сбрасываем цвет пузыря на светло-серый и обновляем fillStyle
+                        bubble.body.render.strokeStyle = '#B0B0B0';
+                        bubble.body.render.fillStyle = getBubbleFillStyle(null);
+                        return { ...bubble, tagId: null };
+                    }
+                    return bubble;
+                });
+                saveBubblesToFirestore(updatedBubbles);
+                return updatedBubbles;
+            });
+
+            // Удаляем таймер из Map
+            setDeleteTimers(prev => {
+                const newMap = new Map(prev);
+                newMap.delete(tagId);
+                return newMap;
+            });
+        }, 5000);
+
+        // Сохраняем таймер
+        setDeleteTimers(prev => new Map(prev).set(tagId, timer));
     };
 
     const handleCloseTagDialog = () => {
@@ -1108,6 +1132,26 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setTimeout(() => {
             setCategoriesDialog(true);
         }, 100);
+    };
+
+    const handleUndoDeleteTag = (tagId) => {
+        // Очищаем таймер удаления
+        const timer = deleteTimers.get(tagId);
+        if (timer) {
+            clearTimeout(timer);
+            setDeleteTimers(prev => {
+                const newMap = new Map(prev);
+                newMap.delete(tagId);
+                return newMap;
+            });
+        }
+
+        // Убираем тег из состояния удаления
+        setDeletingTags(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(tagId);
+            return newSet;
+        });
     };
 
     // Memoized functions for filter management
@@ -2748,56 +2792,90 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     {/* Список существующих категорий */}
                     {tags.length > 0 ? (
                         <List sx={{ padding: 0, marginTop: 3 }}>
-                            {tags.map(tag => (
-                                <ListItem
-                                    key={tag.id}
-                                    sx={{
-                                        border: '1px solid #E0E0E0',
-                                        borderRadius: 2,
-                                        marginBottom: 1,
-                                        padding: 2
-                                    }}
-                                >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                                        <Box
-                                            sx={{
-                                                width: 24,
-                                                height: 24,
-                                                borderRadius: '50%',
-                                                backgroundColor: tag.color,
-                                                border: '2px solid #E0E0E0'
-                                            }}
-                                        />
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                                                {tag.name}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {getBubbleCountByTag(tag.id)} {getBubbleCountByTag(tag.id) === 1 ? t('bubbles.bubble') : t('bubbles.bubbles')}
-                                            </Typography>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => {
-                                                    setCategoriesDialog(false);
-                                                    handleOpenTagDialog(tag);
+                            {tags.map(tag => {
+                                const isDeleting = deletingTags.has(tag.id);
+
+                                return (
+                                    <ListItem
+                                        key={tag.id}
+                                        sx={{
+                                            border: '1px solid #E0E0E0',
+                                            borderRadius: 2,
+                                            marginBottom: 1,
+                                            padding: 2,
+                                            opacity: isDeleting ? 0.7 : 1,
+                                            transition: 'opacity 0.3s ease'
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                                            <Box
+                                                sx={{
+                                                    width: 24,
+                                                    height: 24,
+                                                    borderRadius: '50%',
+                                                    backgroundColor: tag.color,
+                                                    border: '2px solid #E0E0E0'
                                                 }}
-                                                sx={{ color: 'primary.main' }}
-                                            >
-                                                <Edit fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleDeleteTag(tag.id)}
-                                                sx={{ color: 'error.main' }}
-                                            >
-                                                <DeleteOutlined fontSize="small" />
-                                            </IconButton>
+                                            />
+                                            <Box sx={{ flex: 1 }}>
+                                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                                                    {isDeleting ? (
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <DeleteOutlined sx={{ fontSize: 16, color: 'error.main' }} />
+                                                            {tag.name} - {t('bubbles.tagDeleted')}
+                                                        </Box>
+                                                    ) : (
+                                                        tag.name
+                                                    )}
+                                                </Typography>
+                                                {!isDeleting && (
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {getBubbleCountByTag(tag.id)} {getBubbleCountByTag(tag.id) === 1 ? t('bubbles.bubble') : t('bubbles.bubbles')}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                {isDeleting ? (
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={() => handleUndoDeleteTag(tag.id)}
+                                                        sx={{
+                                                            color: 'primary.main',
+                                                            borderColor: 'primary.main',
+                                                            textTransform: 'none',
+                                                            fontSize: '0.75rem',
+                                                            padding: '4px 8px'
+                                                        }}
+                                                    >
+                                                        {t('bubbles.undo')}
+                                                    </Button>
+                                                ) : (
+                                                    <>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => {
+                                                                setCategoriesDialog(false);
+                                                                handleOpenTagDialog(tag);
+                                                            }}
+                                                            sx={{ color: 'primary.main' }}
+                                                        >
+                                                            <Edit fontSize="small" />
+                                                        </IconButton>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleDeleteTag(tag.id)}
+                                                            sx={{ color: 'error.main' }}
+                                                        >
+                                                            <DeleteOutlined fontSize="small" />
+                                                        </IconButton>
+                                                    </>
+                                                )}
+                                            </Box>
                                         </Box>
-                                    </Box>
-                                </ListItem>
-                            ))}
+                                    </ListItem>
+                                );
+                            })}
                         </List>
                     ) : (
                         <Box sx={{

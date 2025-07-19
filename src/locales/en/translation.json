@@ -91,7 +91,9 @@
         "searchResults": "Found {{count}} result",
         "searchResults_other": "Found {{count}} results",
         "bubbleSize": "Bubble size",
-        "bubbleSizeLabel": "Bubble size: {{size}}px"
+        "bubbleSizeLabel": "Bubble size: {{size}}px",
+        "tagDeleted": "Tag deleted",
+        "undo": "UNDO"
     },
     "auth": {
         "welcome": "Welcome",

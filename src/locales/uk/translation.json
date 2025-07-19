@@ -92,7 +92,9 @@
         "searchResults_other": "Знайдено {{count}} результати",
         "searchResults_many": "Знайдено {{count}} результатів",
         "bubbleSize": "Розмір бульбашки",
-        "bubbleSizeLabel": "Розмір бульбашки: {{size}}px"
+        "bubbleSizeLabel": "Розмір бульбашки: {{size}}px",
+        "tagDeleted": "Тег видалено",
+        "undo": "СКАСУВАТИ"
     },
     "auth": {
         "welcome": "Ласкаво просимо",
