@@ -632,7 +632,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                         // Create new physics body with new position
                         // Определяем цвет подсветки для найденных пузырей
-                        let highlightColor = '#1976d2'; // Синий по умолчанию для пузырей без тегов
+                        let highlightColor = '#B0B0B0'; // Серый цвет для пузырей без тегов
                         if (hasSearchQuery && isFound) {
                             if (bubble.tagId) {
                                 const tag = tags.find(t => t.id === bubble.tagId);
@@ -640,7 +640,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                     highlightColor = tag.color;
                                 }
                             }
-                            // Если нет тега, highlightColor остается синим по умолчанию
+                            // Если нет тега, highlightColor остается серым (#B0B0B0)
                         }
 
                         const newBody = Matter.Bodies.circle(newX, newY, bubble.radius, {
@@ -677,7 +677,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         // Обновляем обводку
                         if (hasSearchQuery && isFound) {
                             // Определяем цвет подсветки на основе тега
-                            let highlightColor = '#1976d2'; // Синий по умолчанию для пузырей без тегов
+                            let highlightColor = '#B0B0B0'; // Серый цвет для пузырей без тегов
                             if (bubble.tagId) {
                                 const tag = tags.find(t => t.id === bubble.tagId);
                                 if (tag) {
@@ -717,7 +717,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     // Обновляем стили для найденных пузырей
                     if (hasSearchQuery && isFound) {
                         // Определяем цвет подсветки на основе тега
-                        let highlightColor = '#1976d2'; // Синий по умолчанию для пузырей без тегов
+                        let highlightColor = '#B0B0B0'; // Серый цвет для пузырей без тегов
                         if (bubble.tagId) {
                             const tag = tags.find(t => t.id === bubble.tagId);
                             if (tag) {
