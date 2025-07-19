@@ -1261,7 +1261,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     };
 
     const isColorAvailable = (color) => {
-        return !getUsedColors().includes(color);
+        const usedColors = getUsedColors();
+        // Если редактируем тег, его текущий цвет всегда доступен
+        if (editingTag && editingTag.color === color) {
+            return true;
+        }
+        return !usedColors.includes(color);
     };
 
     const canCreateMoreTags = () => {
@@ -2117,7 +2122,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             margin: '0 auto'
                         }}>
                             {COLOR_PALETTE.map((color, index) => {
-                                const isUsed = !isColorAvailable(color) && color !== tagColor;
+                                // Если редактируем тег, его текущий цвет всегда доступен
+                                const isUsed = editingTag
+                                    ? (!isColorAvailable(color) && color !== editingTag.color)
+                                    : (!isColorAvailable(color) && color !== tagColor);
                                 const isSelected = tagColor === color;
 
                                 return (
