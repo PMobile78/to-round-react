@@ -505,6 +505,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         }
     }, [themeMode, bubbles, tags]);
 
+    // Force TextOverlay re-render on theme change to update text opacity
+    const [textOverlayKey, setTextOverlayKey] = useState(0);
+    useEffect(() => {
+        // Force TextOverlay re-render when theme changes
+        setTextOverlayKey(prev => prev + 1);
+    }, [themeMode]);
+
     // Real-time tags synchronization
     useEffect(() => {
         const unsubscribe = subscribeToTagsUpdates((updatedTags) => {
@@ -624,13 +631,25 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         }
 
                         // Create new physics body with new position
+                        // Определяем цвет подсветки для найденных пузырей
+                        let highlightColor = '#1976d2'; // Синий по умолчанию для пузырей без тегов
+                        if (hasSearchQuery && isFound) {
+                            if (bubble.tagId) {
+                                const tag = tags.find(t => t.id === bubble.tagId);
+                                if (tag) {
+                                    highlightColor = tag.color;
+                                }
+                            }
+                            // Если нет тега, highlightColor остается синим по умолчанию
+                        }
+
                         const newBody = Matter.Bodies.circle(newX, newY, bubble.radius, {
                             restitution: 0.8,
                             frictionAir: 0.01,
                             render: {
                                 fillStyle: getBubbleFillStyle(tagColor),
                                 strokeStyle: hasSearchQuery && isFound
-                                    ? '#1976d2'  // Яркий синий для найденных
+                                    ? highlightColor  // Цвет тега для найденных
                                     : strokeColor,
                                 lineWidth: hasSearchQuery && isFound ? 4 : 3,
                                 // Прозрачность в зависимости от поиска
@@ -640,7 +659,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                         // Добавляем эффект свечения для найденных пузырей
                         if (hasSearchQuery && isFound) {
-                            newBody.render.shadowColor = '#1976d2';
+                            newBody.render.shadowColor = highlightColor;
                             newBody.render.shadowBlur = 15;
                             newBody.render.shadowOffsetX = 0;
                             newBody.render.shadowOffsetY = 0;
@@ -657,10 +676,18 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                         // Обновляем обводку
                         if (hasSearchQuery && isFound) {
-                            bubble.body.render.strokeStyle = '#1976d2';
+                            // Определяем цвет подсветки на основе тега
+                            let highlightColor = '#1976d2'; // Синий по умолчанию для пузырей без тегов
+                            if (bubble.tagId) {
+                                const tag = tags.find(t => t.id === bubble.tagId);
+                                if (tag) {
+                                    highlightColor = tag.color;
+                                }
+                            }
+                            bubble.body.render.strokeStyle = highlightColor;
                             bubble.body.render.lineWidth = 4;
-                            // Добавляем свечение
-                            bubble.body.render.shadowColor = '#1976d2';
+                            // Добавляем свечение цветом тега
+                            bubble.body.render.shadowColor = highlightColor;
                             bubble.body.render.shadowBlur = 15;
                             bubble.body.render.shadowOffsetX = 0;
                             bubble.body.render.shadowOffsetY = 0;
@@ -689,10 +716,18 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                     // Обновляем стили для найденных пузырей
                     if (hasSearchQuery && isFound) {
-                        bubble.body.render.strokeStyle = '#1976d2';
+                        // Определяем цвет подсветки на основе тега
+                        let highlightColor = '#1976d2'; // Синий по умолчанию для пузырей без тегов
+                        if (bubble.tagId) {
+                            const tag = tags.find(t => t.id === bubble.tagId);
+                            if (tag) {
+                                highlightColor = tag.color;
+                            }
+                        }
+                        bubble.body.render.strokeStyle = highlightColor;
                         bubble.body.render.lineWidth = 4;
-                        // Добавляем свечение
-                        bubble.body.render.shadowColor = '#1976d2';
+                        // Добавляем свечение цветом тега
+                        bubble.body.render.shadowColor = highlightColor;
                         bubble.body.render.shadowBlur = 15;
                         bubble.body.render.shadowOffsetX = 0;
                         bubble.body.render.shadowOffsetY = 0;
@@ -1315,7 +1350,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 {positions.map(renderBubbleText)}
             </Box>
         );
-    }, [getFilteredBubbles, bubbles, isMobile, fontSize, themeMode]);
+    }, [getFilteredBubbles, bubbles, isMobile, fontSize, themeMode, foundBubblesIds, debouncedBubblesSearchQuery]);
 
 
 
@@ -1710,7 +1745,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             {/* Canvas for physics */}
             <div ref={canvasRef} style={{ width: '100%', height: '100%' }} />
             {/* Текст поверх пузырей */}
-            <TextOverlay />
+            <TextOverlay key={textOverlayKey} />
 
             {/* Диалог редактирования */}
             <Dialog
