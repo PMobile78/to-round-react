@@ -369,7 +369,7 @@ const ListView = ({
                         >
                             <MenuItem value="createdAt">{t('bubbles.createdAt')}</MenuItem>
                             <MenuItem value="updatedAt">{t('bubbles.updatedAt')}</MenuItem>
-                            <MenuItem value="title">{t('bubbles.title')}</MenuItem>
+                            <MenuItem value="title">{t('bubbles.titleLabel')}</MenuItem>
                             <MenuItem value="tag">{t('bubbles.category')}</MenuItem>
                         </Select>
                     </FormControl>

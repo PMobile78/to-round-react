@@ -221,11 +221,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Function to get canvas dimensions depending on screen size
     const getCanvasSize = () => {
-        const headerHeight = isMobile ? 80 : 100;
-
         return {
             width: window.innerWidth,
-            height: window.innerHeight - headerHeight
+            height: window.innerHeight
         };
     };
 
@@ -425,12 +423,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         // Window resize handler
         const handleResize = () => {
             // Recalculate canvas size using current breakpoint values
-            const currentIsMobile = window.innerWidth <= theme.breakpoints.values.md;
-            const headerHeight = currentIsMobile ? 80 : 100;
-
             const newSize = {
                 width: window.innerWidth,
-                height: window.innerHeight - headerHeight
+                height: window.innerHeight
             };
 
             // Update renderer dimensions
@@ -1893,7 +1888,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             )}
 
             {/* Canvas for physics */}
-            <div ref={canvasRef} style={{ width: '100vw', height: '100%' }} />
+            <div ref={canvasRef} style={{
+                width: '100vw',
+                height: '100vh',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                zIndex: 1
+            }} />
             {/* Текст поверх пузырей */}
             <TextOverlay key={textOverlayKey} />
 
