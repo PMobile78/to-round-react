@@ -1914,7 +1914,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     </FormControl>
 
                     {/* Слайдер размера пузыря */}
-                    <Box sx={{ marginTop: 2, marginBottom: 1 }}>
+                    <Box sx={{
+                        marginTop: 2,
+                        marginBottom: 1,
+                        width: isMobile ? '95%' : '100%',
+                        marginX: isMobile ? 'auto' : 0
+                    }}>
                         <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
                             {t('bubbles.bubbleSizeLabel', { size: editBubbleSize })}
                         </Typography>
@@ -2599,7 +2604,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     </FormControl>
 
                     {/* Слайдер размера пузыря */}
-                    <Box sx={{ marginTop: 2, marginBottom: 1 }}>
+                    <Box sx={{
+                        marginTop: 2,
+                        marginBottom: 1,
+                        width: isMobile ? '95%' : '100%',
+                        marginX: isMobile ? 'auto' : 0
+                    }}>
                         <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
                             {t('bubbles.bubbleSizeLabel', { size: bubbleSize })}
                         </Typography>
