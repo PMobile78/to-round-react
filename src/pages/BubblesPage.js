@@ -1142,19 +1142,20 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         return tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
     }, [tags, listFilterTags, listShowNoTag]);
 
-    // Memoized function to count bubbles by category for Bubbles View (only active bubbles, с учетом поиска)
+    // Memoized function to count bubbles by category for Bubbles View (always shows total count, regardless of filters)
     const getBubbleCountByTagForBubblesView = useCallback((tagId) => {
-        // Если есть поиск, показываем только найденные пузыри
+        // Всегда показываем общее количество пузырей для каждого тега, независимо от фильтров
+        // Но учитываем поиск - если есть поиск, показываем только найденные пузыри
         const bubblesForCount = debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim()
             ? searchFoundBubbles
-            : getFilteredBubbles;
+            : bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE); // Только активные пузыри
 
         if (tagId === null) {
             // Count bubbles without tags
             return bubblesForCount.filter(bubble => !bubble.tagId).length;
         }
         return bubblesForCount.filter(bubble => bubble.tagId === tagId).length;
-    }, [getFilteredBubbles, searchFoundBubbles, debouncedBubblesSearchQuery]);
+    }, [bubbles, searchFoundBubbles, debouncedBubblesSearchQuery]);
 
     // Function to count bubbles by category for List View (based on selected status and search) - memoized
     const getBubbleCountByTagForListView = useCallback((tagId) => {
