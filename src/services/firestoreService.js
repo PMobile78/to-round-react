@@ -278,7 +278,9 @@ export const subscribeToTagsUpdates = (callback) => {
         return onSnapshot(tagsRef, (doc) => {
             if (doc.exists()) {
                 const data = doc.data();
-                callback(data.tags || []);
+                const tags = data.tags || [];
+                // Ensure we always pass an array to the callback
+                callback(Array.isArray(tags) ? tags : []);
             } else {
                 callback([]);
             }

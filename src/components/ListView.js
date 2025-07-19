@@ -86,12 +86,15 @@ const ListView = ({
         }
 
         return filteredByStatus.filter(bubble => {
-            // Если выбраны теги и пузырь имеет один из выбранных тегов
-            if (listFilterTags.length > 0 && bubble.tagId && listFilterTags.includes(bubble.tagId)) {
+            // Проверяем, существует ли тег для пузыря
+            const tagExists = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
+
+            // Если выбраны теги и пузырь имеет один из выбранных тегов (который существует)
+            if (listFilterTags.length > 0 && bubble.tagId && tagExists && listFilterTags.includes(bubble.tagId)) {
                 return true;
             }
-            // Если включен фильтр "No Tag" и у пузыря нет тега
-            if (listShowNoTag && !bubble.tagId) {
+            // Если включен фильтр "No Tag" и у пузыря нет тега или тег был удален
+            if (listShowNoTag && (!bubble.tagId || !tagExists)) {
                 return true;
             }
             return false;
@@ -207,12 +210,15 @@ const ListView = ({
 
         if (!allTagsSelected) {
             filteredBubbles = bubbles.filter(bubble => {
-                // Если выбраны теги и пузырь имеет один из выбранных тегов
-                if (listFilterTags.length > 0 && bubble.tagId && listFilterTags.includes(bubble.tagId)) {
+                // Проверяем, существует ли тег для пузыря
+                const tagExists = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
+
+                // Если выбраны теги и пузырь имеет один из выбранных тегов (который существует)
+                if (listFilterTags.length > 0 && bubble.tagId && tagExists && listFilterTags.includes(bubble.tagId)) {
                     return true;
                 }
-                // Если включен фильтр "No Tag" и у пузыря нет тега
-                if (listShowNoTag && !bubble.tagId) {
+                // Если включен фильтр "No Tag" и у пузыря нет тега или тег был удален
+                if (listShowNoTag && (!bubble.tagId || !tagExists)) {
                     return true;
                 }
                 return false;
@@ -478,6 +484,7 @@ const ListView = ({
                 <List sx={{ padding: 0 }}>
                     {tasks.map((task, index) => {
                         const tag = task.tagId ? tags.find(t => t.id === task.tagId) : null;
+                        const hasDeletedTag = task.tagId && !tag; // Проверяем, есть ли удаленный тег
 
                         return (
                             <ListItem
@@ -528,6 +535,19 @@ const ListView = ({
                                                 size="small"
                                                 sx={{
                                                     backgroundColor: tag.color,
+                                                    color: 'white',
+                                                    marginBottom: 1
+                                                }}
+                                            />
+                                        )}
+
+                                        {/* No Tag chip for tasks with deleted tags */}
+                                        {hasDeletedTag && (
+                                            <Chip
+                                                label={t('bubbles.noTag')}
+                                                size="small"
+                                                sx={{
+                                                    backgroundColor: '#B0B0B0',
                                                     color: 'white',
                                                     marginBottom: 1
                                                 }}

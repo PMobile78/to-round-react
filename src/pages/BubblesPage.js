@@ -539,11 +539,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Real-time tags synchronization
     useEffect(() => {
         const unsubscribe = subscribeToTagsUpdates((updatedTags) => {
-            setTags(updatedTags);
+            // Ensure updatedTags is always an array
+            const tagsArray = Array.isArray(updatedTags) ? updatedTags : [];
+            setTags(tagsArray);
 
             // Update filter tags to remove deleted tags
             setFilterTags(currentFilterTags => {
-                const existingTagIds = updatedTags.map(tag => tag.id);
+                const existingTagIds = tagsArray.map(tag => tag.id);
                 const validFilterTags = currentFilterTags.filter(id => existingTagIds.includes(id));
                 localStorage.setItem('bubbles-filter-tags', JSON.stringify(validFilterTags));
                 return validFilterTags;
@@ -551,7 +553,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
             // Update list filter tags to remove deleted tags
             setListFilterTags(currentListFilterTags => {
-                const existingTagIds = updatedTags.map(tag => tag.id);
+                const existingTagIds = tagsArray.map(tag => tag.id);
                 const validListFilterTags = currentListFilterTags.filter(id => existingTagIds.includes(id));
                 localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(validListFilterTags));
                 return validListFilterTags;
@@ -561,7 +563,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             setBubbles(currentBubbles => {
                 return currentBubbles.map(bubble => {
                     if (bubble.tagId) {
-                        const tag = updatedTags.find(t => t.id === bubble.tagId);
+                        const tag = tagsArray.find(t => t.id === bubble.tagId);
                         if (tag && bubble.body) {
                             bubble.body.render.strokeStyle = tag.color;
                             bubble.body.render.fillStyle = getBubbleFillStyle(tag.color);
@@ -592,12 +594,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         }
 
         return filteredByStatus.filter(bubble => {
-            // Если выбраны теги и пузырь имеет один из выбранных тегов
-            if (filterTags.length > 0 && bubble.tagId && filterTags.includes(bubble.tagId)) {
+            // Проверяем, существует ли тег для пузыря
+            const tagExists = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
+
+            // Если выбраны теги и пузырь имеет один из выбранных тегов (который существует)
+            if (filterTags.length > 0 && bubble.tagId && tagExists && filterTags.includes(bubble.tagId)) {
                 return true;
             }
-            // Если включен фильтр "No Tag" и у пузыря нет тега
-            if (showNoTag && !bubble.tagId) {
+            // Если включен фильтр "No Tag" и у пузыря нет тега или тег был удален
+            if (showNoTag && (!bubble.tagId || !tagExists)) {
                 return true;
             }
             return false;
@@ -828,12 +833,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         }
 
         return filteredByStatus.filter(bubble => {
-            // Если выбраны теги и пузырь имеет один из выбранных тегов
-            if (listFilterTags.length > 0 && bubble.tagId && listFilterTags.includes(bubble.tagId)) {
+            // Проверяем, существует ли тег для пузыря
+            const tagExists = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
+
+            // Если выбраны теги и пузырь имеет один из выбранных тегов (который существует)
+            if (listFilterTags.length > 0 && bubble.tagId && tagExists && listFilterTags.includes(bubble.tagId)) {
                 return true;
             }
-            // Если включен фильтр "No Tag" и у пузыря нет тега
-            if (listShowNoTag && !bubble.tagId) {
+            // Если включен фильтр "No Tag" и у пузыря нет тега или тег был удален
+            if (listShowNoTag && (!bubble.tagId || !tagExists)) {
                 return true;
             }
             return false;
@@ -1250,11 +1258,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             : bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE); // Только активные пузыри
 
         if (tagId === null) {
-            // Count bubbles without tags
-            return bubblesForCount.filter(bubble => !bubble.tagId).length;
+            // Count bubbles without tags or with deleted tags
+            return bubblesForCount.filter(bubble => {
+                if (!bubble.tagId) return true;
+                const tagExists = tags.find(t => t.id === bubble.tagId);
+                return !tagExists; // Включаем пузыри с удаленными тегами
+            }).length;
         }
         return bubblesForCount.filter(bubble => bubble.tagId === tagId).length;
-    }, [bubbles, searchFoundBubbles, debouncedBubblesSearchQuery]);
+    }, [bubbles, tags, searchFoundBubbles, debouncedBubblesSearchQuery]);
 
     // Function to count bubbles by category for List View (based on selected status and search) - memoized
     const getBubbleCountByTagForListView = useCallback((tagId) => {
@@ -1262,8 +1274,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         let tagFilteredBubbles;
 
         if (tagId === null) {
-            // Count bubbles without tags in selected status
-            tagFilteredBubbles = filteredByStatus.filter(bubble => !bubble.tagId);
+            // Count bubbles without tags or with deleted tags in selected status
+            tagFilteredBubbles = filteredByStatus.filter(bubble => {
+                if (!bubble.tagId) return true;
+                const tagExists = tags.find(t => t.id === bubble.tagId);
+                return !tagExists; // Включаем пузыри с удаленными тегами
+            });
         } else {
             tagFilteredBubbles = filteredByStatus.filter(bubble => bubble.tagId === tagId);
         }
@@ -1294,8 +1310,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Function to count all bubbles by category (for category management dialog)
     const getBubbleCountByTag = (tagId) => {
         if (tagId === null) {
-            // Count bubbles without tags
-            return bubbles.filter(bubble => !bubble.tagId).length;
+            // Count bubbles without tags or with deleted tags
+            return bubbles.filter(bubble => {
+                if (!bubble.tagId) return true;
+                const tagExists = tags.find(t => t.id === bubble.tagId);
+                return !tagExists; // Включаем пузыри с удаленными тегами
+            }).length;
         }
         return bubbles.filter(bubble => bubble.tagId === tagId).length;
     };
