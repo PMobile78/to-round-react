@@ -2004,7 +2004,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     {/* Слайдер размера пузыря */}
                     <Box sx={{ marginTop: 2, marginBottom: 1 }}>
                         <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
-                            Размер пузыря: {editBubbleSize}px
+                            {t('bubbles.bubbleSizeLabel', { size: editBubbleSize })}
                         </Typography>
                         <Slider
                             value={editBubbleSize}
@@ -2689,7 +2689,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     {/* Слайдер размера пузыря */}
                     <Box sx={{ marginTop: 2, marginBottom: 1 }}>
                         <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
-                            Размер пузыря: {bubbleSize}px
+                            {t('bubbles.bubbleSizeLabel', { size: bubbleSize })}
                         </Typography>
                         <Slider
                             value={bubbleSize}

@@ -90,7 +90,9 @@
         "searchPlaceholder": "Пошук завдань за заголовком, описом або категорією...",
         "searchResults": "Знайдено {{count}} результат",
         "searchResults_other": "Знайдено {{count}} результати",
-        "searchResults_many": "Знайдено {{count}} результатів"
+        "searchResults_many": "Знайдено {{count}} результатів",
+        "bubbleSize": "Розмір бульбашки",
+        "bubbleSizeLabel": "Розмір бульбашки: {{size}}px"
     },
     "auth": {
         "welcome": "Ласкаво просимо",

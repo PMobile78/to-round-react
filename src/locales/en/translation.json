@@ -89,7 +89,9 @@
         "noTagsAvailable": "No tags available",
         "searchPlaceholder": "Search tasks by title, description or category...",
         "searchResults": "Found {{count}} result",
-        "searchResults_other": "Found {{count}} results"
+        "searchResults_other": "Found {{count}} results",
+        "bubbleSize": "Bubble size",
+        "bubbleSizeLabel": "Bubble size: {{size}}px"
     },
     "auth": {
         "welcome": "Welcome",
