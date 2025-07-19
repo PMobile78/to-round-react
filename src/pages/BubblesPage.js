@@ -1004,6 +1004,24 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
         setTags(updatedTags);
         saveTagsToFirestore(updatedTags);
+
+        // Автоматически активируем новый тег в фильтрах (только для создания, не для редактирования)
+        if (!editingTag) {
+            // Активируем в фильтрах Bubbles View
+            setFilterTags(prev => {
+                const newFilterTags = [...prev, newTag.id];
+                localStorage.setItem('bubbles-filter-tags', JSON.stringify(newFilterTags));
+                return newFilterTags;
+            });
+
+            // Активируем в фильтрах List View
+            setListFilterTags(prev => {
+                const newListFilterTags = [...prev, newTag.id];
+                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(newListFilterTags));
+                return newListFilterTags;
+            });
+        }
+
         setTagDialog(false);
         setEditingTag(null);
         setTagName('');
