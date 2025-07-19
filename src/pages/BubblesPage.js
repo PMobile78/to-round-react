@@ -2867,6 +2867,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                     <ListItem
                                         key={tag.id}
                                         sx={{
+                                            // border: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333',
                                             border: '1px solid #E0E0E0',
                                             borderRadius: 2,
                                             marginBottom: 1,

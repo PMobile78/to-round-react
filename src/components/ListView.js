@@ -320,7 +320,6 @@ const ListView = ({
             padding: 2,
             height: '100%',
             overflow: 'auto',
-            backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)',
             color: themeMode === 'light' ? '#000000' : '#ffffff'
         }}>
             {/* Filter and Sort controls */}
@@ -488,8 +487,8 @@ const ListView = ({
                                     padding: 2,
                                     borderRadius: 2,
                                     backgroundColor: getStatusColor(task.status),
-                                    // border: '1px solid #E0E0E0'
-                                    border: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333'
+                                    border: '1px solid #E0E0E0',
+                                    // border: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333'
                                 }}
                             >
                                 <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', gap: 2, overflow: 'hidden' }}>
