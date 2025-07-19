@@ -94,7 +94,8 @@
         "bubbleSize": "Розмір бульбашки",
         "bubbleSizeLabel": "Розмір бульбашки: {{size}}px",
         "tagDeleted": "Тег видалено",
-        "undo": "СКАСУВАТИ"
+        "undo": "СКАСУВАТИ",
+        "bubbleBackground": "Фон бульбашок"
     },
     "auth": {
         "welcome": "Ласкаво просимо",

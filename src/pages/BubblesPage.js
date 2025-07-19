@@ -19,6 +19,7 @@ import {
     MenuItem,
     Chip,
     Stack,
+    Switch,
     Menu,
     ListItemIcon,
     ListItemText,
@@ -144,6 +145,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     }); // Показывать ли подсказки инструкций
     const [deletingTags, setDeletingTags] = useState(new Set()); // Теги в процессе удаления
     const [deleteTimers, setDeleteTimers] = useState(new Map()); // Таймеры удаления тегов
+    const [bubbleBackgroundEnabled, setBubbleBackgroundEnabled] = useState(() => {
+        const saved = localStorage.getItem('bubbles-background-enabled');
+        return saved === null ? true : saved === 'true';
+    }); // Включен ли фон пузырей
 
     // Состояние поиска для Bubbles View
     const [bubblesSearchQuery, setBubblesSearchQuery] = useState('');
@@ -192,6 +197,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Function to get bubble fill style based on theme
     const getBubbleFillStyle = (tagColor = null) => {
+        // Если фон отключен, возвращаем прозрачный
+        if (!bubbleBackgroundEnabled) {
+            return 'transparent';
+        }
+
         if (themeMode === 'light') {
             // В светлой теме добавляем легкий фон
             if (tagColor) {
@@ -199,8 +209,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 return tagColor + '15'; // добавляем 15 для 8% прозрачности
             }
             return 'rgba(59, 125, 237, 0.08)'; // легкий синий фон по умолчанию
+        } else {
+            // В темной теме также добавляем фон
+            if (tagColor) {
+                // Используем цвет тега с низкой прозрачностью
+                return tagColor + '20'; // добавляем 20 для 12% прозрачности в темной теме
+            }
+            return 'rgba(255, 255, 255, 0.05)'; // легкий белый фон по умолчанию для темной темы
         }
-        return 'transparent'; // в темной теме остается прозрачным
     };
 
     // Function to get canvas dimensions depending on screen size
@@ -1343,6 +1359,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         localStorage.setItem('bubbles-show-instructions', 'false');
     };
 
+    const handleToggleBubbleBackground = () => {
+        const newValue = !bubbleBackgroundEnabled;
+        setBubbleBackgroundEnabled(newValue);
+        localStorage.setItem('bubbles-background-enabled', newValue.toString());
+
+        // Обновляем фон всех пузырей
+        setBubbles(prev => {
+            const updatedBubbles = prev.map(bubble => {
+                const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
+                bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                return bubble;
+            });
+            return updatedBubbles;
+        });
+    };
+
     // Optimized component for displaying text over bubbles
     const TextOverlay = useCallback(() => {
         const [positions, setPositions] = useState([]);
@@ -2387,6 +2419,40 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                     fontWeight: 500
                                 }}
                             />
+                        </ListItem>
+
+                        {/* Bubble Background Toggle */}
+                        <ListItem sx={{ padding: '16px 24px' }}>
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                                <Typography sx={{
+                                    color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
+                                    fontSize: '20px'
+                                }}>
+                                    🎨
+                                </Typography>
+                            </ListItemIcon>
+                            <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" sx={{
+                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                    fontWeight: 500,
+                                    marginBottom: 1
+                                }}>
+                                    {t('bubbles.bubbleBackground')}
+                                </Typography>
+                                <Switch
+                                    checked={bubbleBackgroundEnabled}
+                                    onChange={handleToggleBubbleBackground}
+                                    size="small"
+                                    sx={{
+                                        '& .MuiSwitch-switchBase.Mui-checked': {
+                                            color: themeMode === 'light' ? '#3B7DED' : '#90CAF9'
+                                        },
+                                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                            backgroundColor: themeMode === 'light' ? '#3B7DED' : '#90CAF9'
+                                        }
+                                    }}
+                                />
+                            </Box>
                         </ListItem>
 
                         {/* About */}

@@ -93,7 +93,8 @@
         "bubbleSize": "Bubble size",
         "bubbleSizeLabel": "Bubble size: {{size}}px",
         "tagDeleted": "Tag deleted",
-        "undo": "UNDO"
+        "undo": "UNDO",
+        "bubbleBackground": "Bubble Background"
     },
     "auth": {
         "welcome": "Welcome",
