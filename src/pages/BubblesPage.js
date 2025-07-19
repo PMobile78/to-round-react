@@ -2599,7 +2599,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 overflowWrap: 'break-word'
                             },
                             maxWidth: '100%',
-                            overflow: 'hidden'
                         }}
                     />
 
