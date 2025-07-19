@@ -153,6 +153,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         return saved ? parseFloat(saved) : 0.3;
     });
 
+    // Состояние размера пузыря при создании
+    const [bubbleSize, setBubbleSize] = useState(45); // Размер по умолчанию
+
+    // Состояние размера пузыря при редактировании
+    const [editBubbleSize, setEditBubbleSize] = useState(45); // Размер при редактировании
+
     // Function to get button styles based on theme
     const getButtonStyles = () => {
         return {
@@ -395,6 +401,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 setTitle(clickedBubble.title || '');
                                 setDescription(clickedBubble.description || '');
                                 setSelectedTagId(clickedBubble.tagId || '');
+                                setEditBubbleSize(clickedBubble.radius); // Устанавливаем текущий размер пузыря
                                 setEditDialog(true);
                             }
                             return currentBubbles;
@@ -837,6 +844,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setTitle('');
         setDescription('');
         setSelectedTagId('');
+        setBubbleSize(45); // Сброс размера к значению по умолчанию
         setCreateDialog(true);
     };
 
@@ -846,13 +854,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             return;
         }
 
-        const standardRadius = 45; // same standard size for all devices
         const margin = isMobile ? 50 : 100;
 
         const newBubble = createBubble(
             Math.random() * (canvasSize.width - margin * 2) + margin,
             50,
-            standardRadius,
+            bubbleSize, // Используем выбранный размер
             selectedTagId || null
         );
 
@@ -876,32 +883,60 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Save bubble changes
     const handleSaveBubble = () => {
-        if (selectedBubble) {
+        if (selectedBubble && engineRef.current) {
+            // Сначала обновляем физическое тело
+            const { Bodies } = Matter;
+
+            // Определяем стили для тела
+            let strokeColor = '#B0B0B0';
+            let fillStyle = getBubbleFillStyle(null);
+
+            if (selectedTagId) {
+                const tag = tags.find(t => t.id === selectedTagId);
+                if (tag) {
+                    strokeColor = tag.color;
+                    fillStyle = getBubbleFillStyle(tag.color);
+                }
+            }
+
+            // Создаем новое тело с обновленными параметрами
+            const newBody = Bodies.circle(
+                selectedBubble.body.position.x,
+                selectedBubble.body.position.y,
+                editBubbleSize,
+                {
+                    restitution: 0.8,
+                    frictionAir: 0.01,
+                    render: {
+                        fillStyle: fillStyle,
+                        strokeStyle: strokeColor,
+                        lineWidth: 3
+                    }
+                }
+            );
+
+            // Удаляем старое тело и добавляем новое
+            const worldBodies = engineRef.current.world.bodies;
+            const bodyExists = worldBodies.some(body => body.id === selectedBubble.body.id);
+
+            if (bodyExists) {
+                Matter.World.remove(engineRef.current.world, selectedBubble.body);
+            }
+            Matter.World.add(engineRef.current.world, newBody);
+
+            // Теперь обновляем состояние
             setBubbles(prev => {
                 const updatedBubbles = prev.map(bubble => {
                     if (bubble.id === selectedBubble.id) {
-                        const updatedBubble = {
+                        return {
                             ...bubble,
                             title,
                             description,
                             tagId: selectedTagId || null,
+                            radius: editBubbleSize,
+                            body: newBody, // Используем новое тело
                             updatedAt: new Date().toISOString()
                         };
-
-                        // Update border color and fill style based on tag
-                        if (selectedTagId) {
-                            const tag = tags.find(t => t.id === selectedTagId);
-                            if (tag) {
-                                bubble.body.render.strokeStyle = tag.color;
-                                bubble.body.render.fillStyle = getBubbleFillStyle(tag.color);
-                            }
-                        } else {
-                            // If no tag is selected, use light gray color
-                            bubble.body.render.strokeStyle = '#B0B0B0';
-                            bubble.body.render.fillStyle = getBubbleFillStyle(null);
-                        }
-
-                        return updatedBubble;
                     }
                     return bubble;
                 });
@@ -909,10 +944,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 return updatedBubbles;
             });
         }
+
         setEditDialog(false);
         setSelectedBubble(null);
         setTitle('');
         setDescription('');
+        // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
     // Delete bubble (mark as deleted)
@@ -933,6 +970,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setSelectedBubble(null);
         setTitle('');
         setDescription('');
+        // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
     // Mark bubble as done
@@ -953,6 +991,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setSelectedBubble(null);
         setTitle('');
         setDescription('');
+        // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
     // Close dialog without saving
@@ -962,6 +1001,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setTitle('');
         setDescription('');
         setSelectedTagId('');
+        // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
     // Clear all bubbles
@@ -1961,6 +2001,37 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         </Select>
                     </FormControl>
 
+                    {/* Слайдер размера пузыря */}
+                    <Box sx={{ marginTop: 2, marginBottom: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
+                            Размер пузыря: {editBubbleSize}px
+                        </Typography>
+                        <Slider
+                            value={editBubbleSize}
+                            onChange={(event, newValue) => setEditBubbleSize(newValue)}
+                            min={30}
+                            max={80}
+                            step={5}
+                            marks={[
+                                { value: 30, label: '30' },
+                                { value: 45, label: '45' },
+                                { value: 60, label: '60' },
+                                { value: 80, label: '80' }
+                            ]}
+                            sx={{
+                                '& .MuiSlider-thumb': {
+                                    width: 20,
+                                    height: 20,
+                                },
+                                '& .MuiSlider-track': {
+                                    height: 4,
+                                },
+                                '& .MuiSlider-rail': {
+                                    height: 4,
+                                }
+                            }}
+                        />
+                    </Box>
 
                 </DialogContent>
                 <DialogActions sx={{
@@ -2614,6 +2685,38 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             ))}
                         </Select>
                     </FormControl>
+
+                    {/* Слайдер размера пузыря */}
+                    <Box sx={{ marginTop: 2, marginBottom: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
+                            Размер пузыря: {bubbleSize}px
+                        </Typography>
+                        <Slider
+                            value={bubbleSize}
+                            onChange={(event, newValue) => setBubbleSize(newValue)}
+                            min={30}
+                            max={80}
+                            step={5}
+                            marks={[
+                                { value: 30, label: '30' },
+                                { value: 45, label: '45' },
+                                { value: 60, label: '60' },
+                                { value: 80, label: '80' }
+                            ]}
+                            sx={{
+                                '& .MuiSlider-thumb': {
+                                    width: 20,
+                                    height: 20,
+                                },
+                                '& .MuiSlider-track': {
+                                    height: 4,
+                                },
+                                '& .MuiSlider-rail': {
+                                    height: 4,
+                                }
+                            }}
+                        />
+                    </Box>
                 </DialogContent>
                 <DialogActions sx={{
                     padding: isMobile ? 2 : 3,
