@@ -489,17 +489,20 @@ const ListView = ({
                                     border: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333'
                                 }}
                             >
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', gap: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', gap: 2, overflow: 'hidden' }}>
                                     {/* Status icon */}
-                                    <Box sx={{ paddingTop: 0.5 }}>
+                                    <Box sx={{ paddingTop: 0.5, flexShrink: 0 }}>
                                         {getStatusIcon(task.status)}
                                     </Box>
 
                                     {/* Task content */}
-                                    <Box sx={{ flex: 1 }}>
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
                                         <Typography variant="h6" sx={{
                                             marginBottom: 1,
-                                            color: themeMode === 'light' ? '#000000' : '#ffffff'
+                                            color: themeMode === 'light' ? '#000000' : '#ffffff',
+                                            wordBreak: 'break-word',
+                                            overflowWrap: 'break-word',
+                                            hyphens: 'auto'
                                         }}>
                                             {task.title || t('bubbles.empty')}
                                         </Typography>
@@ -507,7 +510,10 @@ const ListView = ({
                                         {task.description && (
                                             <Typography variant="body2" sx={{
                                                 marginBottom: 1,
-                                                color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                                                color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa',
+                                                wordBreak: 'break-word',
+                                                overflowWrap: 'break-word',
+                                                hyphens: 'auto'
                                             }}>
                                                 {task.description}
                                             </Typography>
@@ -551,7 +557,7 @@ const ListView = ({
                                     </Box>
 
                                     {/* Actions */}
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
                                         {task.status === BUBBLE_STATUS.ACTIVE && (
                                             <>
                                                 <IconButton
