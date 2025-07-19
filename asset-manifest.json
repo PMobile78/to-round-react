@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/to-round-react/static/js/main.9f53198d.js",
+    "main.js": "/to-round-react/static/js/main.d45ef825.js",
     "index.html": "/to-round-react/index.html",
-    "main.9f53198d.js.map": "/to-round-react/static/js/main.9f53198d.js.map"
+    "main.d45ef825.js.map": "/to-round-react/static/js/main.d45ef825.js.map"
   },
   "entrypoints": [
-    "static/js/main.9f53198d.js"
+    "static/js/main.d45ef825.js"
   ]
 }
