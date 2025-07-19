@@ -1422,6 +1422,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                     ? '1px solid rgba(59, 125, 237, 0.5)'
                                     : '1px solid rgba(255,255,255,0.3)',
                                 color: themeMode === 'light' ? 'white' : 'white',
+                                height: 36,
                                 '&:hover': {
                                     background: themeMode === 'light'
                                         ? 'rgba(59, 125, 237, 1)'
