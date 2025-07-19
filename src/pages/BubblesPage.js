@@ -1406,7 +1406,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             color: themeMode === 'light' ? '#2C3E50' : 'white',
                             fontWeight: 'bold'
                         }}>
-                            🫧 {t('bubbles.title')}
+                            {/* 🫧 {t('bubbles.title')} */}
+                            🫧
                         </Typography>
                         <Button
                             variant="contained"
