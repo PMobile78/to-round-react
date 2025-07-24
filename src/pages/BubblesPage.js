@@ -2239,7 +2239,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 <DialogContent sx={{
                     padding: isMobile ? 2 : 3,
                     maxWidth: '100%',
-                    overflowY: 'auto', overflowX: 'hidden'
+                    overflowY: 'auto',
+                    overflowX: 'hidden'
                 }}>
                     <TextField
                         autoFocus={!isMobile}
@@ -2313,7 +2314,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             onSave={val => setNotifValue(val)}
                             initialValue={notifValue}
                             notifications={editNotifications}
-                            onAdd={notif => setEditNotifications(prev => [...prev, notif])}
+                            onAdd={notifs => setEditNotifications(notifs)}
                             onDelete={handleDeleteNotification}
                             dueDate={editDueDate}
                         />
@@ -3015,7 +3016,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 <DialogContent sx={{
                     padding: isMobile ? 2 : 3,
                     maxWidth: '100%',
-                    overflow: 'hidden'
+                    overflowY: 'auto',
+                    overflowX: 'hidden'
                 }}>
                     <TextField
                         autoFocus={!isMobile}
@@ -3087,7 +3089,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             onSave={val => setNotifValue(val)}
                             initialValue={notifValue}
                             notifications={createNotifications}
-                            onAdd={notif => setCreateNotifications(prev => [...prev, notif])}
+                            onAdd={notifs => setCreateNotifications(notifs)}
                             onDelete={handleDeleteCreateNotification}
                             dueDate={dueDate}
                         />

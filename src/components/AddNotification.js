@@ -82,6 +82,9 @@ export default function AddNotification({
         return 0;
     }
 
+    // Сортировка уведомлений по времени до события (offset)
+    const sortedNotifications = [...notifications].sort((a, b) => getOffsetMs(a) - getOffsetMs(b));
+
     // Проверка просроченности уведомления
     function isNotificationOverdue(notification) {
         if (!dueDate) return false;
@@ -108,7 +111,10 @@ export default function AddNotification({
                 Number(n.value) === Number(customValue) && n.unit === customUnit
             );
             if (!exists) {
-                onAdd({ type: 'custom', value: Number(customValue), unit: customUnit });
+                // Добавляем и сортируем
+                const newNotifs = [...notifications, { type: 'custom', value: Number(customValue), unit: customUnit }];
+                newNotifs.sort((a, b) => getOffsetMs(a) - getOffsetMs(b));
+                onAdd(newNotifs);
             }
             setCustomOpen(false);
             setDialogOpen(false);
@@ -121,7 +127,10 @@ export default function AddNotification({
         if (selected !== 'custom') {
             // Проверяем, есть ли уже такой notification
             if (!notifications.some(n => typeof n === 'string' ? n === selected : false)) {
-                onAdd(selected);
+                // Добавляем и сортируем
+                const newNotifs = [...notifications, selected];
+                newNotifs.sort((a, b) => getOffsetMs(a) - getOffsetMs(b));
+                onAdd(newNotifs);
             }
             setDialogOpen(false);
             setSelected(''); // сброс выбора
@@ -134,7 +143,7 @@ export default function AddNotification({
         <Box>
             {/* Список уведомлений */}
             <List dense>
-                {notifications.map((notif, idx) => (
+                {sortedNotifications.map((notif, idx) => (
                     <ListItem key={idx} secondaryAction={
                         <IconButton edge="end" aria-label="delete" onClick={() => onDelete(idx)}>
                             <DeleteIcon />
