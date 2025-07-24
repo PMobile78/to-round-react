@@ -96,7 +96,10 @@
         "tagDeleted": "Тег видалено",
         "undo": "СКАСУВАТИ",
         "bubbleBackground": "Фон бульбашок",
-        "dueDateLabel": "Термін виконання"
+        "dueDateLabel": "Термін виконання",
+        "overdueNotificationTitle": "Прострочене завдання!",
+        "overdueNotificationBody": "У вас є прострочене завдання.",
+        "overdueNotificationBodyWithTitle": "Прострочено: {{title}}"
     },
     "auth": {
         "welcome": "Ласкаво просимо",

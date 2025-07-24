@@ -68,7 +68,7 @@ const DELETED_TASKS_CLEANUP_DAYS = 30;
 
 
 const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // 600px and below
@@ -1608,12 +1608,41 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         );
     }, [getFilteredBubbles, bubbles, isMobile, fontSize, themeMode, foundBubblesIds, debouncedBubblesSearchQuery]);
 
+    // В начале компонента:
+    const notifiedBubblesRef = useRef(new Set());
+
     // Пульсация для просроченных задач
     useEffect(() => {
         if (!engineRef.current) return;
 
         let animationFrame;
         let pulsePhase = 0;
+
+        const showNotificationAndVibrate = (bubble) => {
+            // Вибрация
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200]);
+            }
+            // Уведомление
+            if (window.Notification) {
+                const title = t('bubbles.overdueNotificationTitle');
+                let body = '';
+                if (bubble.title) {
+                    body = t('bubbles.overdueNotificationBodyWithTitle', { title: bubble.title });
+                } else {
+                    body = t('bubbles.overdueNotificationBody');
+                }
+                if (Notification.permission === "granted") {
+                    new Notification(title, { body });
+                } else if (Notification.permission !== "denied") {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === "granted") {
+                            new Notification(title, { body });
+                        }
+                    });
+                }
+            }
+        };
 
         const animate = () => {
             const now = Date.now();
@@ -1625,6 +1654,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     bubble.dueDate &&
                     new Date(bubble.dueDate).getTime() <= now
                 ) {
+                    // Оповещение и вибрация только один раз для каждого пузыря
+                    if (!notifiedBubblesRef.current.has(bubble.id)) {
+                        showNotificationAndVibrate(bubble);
+                        notifiedBubblesRef.current.add(bubble.id);
+                    }
                     // Пульсация радиуса
                     const baseRadius = bubble.radius;
                     const pulse = 1 + 0.13 * Math.sin(pulsePhase + bubble.body.id % 10); // 13% пульсация
@@ -1658,7 +1692,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         };
         animate();
         return () => cancelAnimationFrame(animationFrame);
-    }, [bubbles, tags, getBubbleFillStyle]);
+    }, [bubbles, tags, getBubbleFillStyle, t, i18n.language]);
 
     // При открытии диалога редактирования подставлять dueDate
     useEffect(() => {
@@ -1678,6 +1712,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             }
         }
     }, [editDialog, selectedBubble]);
+
+    // Сброс уведомлений при смене языка
+    useEffect(() => {
+        notifiedBubblesRef.current = new Set();
+    }, [i18n.language]);
 
 
 

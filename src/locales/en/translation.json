@@ -139,5 +139,8 @@
     },
     "language": {
         "title": "Language"
-    }
+    },
+    "overdueNotificationTitle": "Overdue task!",
+    "overdueNotificationBody": "You have an overdue task.",
+    "overdueNotificationBodyWithTitle": "Overdue: {{title}}"
 }
