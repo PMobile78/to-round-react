@@ -1629,22 +1629,30 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             if (navigator.vibrate) {
                 navigator.vibrate([200, 100, 200]);
             }
-            if (window.Notification) {
-                const title = t('bubbles.overdueNotificationTitle');
-                let body = '';
-                if (bubble.title) {
-                    body = t('bubbles.overdueNotificationBodyWithTitle', { title: bubble.title });
-                } else {
-                    body = t('bubbles.overdueNotificationBody');
-                }
-                if (Notification.permission === "granted") {
-                    new Notification(title, { body });
-                } else if (Notification.permission !== "denied") {
-                    Notification.requestPermission().then(permission => {
-                        if (permission === "granted") {
+            if (typeof window !== 'undefined' && 'Notification' in window) {
+                try {
+                    const title = t('bubbles.overdueNotificationTitle');
+                    let body = '';
+                    if (bubble.title) {
+                        body = t('bubbles.overdueNotificationBodyWithTitle', { title: bubble.title });
+                    } else {
+                        body = t('bubbles.overdueNotificationBody');
+                    }
+                    if (Notification.permission === "granted") {
+                        try {
                             new Notification(title, { body });
-                        }
-                    });
+                        } catch (e) { /* ignore */ }
+                    } else if (Notification.permission !== "denied") {
+                        Notification.requestPermission().then(permission => {
+                            if (permission === "granted") {
+                                try {
+                                    new Notification(title, { body });
+                                } catch (e) { /* ignore */ }
+                            }
+                        }).catch(() => { });
+                    }
+                } catch (e) {
+                    // ignore
                 }
             }
         };
