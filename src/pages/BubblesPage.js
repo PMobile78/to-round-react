@@ -1626,9 +1626,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         let pulsePhase = 0;
 
         const showNotificationAndVibrate = (bubble) => {
-            if (navigator.vibrate) {
-                navigator.vibrate([200, 100, 200]);
-            }
+            // if (navigator.vibrate) {
+            //     navigator.vibrate([200, 100, 200]);
+            // }
             if (typeof window !== 'undefined' && 'Notification' in window) {
                 try {
                     const title = t('bubbles.overdueNotificationTitle');
