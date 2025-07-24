@@ -871,7 +871,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Function for creating a new bubble
     const createNewBubble = () => {
-        if (!engineRef.current || !renderRef.current) {
+        if (!engineRef.current || !renderRef.current || !title.trim()) {
             return;
         }
 
@@ -907,6 +907,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Save bubble changes
     const handleSaveBubble = () => {
+        if (!title.trim()) return;
         if (selectedBubble && engineRef.current) {
             // Сначала обновляем физическое тело
             const { Bodies } = Matter;
@@ -2458,6 +2459,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 minHeight: isMobile ? 48 : 36,
                                 order: isSmallScreen ? 1 : 2
                             }}
+                            disabled={!title.trim()}
                         >
                             {t('bubbles.save')}
                         </Button>
@@ -3191,6 +3193,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             borderRadius: 2,
                             minHeight: isMobile ? 48 : 36
                         }}
+                        disabled={!title.trim()}
                     >
                         {t('bubbles.create')}
                     </Button>
