@@ -1631,6 +1631,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             // }
             if (typeof window !== 'undefined' && 'Notification' in window) {
                 try {
+                    console.log('[NOTIFY] Notification.permission:', Notification.permission);
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.getRegistrations().then(regs => {
+                            console.log('[NOTIFY] ServiceWorker registrations:', regs);
+                        });
+                    }
                     const title = t('bubbles.overdueNotificationTitle');
                     let body = '';
                     if (bubble.title) {
@@ -1640,19 +1646,43 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     }
                     if (Notification.permission === "granted") {
                         try {
-                            new Notification(title, { body });
-                        } catch (e) { /* ignore */ }
+                            if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+                                console.log('[NOTIFY] Trying to show notification via ServiceWorker:', title, body);
+                                navigator.serviceWorker.ready.then(function (registration) {
+                                    registration.showNotification(title, { body })
+                                        .then(() => console.log('[NOTIFY] showNotification success'))
+                                        .catch(e => console.error('[NOTIFY] showNotification error:', e));
+                                }).catch(e => console.error('[NOTIFY] navigator.serviceWorker.ready error:', e));
+                            } else {
+                                console.warn('[NOTIFY] ServiceWorker not supported');
+                            }
+                        } catch (e) {
+                            console.error('[NOTIFY] Exception in showNotification:', e);
+                        }
                     } else if (Notification.permission !== "denied") {
+                        console.log('[NOTIFY] Requesting notification permission...');
                         Notification.requestPermission().then(permission => {
+                            console.log('[NOTIFY] Permission result:', permission);
                             if (permission === "granted") {
                                 try {
-                                    new Notification(title, { body });
-                                } catch (e) { /* ignore */ }
+                                    if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+                                        console.log('[NOTIFY] Trying to show notification via ServiceWorker (after permission):', title, body);
+                                        navigator.serviceWorker.ready.then(function (registration) {
+                                            registration.showNotification(title, { body })
+                                                .then(() => console.log('[NOTIFY] showNotification success'))
+                                                .catch(e => console.error('[NOTIFY] showNotification error:', e));
+                                        }).catch(e => console.error('[NOTIFY] navigator.serviceWorker.ready error:', e));
+                                    } else {
+                                        console.warn('[NOTIFY] ServiceWorker not supported');
+                                    }
+                                } catch (e) {
+                                    console.error('[NOTIFY] Exception in showNotification (after permission):', e);
+                                }
                             }
-                        }).catch(() => { });
+                        }).catch(e => console.error('[NOTIFY] requestPermission error:', e));
                     }
                 } catch (e) {
-                    // ignore
+                    console.error('[NOTIFY] Outer catch:', e);
                 }
             }
         };
