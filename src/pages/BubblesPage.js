@@ -1625,7 +1625,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         let pulsePhase = 0;
 
         // Сбросить отправленные уведомления при изменении bubbles/tags
-        notifiedBubbleNotificationsRef.current = new Set();
+        // notifiedBubbleNotificationsRef.current = new Set();
 
         // Вспомогательная функция для вычисления offset в миллисекундах
         function getOffsetMs(notification) {

@@ -95,7 +95,10 @@
         "tagDeleted": "Tag deleted",
         "undo": "UNDO",
         "bubbleBackground": "Bubble Background",
-        "dueDateLabel": "Due date"
+        "dueDateLabel": "Due date",
+        "overdueNotificationTitle": "Overdue task!",
+        "overdueNotificationBody": "You have an overdue task.",
+        "overdueNotificationBodyWithTitle": "Overdue: {{title}}"
     },
     "auth": {
         "welcome": "Welcome",
@@ -139,8 +142,5 @@
     },
     "language": {
         "title": "Language"
-    },
-    "overdueNotificationTitle": "Overdue task!",
-    "overdueNotificationBody": "You have an overdue task.",
-    "overdueNotificationBodyWithTitle": "Overdue: {{title}}"
+    }
 }
