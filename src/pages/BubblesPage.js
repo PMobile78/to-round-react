@@ -2322,6 +2322,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             notifications={editNotifications}
                             onAdd={notif => setEditNotifications(prev => [...prev, notif])}
                             onDelete={handleDeleteNotification}
+                            dueDate={editDueDate}
                         />
                     </Box>
                     {/* Выбор тега */}
@@ -3095,6 +3096,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             notifications={createNotifications}
                             onAdd={notif => setCreateNotifications(prev => [...prev, notif])}
                             onDelete={handleDeleteCreateNotification}
+                            dueDate={dueDate}
                         />
                     </Box>
                     {/* Выбор тега */}

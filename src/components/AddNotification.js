@@ -53,13 +53,43 @@ export default function AddNotification({
     onAdd,
     onDelete,
     open,
-    onClose
+    onClose,
+    dueDate // <-- добавляем dueDate как проп
 }) {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selected, setSelected] = useState('5m');
     const [customOpen, setCustomOpen] = useState(false);
     const [customValue, setCustomValue] = useState('');
     const [customUnit, setCustomUnit] = useState('minutes');
+
+    // Вспомогательная функция для вычисления offset в миллисекундах
+    function getOffsetMs(notification) {
+        if (typeof notification === 'string') {
+            if (notification.endsWith('m')) return parseInt(notification) * 60 * 1000;
+            if (notification.endsWith('h')) return parseInt(notification) * 60 * 60 * 1000;
+            if (notification.endsWith('d')) return parseInt(notification) * 24 * 60 * 60 * 1000;
+        }
+        if (notification.type === 'custom') {
+            const v = Number(notification.value);
+            switch (notification.unit) {
+                case 'minutes': return v * 60 * 1000;
+                case 'hours': return v * 60 * 60 * 1000;
+                case 'days': return v * 24 * 60 * 60 * 1000;
+                case 'weeks': return v * 7 * 24 * 60 * 60 * 1000;
+                default: return 0;
+            }
+        }
+        return 0;
+    }
+
+    // Проверка просроченности уведомления
+    function isNotificationOverdue(notification) {
+        if (!dueDate) return false;
+        const due = new Date(dueDate).getTime();
+        const offset = getOffsetMs(notification);
+        const notifTime = due - offset;
+        return Date.now() > notifTime;
+    }
 
     const handleRadioChange = (e) => {
         setSelected(e.target.value);
@@ -100,7 +130,10 @@ export default function AddNotification({
                         <ListItemIcon>
                             <NotificationsActiveIcon color="primary" />
                         </ListItemIcon>
-                        <ListItemText primary={formatNotificationText(notif)} />
+                        <ListItemText
+                            primary={formatNotificationText(notif)}
+                            primaryTypographyProps={isNotificationOverdue(notif) ? { sx: { textDecoration: 'line-through', color: '#b0b0b0' } } : {}}
+                        />
                     </ListItem>
                 ))}
             </List>
