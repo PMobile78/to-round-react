@@ -3691,6 +3691,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         selectAllListFilters={selectAllListFilters}
                         getBubbleCountByTagForListView={getBubbleCountByTagForListView}
                         themeMode={themeMode}
+                        isAllListFiltersSelected={isAllListFiltersSelected()} // функция возвращает bool
+                        onOpenFilterMenu={() => setFilterDrawerOpen(true)}
                     />
                 </Box>
             </Drawer>

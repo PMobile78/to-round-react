@@ -23,6 +23,7 @@ import {
     Restore,
     ArrowUpward,
     ArrowDownward,
+    FilterList // добавил иконку фильтра
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { FilterMenu } from './FilterMenu';
@@ -66,7 +67,9 @@ const ListView = ({
     clearAllListFilters,
     selectAllListFilters,
     getBubbleCountByTagForListView,
-    themeMode
+    themeMode,
+    isAllListFiltersSelected, // новый проп
+    onOpenFilterMenu // новый проп
 }) => {
     const { t } = useTranslation();
     const theme = useTheme();
@@ -325,18 +328,30 @@ const ListView = ({
                 flexWrap: 'wrap',
                 flexDirection: isMobile ? 'column' : 'row'
             }}>
-                {/* Categories filter */}
-                <FilterMenu
-                    tags={tags}
-                    filterTags={listFilterTags}
-                    showNoTag={listShowNoTag}
-                    onTagFilterChange={handleListTagFilterChange}
-                    onNoTagFilterChange={handleListNoTagFilterChange}
-                    onSelectAll={selectAllListFilters}
-                    onClearAll={clearAllListFilters}
-                    getBubbleCountByTag={getBubbleCountByTagForListView}
-                    themeMode={themeMode}
-                />
+                {/* Кнопка/меню фильтра с подсветкой */}
+                <Box
+                    sx={{
+                        display: 'inline-block',
+                        color: !isAllListFiltersSelected ? 'primary.main' : (themeMode === 'light' ? '#757575' : '#aaaaaa'),
+                        backgroundColor: !isAllListFiltersSelected ? 'rgba(59, 125, 237, 0.15)' : 'transparent',
+                        border: !isAllListFiltersSelected ? '1px solid #3B7DED' : '1px solid transparent',
+                        borderRadius: 1,
+                        transition: 'all 0.2s',
+                        marginRight: 2
+                    }}
+                >
+                    <FilterMenu
+                        tags={tags}
+                        filterTags={listFilterTags}
+                        showNoTag={listShowNoTag}
+                        onTagFilterChange={handleListTagFilterChange}
+                        onNoTagFilterChange={handleListNoTagFilterChange}
+                        onSelectAll={selectAllListFilters}
+                        onClearAll={clearAllListFilters}
+                        getBubbleCountByTag={getBubbleCountByTagForListView}
+                        themeMode={themeMode}
+                    />
+                </Box>
 
                 {/* Sort controls */}
                 <Box sx={{
