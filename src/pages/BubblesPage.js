@@ -1693,7 +1693,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 }
                 // 2. Если есть активное уведомление — пульсируем только по нему
                 if (activeNotifIdx !== null) {
-                    const key = `${bubble.id}:${activeNotifIdx}`;
+                    const key = `${bubble.id}:${activeNotifTargetTime}`;
                     if (!notifiedBubbleNotificationsRef.current.has(key)) {
                         showNotificationAndVibrate(bubble);
                         notifiedBubbleNotificationsRef.current.add(key);
@@ -1755,24 +1755,32 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Для editNotifications
     const handleDeleteNotification = useCallback((idx) => {
         setEditNotifications(prev => {
-            // Удаляем ключ из notifiedBubbleNotificationsRef
-            if (selectedBubble) {
-                const key = `${selectedBubble.id}:${idx}`;
+            if (selectedBubble && editDueDate) {
+                // Получаем targetTime для удаляемого уведомления
+                const due = new Date(editDueDate).getTime();
+                const notif = prev[idx];
+                const offset = notif ? getOffsetMs(notif) : 0;
+                const targetTime = due - offset;
+                const key = `${selectedBubble.id}:${targetTime}`;
                 notifiedBubbleNotificationsRef.current.delete(key);
             }
             return prev.filter((_, i) => i !== idx);
         });
-    }, [selectedBubble]);
+    }, [selectedBubble, editDueDate]);
     // Для createNotifications
     const handleDeleteCreateNotification = useCallback((idx) => {
         setCreateNotifications(prev => {
-            if (selectedBubble) {
-                const key = `${selectedBubble.id}:${idx}`;
+            if (selectedBubble && dueDate) {
+                const due = new Date(dueDate).getTime();
+                const notif = prev[idx];
+                const offset = notif ? getOffsetMs(notif) : 0;
+                const targetTime = due - offset;
+                const key = `${selectedBubble.id}:${targetTime}`;
                 notifiedBubbleNotificationsRef.current.delete(key);
             }
             return prev.filter((_, i) => i !== idx);
         });
-    }, [selectedBubble]);
+    }, [selectedBubble, dueDate]);
 
     // При открытии диалога редактирования подставлять dueDate
     useEffect(() => {
