@@ -2239,7 +2239,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 <DialogContent sx={{
                     padding: isMobile ? 2 : 3,
                     maxWidth: '100%',
-                    overflow: 'hidden'
+                    overflowY: 'auto', overflowX: 'hidden'
                 }}>
                     <TextField
                         autoFocus={!isMobile}
