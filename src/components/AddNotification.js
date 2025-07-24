@@ -30,9 +30,9 @@ const PRESETS = [
 
 const CUSTOM_UNITS = [
     { value: 'minutes', label: 'Minutes before' },
-    { value: 'hours', label: 'Hours before' },
-    { value: 'days', label: 'Days before' },
-    { value: 'weeks', label: 'Weeks before' }
+    { value: 'hours', label: 'Hours' },
+    { value: 'days', label: 'Days' },
+    { value: 'weeks', label: 'Weeks' }
 ];
 
 function formatNotificationText(notification) {

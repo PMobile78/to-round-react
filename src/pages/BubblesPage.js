@@ -1617,15 +1617,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const notifiedBubblesRef = useRef(new Set());
     const notifiedBubbleNotificationsRef = useRef(new Set()); // bubbleId:idx
 
-    // Пульсация для просроченных задач
+    // --- Пульсация для просроченных задач и уведомлений ---
     useEffect(() => {
         if (!engineRef.current) return;
 
         let animationFrame;
         let pulsePhase = 0;
-
-        // Сбросить отправленные уведомления при изменении bubbles/tags
-        // notifiedBubbleNotificationsRef.current = new Set();
 
         // Вспомогательная функция для вычисления offset в миллисекундах
         function getOffsetMs(notification) {
@@ -1675,48 +1672,52 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             const now = Date.now();
             pulsePhase += 0.12;
             bubbles.forEach(bubble => {
-                // --- Новая логика: notifications ---
-                if (bubble.body && bubble.status === BUBBLE_STATUS.ACTIVE && bubble.dueDate && Array.isArray(bubble.notifications)) {
-                    const due = new Date(bubble.dueDate).getTime();
-                    bubble.notifications.forEach((notif, idx) => {
+                if (!bubble.body || bubble.status !== BUBBLE_STATUS.ACTIVE || !bubble.dueDate) return;
+                const due = new Date(bubble.dueDate).getTime();
+                // 1. Найти ближайшее сработавшее уведомление, которое не удалено
+                let activeNotifIdx = null;
+                let activeNotifTargetTime = null;
+                if (Array.isArray(bubble.notifications) && bubble.notifications.length > 0) {
+                    // Сортируем по времени срабатывания (от ближайшего к дальнему)
+                    const notifWithTime = bubble.notifications.map((notif, idx) => {
                         const offset = getOffsetMs(notif);
-                        const targetTime = due - offset;
-                        const key = `${bubble.id}:${idx}`;
-                        // Сработать только если сейчас нужный момент и не было отправлено
-                        if (now >= targetTime && now < due && !notifiedBubbleNotificationsRef.current.has(key)) {
-                            // Пульсация и нотификация
-                            showNotificationAndVibrate(bubble);
-                            notifiedBubbleNotificationsRef.current.add(key);
-                        }
-                        // Пульсация только если сейчас нужный момент
+                        return { idx, targetTime: due - offset, notif };
+                    }).sort((a, b) => a.targetTime - b.targetTime);
+                    for (const { idx, targetTime } of notifWithTime) {
                         if (now >= targetTime && now < due) {
-                            // Пульсация радиуса
-                            const baseRadius = bubble.radius;
-                            const pulse = 1 + 0.13 * Math.sin(pulsePhase + bubble.body.id % 10);
-                            const newRadius = baseRadius * pulse;
-                            const currentRadius = bubble.body.circleRadius;
-                            const scale = newRadius / currentRadius;
-                            if (Math.abs(scale - 1) > 0.01) {
-                                Matter.Body.scale(bubble.body, scale, scale);
-                            }
-                            // Красный фон при пульсации
-                            const pulseValue = Math.abs(Math.sin(pulsePhase + bubble.body.id % 10));
-                            if (pulseValue > 0.7) {
-                                bubble.body.render.fillStyle = 'rgba(255,0,0,0.5)';
-                            } else {
-                                const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                                bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
-                            }
+                            activeNotifIdx = idx;
+                            activeNotifTargetTime = targetTime;
+                            break;
                         }
-                    });
+                    }
                 }
-                // --- Старая логика для просроченных задач (оставить для обратной совместимости) ---
-                if (
-                    bubble.body &&
-                    bubble.status === BUBBLE_STATUS.ACTIVE &&
-                    bubble.dueDate &&
-                    new Date(bubble.dueDate).getTime() <= now
-                ) {
+                // 2. Если есть активное уведомление — пульсируем только по нему
+                if (activeNotifIdx !== null) {
+                    const key = `${bubble.id}:${activeNotifIdx}`;
+                    if (!notifiedBubbleNotificationsRef.current.has(key)) {
+                        showNotificationAndVibrate(bubble);
+                        notifiedBubbleNotificationsRef.current.add(key);
+                    }
+                    // Пульсация
+                    const baseRadius = bubble.radius;
+                    const pulse = 1 + 0.13 * Math.sin(pulsePhase + bubble.body.id % 10);
+                    const newRadius = baseRadius * pulse;
+                    const currentRadius = bubble.body.circleRadius;
+                    const scale = newRadius / currentRadius;
+                    if (Math.abs(scale - 1) > 0.01) {
+                        Matter.Body.scale(bubble.body, scale, scale);
+                    }
+                    const pulseValue = Math.abs(Math.sin(pulsePhase + bubble.body.id % 10));
+                    if (pulseValue > 0.7) {
+                        bubble.body.render.fillStyle = 'rgba(255,0,0,0.5)';
+                    } else {
+                        const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
+                        bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    }
+                    return; // не пульсируем по dueDate, если есть активное уведомление
+                }
+                // 3. Если нет активных уведомлений, но dueDate просрочен — пульсация по dueDate
+                if (now >= due) {
                     if (!notifiedBubblesRef.current.has(bubble.id)) {
                         showNotificationAndVibrate(bubble);
                         notifiedBubblesRef.current.add(bubble.id);
@@ -1737,6 +1738,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
                     }
                 } else if (bubble.body && Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
+                    // Сбросить радиус, если не пульсируем
                     const scale = bubble.radius / bubble.body.circleRadius;
                     Matter.Body.scale(bubble.body, scale, scale);
                     const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
@@ -1748,6 +1750,29 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         animate();
         return () => cancelAnimationFrame(animationFrame);
     }, [bubbles, tags, getBubbleFillStyle, t, i18n.language]);
+
+    // --- Сброс пульсации при удалении уведомления ---
+    // Для editNotifications
+    const handleDeleteNotification = useCallback((idx) => {
+        setEditNotifications(prev => {
+            // Удаляем ключ из notifiedBubbleNotificationsRef
+            if (selectedBubble) {
+                const key = `${selectedBubble.id}:${idx}`;
+                notifiedBubbleNotificationsRef.current.delete(key);
+            }
+            return prev.filter((_, i) => i !== idx);
+        });
+    }, [selectedBubble]);
+    // Для createNotifications
+    const handleDeleteCreateNotification = useCallback((idx) => {
+        setCreateNotifications(prev => {
+            if (selectedBubble) {
+                const key = `${selectedBubble.id}:${idx}`;
+                notifiedBubbleNotificationsRef.current.delete(key);
+            }
+            return prev.filter((_, i) => i !== idx);
+        });
+    }, [selectedBubble]);
 
     // При открытии диалога редактирования подставлять dueDate
     useEffect(() => {
@@ -2296,7 +2321,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             initialValue={notifValue}
                             notifications={editNotifications}
                             onAdd={notif => setEditNotifications(prev => [...prev, notif])}
-                            onDelete={idx => setEditNotifications(prev => prev.filter((_, i) => i !== idx))}
+                            onDelete={handleDeleteNotification}
                         />
                     </Box>
                     {/* Выбор тега */}
@@ -3069,7 +3094,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             initialValue={notifValue}
                             notifications={createNotifications}
                             onAdd={notif => setCreateNotifications(prev => [...prev, notif])}
-                            onDelete={idx => setCreateNotifications(prev => prev.filter((_, i) => i !== idx))}
+                            onDelete={handleDeleteCreateNotification}
                         />
                     </Box>
                     {/* Выбор тега */}
