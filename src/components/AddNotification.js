@@ -57,7 +57,7 @@ export default function AddNotification({
     dueDate // <-- добавляем dueDate как проп
 }) {
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [selected, setSelected] = useState('5m');
+    const [selected, setSelected] = useState('');
     const [customOpen, setCustomOpen] = useState(false);
     const [customValue, setCustomValue] = useState('');
     const [customUnit, setCustomUnit] = useState('minutes');
@@ -102,16 +102,29 @@ export default function AddNotification({
 
     const handleCustomSave = () => {
         if (customValue && !isNaN(Number(customValue)) && Number(customValue) > 0) {
-            onAdd({ type: 'custom', value: Number(customValue), unit: customUnit });
+            // Проверяем, есть ли уже такой кастомный notification
+            const exists = notifications.some(n =>
+                typeof n === 'object' && n.type === 'custom' &&
+                Number(n.value) === Number(customValue) && n.unit === customUnit
+            );
+            if (!exists) {
+                onAdd({ type: 'custom', value: Number(customValue), unit: customUnit });
+            }
             setCustomOpen(false);
             setDialogOpen(false);
+            setSelected(''); // сброс выбора
         }
     };
 
     const handleSave = () => {
+        if (!selected) return; // Не добавлять, если ничего не выбрано
         if (selected !== 'custom') {
-            onAdd(selected);
+            // Проверяем, есть ли уже такой notification
+            if (!notifications.some(n => typeof n === 'string' ? n === selected : false)) {
+                onAdd(selected);
+            }
             setDialogOpen(false);
+            setSelected(''); // сброс выбора
         } else {
             setCustomOpen(true);
         }
@@ -143,23 +156,29 @@ export default function AddNotification({
             </Button>
 
             {/* Диалог выбора уведомления */}
-            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+            <Dialog open={dialogOpen} onClose={() => { setDialogOpen(false); setSelected(''); }}>
                 <DialogTitle>Add notification</DialogTitle>
                 <DialogContent>
                     <RadioGroup value={selected} onChange={handleRadioChange}>
                         {PRESETS.map(opt => (
-                            <FormControlLabel key={opt.value} value={opt.value} control={<Radio />} label={opt.label} />
+                            <FormControlLabel
+                                key={opt.value}
+                                value={opt.value}
+                                control={<Radio />}
+                                label={opt.label}
+                                disabled={notifications.some(n => typeof n === 'string' ? n === opt.value : false)}
+                            />
                         ))}
                     </RadioGroup>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={() => { setDialogOpen(false); setSelected(''); }}>Cancel</Button>
                     <Button onClick={handleSave} variant="contained">Save</Button>
                 </DialogActions>
             </Dialog>
 
             {/* Диалог custom-уведомления */}
-            <Dialog open={customOpen} onClose={() => setCustomOpen(false)}>
+            <Dialog open={customOpen} onClose={() => { setCustomOpen(false); setSelected(''); }}>
                 <DialogTitle>Custom notification</DialogTitle>
                 <DialogContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
@@ -183,7 +202,7 @@ export default function AddNotification({
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setCustomOpen(false)}>Cancel</Button>
+                    <Button onClick={() => { setCustomOpen(false); setSelected(''); }}>Cancel</Button>
                     <Button onClick={handleCustomSave} variant="contained" disabled={!customValue || isNaN(Number(customValue)) || Number(customValue) <= 0}>Save</Button>
                 </DialogActions>
             </Dialog>

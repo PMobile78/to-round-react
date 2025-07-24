@@ -1624,26 +1624,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         let animationFrame;
         let pulsePhase = 0;
 
-        // Вспомогательная функция для вычисления offset в миллисекундах
-        function getOffsetMs(notification) {
-            if (typeof notification === 'string') {
-                if (notification.endsWith('m')) return parseInt(notification) * 60 * 1000;
-                if (notification.endsWith('h')) return parseInt(notification) * 60 * 60 * 1000;
-                if (notification.endsWith('d')) return parseInt(notification) * 24 * 60 * 60 * 1000;
-            }
-            if (notification.type === 'custom') {
-                const v = Number(notification.value);
-                switch (notification.unit) {
-                    case 'minutes': return v * 60 * 1000;
-                    case 'hours': return v * 60 * 60 * 1000;
-                    case 'days': return v * 24 * 60 * 60 * 1000;
-                    case 'weeks': return v * 7 * 24 * 60 * 60 * 1000;
-                    default: return 0;
-                }
-            }
-            return 0;
-        }
-
         const showNotificationAndVibrate = (bubble) => {
             if (navigator.vibrate) {
                 navigator.vibrate([200, 100, 200]);
@@ -1759,7 +1739,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 // Получаем targetTime для удаляемого уведомления
                 const due = new Date(editDueDate).getTime();
                 const notif = prev[idx];
-                const offset = notif ? getOffsetMs(notif) : 0;
+                const offset = getOffsetMs(notif);
                 const targetTime = due - offset;
                 const key = `${selectedBubble.id}:${targetTime}`;
                 notifiedBubbleNotificationsRef.current.delete(key);
@@ -1773,7 +1753,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             if (selectedBubble && dueDate) {
                 const due = new Date(dueDate).getTime();
                 const notif = prev[idx];
-                const offset = notif ? getOffsetMs(notif) : 0;
+                const offset = getOffsetMs(notif);
                 const targetTime = due - offset;
                 const key = `${selectedBubble.id}:${targetTime}`;
                 notifiedBubbleNotificationsRef.current.delete(key);
@@ -1814,6 +1794,26 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Внутри компонента:
     const [createNotifications, setCreateNotifications] = useState([]); // для создания
     const [editNotifications, setEditNotifications] = useState([]); // для редактирования
+
+    // Вспомогательная функция для вычисления offset в миллисекундах
+    function getOffsetMs(notification) {
+        if (typeof notification === 'string') {
+            if (notification.endsWith('m')) return parseInt(notification) * 60 * 1000;
+            if (notification.endsWith('h')) return parseInt(notification) * 60 * 60 * 1000;
+            if (notification.endsWith('d')) return parseInt(notification) * 24 * 60 * 60 * 1000;
+        }
+        if (notification.type === 'custom') {
+            const v = Number(notification.value);
+            switch (notification.unit) {
+                case 'minutes': return v * 60 * 1000;
+                case 'hours': return v * 60 * 60 * 1000;
+                case 'days': return v * 24 * 60 * 60 * 1000;
+                case 'weeks': return v * 7 * 24 * 60 * 60 * 1000;
+                default: return 0;
+            }
+        }
+        return 0;
+    }
 
     return (
         <Box sx={{
