@@ -61,6 +61,7 @@ import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import AddNotification from '../components/AddNotification';
 
 // Auto-cleanup period for deleted tasks (30 days)
 const DELETED_TASKS_CLEANUP_DAYS = 30;
@@ -345,7 +346,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             createdAt: storedBubble.createdAt || new Date().toISOString(),
                             updatedAt: storedBubble.updatedAt || new Date().toISOString(),
                             deletedAt: storedBubble.deletedAt || null,
-                            dueDate: storedBubble.dueDate || null // ← добавлено поле dueDate
+                            dueDate: storedBubble.dueDate || null, // ← добавлено поле dueDate
+                            notifications: storedBubble.notifications || []
                         };
                         initialBubbles.push(bubble);
                     });
@@ -863,6 +865,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setSelectedTagId('');
         setBubbleSize(45); // Сброс размера к значению по умолчанию
         setDueDate(null); // Сброс даты
+        setCreateNotifications([]); // сброс уведомлений
         setCreateDialog(true);
     };
 
@@ -885,6 +888,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         newBubble.title = title;
         newBubble.description = description;
         newBubble.dueDate = dueDate ? new Date(dueDate).toISOString() : null;
+        newBubble.notifications = createNotifications;
 
         Matter.World.add(engineRef.current.world, newBubble.body);
         setBubbles(prev => {
@@ -956,7 +960,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             radius: editBubbleSize,
                             body: newBody, // Используем новое тело
                             updatedAt: new Date().toISOString(),
-                            dueDate: editDueDate ? new Date(editDueDate).toISOString() : null
+                            dueDate: editDueDate ? new Date(editDueDate).toISOString() : null,
+                            notifications: editNotifications
                         };
                     }
                     return bubble;
@@ -1610,6 +1615,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // В начале компонента:
     const notifiedBubblesRef = useRef(new Set());
+    const notifiedBubbleNotificationsRef = useRef(new Set()); // bubbleId:idx
 
     // Пульсация для просроченных задач
     useEffect(() => {
@@ -1618,12 +1624,33 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         let animationFrame;
         let pulsePhase = 0;
 
+        // Сбросить отправленные уведомления при изменении bubbles/tags
+        notifiedBubbleNotificationsRef.current = new Set();
+
+        // Вспомогательная функция для вычисления offset в миллисекундах
+        function getOffsetMs(notification) {
+            if (typeof notification === 'string') {
+                if (notification.endsWith('m')) return parseInt(notification) * 60 * 1000;
+                if (notification.endsWith('h')) return parseInt(notification) * 60 * 60 * 1000;
+                if (notification.endsWith('d')) return parseInt(notification) * 24 * 60 * 60 * 1000;
+            }
+            if (notification.type === 'custom') {
+                const v = Number(notification.value);
+                switch (notification.unit) {
+                    case 'minutes': return v * 60 * 1000;
+                    case 'hours': return v * 60 * 60 * 1000;
+                    case 'days': return v * 24 * 60 * 60 * 1000;
+                    case 'weeks': return v * 7 * 24 * 60 * 60 * 1000;
+                    default: return 0;
+                }
+            }
+            return 0;
+        }
+
         const showNotificationAndVibrate = (bubble) => {
-            // Вибрация
             if (navigator.vibrate) {
                 navigator.vibrate([200, 100, 200]);
             }
-            // Уведомление
             if (window.Notification) {
                 const title = t('bubbles.overdueNotificationTitle');
                 let body = '';
@@ -1646,44 +1673,72 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
         const animate = () => {
             const now = Date.now();
-            pulsePhase += 0.12; // скорость пульсации
+            pulsePhase += 0.12;
             bubbles.forEach(bubble => {
+                // --- Новая логика: notifications ---
+                if (bubble.body && bubble.status === BUBBLE_STATUS.ACTIVE && bubble.dueDate && Array.isArray(bubble.notifications)) {
+                    const due = new Date(bubble.dueDate).getTime();
+                    bubble.notifications.forEach((notif, idx) => {
+                        const offset = getOffsetMs(notif);
+                        const targetTime = due - offset;
+                        const key = `${bubble.id}:${idx}`;
+                        // Сработать только если сейчас нужный момент и не было отправлено
+                        if (now >= targetTime && now < due && !notifiedBubbleNotificationsRef.current.has(key)) {
+                            // Пульсация и нотификация
+                            showNotificationAndVibrate(bubble);
+                            notifiedBubbleNotificationsRef.current.add(key);
+                        }
+                        // Пульсация только если сейчас нужный момент
+                        if (now >= targetTime && now < due) {
+                            // Пульсация радиуса
+                            const baseRadius = bubble.radius;
+                            const pulse = 1 + 0.13 * Math.sin(pulsePhase + bubble.body.id % 10);
+                            const newRadius = baseRadius * pulse;
+                            const currentRadius = bubble.body.circleRadius;
+                            const scale = newRadius / currentRadius;
+                            if (Math.abs(scale - 1) > 0.01) {
+                                Matter.Body.scale(bubble.body, scale, scale);
+                            }
+                            // Красный фон при пульсации
+                            const pulseValue = Math.abs(Math.sin(pulsePhase + bubble.body.id % 10));
+                            if (pulseValue > 0.7) {
+                                bubble.body.render.fillStyle = 'rgba(255,0,0,0.5)';
+                            } else {
+                                const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
+                                bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                            }
+                        }
+                    });
+                }
+                // --- Старая логика для просроченных задач (оставить для обратной совместимости) ---
                 if (
                     bubble.body &&
                     bubble.status === BUBBLE_STATUS.ACTIVE &&
                     bubble.dueDate &&
                     new Date(bubble.dueDate).getTime() <= now
                 ) {
-                    // Оповещение и вибрация только один раз для каждого пузыря
                     if (!notifiedBubblesRef.current.has(bubble.id)) {
                         showNotificationAndVibrate(bubble);
                         notifiedBubblesRef.current.add(bubble.id);
                     }
-                    // Пульсация радиуса
                     const baseRadius = bubble.radius;
-                    const pulse = 1 + 0.13 * Math.sin(pulsePhase + bubble.body.id % 10); // 13% пульсация
+                    const pulse = 1 + 0.13 * Math.sin(pulsePhase + bubble.body.id % 10);
                     const newRadius = baseRadius * pulse;
-                    // Меняем радиус через Matter.Body.scale
                     const currentRadius = bubble.body.circleRadius;
                     const scale = newRadius / currentRadius;
                     if (Math.abs(scale - 1) > 0.01) {
                         Matter.Body.scale(bubble.body, scale, scale);
                     }
-                    // Пульсация цвета background
-                    // В момент максимального увеличения делаем фон красным
                     const pulseValue = Math.abs(Math.sin(pulsePhase + bubble.body.id % 10));
                     if (pulseValue > 0.7) {
-                        bubble.body.render.fillStyle = 'rgba(255,0,0,0.5)'; // красный фон
+                        bubble.body.render.fillStyle = 'rgba(255,0,0,0.5)';
                     } else {
-                        // Возвращаем исходный цвет
                         const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
                         bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
                     }
                 } else if (bubble.body && Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
-                    // Возвращаем радиус к исходному, если задача больше не просрочена
                     const scale = bubble.radius / bubble.body.circleRadius;
                     Matter.Body.scale(bubble.body, scale, scale);
-                    // Возвращаем исходный цвет
                     const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
                     bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
                 }
@@ -1697,9 +1752,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // При открытии диалога редактирования подставлять dueDate
     useEffect(() => {
         if (editDialog && selectedBubble) {
+            setEditNotifications(Array.isArray(selectedBubble.notifications) ? selectedBubble.notifications : []);
             let val = selectedBubble.dueDate;
             if (val) {
-                // Если строка, преобразуем к Date
                 if (typeof val === 'string') {
                     setEditDueDate(new Date(val));
                 } else if (val instanceof Date) {
@@ -1711,14 +1766,21 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 setEditDueDate(null);
             }
         }
-    }, [editDialog, selectedBubble]);
+        // eslint-disable-next-line
+    }, [editDialog, selectedBubble?.id]);
 
     // Сброс уведомлений при смене языка
     useEffect(() => {
         notifiedBubblesRef.current = new Set();
     }, [i18n.language]);
 
+    // Состояния для диалога уведомлений
+    const [notifDialogOpen, setNotifDialogOpen] = useState(false);
+    const [notifValue, setNotifValue] = useState(null);
 
+    // Внутри компонента:
+    const [createNotifications, setCreateNotifications] = useState([]); // для создания
+    const [editNotifications, setEditNotifications] = useState([]); // для редактирования
 
     return (
         <Box sx={{
@@ -2205,7 +2267,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             marginBottom: 2,
                         }}
                     />
-                    <Box sx={{ marginTop: 1, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ marginTop: 1, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Box sx={{ flex: 1 }}>
                             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
                                 <DateTimePicker
@@ -2221,12 +2283,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             </LocalizationProvider>
                         </Box>
                         {editDueDate && (
-                            <IconButton onClick={() => setEditDueDate(null)} sx={{ mt: 1 }}>
+                            <IconButton onClick={() => { setEditDueDate(null); setEditNotifications([]); }} sx={{ mt: 1 }}>
                                 <Clear />
                             </IconButton>
                         )}
                     </Box>
-
+                    <Box >
+                        <AddNotification
+                            open={notifDialogOpen}
+                            onClose={() => setNotifDialogOpen(false)}
+                            onSave={val => setNotifValue(val)}
+                            initialValue={notifValue}
+                            notifications={editNotifications}
+                            onAdd={notif => setEditNotifications(prev => [...prev, notif])}
+                            onDelete={idx => setEditNotifications(prev => prev.filter((_, i) => i !== idx))}
+                        />
+                    </Box>
                     {/* Выбор тега */}
                     <FormControl fullWidth margin="dense" variant="outlined">
                         <InputLabel>{t('bubbles.categoryLabel')}</InputLabel>
@@ -2298,7 +2370,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             }}
                         />
                     </Box>
-
                 </DialogContent>
                 <DialogActions sx={{
                     padding: isMobile ? 2 : 3,
@@ -2969,7 +3040,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             maxWidth: '100%',
                         }}
                     />
-                    <Box sx={{ marginTop: 1, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ marginTop: 1, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Box sx={{ flex: 1 }}>
                             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
                                 <DateTimePicker
@@ -2985,12 +3056,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             </LocalizationProvider>
                         </Box>
                         {dueDate && (
-                            <IconButton onClick={() => setDueDate(null)} sx={{ mt: 1 }}>
+                            <IconButton onClick={() => { setDueDate(null); setCreateNotifications([]); }} sx={{ mt: 1 }}>
                                 <Clear />
                             </IconButton>
                         )}
                     </Box>
-
+                    <Box>
+                        <AddNotification
+                            open={notifDialogOpen}
+                            onClose={() => setNotifDialogOpen(false)}
+                            onSave={val => setNotifValue(val)}
+                            initialValue={notifValue}
+                            notifications={createNotifications}
+                            onAdd={notif => setCreateNotifications(prev => [...prev, notif])}
+                            onDelete={idx => setCreateNotifications(prev => prev.filter((_, i) => i !== idx))}
+                        />
+                    </Box>
                     {/* Выбор тега */}
                     <FormControl fullWidth margin="dense" variant="outlined">
                         <InputLabel>{t('bubbles.categoryLabel')}</InputLabel>
@@ -3593,7 +3674,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     />
                 </Box>
             </Drawer>
-
 
         </Box>
     );

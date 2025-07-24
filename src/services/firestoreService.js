@@ -58,7 +58,8 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             createdAt: bubble.createdAt || new Date().toISOString(),
             updatedAt: bubble.updatedAt || new Date().toISOString(),
             deletedAt: bubble.deletedAt || null,
-            dueDate: bubble.dueDate || null
+            dueDate: bubble.dueDate || null,
+            notifications: bubble.notifications || []
         }));
 
         await setDoc(bubblesRef, {
@@ -83,7 +84,8 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             createdAt: bubble.createdAt || new Date().toISOString(),
             updatedAt: bubble.updatedAt || new Date().toISOString(),
             deletedAt: bubble.deletedAt || null,
-            dueDate: bubble.dueDate || null
+            dueDate: bubble.dueDate || null,
+            notifications: bubble.notifications || []
         }));
         localStorage.setItem(`bubbles_${userId}`, JSON.stringify(bubblesForStorage));
     }
