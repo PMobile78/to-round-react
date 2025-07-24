@@ -416,7 +416,6 @@ const ListView = ({
                         key={tab.key}
                         variant={listFilter === tab.key ? 'contained' : 'outlined'}
                         onClick={() => setListFilter(tab.key)}
-                        disabled={tab.key === 'postpone' && getTasksCountByStatus('postpone') === 0}
                         sx={{
                             borderRadius: 20,
                             paddingX: 2,
@@ -424,7 +423,6 @@ const ListView = ({
                             textTransform: 'none',
                             minWidth: 'auto',
                             fontSize: isMobile ? '0.8rem' : '0.9rem',
-                            opacity: tab.key === 'postpone' && getTasksCountByStatus('postpone') === 0 ? 0.5 : 1
                         }}
                     >
                         {tab.label} ({tab.count})
