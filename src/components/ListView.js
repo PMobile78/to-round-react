@@ -74,26 +74,29 @@ const ListView = ({
 
     // Memoized function to get filtered bubbles for list view (без поиска)
     const getFilteredBubblesForList = useMemo(() => {
-        // Filter by selected status
-        const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
+        let filteredByStatus;
+        if (listFilter === 'postpone') {
+            // Показываем только задачи с dueDate в будущем и статусом не DELETED и не DONE
+            const now = new Date();
+            filteredByStatus = bubbles.filter(bubble => {
+                if (!bubble.dueDate) return false;
+                if (bubble.status === BUBBLE_STATUS.DELETED || bubble.status === BUBBLE_STATUS.DONE) return false;
+                return new Date(bubble.dueDate) > now;
+            });
+        } else {
+            filteredByStatus = getBubblesByStatus(bubbles, listFilter);
+        }
 
         // Apply tag filters using separate list filter states
-        // Check if all tags are selected and showNoTag is true - show all bubbles
         const allTagsSelected = tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
-
         if (allTagsSelected) {
             return filteredByStatus;
         }
-
         return filteredByStatus.filter(bubble => {
-            // Проверяем, существует ли тег для пузыря
             const tagExists = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
-
-            // Если выбраны теги и пузырь имеет один из выбранных тегов (который существует)
             if (listFilterTags.length > 0 && bubble.tagId && tagExists && listFilterTags.includes(bubble.tagId)) {
                 return true;
             }
-            // Если включен фильтр "No Tag" и у пузыря нет тега или тег был удален
             if (listShowNoTag && (!bubble.tagId || !tagExists)) {
                 return true;
             }
@@ -203,62 +206,45 @@ const ListView = ({
 
     // Memoized task count calculation
     const getTasksCountByStatus = useCallback((status) => {
-        // Apply tag filters to all bubbles using list filter states
         const allTagsSelected = tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
-
         let filteredBubbles = bubbles;
-
         if (!allTagsSelected) {
             filteredBubbles = bubbles.filter(bubble => {
-                // Проверяем, существует ли тег для пузыря
                 const tagExists = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
-
-                // Если выбраны теги и пузырь имеет один из выбранных тегов (который существует)
                 if (listFilterTags.length > 0 && bubble.tagId && tagExists && listFilterTags.includes(bubble.tagId)) {
                     return true;
                 }
-                // Если включен фильтр "No Tag" и у пузыря нет тега или тег был удален
                 if (listShowNoTag && (!bubble.tagId || !tagExists)) {
                     return true;
                 }
                 return false;
             });
         }
-
-        // Filter by status
         let statusFilteredBubbles;
         if (status === 'active') {
             statusFilteredBubbles = filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
         } else if (status === 'done') {
             statusFilteredBubbles = filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.DONE);
         } else if (status === 'postpone') {
-            statusFilteredBubbles = filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.POSTPONE);
+            // Только задачи с dueDate в будущем и статусом не DELETED и не DONE
+            const now = new Date();
+            statusFilteredBubbles = filteredBubbles.filter(bubble => bubble.dueDate && new Date(bubble.dueDate) > now && bubble.status !== BUBBLE_STATUS.DELETED && bubble.status !== BUBBLE_STATUS.DONE);
         } else if (status === 'deleted') {
             statusFilteredBubbles = filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.DELETED);
         } else {
             statusFilteredBubbles = filteredBubbles;
         }
-
-        // Apply search filter with debounced query
         if (!debouncedSearchQuery.trim()) {
             return statusFilteredBubbles.length;
         }
-
         const query = debouncedSearchQuery.toLowerCase().trim();
         const searchFilteredBubbles = statusFilteredBubbles.filter(bubble => {
-            // Search in title
             const titleMatch = (bubble.title || '').toLowerCase().includes(query);
-
-            // Search in description
             const descriptionMatch = (bubble.description || '').toLowerCase().includes(query);
-
-            // Search in tag name
             const tag = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
             const tagMatch = tag ? tag.name.toLowerCase().includes(query) : false;
-
             return titleMatch || descriptionMatch || tagMatch;
         });
-
         return searchFilteredBubbles.length;
     }, [bubbles, tags, listFilterTags, listShowNoTag, debouncedSearchQuery]);
 
