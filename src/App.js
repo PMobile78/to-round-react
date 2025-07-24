@@ -11,7 +11,6 @@ function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const { themeMode, actualTheme, toggleTheme, theme } = useThemeMode();
-    navigator.serviceWorker.ready.then(reg => reg.showNotification('Test Desktop', { body: 'Hello from desktop!' }))
     useEffect(() => {
         const unsubscribe = onAuthStateChange((currentUser) => {
             setUser(currentUser);
