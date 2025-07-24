@@ -1735,32 +1735,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Для editNotifications
     const handleDeleteNotification = useCallback((idx) => {
         setEditNotifications(prev => {
-            if (selectedBubble && editDueDate) {
-                // Получаем targetTime для удаляемого уведомления
-                const due = new Date(editDueDate).getTime();
-                const notif = prev[idx];
-                const offset = getOffsetMs(notif);
-                const targetTime = due - offset;
-                const key = `${selectedBubble.id}:${targetTime}`;
-                notifiedBubbleNotificationsRef.current.delete(key);
-            }
+            // Не удаляем ключ из notifiedBubbleNotificationsRef.current
             return prev.filter((_, i) => i !== idx);
         });
-    }, [selectedBubble, editDueDate]);
+    }, []);
     // Для createNotifications
     const handleDeleteCreateNotification = useCallback((idx) => {
         setCreateNotifications(prev => {
-            if (selectedBubble && dueDate) {
-                const due = new Date(dueDate).getTime();
-                const notif = prev[idx];
-                const offset = getOffsetMs(notif);
-                const targetTime = due - offset;
-                const key = `${selectedBubble.id}:${targetTime}`;
-                notifiedBubbleNotificationsRef.current.delete(key);
-            }
+            // Не удаляем ключ из notifiedBubbleNotificationsRef.current
             return prev.filter((_, i) => i !== idx);
         });
-    }, [selectedBubble, dueDate]);
+    }, []);
 
     // При открытии диалога редактирования подставлять dueDate
     useEffect(() => {
