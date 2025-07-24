@@ -1551,17 +1551,30 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     if (Math.abs(scale - 1) > 0.01) {
                         Matter.Body.scale(bubble.body, scale, scale);
                     }
+                    // Пульсация цвета background
+                    // В момент максимального увеличения делаем фон красным
+                    const pulseValue = Math.abs(Math.sin(pulsePhase + bubble.body.id % 10));
+                    if (pulseValue > 0.7) {
+                        bubble.body.render.fillStyle = 'rgba(255,0,0,0.5)'; // красный фон
+                    } else {
+                        // Возвращаем исходный цвет
+                        const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
+                        bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    }
                 } else if (bubble.body && Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
                     // Возвращаем радиус к исходному, если задача больше не просрочена
                     const scale = bubble.radius / bubble.body.circleRadius;
                     Matter.Body.scale(bubble.body, scale, scale);
+                    // Возвращаем исходный цвет
+                    const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
+                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
                 }
             });
             animationFrame = requestAnimationFrame(animate);
         };
         animate();
         return () => cancelAnimationFrame(animationFrame);
-    }, [bubbles]);
+    }, [bubbles, tags, getBubbleFillStyle]);
 
     // При открытии диалога редактирования подставлять dueDate
     useEffect(() => {
