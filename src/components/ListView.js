@@ -265,7 +265,8 @@ const ListView = ({
     const formatDate = useCallback((dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // 24-часовой формат
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
     }, []);
 
     // Memoized action handlers
@@ -515,6 +516,16 @@ const ListView = ({
                                         }}>
                                             {task.title || t('bubbles.empty')}
                                         </Typography>
+
+                                        {task.dueDate && (
+                                            <Typography variant="body2" sx={{
+                                                marginBottom: 1,
+                                                color: themeMode === 'light' ? '#1976d2' : '#90caf9',
+                                                fontWeight: 500
+                                            }}>
+                                                {t('bubbles.dueDateLabel')}: {formatDate(task.dueDate)}
+                                            </Typography>
+                                        )}
 
                                         {task.description && (
                                             <Typography variant="body2" sx={{

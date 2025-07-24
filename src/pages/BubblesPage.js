@@ -57,6 +57,10 @@ import { FilterMenu } from '../components/FilterMenu';
 import ListView from '../components/ListView';
 import SearchField from '../components/SearchField';
 import useSearch from '../hooks/useSearch';
+import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 // Auto-cleanup period for deleted tasks (30 days)
 const DELETED_TASKS_CLEANUP_DAYS = 30;
@@ -162,6 +166,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Состояние размера пузыря при редактировании
     const [editBubbleSize, setEditBubbleSize] = useState(45); // Размер при редактировании
+
+    const [dueDate, setDueDate] = useState(null); // Для создания
+    const [editDueDate, setEditDueDate] = useState(null); // Для редактирования
 
     // Function to get button styles based on theme
     const getButtonStyles = () => {
@@ -337,7 +344,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             status: storedBubble.status || BUBBLE_STATUS.ACTIVE,
                             createdAt: storedBubble.createdAt || new Date().toISOString(),
                             updatedAt: storedBubble.updatedAt || new Date().toISOString(),
-                            deletedAt: storedBubble.deletedAt || null
+                            deletedAt: storedBubble.deletedAt || null,
+                            dueDate: storedBubble.dueDate || null // ← добавлено поле dueDate
                         };
                         initialBubbles.push(bubble);
                     });
@@ -854,6 +862,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setDescription('');
         setSelectedTagId('');
         setBubbleSize(45); // Сброс размера к значению по умолчанию
+        setDueDate(null); // Сброс даты
         setCreateDialog(true);
     };
 
@@ -872,9 +881,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             selectedTagId || null
         );
 
-        // Set title and description
+        // Set title, description, dueDate
         newBubble.title = title;
         newBubble.description = description;
+        newBubble.dueDate = dueDate ? new Date(dueDate).toISOString() : null;
 
         Matter.World.add(engineRef.current.world, newBubble.body);
         setBubbles(prev => {
@@ -888,6 +898,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setTitle('');
         setDescription('');
         setSelectedTagId('');
+        setDueDate(null);
     };
 
     // Save bubble changes
@@ -944,7 +955,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             tagId: selectedTagId || null,
                             radius: editBubbleSize,
                             body: newBody, // Используем новое тело
-                            updatedAt: new Date().toISOString()
+                            updatedAt: new Date().toISOString(),
+                            dueDate: editDueDate ? new Date(editDueDate).toISOString() : null
                         };
                     }
                     return bubble;
@@ -958,6 +970,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setSelectedBubble(null);
         setTitle('');
         setDescription('');
+        setEditDueDate(null);
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
@@ -1511,6 +1524,64 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         );
     }, [getFilteredBubbles, bubbles, isMobile, fontSize, themeMode, foundBubblesIds, debouncedBubblesSearchQuery]);
 
+    // Пульсация для просроченных задач
+    useEffect(() => {
+        if (!engineRef.current) return;
+
+        let animationFrame;
+        let pulsePhase = 0;
+
+        const animate = () => {
+            const now = Date.now();
+            pulsePhase += 0.12; // скорость пульсации
+            bubbles.forEach(bubble => {
+                if (
+                    bubble.body &&
+                    bubble.status === BUBBLE_STATUS.ACTIVE &&
+                    bubble.dueDate &&
+                    new Date(bubble.dueDate).getTime() <= now
+                ) {
+                    // Пульсация радиуса
+                    const baseRadius = bubble.radius;
+                    const pulse = 1 + 0.13 * Math.sin(pulsePhase + bubble.body.id % 10); // 13% пульсация
+                    const newRadius = baseRadius * pulse;
+                    // Меняем радиус через Matter.Body.scale
+                    const currentRadius = bubble.body.circleRadius;
+                    const scale = newRadius / currentRadius;
+                    if (Math.abs(scale - 1) > 0.01) {
+                        Matter.Body.scale(bubble.body, scale, scale);
+                    }
+                } else if (bubble.body && Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
+                    // Возвращаем радиус к исходному, если задача больше не просрочена
+                    const scale = bubble.radius / bubble.body.circleRadius;
+                    Matter.Body.scale(bubble.body, scale, scale);
+                }
+            });
+            animationFrame = requestAnimationFrame(animate);
+        };
+        animate();
+        return () => cancelAnimationFrame(animationFrame);
+    }, [bubbles]);
+
+    // При открытии диалога редактирования подставлять dueDate
+    useEffect(() => {
+        if (editDialog && selectedBubble) {
+            let val = selectedBubble.dueDate;
+            if (val) {
+                // Если строка, преобразуем к Date
+                if (typeof val === 'string') {
+                    setEditDueDate(new Date(val));
+                } else if (val instanceof Date) {
+                    setEditDueDate(val);
+                } else {
+                    setEditDueDate(null);
+                }
+            } else {
+                setEditDueDate(null);
+            }
+        }
+    }, [editDialog, selectedBubble]);
+
 
 
     return (
@@ -1998,6 +2069,27 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             marginBottom: 2,
                         }}
                     />
+                    <Box sx={{ marginTop: 1, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ flex: 1 }}>
+                            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+                                <DateTimePicker
+                                    label={t('bubbles.dueDateLabel')}
+                                    value={editDueDate}
+                                    onChange={setEditDueDate}
+                                    ampm={false}
+                                    inputFormat="dd.MM.yyyy HH:mm"
+                                    renderInput={(params) => (
+                                        <TextField {...params} fullWidth margin="dense" sx={{ marginTop: 2, marginBottom: 2 }} />
+                                    )}
+                                />
+                            </LocalizationProvider>
+                        </Box>
+                        {editDueDate && (
+                            <IconButton onClick={() => setEditDueDate(null)} sx={{ mt: 1 }}>
+                                <Clear />
+                            </IconButton>
+                        )}
+                    </Box>
 
                     {/* Выбор тега */}
                     <FormControl fullWidth margin="dense" variant="outlined">
@@ -2741,6 +2833,27 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             maxWidth: '100%',
                         }}
                     />
+                    <Box sx={{ marginTop: 1, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ flex: 1 }}>
+                            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+                                <DateTimePicker
+                                    label={t('bubbles.dueDateLabel')}
+                                    value={dueDate}
+                                    onChange={setDueDate}
+                                    ampm={false}
+                                    inputFormat="dd.MM.yyyy HH:mm"
+                                    renderInput={(params) => (
+                                        <TextField {...params} fullWidth margin="dense" sx={{ marginTop: 2, marginBottom: 2 }} />
+                                    )}
+                                />
+                            </LocalizationProvider>
+                        </Box>
+                        {dueDate && (
+                            <IconButton onClick={() => setDueDate(null)} sx={{ mt: 1 }}>
+                                <Clear />
+                            </IconButton>
+                        )}
+                    </Box>
 
                     {/* Выбор тега */}
                     <FormControl fullWidth margin="dense" variant="outlined">

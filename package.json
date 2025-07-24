@@ -29,6 +29,8 @@
     "@emotion/styled": "latest",
     "@mui/icons-material": "latest",
     "@mui/material": "latest",
+    "@mui/x-date-pickers": "^8.9.0",
+    "date-fns": "^4.1.0",
     "firebase": "latest",
     "i18next": "latest",
     "i18next-browser-languagedetector": "latest",

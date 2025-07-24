@@ -94,7 +94,8 @@
         "bubbleSizeLabel": "Bubble size: {{size}}px",
         "tagDeleted": "Tag deleted",
         "undo": "UNDO",
-        "bubbleBackground": "Bubble Background"
+        "bubbleBackground": "Bubble Background",
+        "dueDateLabel": "Due date"
     },
     "auth": {
         "welcome": "Welcome",
