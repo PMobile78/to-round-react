@@ -2139,21 +2139,38 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             >
                                 {t('bubbles.listView')}
                             </Button>
-                            <Button
-                                onClick={() => setFilterDrawerOpen(true)}
-                                variant="outlined"
-                                size="small"
-                                startIcon={<FilterList />}
-                                sx={{
-                                    ...getOutlinedButtonStyles(),
-                                    height: 36,
-                                    backgroundColor: !isAllSelected()
-                                        ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
-                                        : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent')
-                                }}
+                            <Tooltip
+                                title={categoriesPanelEnabled ? t('bubbles.filterDisabled') : t('bubbles.filterButton')}
+                                placement="top"
                             >
-                                {t('bubbles.filterButton')}
-                            </Button>
+                                <span>
+                                    <Button
+                                        onClick={() => {
+                                            if (!categoriesPanelEnabled) {
+                                                setFilterDrawerOpen(true);
+                                            }
+                                        }}
+                                        variant="outlined"
+                                        size="small"
+                                        startIcon={<FilterList />}
+                                        disabled={categoriesPanelEnabled}
+                                        sx={{
+                                            ...getOutlinedButtonStyles(),
+                                            height: 36,
+                                            backgroundColor: !isAllSelected()
+                                                ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
+                                                : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent'),
+                                            opacity: categoriesPanelEnabled ? 0.5 : 1,
+                                            '&:disabled': {
+                                                backgroundColor: themeMode === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)',
+                                                color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)'
+                                            }
+                                        }}
+                                    >
+                                        {t('bubbles.filterButton')}
+                                    </Button>
+                                </span>
+                            </Tooltip>
                         </Box>
 
 
@@ -2231,17 +2248,34 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         >
                             <ViewList />
                         </IconButton>
-                        <IconButton
-                            onClick={() => setFilterDrawerOpen(true)}
-                            sx={{
-                                ...getButtonStyles(),
-                                backgroundColor: !isAllSelected()
-                                    ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)')
-                                    : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
-                            }}
+                        <Tooltip
+                            title={categoriesPanelEnabled ? t('bubbles.filterDisabled') : t('bubbles.filterButton')}
+                            placement="top"
                         >
-                            <FilterList />
-                        </IconButton>
+                            <span>
+                                <IconButton
+                                    onClick={() => {
+                                        if (!categoriesPanelEnabled) {
+                                            setFilterDrawerOpen(true);
+                                        }
+                                    }}
+                                    disabled={categoriesPanelEnabled}
+                                    sx={{
+                                        ...getButtonStyles(),
+                                        backgroundColor: !isAllSelected()
+                                            ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)')
+                                            : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)'),
+                                        opacity: categoriesPanelEnabled ? 0.5 : 1,
+                                        '&:disabled': {
+                                            backgroundColor: themeMode === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)',
+                                            color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)'
+                                        }
+                                    }}
+                                >
+                                    <FilterList />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
 
 
 
@@ -2854,7 +2888,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             }}
                         >
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                {/* <Category sx={{ color: '#BDC3C7' }} /> */}
                                 <Sell sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <ListItemText
@@ -2934,7 +2967,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                     fontWeight: 500,
                                     marginBottom: 1
                                 }}>
-                                    {t('bubbles.taskCategories')}
+                                    {t('bubbles.taskCategoriesPanel')}
                                 </Typography>
                                 <Switch
                                     checked={categoriesPanelEnabled}
