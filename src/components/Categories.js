@@ -176,19 +176,17 @@ const Categories = ({
                                     fontWeight: selectedCategory === category.id ? 700 : 500
                                 }}
                             />
-                            {getBubbleCount(category.id) > 0 && (
-                                <Typography
-                                    variant="caption"
-                                    sx={{
-                                        color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                        fontWeight: 'bold',
-                                        fontSize: '12px',
-                                        backgroundColor: 'transparent'
-                                    }}
-                                >
-                                    {getBubbleCount(category.id)}
-                                </Typography>
-                            )}
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                    fontWeight: 'bold',
+                                    fontSize: '12px',
+                                    backgroundColor: 'transparent'
+                                }}
+                            >
+                                {getBubbleCount(category.id)}
+                            </Typography>
                         </ListItem>
                         {index < allCategories.length - 1 && (
                             <Divider sx={{
@@ -207,7 +205,7 @@ const Categories = ({
             }} />
 
             {/* Настройки категорий */}
-            <List sx={{ padding: 0 }}>
+            {/* <List sx={{ padding: 0 }}>
                 <ListItem
                     button
                     onClick={() => {
@@ -236,7 +234,7 @@ const Categories = ({
                         }}
                     />
                 </ListItem>
-            </List>
+            </List> */}
         </Box>
     );
 };
