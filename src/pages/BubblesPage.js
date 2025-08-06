@@ -17,15 +17,11 @@ import {
     InputLabel,
     Select,
     MenuItem,
-    Chip,
-    Stack,
     Switch,
     Menu,
     ListItemIcon,
     ListItemText,
     Drawer,
-    Checkbox,
-    FormControlLabel,
     List,
     ListItem,
     Divider,
@@ -33,11 +29,12 @@ import {
 
 } from '@mui/material';
 import {
-    CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward, Search,
+    CloseOutlined, DeleteOutlined, Add, Clear, Edit, Logout, FilterList, Check, Menu as MenuIcon, Info, Category, Sell, CheckCircle, ViewList, Search,
     LanguageOutlined,
     PaletteOutlined,
     FormatColorFillOutlined,
     FormatSizeOutlined,
+    LabelOutlined,
 } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
@@ -49,17 +46,14 @@ import {
     loadBubblesFromFirestore,
     clearBubblesFromFirestore,
     saveTagsToFirestore,
-    loadTagsFromFirestore,
     subscribeToTagsUpdates,
     BUBBLE_STATUS,
     markBubbleAsDone,
     markBubbleAsDeleted,
-    restoreBubble,
     getBubblesByStatus,
     cleanupOldDeletedBubbles
 } from '../services/firestoreService';
 
-import { FilterMenu } from '../components/FilterMenu';
 import ListView from '../components/ListView';
 import SearchField from '../components/SearchField';
 import Categories from '../components/Categories';
@@ -67,13 +61,8 @@ import MobileCategorySelector from '../components/MobileCategorySelector';
 import useSearch from '../hooks/useSearch';
 import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import AddNotification from '../components/AddNotification';
-
-// Auto-cleanup period for deleted tasks (30 days)
-const DELETED_TASKS_CLEANUP_DAYS = 30;
-
 
 
 const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
@@ -2937,7 +2926,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         {/* Переключатель панели категорий */}
                         <ListItem sx={{ padding: '16px 24px' }}>
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Category sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                                <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <Box sx={{ flex: 1 }}>
                                 <Typography variant="body2" sx={{

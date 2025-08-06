@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-    Drawer,
     List,
     ListItem,
     ListItemIcon,
@@ -9,12 +8,10 @@ import {
     Box,
     IconButton,
     Divider,
-    Chip
 } from '@mui/material';
 import {
     CloseOutlined,
     Edit,
-    Category,
     LabelOutlined,
     AllInclusive
 } from '@mui/icons-material';
