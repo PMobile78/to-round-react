@@ -98,6 +98,8 @@
         "undo": "UNDO",
         "bubbleBackground": "Bubble Background",
         "dueDateLabel": "Due date",
+        "overdue": "Overdue",
+        "overdueLabel": "Overdue: {{date}}",
         "overdueNotificationTitle": "Overdue task!",
         "overdueNotificationBody": "You have an overdue task.",
         "overdueNotificationBodyWithTitle": "Overdue: {{title}}",

@@ -99,6 +99,8 @@
         "undo": "СКАСУВАТИ",
         "bubbleBackground": "Фон бульбашок",
         "dueDateLabel": "Термін виконання",
+        "overdue": "Прострочено",
+        "overdueLabel": "Прострочено: {{date}}",
         "overdueNotificationTitle": "Прострочене завдання!",
         "overdueNotificationBody": "У вас є прострочене завдання.",
         "overdueNotificationBodyWithTitle": "Прострочено: {{title}}",

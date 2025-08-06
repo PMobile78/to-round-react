@@ -258,6 +258,12 @@ const ListView = ({
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
     }, []);
 
+    // Функция для проверки просроченности due date
+    const isOverdue = useCallback((dueDate) => {
+        if (!dueDate) return false;
+        return new Date(dueDate) < new Date();
+    }, []);
+
     // Memoized action handlers
     const handleRestoreBubble = useCallback(async (bubbleId) => {
         try {
@@ -517,13 +523,35 @@ const ListView = ({
                                         </Typography>
 
                                         {task.dueDate && (
-                                            <Typography variant="body2" sx={{
-                                                marginBottom: 1,
-                                                color: themeMode === 'light' ? '#1976d2' : '#90caf9',
-                                                fontWeight: 500
-                                            }}>
-                                                {t('bubbles.dueDateLabel')}: {formatDate(task.dueDate)}
-                                            </Typography>
+                                            <Box sx={{ marginBottom: 1 }}>
+                                                <Typography variant="body2" sx={{
+                                                    color: isOverdue(task.dueDate)
+                                                        ? '#f44336'
+                                                        : (themeMode === 'light' ? '#1976d2' : '#90caf9'),
+                                                    fontWeight: 500,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 0.5
+                                                }}>
+                                                    {t('bubbles.dueDateLabel')}: {formatDate(task.dueDate)}
+                                                    {isOverdue(task.dueDate) && (
+                                                        <Typography
+                                                            component="span"
+                                                            variant="caption"
+                                                            sx={{
+                                                                color: '#f44336',
+                                                                fontWeight: 'bold',
+                                                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                                                padding: '2px 6px',
+                                                                borderRadius: 1,
+                                                                border: '1px solid rgba(244, 67, 54, 0.3)'
+                                                            }}
+                                                        >
+                                                            {t('bubbles.overdue')}
+                                                        </Typography>
+                                                    )}
+                                                </Typography>
+                                            </Box>
                                         )}
 
                                         {task.description && (

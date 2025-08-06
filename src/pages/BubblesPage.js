@@ -1481,6 +1481,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         return counts;
     };
 
+    // Функция для проверки просроченности due date
+    const isOverdue = (dueDate) => {
+        if (!dueDate) return false;
+        return new Date(dueDate) < new Date();
+    };
+
     const handleCategorySelect = (categoryId) => {
         setSelectedCategory(categoryId);
         // Панель не закрывается при выборе категории, если она постоянно включена
@@ -2469,7 +2475,24 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                     ampm={false}
                                     inputFormat="dd.MM.yyyy HH:mm"
                                     renderInput={(params) => (
-                                        <TextField {...params} fullWidth margin="dense" sx={{ marginTop: 2, marginBottom: 2 }} />
+                                        <TextField
+                                            {...params}
+                                            fullWidth
+                                            margin="dense"
+                                            sx={{
+                                                marginTop: 2,
+                                                marginBottom: 2,
+                                                '& .MuiInputBase-root': {
+                                                    borderColor: isOverdue(editDueDate) ? '#f44336' : undefined,
+                                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                        borderColor: isOverdue(editDueDate) ? '#f44336' : undefined,
+                                                    },
+                                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                        borderColor: isOverdue(editDueDate) ? '#f44336' : undefined,
+                                                    }
+                                                }
+                                            }}
+                                        />
                                     )}
                                 />
                             </LocalizationProvider>
@@ -2480,6 +2503,23 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             </IconButton>
                         )}
                     </Box>
+                    {/* Индикация просроченности */}
+                    {editDueDate && isOverdue(editDueDate) && (
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            marginTop: 1,
+                            padding: 1,
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            borderRadius: 1,
+                            border: '1px solid rgba(244, 67, 54, 0.3)'
+                        }}>
+                            <Typography variant="caption" sx={{ color: '#f44336', fontWeight: 'bold' }}>
+                                {t('bubbles.overdue')}
+                            </Typography>
+                        </Box>
+                    )}
                     <Box >
                         <AddNotification
                             open={notifDialogOpen}
@@ -3261,7 +3301,24 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                     ampm={false}
                                     inputFormat="dd.MM.yyyy HH:mm"
                                     renderInput={(params) => (
-                                        <TextField {...params} fullWidth margin="dense" sx={{ marginTop: 2, marginBottom: 2 }} />
+                                        <TextField
+                                            {...params}
+                                            fullWidth
+                                            margin="dense"
+                                            sx={{
+                                                marginTop: 2,
+                                                marginBottom: 2,
+                                                '& .MuiInputBase-root': {
+                                                    borderColor: isOverdue(dueDate) ? '#f44336' : undefined,
+                                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                        borderColor: isOverdue(dueDate) ? '#f44336' : undefined,
+                                                    },
+                                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                        borderColor: isOverdue(dueDate) ? '#f44336' : undefined,
+                                                    }
+                                                }
+                                            }}
+                                        />
                                     )}
                                 />
                             </LocalizationProvider>
@@ -3272,6 +3329,23 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             </IconButton>
                         )}
                     </Box>
+                    {/* Индикация просроченности */}
+                    {dueDate && isOverdue(dueDate) && (
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            marginTop: 1,
+                            padding: 1,
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            borderRadius: 1,
+                            border: '1px solid rgba(244, 67, 54, 0.3)'
+                        }}>
+                            <Typography variant="caption" sx={{ color: '#f44336', fontWeight: 'bold' }}>
+                                {t('bubbles.overdue')}
+                            </Typography>
+                        </Box>
+                    )}
                     <Box>
                         <AddNotification
                             open={notifDialogOpen}
