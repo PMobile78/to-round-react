@@ -32,7 +32,13 @@ import {
     Slider,
 
 } from '@mui/material';
-import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward, Search, LanguageOutlined, PaletteOutlined } from '@mui/icons-material';
+import {
+    CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward, Search,
+    LanguageOutlined,
+    PaletteOutlined,
+    FormatColorFillOutlined,
+    FormatSizeOutlined,
+} from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
@@ -2795,7 +2801,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             }}
                         >
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Settings sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                                <FormatSizeOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <ListItemText
                                 primary={t('bubbles.fontSettings')}
@@ -2809,7 +2815,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         {/* Bubble Background Toggle */}
                         <ListItem sx={{ padding: '16px 24px' }}>
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                <LanguageOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                                <FormatColorFillOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <Box sx={{ flex: 1 }}>
                                 <Typography variant="body2" sx={{
