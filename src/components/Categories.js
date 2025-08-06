@@ -29,7 +29,8 @@ const Categories = ({
     themeMode,
     bubbleCounts = {},
     onOpenTagDialog,
-    bubbles = []
+    bubbles = [],
+    isPermanent = false
 }) => {
     const { t } = useTranslation();
 
@@ -45,18 +46,20 @@ const Categories = ({
     };
 
     return (
-        <Drawer
-            anchor="left"
-            open={open}
-            onClose={onClose}
-            PaperProps={{
-                sx: {
-                    width: 280,
-                    backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)',
-                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                    backdropFilter: 'blur(10px)',
-                    borderRight: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#333333'}`
-                }
+        <Box
+            sx={{
+                position: 'fixed',
+                left: 0,
+                top: 0,
+                height: '100vh',
+                width: 280,
+                backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)',
+                color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                backdropFilter: 'blur(10px)',
+                borderRight: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#333333'}`,
+                zIndex: 1200,
+                display: open ? 'block' : 'none',
+                overflowY: 'auto'
             }}
         >
             {/* Заголовок */}
@@ -70,17 +73,19 @@ const Categories = ({
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                     {t('bubbles.taskCategories')}
                 </Typography>
-                <IconButton
-                    onClick={onClose}
-                    sx={{
-                        color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
-                        '&:hover': {
-                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
-                        }
-                    }}
-                >
-                    <CloseOutlined />
-                </IconButton>
+                {!isPermanent && (
+                    <IconButton
+                        onClick={onClose}
+                        sx={{
+                            color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
+                            '&:hover': {
+                                backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                            }
+                        }}
+                    >
+                        <CloseOutlined />
+                    </IconButton>
+                )}
             </Box>
 
             {/* Список категорий */}
@@ -93,6 +98,10 @@ const Categories = ({
                     sx={{
                         padding: '16px 20px',
                         cursor: 'pointer',
+                        borderLeft: selectedCategory === 'all' ? '4px solid #3B7DED' : '4px solid transparent',
+                        backgroundColor: selectedCategory === 'all'
+                            ? (themeMode === 'light' ? '#E3F2FD' : '#1A237E')
+                            : 'transparent',
                         '&:hover': {
                             backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                         },
@@ -110,8 +119,10 @@ const Categories = ({
                     <ListItemText
                         primary={t('categories.allCategories')}
                         primaryTypographyProps={{
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                            fontWeight: selectedCategory === 'all' ? 600 : 500
+                            color: selectedCategory === 'all'
+                                ? '#3B7DED'
+                                : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
+                            fontWeight: selectedCategory === 'all' ? 700 : 500
                         }}
                     />
                     <Typography
@@ -141,6 +152,10 @@ const Categories = ({
                             sx={{
                                 padding: '16px 20px',
                                 cursor: 'pointer',
+                                borderLeft: selectedCategory === category.id ? '4px solid #3B7DED' : '4px solid transparent',
+                                backgroundColor: selectedCategory === category.id
+                                    ? (themeMode === 'light' ? '#E3F2FD' : '#1A237E')
+                                    : 'transparent',
                                 '&:hover': {
                                     backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                                 },
@@ -158,8 +173,10 @@ const Categories = ({
                             <ListItemText
                                 primary={category.name}
                                 primaryTypographyProps={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                    fontWeight: selectedCategory === category.id ? 600 : 500
+                                    color: selectedCategory === category.id
+                                        ? '#3B7DED'
+                                        : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
+                                    fontWeight: selectedCategory === category.id ? 700 : 500
                                 }}
                             />
                             {getBubbleCount(category.id) > 0 && (
@@ -223,7 +240,7 @@ const Categories = ({
                     />
                 </ListItem>
             </List>
-        </Drawer>
+        </Box>
     );
 };
 

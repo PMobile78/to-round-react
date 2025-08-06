@@ -126,6 +126,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false); // Состояние панели категорий
     const [selectedCategory, setSelectedCategory] = useState(null); // Выбранная категория
+    const [categoriesPanelEnabled, setCategoriesPanelEnabled] = useState(() => {
+        const saved = localStorage.getItem('bubbles-categories-panel-enabled');
+        return saved ? JSON.parse(saved) : false;
+    }); // Постоянное отображение панели категорий
     const [categoriesDialog, setCategoriesDialog] = useState(false); // Диалог управления категориями
     const [fontSettingsDialog, setFontSettingsDialog] = useState(false); // Диалог настроек шрифта
     const [fontSize, setFontSize] = useState(() => {
@@ -239,7 +243,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Function to get canvas dimensions depending on screen size
     const getCanvasSize = () => {
         return {
-            width: window.innerWidth,
+            width: window.innerWidth - (!isMobile && categoriesPanelEnabled ? 280 : 0),
             height: window.innerHeight
         };
     };
@@ -1489,7 +1493,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     const handleCategorySelect = (categoryId) => {
         setSelectedCategory(categoryId);
-        setCategoriesDrawerOpen(false);
+        // Панель не закрывается при выборе категории, если она постоянно включена
 
         if (categoryId === 'all') {
             // Показываем все пузыри - устанавливаем все теги
@@ -1507,8 +1511,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         }
     };
 
-    const handleOpenCategories = () => {
-        setCategoriesDrawerOpen(true);
+    const handleToggleCategoriesPanel = () => {
+        const newValue = !categoriesPanelEnabled;
+        setCategoriesPanelEnabled(newValue);
+        localStorage.setItem('bubbles-categories-panel-enabled', JSON.stringify(newValue));
+
+        // Полное обновление страницы при переключении панели категорий
+        setTimeout(() => {
+            window.location.reload();
+        }, 100);
     };
 
     // Функция выхода
@@ -1901,11 +1912,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     return (
         <Box sx={{
-            width: '100vw',
+            width: (!isMobile && categoriesPanelEnabled) ? 'calc(100vw - 280px)' : '100vw',
             height: '100vh',
             overflow: 'hidden',
             position: 'relative',
-            background: theme.palette.background.bubbleView
+            background: theme.palette.background.bubbleView,
+            marginLeft: (!isMobile && categoriesPanelEnabled) ? '280px' : '0px',
+            transition: 'margin-left 0.3s ease, width 0.3s ease'
         }}>
             {/* Заголовок и кнопки - адаптивный */}
             {!isMobile ? (
@@ -1913,11 +1926,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     <Box sx={{
                         position: 'absolute',
                         top: 20,
-                        left: 20,
+                        left: (!isMobile && categoriesPanelEnabled) ? 20 : 20,
                         zIndex: 1000,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 2
+                        gap: 2,
+                        transition: 'left 0.3s ease'
                     }}>
                         <IconButton
                             onClick={() => setMenuDrawerOpen(true)}
@@ -2102,21 +2116,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         {/* View Mode Toggle */}
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                             <Button
-                                onClick={handleOpenCategories}
-                                variant="outlined"
-                                size="small"
-                                startIcon={<Category />}
-                                sx={{
-                                    ...getOutlinedButtonStyles(),
-                                    height: 36,
-                                    backgroundColor: selectedCategory
-                                        ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
-                                        : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent')
-                                }}
-                            >
-                                {selectedCategory === 'all' ? t('categories.allCategories') : selectedCategory ? tags.find(t => t.id === selectedCategory)?.name || t('bubbles.taskCategories') : t('bubbles.taskCategories')}
-                            </Button>
-                            <Button
                                 onClick={() => setListViewDialog(true)}
                                 variant="outlined"
                                 size="small"
@@ -2214,17 +2213,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         </IconButton>
 
                         {/* View Mode Toggle for Mobile */}
-                        <IconButton
-                            onClick={handleOpenCategories}
-                            sx={{
-                                ...getButtonStyles(),
-                                backgroundColor: selectedCategory
-                                    ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)')
-                                    : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
-                            }}
-                        >
-                            <Category />
-                        </IconButton>
                         <IconButton
                             onClick={() => setListViewDialog(true)}
                             sx={getButtonStyles()}
@@ -2770,7 +2758,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     sx: {
                         width: isMobile ? '70%' : 300,
                         maxWidth: '85%',
-                        backgroundColor: themeMode === 'light' ? '#FFFFFF' : '#1e1e1e'
+                        backgroundColor: themeMode === 'light' ? '#FFFFFF' : '#1e1e1e',
+                        zIndex: 1300 // Выше панели категорий
                     }
                 }}
             >
@@ -2908,6 +2897,55 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 <Switch
                                     checked={bubbleBackgroundEnabled}
                                     onChange={handleToggleBubbleBackground}
+                                    size="small"
+                                    sx={{
+                                        '& .MuiSwitch-switchBase.Mui-checked': {
+                                            color: themeMode === 'light' ? '#3B7DED' : '#90CAF9'
+                                        },
+                                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                            backgroundColor: themeMode === 'light' ? '#3B7DED' : '#90CAF9'
+                                        }
+                                    }}
+                                />
+                            </Box>
+                        </ListItem>
+
+                        {/* Categories Panel Toggle */}
+                        <ListItem sx={{
+                            padding: '16px 24px',
+                            opacity: isMobile ? 0.5 : 1,
+                            pointerEvents: isMobile ? 'none' : 'auto'
+                        }}>
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                                <Category sx={{
+                                    color: isMobile
+                                        ? (themeMode === 'light' ? '#E0E0E0' : '#666666')
+                                        : (themeMode === 'light' ? '#BDC3C7' : '#aaaaaa')
+                                }} />
+                            </ListItemIcon>
+                            <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" sx={{
+                                    color: isMobile
+                                        ? (themeMode === 'light' ? '#B0B0B0' : '#666666')
+                                        : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
+                                    fontWeight: 500,
+                                    marginBottom: 1
+                                }}>
+                                    {t('bubbles.taskCategories')}
+                                    {isMobile && (
+                                        <Typography component="span" variant="caption" sx={{
+                                            color: themeMode === 'light' ? '#B0B0B0' : '#666666',
+                                            marginLeft: 1,
+                                            fontStyle: 'italic'
+                                        }}>
+                                            (Desktop only)
+                                        </Typography>
+                                    )}
+                                </Typography>
+                                <Switch
+                                    checked={categoriesPanelEnabled}
+                                    onChange={handleToggleCategoriesPanel}
+                                    disabled={isMobile}
                                     size="small"
                                     sx={{
                                         '& .MuiSwitch-switchBase.Mui-checked': {
@@ -3825,18 +3863,21 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 </Box>
             </Drawer>
 
-            {/* Панель категорий */}
-            <Categories
-                open={categoriesDrawerOpen}
-                onClose={() => setCategoriesDrawerOpen(false)}
-                tags={tags}
-                selectedCategory={selectedCategory}
-                onCategorySelect={handleCategorySelect}
-                themeMode={themeMode}
-                bubbleCounts={getCategoryBubbleCounts()}
-                onOpenTagDialog={() => setCategoriesDialog(true)}
-                bubbles={bubbles}
-            />
+            {/* Панель категорий - только для десктопа */}
+            {!isMobile && (
+                <Categories
+                    open={categoriesPanelEnabled}
+                    onClose={() => setCategoriesPanelEnabled(false)}
+                    tags={tags}
+                    selectedCategory={selectedCategory}
+                    onCategorySelect={handleCategorySelect}
+                    themeMode={themeMode}
+                    bubbleCounts={getCategoryBubbleCounts()}
+                    onOpenTagDialog={() => setCategoriesDialog(true)}
+                    bubbles={bubbles}
+                    isPermanent={categoriesPanelEnabled}
+                />
+            )}
 
         </Box>
     );
