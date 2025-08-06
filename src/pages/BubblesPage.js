@@ -63,6 +63,7 @@ import { FilterMenu } from '../components/FilterMenu';
 import ListView from '../components/ListView';
 import SearchField from '../components/SearchField';
 import Categories from '../components/Categories';
+import MobileCategorySelector from '../components/MobileCategorySelector';
 import useSearch from '../hooks/useSearch';
 import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -1516,10 +1517,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setCategoriesPanelEnabled(newValue);
         localStorage.setItem('bubbles-categories-panel-enabled', JSON.stringify(newValue));
 
-        // Полное обновление страницы при переключении панели категорий
-        setTimeout(() => {
-            window.location.reload();
-        }, 100);
+        // Полное обновление страницы для десктопной версии
+        if (!isMobile) {
+            setTimeout(() => {
+                window.location.reload();
+            }, 100);
+        }
     };
 
     // Функция выхода
@@ -1956,12 +1959,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                     objectFit: 'contain'
                                 }}
                             />
-                            <Typography variant="h4" sx={{
+                            {/* <Typography variant="h4" sx={{
                                 color: themeMode === 'light' ? '#2C3E50' : 'white',
                                 fontWeight: 'bold'
                             }}>
                                 {t('bubbles.title')}
-                            </Typography>
+                            </Typography> */}
                         </Box>
                         <Button
                             variant="contained"
@@ -2001,7 +2004,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     </Box>
                 </>
             ) : (
-                // Mobile version without title
+                // Mobile version without category selector
                 <Box sx={{
                     position: 'absolute',
                     top: 10,
@@ -2023,6 +2026,26 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             )}
 
 
+
+            {/* Мобильный селектор категорий */}
+            {isMobile && categoriesPanelEnabled && (
+                <Box sx={{
+                    position: 'absolute',
+                    top: 70,
+                    left: 20,
+                    right: 20,
+                    zIndex: 1000,
+                    transition: 'all 0.3s ease'
+                }}>
+                    <MobileCategorySelector
+                        tags={tags}
+                        selectedCategory={selectedCategory}
+                        onCategorySelect={handleCategorySelect}
+                        themeMode={themeMode}
+                        bubbleCounts={getCategoryBubbleCounts()}
+                    />
+                </Box>
+            )}
 
             {/* Плавающие кнопки для мобильных устройств */}
             {isMobile && (
@@ -2911,41 +2934,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         </ListItem>
 
                         {/* Categories Panel Toggle */}
-                        <ListItem sx={{
-                            padding: '16px 24px',
-                            opacity: isMobile ? 0.5 : 1,
-                            pointerEvents: isMobile ? 'none' : 'auto'
-                        }}>
+                        {/* Переключатель панели категорий */}
+                        <ListItem sx={{ padding: '16px 24px' }}>
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Category sx={{
-                                    color: isMobile
-                                        ? (themeMode === 'light' ? '#E0E0E0' : '#666666')
-                                        : (themeMode === 'light' ? '#BDC3C7' : '#aaaaaa')
-                                }} />
+                                <Category sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <Box sx={{ flex: 1 }}>
                                 <Typography variant="body2" sx={{
-                                    color: isMobile
-                                        ? (themeMode === 'light' ? '#B0B0B0' : '#666666')
-                                        : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
+                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
                                     fontWeight: 500,
                                     marginBottom: 1
                                 }}>
                                     {t('bubbles.taskCategories')}
-                                    {isMobile && (
-                                        <Typography component="span" variant="caption" sx={{
-                                            color: themeMode === 'light' ? '#B0B0B0' : '#666666',
-                                            marginLeft: 1,
-                                            fontStyle: 'italic'
-                                        }}>
-                                            (Desktop only)
-                                        </Typography>
-                                    )}
                                 </Typography>
                                 <Switch
                                     checked={categoriesPanelEnabled}
                                     onChange={handleToggleCategoriesPanel}
-                                    disabled={isMobile}
                                     size="small"
                                     sx={{
                                         '& .MuiSwitch-switchBase.Mui-checked': {
