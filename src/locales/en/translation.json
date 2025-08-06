@@ -138,8 +138,8 @@
         "enterEmail": "Please enter your email",
         "resetEmailSent": "Password reset email sent",
         "logoutConfirm": "Confirm Logout",
-        "logoutMessage": "Are you sure you want to logout from your account?",
-        "approveLogout": "Approve"
+        "logoutMessage": "Are you sure you want to log out from your account?",
+        "approveLogout": "Logout"
     },
     "common": {
         "language": "Language",

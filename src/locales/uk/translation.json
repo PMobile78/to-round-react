@@ -140,7 +140,7 @@
         "resetEmailSent": "Лист для скидання пароля надіслано",
         "logoutConfirm": "Підтвердження виходу",
         "logoutMessage": "Ви впевнені, що хочете вийти з вашого облікового запису?",
-        "approveLogout": "Підтвердити"
+        "approveLogout": "Вийти"
     },
     "common": {
         "language": "Мова",
