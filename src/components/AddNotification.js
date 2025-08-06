@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useTranslation } from 'react-i18next';
 
 const PRESETS = [
     { value: '5m', label: '5 minutes before' },
@@ -35,14 +36,14 @@ const CUSTOM_UNITS = [
     { value: 'weeks', label: 'Weeks' }
 ];
 
-function formatNotificationText(notification) {
+function formatNotificationText(notification, getPresets, getCustomUnits) {
     if (typeof notification === 'string') {
         // Preset
-        const preset = PRESETS.find(p => p.value === notification);
+        const preset = getPresets().find(p => p.value === notification);
         return preset ? preset.label : notification;
     }
     if (notification.type === 'custom') {
-        const unit = CUSTOM_UNITS.find(u => u.value === notification.unit);
+        const unit = getCustomUnits().find(u => u.value === notification.unit);
         return `${notification.value} ${unit ? unit.label : notification.unit}`;
     }
     return '';
@@ -56,11 +57,29 @@ export default function AddNotification({
     onClose,
     dueDate // <-- добавляем dueDate как проп
 }) {
+    const { t } = useTranslation();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selected, setSelected] = useState('');
     const [customOpen, setCustomOpen] = useState(false);
     const [customValue, setCustomValue] = useState('');
     const [customUnit, setCustomUnit] = useState('minutes');
+
+    // Получаем переведенные константы
+    const getPresets = () => [
+        { value: '5m', label: '5 minutes before' },
+        { value: '10m', label: '10 minutes before' },
+        { value: '15m', label: '15 minutes before' },
+        { value: '1h', label: '1 hour before' },
+        { value: '1d', label: '1 day before' },
+        { value: 'custom', label: 'Custom...' }
+    ];
+
+    const getCustomUnits = () => [
+        { value: 'minutes', label: t('bubbles.minutesBefore') },
+        { value: 'hours', label: t('bubbles.hours') },
+        { value: 'days', label: t('bubbles.days') },
+        { value: 'weeks', label: t('bubbles.weeks') }
+    ];
 
     // Вспомогательная функция для вычисления offset в миллисекундах
     function getOffsetMs(notification) {
@@ -153,7 +172,7 @@ export default function AddNotification({
                             <NotificationsActiveIcon color="primary" />
                         </ListItemIcon>
                         <ListItemText
-                            primary={formatNotificationText(notif)}
+                            primary={formatNotificationText(notif, getPresets, getCustomUnits)}
                             primaryTypographyProps={isNotificationOverdue(notif) ? { sx: { textDecoration: 'line-through', color: '#b0b0b0' } } : {}}
                         />
                     </ListItem>
@@ -161,15 +180,15 @@ export default function AddNotification({
             </List>
             {/* Кнопка добавления */}
             <Button variant="outlined" onClick={() => setDialogOpen(true)} sx={{ mt: 0, mb: 2 }}>
-                Add notification
+                {t('bubbles.remindMe')}
             </Button>
 
             {/* Диалог выбора уведомления */}
             <Dialog open={dialogOpen} onClose={() => { setDialogOpen(false); setSelected(''); }}>
-                <DialogTitle>Add notification</DialogTitle>
+                <DialogTitle>{t('bubbles.addNotification')}</DialogTitle>
                 <DialogContent>
                     <RadioGroup value={selected} onChange={handleRadioChange}>
-                        {PRESETS.map(opt => (
+                        {getPresets().map(opt => (
                             <FormControlLabel
                                 key={opt.value}
                                 value={opt.value}
@@ -181,18 +200,18 @@ export default function AddNotification({
                     </RadioGroup>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => { setDialogOpen(false); setSelected(''); }}>Cancel</Button>
-                    <Button onClick={handleSave} variant="contained">Save</Button>
+                    <Button onClick={() => { setDialogOpen(false); setSelected(''); }}>{t('bubbles.cancel')}</Button>
+                    <Button onClick={handleSave} variant="contained">{t('bubbles.save')}</Button>
                 </DialogActions>
             </Dialog>
 
             {/* Диалог custom-уведомления */}
             <Dialog open={customOpen} onClose={() => { setCustomOpen(false); setSelected(''); }}>
-                <DialogTitle>Custom notification</DialogTitle>
+                <DialogTitle>{t('bubbles.customNotification')}</DialogTitle>
                 <DialogContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
                         <TextField
-                            label="Value"
+                            label={t('bubbles.value')}
                             type="number"
                             value={customValue}
                             onChange={e => setCustomValue(e.target.value)}
@@ -204,15 +223,15 @@ export default function AddNotification({
                             value={customUnit}
                             onChange={e => setCustomUnit(e.target.value)}
                         >
-                            {CUSTOM_UNITS.map(opt => (
+                            {getCustomUnits().map(opt => (
                                 <FormControlLabel key={opt.value} value={opt.value} control={<Radio />} label={opt.label} />
                             ))}
                         </RadioGroup>
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => { setCustomOpen(false); setSelected(''); }}>Cancel</Button>
-                    <Button onClick={handleCustomSave} variant="contained" disabled={!customValue || isNaN(Number(customValue)) || Number(customValue) <= 0}>Save</Button>
+                    <Button onClick={() => { setCustomOpen(false); setSelected(''); }}>{t('bubbles.cancel')}</Button>
+                    <Button onClick={handleCustomSave} variant="contained" disabled={!customValue || isNaN(Number(customValue)) || Number(customValue) <= 0}>{t('bubbles.save')}</Button>
                 </DialogActions>
             </Dialog>
         </Box>

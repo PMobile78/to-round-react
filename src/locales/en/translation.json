@@ -100,7 +100,16 @@
         "dueDateLabel": "Due date",
         "overdueNotificationTitle": "Overdue task!",
         "overdueNotificationBody": "You have an overdue task.",
-        "overdueNotificationBodyWithTitle": "Overdue: {{title}}"
+        "overdueNotificationBodyWithTitle": "Overdue: {{title}}",
+        "remindMe": "Remind me",
+        "addNotification": "Add notification",
+        "customNotification": "Custom notification",
+        "customReminder": "Custom reminder",
+        "value": "Value",
+        "minutesBefore": "Minutes before",
+        "hours": "Hours",
+        "days": "Days",
+        "weeks": "Weeks"
     },
     "auth": {
         "welcome": "Welcome",

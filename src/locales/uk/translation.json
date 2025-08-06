@@ -101,7 +101,16 @@
         "dueDateLabel": "Термін виконання",
         "overdueNotificationTitle": "Прострочене завдання!",
         "overdueNotificationBody": "У вас є прострочене завдання.",
-        "overdueNotificationBodyWithTitle": "Прострочено: {{title}}"
+        "overdueNotificationBodyWithTitle": "Прострочено: {{title}}",
+        "remindMe": "Нагадати мені",
+        "addNotification": "Додати сповіщення",
+        "customNotification": "Власне сповіщення",
+        "customReminder": "Власне нагадування",
+        "value": "Значення",
+        "minutesBefore": "Хвилин до",
+        "hours": "Годин",
+        "days": "Днів",
+        "weeks": "Тижнів"
     },
     "auth": {
         "welcome": "Ласкаво просимо",
