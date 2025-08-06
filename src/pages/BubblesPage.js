@@ -32,7 +32,7 @@ import {
     Slider,
 
 } from '@mui/material';
-import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward, Search } from '@mui/icons-material';
+import { CloseOutlined, DeleteOutlined, Add, Clear, Label, Edit, LocalOffer, Logout, FilterList, Check, Menu as MenuIcon, Settings, Info, Category, Sell, CheckCircle, ViewList, Restore, ViewModule, Sort, ArrowUpward, ArrowDownward, Search, LanguageOutlined, PaletteOutlined } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
@@ -1868,13 +1868,27 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         >
                             <MenuIcon />
                         </IconButton>
-                        <Typography variant="h4" sx={{
-                            color: themeMode === 'light' ? '#2C3E50' : 'white',
-                            fontWeight: 'bold'
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
                         }}>
-                            {/* 🫧 {t('bubbles.title')} */}
-                            🫧
-                        </Typography>
+                            <img
+                                src="/to-round-react/bubbles.png"
+                                alt="Bubbles"
+                                style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    objectFit: 'contain'
+                                }}
+                            />
+                            <Typography variant="h4" sx={{
+                                color: themeMode === 'light' ? '#2C3E50' : 'white',
+                                fontWeight: 'bold'
+                            }}>
+                                {t('bubbles.title')}
+                            </Typography>
+                        </Box>
                         <Button
                             variant="contained"
                             onClick={openCreateDialog}
@@ -2696,12 +2710,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         {/* Language Selector */}
                         <ListItem sx={{ padding: '16px 24px' }}>
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Typography sx={{
-                                    color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
-                                    fontSize: '20px'
-                                }}>
-                                    🌐
-                                </Typography>
+                                <LanguageOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <Box sx={{ flex: 1 }}>
                                 <Typography variant="body2" sx={{
@@ -2723,12 +2732,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         {/* Theme Toggle */}
                         <ListItem sx={{ padding: '16px 24px' }}>
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Typography sx={{
-                                    color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
-                                    fontSize: '20px'
-                                }}>
-                                    🎨
-                                </Typography>
+                                <PaletteOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <Box sx={{ flex: 1 }}>
                                 <Typography variant="body2" sx={{
@@ -2805,12 +2809,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         {/* Bubble Background Toggle */}
                         <ListItem sx={{ padding: '16px 24px' }}>
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Typography sx={{
-                                    color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
-                                    fontSize: '20px'
-                                }}>
-                                    🎨
-                                </Typography>
+                                <LanguageOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                             </ListItemIcon>
                             <Box sx={{ flex: 1 }}>
                                 <Typography variant="body2" sx={{

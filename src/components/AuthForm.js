@@ -140,9 +140,17 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                 }}
             >
                 <Box sx={{ textAlign: 'center', marginBottom: 3 }}>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#667eea' }}>
-                        🫧
-                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: 1 }}>
+                        <img
+                            src="/to-round-react/bubbles.png"
+                            alt="Bubbles"
+                            style={{
+                                width: '48px',
+                                height: '48px',
+                                objectFit: 'contain'
+                            }}
+                        />
+                    </Box>
                     <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#667eea', marginBottom: 1 }}>
                         To-Round
                     </Typography>
