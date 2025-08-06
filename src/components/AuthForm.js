@@ -159,7 +159,7 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                 >
                     <Tab label={t('auth.login')} />
                     {/* Temporary disable register tab */}
-                    {/* <Tab label={t('auth.register')} /> */}
+                    <Tab label={t('auth.register')} />
                 </Tabs>
 
                 {error && (
