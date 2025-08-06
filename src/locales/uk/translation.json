@@ -143,5 +143,13 @@
     },
     "language": {
         "title": "Мова"
+    },
+    "categories": {
+        "title": "Категорії",
+        "today": "Сьогодні",
+        "tomorrow": "Завтра",
+        "upcoming": "Майбутні",
+        "someday": "Колись",
+        "customize": "Налаштувати"
     }
 }

@@ -142,5 +142,14 @@
     },
     "language": {
         "title": "Language"
+    },
+    "categories": {
+        "title": "Categories",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "upcoming": "Upcoming",
+        "someday": "Someday",
+        "customize": "Customize",
+        "allCategories": "All Categories"
     }
 }

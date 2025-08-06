@@ -62,6 +62,7 @@ import {
 import { FilterMenu } from '../components/FilterMenu';
 import ListView from '../components/ListView';
 import SearchField from '../components/SearchField';
+import Categories from '../components/Categories';
 import useSearch from '../hooks/useSearch';
 import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -123,6 +124,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
+    const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false); // Состояние панели категорий
+    const [selectedCategory, setSelectedCategory] = useState(null); // Выбранная категория
     const [categoriesDialog, setCategoriesDialog] = useState(false); // Диалог управления категориями
     const [fontSettingsDialog, setFontSettingsDialog] = useState(false); // Диалог настроек шрифта
     const [fontSize, setFontSize] = useState(() => {
@@ -595,6 +598,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
         return () => unsubscribe();
     }, []);
+
+    // Функция для фильтрации пузырей по категории (тегу)
+    const getBubblesByCategory = (categoryId) => {
+        return bubbles.filter(bubble => {
+            if (bubble.status !== BUBBLE_STATUS.ACTIVE) return false;
+            return bubble.tagId === categoryId;
+        });
+    };
 
     // Memoized function for filtering bubbles (for physics world - only active)
     const getFilteredBubbles = useMemo(() => {
@@ -1291,6 +1302,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             localStorage.setItem('bubbles-filter-tags', JSON.stringify(newFilterTags));
             return newFilterTags;
         });
+
+        // Сбрасываем выбранную категорию при ручном изменении фильтров
+        setSelectedCategory(null);
     }, []);
 
     const handleNoTagFilterChange = useCallback(() => {
@@ -1299,11 +1313,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             localStorage.setItem('bubbles-show-no-tag', JSON.stringify(newShowNoTag));
             return newShowNoTag;
         });
+
+        // Сбрасываем выбранную категорию при ручном изменении фильтров
+        setSelectedCategory(null);
     }, []);
 
     const clearAllFilters = useCallback(() => {
         setFilterTags([]);
         setShowNoTag(false);
+        setSelectedCategory(null); // Сбрасываем выбранную категорию
         localStorage.setItem('bubbles-filter-tags', JSON.stringify([]));
         localStorage.setItem('bubbles-show-no-tag', JSON.stringify(false));
     }, []);
@@ -1312,6 +1330,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const allTagIds = tags.map(tag => tag.id);
         setFilterTags(allTagIds);
         setShowNoTag(true);
+        setSelectedCategory(null); // Сбрасываем выбранную категорию
         localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
         localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
     }, [tags]);
@@ -1455,6 +1474,41 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     const canCreateMoreTags = () => {
         return getAvailableColors().length > 0;
+    };
+
+    // Функции для работы с категориями (тегами)
+    const getCategoryBubbleCounts = () => {
+        const counts = {};
+        tags.forEach(tag => {
+            counts[tag.id] = bubbles.filter(bubble =>
+                bubble.status === BUBBLE_STATUS.ACTIVE && bubble.tagId === tag.id
+            ).length;
+        });
+        return counts;
+    };
+
+    const handleCategorySelect = (categoryId) => {
+        setSelectedCategory(categoryId);
+        setCategoriesDrawerOpen(false);
+
+        if (categoryId === 'all') {
+            // Показываем все пузыри - устанавливаем все теги
+            const allTagIds = tags.map(tag => tag.id);
+            setFilterTags(allTagIds);
+            setShowNoTag(true);
+            localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
+            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
+        } else {
+            // Устанавливаем фильтр только на выбранную категорию
+            setFilterTags([categoryId]);
+            setShowNoTag(false); // Отключаем показ пузырей без тегов
+            localStorage.setItem('bubbles-filter-tags', JSON.stringify([categoryId]));
+            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(false));
+        }
+    };
+
+    const handleOpenCategories = () => {
+        setCategoriesDrawerOpen(true);
     };
 
     // Функция выхода
@@ -2048,6 +2102,21 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         {/* View Mode Toggle */}
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                             <Button
+                                onClick={handleOpenCategories}
+                                variant="outlined"
+                                size="small"
+                                startIcon={<Category />}
+                                sx={{
+                                    ...getOutlinedButtonStyles(),
+                                    height: 36,
+                                    backgroundColor: selectedCategory
+                                        ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
+                                        : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent')
+                                }}
+                            >
+                                {selectedCategory === 'all' ? t('categories.allCategories') : selectedCategory ? tags.find(t => t.id === selectedCategory)?.name || t('bubbles.taskCategories') : t('bubbles.taskCategories')}
+                            </Button>
+                            <Button
                                 onClick={() => setListViewDialog(true)}
                                 variant="outlined"
                                 size="small"
@@ -2145,6 +2214,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         </IconButton>
 
                         {/* View Mode Toggle for Mobile */}
+                        <IconButton
+                            onClick={handleOpenCategories}
+                            sx={{
+                                ...getButtonStyles(),
+                                backgroundColor: selectedCategory
+                                    ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)')
+                                    : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
+                            }}
+                        >
+                            <Category />
+                        </IconButton>
                         <IconButton
                             onClick={() => setListViewDialog(true)}
                             sx={getButtonStyles()}
@@ -3744,6 +3824,19 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     />
                 </Box>
             </Drawer>
+
+            {/* Панель категорий */}
+            <Categories
+                open={categoriesDrawerOpen}
+                onClose={() => setCategoriesDrawerOpen(false)}
+                tags={tags}
+                selectedCategory={selectedCategory}
+                onCategorySelect={handleCategorySelect}
+                themeMode={themeMode}
+                bubbleCounts={getCategoryBubbleCounts()}
+                onOpenTagDialog={() => setCategoriesDialog(true)}
+                bubbles={bubbles}
+            />
 
         </Box>
     );
