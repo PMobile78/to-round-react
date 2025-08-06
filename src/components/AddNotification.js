@@ -14,7 +14,8 @@ import {
     ListItem,
     ListItemIcon,
     ListItemText,
-    IconButton
+    IconButton,
+    Tooltip
 } from '@mui/material';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -55,7 +56,8 @@ export default function AddNotification({
     onDelete,
     open,
     onClose,
-    dueDate // <-- добавляем dueDate как проп
+    dueDate, // <-- добавляем dueDate как проп
+    themeMode = 'light' // добавляем themeMode
 }) {
     const { t } = useTranslation();
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -66,12 +68,12 @@ export default function AddNotification({
 
     // Получаем переведенные константы
     const getPresets = () => [
-        { value: '5m', label: '5 minutes before' },
-        { value: '10m', label: '10 minutes before' },
-        { value: '15m', label: '15 minutes before' },
-        { value: '1h', label: '1 hour before' },
-        { value: '1d', label: '1 day before' },
-        { value: 'custom', label: 'Custom...' }
+        { value: '5m', label: t('bubbles.5minutesBefore') },
+        { value: '10m', label: t('bubbles.10minutesBefore') },
+        { value: '15m', label: t('bubbles.15minutesBefore') },
+        { value: '1h', label: t('bubbles.1hourBefore') },
+        { value: '1d', label: t('bubbles.1dayBefore') },
+        { value: 'custom', label: t('bubbles.custom') }
     ];
 
     const getCustomUnits = () => [
@@ -179,9 +181,47 @@ export default function AddNotification({
                 ))}
             </List>
             {/* Кнопка добавления */}
-            <Button variant="outlined" onClick={() => setDialogOpen(true)} sx={{ mt: 0, mb: 2 }}>
-                {t('bubbles.remindMe')}
-            </Button>
+            <Tooltip
+                title={dueDate ? t('bubbles.remindMe') : t('bubbles.remindMeDisabled')}
+                placement="top"
+            >
+                <span>
+                    <Button
+                        variant="outlined"
+                        onClick={() => setDialogOpen(true)}
+                        disabled={!dueDate}
+                        sx={{
+                            mt: 0,
+                            mb: 2,
+                            opacity: dueDate ? 1 : 0.5,
+                            '&:disabled': {
+                                backgroundColor: themeMode === 'light'
+                                    ? 'rgba(0, 0, 0, 0.05)'
+                                    : 'rgba(255, 255, 255, 0.05)',
+                                color: themeMode === 'light'
+                                    ? 'rgba(0, 0, 0, 0.3)'
+                                    : 'rgba(255, 255, 255, 0.3)',
+                                borderColor: themeMode === 'light'
+                                    ? 'rgba(0, 0, 0, 0.2)'
+                                    : 'rgba(255, 255, 255, 0.2)'
+                            },
+                            '&.Mui-disabled': {
+                                backgroundColor: themeMode === 'light'
+                                    ? 'rgba(0, 0, 0, 0.05)'
+                                    : 'rgba(255, 255, 255, 0.05)',
+                                color: themeMode === 'light'
+                                    ? 'rgba(0, 0, 0, 0.3)'
+                                    : 'rgba(255, 255, 255, 0.3)',
+                                borderColor: themeMode === 'light'
+                                    ? 'rgba(0, 0, 0, 0.2)'
+                                    : 'rgba(255, 255, 255, 0.2)'
+                            }
+                        }}
+                    >
+                        {t('bubbles.remindMe')}
+                    </Button>
+                </span>
+            </Tooltip>
 
             {/* Диалог выбора уведомления */}
             <Dialog open={dialogOpen} onClose={() => { setDialogOpen(false); setSelected(''); }}>

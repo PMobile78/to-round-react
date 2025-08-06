@@ -109,7 +109,14 @@
         "minutesBefore": "Minutes before",
         "hours": "Hours",
         "days": "Days",
-        "weeks": "Weeks"
+        "weeks": "Weeks",
+        "remindMeDisabled": "Set due date to add reminders",
+        "5minutesBefore": "5 minutes before",
+        "10minutesBefore": "10 minutes before",
+        "15minutesBefore": "15 minutes before",
+        "1hourBefore": "1 hour before",
+        "1dayBefore": "1 day before",
+        "custom": "Custom..."
     },
     "auth": {
         "welcome": "Welcome",
