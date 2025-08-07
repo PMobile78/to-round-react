@@ -140,6 +140,59 @@ const Categories = ({
                     margin: '0 20px'
                 }} />
 
+                {/* No tags категория */}
+                <ListItem
+                    button
+                    onClick={() => onCategorySelect('no-tags')}
+                    selected={selectedCategory === 'no-tags'}
+                    sx={{
+                        padding: '16px 20px',
+                        cursor: 'pointer',
+                        borderLeft: selectedCategory === 'no-tags' ? '4px solid #3B7DED' : '4px solid transparent',
+                        backgroundColor: selectedCategory === 'no-tags'
+                            ? (themeMode === 'light' ? '#E3F2FD' : '#1A237E')
+                            : 'transparent',
+                        '&:hover': {
+                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                        },
+                        '&.Mui-selected': {
+                            backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E',
+                            '&:hover': {
+                                backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E'
+                            }
+                        }
+                    }}
+                >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                        <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                    </ListItemIcon>
+                    <ListItemText
+                        primary={t('bubbles.noTags')}
+                        primaryTypographyProps={{
+                            color: selectedCategory === 'no-tags'
+                                ? '#3B7DED'
+                                : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
+                            fontWeight: selectedCategory === 'no-tags' ? 700 : 500
+                        }}
+                    />
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            fontWeight: 'bold',
+                            fontSize: '12px',
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        {bubbles.filter(bubble => bubble.status === 'active' && !bubble.tagId).length}
+                    </Typography>
+                </ListItem>
+
+                <Divider sx={{
+                    backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
+                    margin: '0 20px'
+                }} />
+
                 {allCategories.map((category, index) => (
                     <React.Fragment key={category.id}>
                         <ListItem

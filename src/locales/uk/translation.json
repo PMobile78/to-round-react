@@ -89,6 +89,7 @@
         "additionalFilters": "Додаткові фільтри",
         "filterHelpText": "Використовуйте категорії для організації та швидкого пошуку ваших завдань.",
         "noTagsAvailable": "Немає доступних тегів",
+        "noTags": "Без тегів",
         "searchPlaceholder": "Пошук завдань",
         "searchResults": "Знайдено {{count}} результат",
         "searchResults_other": "Знайдено {{count}} результати",

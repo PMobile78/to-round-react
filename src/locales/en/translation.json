@@ -89,6 +89,7 @@
         "additionalFilters": "Additional Filters",
         "filterHelpText": "Use categories to organize and find your tasks faster.",
         "noTagsAvailable": "No tags available",
+        "noTags": "No tags",
         "searchPlaceholder": "Search tasks",
         "searchResults": "Found {{count}} result",
         "searchResults_other": "Found {{count}} results",

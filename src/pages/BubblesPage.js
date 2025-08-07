@@ -1498,6 +1498,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             setShowNoTag(true);
             localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
             localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
+        } else if (categoryId === 'no-tags') {
+            // Показываем только пузыри без тегов
+            setFilterTags([]);
+            setShowNoTag(true);
+            localStorage.setItem('bubbles-filter-tags', JSON.stringify([]));
+            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
         } else {
             // Устанавливаем фильтр только на выбранную категорию
             setFilterTags([categoryId]);
