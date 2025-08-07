@@ -378,10 +378,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         };
                         initialBubbles.push(bubble);
                     });
-                    World.add(engine.world, initialBubbles.map(b => b.body));
+                    // Убираем добавление всех пузырей в физический мир - они будут добавлены после фильтрации
                 }
 
                 setBubbles(initialBubbles);
+                // Не добавляем пузыри в физический мир сразу - они будут добавлены после применения фильтров
             } catch (error) {
                 console.error('Error loading initial bubbles:', error);
                 setBubbles([]);
@@ -677,6 +678,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         }
     }, [filterTags, showNoTag, tags]);
 
+
+
     // Автоматическая активация "All categories" при включении панели категорий
     useEffect(() => {
         if (categoriesPanelEnabled && tags.length > 0) {
@@ -733,6 +736,26 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         });
     }, [bubbles, tags, filterTags, showNoTag]);
 
+    // Применение фильтрации при загрузке пузырей
+    useEffect(() => {
+        if (bubbles.length > 0 && engineRef.current) {
+            // Применяем фильтрацию сразу после загрузки пузырей
+            const filteredIds = new Set(getFilteredBubbles.map(b => b.id));
+
+            bubbles.forEach(bubble => {
+                if (bubble.body) {
+                    const isVisible = filteredIds.has(bubble.id);
+                    const isCurrentlyInWorld = engineRef.current.world.bodies.includes(bubble.body);
+
+                    if (isVisible && !isCurrentlyInWorld) {
+                        // Добавляем пузырь в физический мир только если он проходит фильтрацию
+                        Matter.World.add(engineRef.current.world, bubble.body);
+                    }
+                }
+            });
+        }
+    }, [bubbles, getFilteredBubbles]);
+
     // Используем хук поиска только для определения найденных пузырей (не для фильтрации)
     const {
         filteredItems: searchFoundBubbles,
@@ -765,100 +788,43 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 const hasSearchQuery = debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim();
 
                 if (isVisible && !isCurrentlyInWorld) {
-                    // Only create new physics body if the bubble doesn't already have one or it was removed
-                    if (!bubble.body || !engineRef.current.world.bodies.includes(bubble.body)) {
-                        // Create new physics body for restored bubbles to make them fall from top
-                        const margin = isMobile ? 50 : 100;
-                        const newX = Math.random() * (canvasSize.width - margin * 2) + margin;
-                        const newY = 50; // Drop from top
+                    // Add bubble to physical world if it's visible and not already there
+                    Matter.World.add(engineRef.current.world, bubble.body);
 
-                        // Determine stroke color and tag color based on tag
-                        let strokeColor = '#B0B0B0';
-                        let tagColor = null;
+                    // Update styles for the bubble
+                    bubble.body.render.opacity = hasSearchQuery ? (isFound ? 1 : 0.3) : 1;
+
+                    // Обновляем обводку
+                    if (hasSearchQuery && isFound) {
+                        // Определяем цвет подсветки на основе тега
+                        let highlightColor = '#B0B0B0'; // Серый цвет для пузырей без тегов
                         if (bubble.tagId) {
                             const tag = tags.find(t => t.id === bubble.tagId);
                             if (tag) {
-                                strokeColor = tag.color;
-                                tagColor = tag.color;
+                                highlightColor = tag.color;
                             }
                         }
-
-                        // Create new physics body with new position
-                        // Определяем цвет подсветки для найденных пузырей
-                        let highlightColor = '#B0B0B0'; // Серый цвет для пузырей без тегов
-                        if (hasSearchQuery && isFound) {
-                            if (bubble.tagId) {
-                                const tag = tags.find(t => t.id === bubble.tagId);
-                                if (tag) {
-                                    highlightColor = tag.color;
-                                }
-                            }
-                            // Если нет тега, highlightColor остается серым (#B0B0B0)
-                        }
-
-                        const newBody = Matter.Bodies.circle(newX, newY, bubble.radius, {
-                            restitution: 0.8,
-                            frictionAir: 0.01,
-                            render: {
-                                fillStyle: getBubbleFillStyle(tagColor),
-                                strokeStyle: hasSearchQuery && isFound
-                                    ? highlightColor  // Цвет тега для найденных
-                                    : strokeColor,
-                                lineWidth: hasSearchQuery && isFound ? 4 : 3,
-                                // Прозрачность в зависимости от поиска
-                                opacity: hasSearchQuery ? (isFound ? 1 : 0.3) : 1
-                            }
-                        });
-
-                        // Добавляем эффект свечения для найденных пузырей
-                        if (hasSearchQuery && isFound) {
-                            newBody.render.shadowColor = highlightColor;
-                            newBody.render.shadowBlur = 15;
-                            newBody.render.shadowOffsetX = 0;
-                            newBody.render.shadowOffsetY = 0;
-                        }
-
-                        // Update bubble with new physics body
-                        bubble.body = newBody;
-
-                        // Add new bubble to the physical world
-                        Matter.World.add(engineRef.current.world, newBody);
+                        bubble.body.render.strokeStyle = highlightColor;
+                        bubble.body.render.lineWidth = 4;
+                        // Добавляем свечение цветом тега
+                        bubble.body.render.shadowColor = highlightColor;
+                        bubble.body.render.shadowBlur = 15;
+                        bubble.body.render.shadowOffsetX = 0;
+                        bubble.body.render.shadowOffsetY = 0;
                     } else {
-                        // Update styles for existing bubbles
-                        bubble.body.render.opacity = hasSearchQuery ? (isFound ? 1 : 0.3) : 1;
-
-                        // Обновляем обводку
-                        if (hasSearchQuery && isFound) {
-                            // Определяем цвет подсветки на основе тега
-                            let highlightColor = '#B0B0B0'; // Серый цвет для пузырей без тегов
-                            if (bubble.tagId) {
-                                const tag = tags.find(t => t.id === bubble.tagId);
-                                if (tag) {
-                                    highlightColor = tag.color;
-                                }
+                        // Возвращаем оригинальный цвет обводки
+                        let originalStrokeColor = '#B0B0B0';
+                        if (bubble.tagId) {
+                            const tag = tags.find(t => t.id === bubble.tagId);
+                            if (tag) {
+                                originalStrokeColor = tag.color;
                             }
-                            bubble.body.render.strokeStyle = highlightColor;
-                            bubble.body.render.lineWidth = 4;
-                            // Добавляем свечение цветом тега
-                            bubble.body.render.shadowColor = highlightColor;
-                            bubble.body.render.shadowBlur = 15;
-                            bubble.body.render.shadowOffsetX = 0;
-                            bubble.body.render.shadowOffsetY = 0;
-                        } else {
-                            // Возвращаем оригинальный цвет обводки
-                            let originalStrokeColor = '#B0B0B0';
-                            if (bubble.tagId) {
-                                const tag = tags.find(t => t.id === bubble.tagId);
-                                if (tag) {
-                                    originalStrokeColor = tag.color;
-                                }
-                            }
-                            bubble.body.render.strokeStyle = originalStrokeColor;
-                            bubble.body.render.lineWidth = 3;
-                            // Убираем свечение
-                            bubble.body.render.shadowColor = 'transparent';
-                            bubble.body.render.shadowBlur = 0;
                         }
+                        bubble.body.render.strokeStyle = originalStrokeColor;
+                        bubble.body.render.lineWidth = 3;
+                        // Убираем свечение
+                        bubble.body.render.shadowColor = 'transparent';
+                        bubble.body.render.shadowBlur = 0;
                     }
                 } else if (!isVisible && isCurrentlyInWorld) {
                     // Remove bubble from the physical world
@@ -902,7 +868,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 }
             }
         });
-    }, [getFilteredBubbles, bubbles, canvasSize, isMobile, tags, foundBubblesIds, debouncedBubblesSearchQuery]);
+    }, [getFilteredBubbles, bubbles, tags, foundBubblesIds, debouncedBubblesSearchQuery]);
 
 
 
