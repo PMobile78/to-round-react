@@ -29,19 +29,19 @@ const TaskFilterDrawer = ({
             open={open}
             onClose={onClose}
             PaperProps={{
-                elevation: 1,
+                elevation: 0,
                 sx: {
                     width: isMobile ? '85%' : 350,
                     maxWidth: '90%',
                     backgroundColor: containerBg,
                     color: textColor,
-                    boxShadow: 1
+                    boxShadow: 'none'
                 }
             }}
         >
-            <Box sx={{ padding: 0 }}>
+            <Box sx={{ padding: 0, minHeight: '100vh', backgroundColor: containerBg }}>
                 {/* Header */}
-                <Box sx={{ padding: 2, paddingBottom: 1, backgroundColor: containerBg }}>
+                <Box sx={{ padding: 2, paddingBottom: 1 }}>
                     <IconButton onClick={onClose} sx={{ color: textColor, padding: 0, marginBottom: 1 }}>
                         <CloseOutlined />
                     </IconButton>
