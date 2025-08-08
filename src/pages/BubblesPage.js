@@ -260,7 +260,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Function to get canvas dimensions depending on screen size
     const getCanvasSize = () => {
         return {
-            width: window.innerWidth - (!isMobile && categoriesPanelEnabled ? 280 : 0),
+            width: window.innerWidth - (!isMobile && categoriesPanelEnabled ? 320 : 0),
             height: window.innerHeight
         };
     };
@@ -2028,12 +2028,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     return (
         <Box sx={{
-            width: (!isMobile && categoriesPanelEnabled) ? 'calc(100vw - 280px)' : '100vw',
+            width: (!isMobile && categoriesPanelEnabled) ? 'calc(100vw - 320px)' : '100vw',
             height: '100vh',
             overflow: 'hidden',
             position: 'relative',
             background: theme.palette.background.bubbleView,
-            marginLeft: (!isMobile && categoriesPanelEnabled) ? '280px' : '0px',
+            marginLeft: (!isMobile && categoriesPanelEnabled) ? '320px' : '0px',
             transition: 'margin-left 0.3s ease, width 0.3s ease'
         }}>
             {/* Заголовок и кнопки - адаптивный */}
@@ -2219,7 +2219,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                         {/* Search field for desktop */}
                         <Box sx={{
-                            maxWidth: 280,
+                            maxWidth: 320,
                             minWidth: 200,
                             position: 'relative'
                         }}>

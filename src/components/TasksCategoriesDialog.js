@@ -113,7 +113,7 @@ const TasksCategoriesDialog = ({
                                         backgroundColor: draggedIndex === index ? (themeMode === 'light' ? '#F8F9FA' : '#2a2a2a') : 'transparent'
                                     }}
                                 >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
                                         {!isDeleting && (
                                             <Box
                                                 sx={{
@@ -125,8 +125,8 @@ const TasksCategoriesDialog = ({
                                                 }}
                                             />
                                         )}
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                                        <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {isDeleting ? (
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                         <DeleteOutlined sx={{ fontSize: 20, color: 'text.secondary' }} />
@@ -142,7 +142,7 @@ const TasksCategoriesDialog = ({
                                                 </Typography>
                                             )}
                                         </Box>
-                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                        <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
                                             {isDeleting ? (
                                                 <Button
                                                     size="small"

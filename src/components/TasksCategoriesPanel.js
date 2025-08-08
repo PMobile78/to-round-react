@@ -72,7 +72,7 @@ const TasksCategoriesPanel = ({
                 left: 0,
                 top: 0,
                 height: '100vh',
-                width: 280,
+                width: 320,
                 backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)',
                 color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
                 backdropFilter: 'blur(10px)',
@@ -143,7 +143,8 @@ const TasksCategoriesPanel = ({
                             color: selectedCategory === 'all'
                                 ? '#3B7DED'
                                 : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
-                            fontWeight: selectedCategory === 'all' ? 700 : 500
+                            fontWeight: selectedCategory === 'all' ? 700 : 500,
+                            noWrap: true
                         }}
                     />
                     <Typography
@@ -197,7 +198,8 @@ const TasksCategoriesPanel = ({
                             color: selectedCategory === 'no-tags'
                                 ? '#3B7DED'
                                 : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
-                            fontWeight: selectedCategory === 'no-tags' ? 700 : 500
+                            fontWeight: selectedCategory === 'no-tags' ? 700 : 500,
+                            noWrap: true
                         }}
                     />
                     <Typography
@@ -269,7 +271,8 @@ const TasksCategoriesPanel = ({
                                     color: selectedCategory === category.id
                                         ? '#3B7DED'
                                         : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
-                                    fontWeight: selectedCategory === category.id ? 700 : 500
+                                    fontWeight: selectedCategory === category.id ? 700 : 500,
+                                    noWrap: true
                                 }}
                             />
                             <Typography
