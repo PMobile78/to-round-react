@@ -585,7 +585,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             setFilterTags(currentFilterTags => {
                 const existingTagIds = tagsArray.map(tag => tag.id);
                 const validFilterTags = currentFilterTags.filter(id => existingTagIds.includes(id));
-                localStorage.setItem('bubbles-filter-tags', JSON.stringify(validFilterTags));
+                // Не записываем ключ впервые, чтобы не блокировать первичную инициализацию фильтра
+                const hadFilterKey = localStorage.getItem('bubbles-filter-tags') !== null;
+                if (hadFilterKey) {
+                    localStorage.setItem('bubbles-filter-tags', JSON.stringify(validFilterTags));
+                }
                 return validFilterTags;
             });
 
@@ -593,7 +597,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             setListFilterTags(currentListFilterTags => {
                 const existingTagIds = tagsArray.map(tag => tag.id);
                 const validListFilterTags = currentListFilterTags.filter(id => existingTagIds.includes(id));
-                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(validListFilterTags));
+                const hadListFilterKey = localStorage.getItem('bubbles-list-filter-tags') !== null;
+                if (hadListFilterKey) {
+                    localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(validListFilterTags));
+                }
                 return validListFilterTags;
             });
 
@@ -621,8 +628,31 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Синхронизация selectedCategory с фильтрами после загрузки тегов
     useEffect(() => {
         if (tags.length > 0) {
-            const savedFilterTags = localStorage.getItem('bubbles-filter-tags');
-            const savedShowNoTag = localStorage.getItem('bubbles-show-no-tag');
+            // Если на устройстве нет сохраненных настроек фильтра, выбираем все теги и показываем без тега
+            let savedFilterTags = localStorage.getItem('bubbles-filter-tags');
+            let savedShowNoTag = localStorage.getItem('bubbles-show-no-tag');
+
+            if (savedFilterTags === null && savedShowNoTag === null) {
+                const allTagIds = tags.map(tag => tag.id);
+                setFilterTags(allTagIds);
+                setShowNoTag(true);
+                setSelectedCategory('all');
+                localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
+                localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
+                savedFilterTags = JSON.stringify(allTagIds);
+                savedShowNoTag = JSON.stringify(true);
+            }
+
+            // Тоже самое для настроек фильтра в списке задач
+            let savedListFilterTags = localStorage.getItem('bubbles-list-filter-tags');
+            let savedListShowNoTag = localStorage.getItem('bubbles-list-show-no-tag');
+            if (savedListFilterTags === null && savedListShowNoTag === null) {
+                const allTagIds = tags.map(tag => tag.id);
+                setListFilterTags(allTagIds);
+                setListShowNoTag(true);
+                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(allTagIds));
+                localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(true));
+            }
 
             if (savedFilterTags && savedShowNoTag) {
                 const filterTags = JSON.parse(savedFilterTags);
