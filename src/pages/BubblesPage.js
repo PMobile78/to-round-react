@@ -65,6 +65,7 @@ import { ru } from 'date-fns/locale';
 import AddNotification from '../components/AddNotification';
 import EditBubbleDialog from '../components/EditBubbleDialog';
 import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
+import TaskFilterDrawer from '../components/TaskFilterDrawer';
 import CreateBubbleDialog from '../components/CreateBubbleDialog';
 
 
@@ -2944,130 +2945,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 </Box>
             </Drawer>
 
-            {/* Боковое меню фильтрации */}
-            <Drawer
-                anchor="right"
+            {/* Боковое меню фильтрации (вынесено в компонент) */}
+            <TaskFilterDrawer
                 open={filterDrawerOpen}
                 onClose={() => setFilterDrawerOpen(false)}
-                PaperProps={{
-                    sx: {
-                        width: isMobile ? '85%' : 350,
-                        maxWidth: '90%',
-                        backgroundColor: '#2C3E50',
-                        color: 'white'
-                    }
-                }}
-            >
-                <Box sx={{ padding: 0 }}>
-                    {/* Заголовок */}
-                    <Box sx={{ padding: 2, paddingBottom: 1 }}>
-                        <IconButton
-                            onClick={() => setFilterDrawerOpen(false)}
-                            sx={{ color: 'white', padding: 0, marginBottom: 1 }}
-                        >
-                            <CloseOutlined />
-                        </IconButton>
-
-                        {/* Текст с галочкой на одной линии */}
-                        <Box sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                        }}>
-                            <Typography variant="body2" sx={{ color: '#BDC3C7', lineHeight: 1.3 }}>
-                                {t('bubbles.chooseCategoriesText')}
-                            </Typography>
-                            <IconButton
-                                onClick={isAllSelected() ? clearAllFilters : selectAllFilters}
-                                sx={{
-                                    color: 'white',
-                                    backgroundColor: isAllSelected() ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(255,255,255,0.2)'
-                                    },
-                                    padding: '4px'
-                                }}
-                            >
-                                <Check />
-                            </IconButton>
-                        </Box>
-                    </Box>
-
-                    {/* Список категорий */}
-                    <Box sx={{ paddingX: 0 }}>
-                        {/* No tag категория */}
-                        <Box
-                            onClick={handleNoTagFilterChange}
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '16px 20px',
-                                borderBottom: '1px solid rgba(255,255,255,0.1)',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255,255,255,0.05)'
-                                }
-                            }}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
-                                <Box
-                                    sx={{
-                                        width: 24,
-                                        height: 24,
-                                        borderRadius: '50%',
-                                        backgroundColor: '#B0B0B0',
-                                        border: '2px solid #B0B0B0'
-                                    }}
-                                />
-                                <Typography sx={{ color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
-                                    {t('bubbles.noTag')} <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>{getBubbleCountByTagForBubblesView(null)}</Box>
-                                </Typography>
-                            </Box>
-                            {showNoTag && (
-                                <Check sx={{ color: 'white', fontSize: '20px' }} />
-                            )}
-                        </Box>
-
-                        {/* Остальные теги */}
-                        {tags.map(tag => (
-                            <Box
-                                key={tag.id}
-                                onClick={() => handleTagFilterChange(tag.id)}
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '16px 20px',
-                                    borderBottom: '1px solid rgba(255,255,255,0.1)',
-                                    cursor: 'pointer',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(255,255,255,0.05)'
-                                    }
-                                }}
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
-                                    <Box
-                                        sx={{
-                                            width: 24,
-                                            height: 24,
-                                            borderRadius: '50%',
-                                            backgroundColor: tag.color,
-                                            border: `2px solid ${tag.color}`
-                                        }}
-                                    />
-                                    <Typography sx={{ color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
-                                        {tag.name} <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>{getBubbleCountByTagForBubblesView(tag.id)}</Box>
-                                    </Typography>
-                                </Box>
-                                {filterTags.includes(tag.id) && (
-                                    <Check sx={{ color: 'white', fontSize: '20px' }} />
-                                )}
-                            </Box>
-                        ))}
-                    </Box>
-                </Box>
-            </Drawer>
+                isMobile={isMobile}
+                themeMode={themeMode}
+                tags={tags}
+                filterTags={filterTags}
+                showNoTag={showNoTag}
+                onToggleNoTag={handleNoTagFilterChange}
+                onToggleTag={handleTagFilterChange}
+                onSelectAll={selectAllFilters}
+                onClearAll={clearAllFilters}
+                isAllSelected={isAllSelected()}
+                getBubbleCountByTagForBubblesView={getBubbleCountByTagForBubblesView}
+            />
 
             {/* Диалог создания нового пузыря */}
             <CreateBubbleDialog
