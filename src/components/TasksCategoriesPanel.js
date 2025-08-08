@@ -13,7 +13,9 @@ import {
     CloseOutlined,
     Edit,
     LabelOutlined,
-    AllInclusive
+    AllInclusive,
+    DragHandle,
+    DragIndicator,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
@@ -239,9 +241,24 @@ const TasksCategoriesPanel = ({
                                     '&:hover': {
                                         backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E'
                                     }
+                                },
+                                '& .drag-handle': {
+                                    opacity: 0,
+                                    transition: 'opacity 0.15s ease'
+                                },
+                                '&:hover .drag-handle': {
+                                    opacity: 1
                                 }
                             }}
                         >
+                            <DragIndicator
+                                className="drag-handle"
+                                sx={{
+                                    color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
+                                    mr: 1,
+                                    cursor: 'grab'
+                                }}
+                            />
                             <ListItemIcon sx={{ minWidth: 40 }}>
                                 {getCategoryIcon(category)}
                             </ListItemIcon>

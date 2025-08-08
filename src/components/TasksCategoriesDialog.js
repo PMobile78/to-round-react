@@ -11,7 +11,7 @@ import {
     List,
     ListItem
 } from '@mui/material';
-import { Add, CloseOutlined, DeleteOutlined, Edit, Category } from '@mui/icons-material';
+import { Add, CloseOutlined, DeleteOutlined, Edit, Category, DragHandle, DragIndicator } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { reorderArray } from '../utils/reorderArray';
 
@@ -103,6 +103,13 @@ const TasksCategoriesDialog = ({
                                         opacity: isDeleting ? 0.7 : 1,
                                         transition: 'opacity 0.3s ease',
                                         cursor: isDeleting ? 'default' : 'grab',
+                                        '& .drag-handle': {
+                                            opacity: 0,
+                                            transition: 'opacity 0.15s ease'
+                                        },
+                                        '&:hover .drag-handle': {
+                                            opacity: 1
+                                        },
                                         backgroundColor: draggedIndex === index ? (themeMode === 'light' ? '#F8F9FA' : '#2a2a2a') : 'transparent'
                                     }}
                                 >
@@ -159,6 +166,7 @@ const TasksCategoriesDialog = ({
                                                     <IconButton size="small" onClick={() => onDeleteTag(tag.id)} sx={{ color: 'error.main' }}>
                                                         <DeleteOutlined fontSize="small" />
                                                     </IconButton>
+                                                    <DragIndicator className="drag-handle" sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa', ml: 0.5, cursor: 'grab' }} />
                                                 </>
                                             )}
                                         </Box>
