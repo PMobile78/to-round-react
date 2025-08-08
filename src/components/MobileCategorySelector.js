@@ -100,42 +100,45 @@ const MobileCategorySelector = ({
     };
 
     const getSelectedCategoryName = () => {
+        if (!selectedCategory) return '';
         if (selectedCategory === 'all') {
             return t('categories.allCategories');
         }
         const category = tags.find(tag => tag.id === selectedCategory);
-        return category ? category.name : t('categories.allCategories');
+        return category ? category.name : '';
     };
 
     const getSelectedCategoryIcon = () => {
+        if (!selectedCategory) return null;
         if (selectedCategory === 'all') {
             return <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />;
         }
         const category = tags.find(tag => tag.id === selectedCategory);
         return category ? (
             <LabelOutlined sx={{ color: category.color }} />
-        ) : (
-            <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-        );
+        ) : null;
     };
 
     return (
         <FormControl fullWidth size="small">
             <Select
-                value={selectedCategory || 'all'}
+                value={selectedCategory ?? ''}
                 onChange={handleChange}
                 displayEmpty
-                renderValue={(value) => (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {getSelectedCategoryIcon()}
-                        <Typography variant="body2" sx={{
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                            fontSize: '14px'
-                        }}>
-                            {getSelectedCategoryName()}
-                        </Typography>
-                    </Box>
-                )}
+                renderValue={(value) => {
+                    if (value === '') return null; // показываем пусто при множественном выборе
+                    return (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {getSelectedCategoryIcon()}
+                            <Typography variant="body2" sx={{
+                                color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                fontSize: '14px'
+                            }}>
+                                {getSelectedCategoryName()}
+                            </Typography>
+                        </Box>
+                    );
+                }}
                 sx={{
                     backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(52, 73, 94, 0.95)',
                     backdropFilter: 'blur(15px)',

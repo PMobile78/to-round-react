@@ -679,9 +679,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 else if (filterTags.length === 1 && !showNoTag) {
                     setSelectedCategory(filterTags[0]);
                 }
-                // Если выбрано несколько тегов (но не все) - это "all" (показываем все категории)
+                // Если выбрано несколько тегов (но не все) — не выделяем категорию
                 else if (filterTags.length > 1) {
-                    setSelectedCategory('all');
+                    setSelectedCategory(null);
                 }
                 // Если выбрано несколько тегов или другие комбинации - сбрасываем выбранную категорию
                 else {
@@ -706,9 +706,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             else if (filterTags.length === 1 && !showNoTag) {
                 setSelectedCategory(filterTags[0]);
             }
-            // Если выбрано несколько тегов (но не все) - это "all" (показываем все категории)
+            // Если выбрано несколько тегов (но не все) — не выделяем категорию
             else if (filterTags.length > 1) {
-                setSelectedCategory('all');
+                setSelectedCategory(null);
             }
             // Если выбрано несколько тегов или другие комбинации - сбрасываем выбранную категорию
             else {
@@ -719,24 +719,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
 
 
-    // Автоматическая активация "All categories" при включении панели категорий
-    useEffect(() => {
-        if (categoriesPanelEnabled && tags.length > 0) {
-            // Проверяем, есть ли уже сохраненные фильтры
-            const savedFilterTags = localStorage.getItem('bubbles-filter-tags');
-            const savedShowNoTag = localStorage.getItem('bubbles-show-no-tag');
-
-            // Если фильтры не настроены или показываются не все категории, активируем "All categories"
-            if (!savedFilterTags || !savedShowNoTag) {
-                const allTagIds = tags.map(tag => tag.id);
-                setFilterTags(allTagIds);
-                setShowNoTag(true);
-                setSelectedCategory('all');
-                localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-                localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-            }
-        }
-    }, [categoriesPanelEnabled, tags]);
+    // При включении панели категорий оставляем текущие фильтры и выбранную категорию как есть
+    // Выбор в панели определяется текущими filterTags/showNoTag
 
     // Функция для фильтрации пузырей по категории (тегу)
     const getBubblesByCategory = (categoryId) => {
@@ -1625,16 +1609,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const newValue = !categoriesPanelEnabled;
         setCategoriesPanelEnabled(newValue);
         localStorage.setItem('bubbles-categories-panel-enabled', JSON.stringify(newValue));
-
-        // Если включаем панель категорий, автоматически активируем "All categories"
-        if (newValue) {
-            const allTagIds = tags.map(tag => tag.id);
-            setFilterTags(allTagIds);
-            setShowNoTag(true);
-            setSelectedCategory('all');
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-        }
 
         // Полное обновление страницы для десктопной версии
         if (!isMobile) {
