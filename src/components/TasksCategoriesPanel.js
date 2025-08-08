@@ -160,10 +160,6 @@ const TasksCategoriesPanel = ({
                     </Typography>
                 </ListItem>
 
-                <Divider sx={{
-                    backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
-                    margin: '0 20px'
-                }} />
 
                 {/* No tags категория */}
                 <ListItem
@@ -215,10 +211,31 @@ const TasksCategoriesPanel = ({
                     </Typography>
                 </ListItem>
 
-                <Divider sx={{
-                    backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
-                    margin: '0 20px'
-                }} />
+                <Divider
+                    textAlign="left"
+                    sx={{
+                        borderColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
+                        color: themeMode === 'light' ? '#757575' : '#aaaaaa',
+                        mx: 2,
+                        my: 1.5
+                    }}
+                >
+                    <Box
+                        sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            px: 1,
+                            borderRadius: 1,
+                            bgcolor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)'
+                        }}
+                    >
+                        <LabelOutlined sx={{ fontSize: 18, color: themeMode === 'light' ? '#9E9E9E' : '#888888' }} />
+                        <Typography variant="overline" sx={{ letterSpacing: 1 }}>
+                            {t('bubbles.tags', { defaultValue: 'Tags' })}
+                        </Typography>
+                    </Box>
+                </Divider>
 
                 {allCategories.map((category, index) => (
                     <React.Fragment key={category.id}>
