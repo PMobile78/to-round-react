@@ -17,7 +17,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
-const Categories = ({
+const TasksCategoriesPanel = ({
     open,
     onClose,
     tags,
@@ -27,12 +27,33 @@ const Categories = ({
     bubbleCounts = {},
     onOpenTagDialog,
     bubbles = [],
-    isPermanent = false
+    isPermanent = false,
+    onReorderTags
 }) => {
     const { t } = useTranslation();
 
     // Используем теги как категории
     const allCategories = tags;
+
+    // DnD упрощенный: перетаскивание элементов списка
+    const [draggedIndex, setDraggedIndex] = React.useState(null);
+    const handleDragStart = (index) => (event) => {
+        setDraggedIndex(index);
+        event.dataTransfer.effectAllowed = 'move';
+    };
+    const handleDragOver = (index) => (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+    };
+    const handleDrop = (index) => (event) => {
+        event.preventDefault();
+        if (draggedIndex === null || draggedIndex === index) return;
+        const updated = [...allCategories];
+        const [removed] = updated.splice(draggedIndex, 1);
+        updated.splice(index, 0, removed);
+        onReorderTags && onReorderTags(updated);
+        setDraggedIndex(null);
+    };
 
     const getCategoryIcon = (category) => {
         return <LabelOutlined sx={{ color: category.color }} />;
@@ -197,6 +218,10 @@ const Categories = ({
                     <React.Fragment key={category.id}>
                         <ListItem
                             button
+                            draggable
+                            onDragStart={handleDragStart(index)}
+                            onDragOver={handleDragOver(index)}
+                            onDrop={handleDrop(index)}
                             onClick={() => onCategorySelect(category.id)}
                             selected={selectedCategory === category.id}
                             sx={{
@@ -292,4 +317,4 @@ const Categories = ({
     );
 };
 
-export default Categories; 
+export default TasksCategoriesPanel; 

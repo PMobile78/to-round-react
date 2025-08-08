@@ -56,7 +56,7 @@ import {
 
 import ListView from '../components/ListView';
 import SearchField from '../components/SearchField';
-import Categories from '../components/Categories';
+import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
 import useSearch from '../hooks/useSearch';
 import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers';
@@ -64,6 +64,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ru } from 'date-fns/locale';
 import AddNotification from '../components/AddNotification';
 import EditBubbleDialog from '../components/EditBubbleDialog';
+import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
 import CreateBubbleDialog from '../components/CreateBubbleDialog';
 
 
@@ -3098,248 +3099,35 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 setBubbleSize={setBubbleSize}
                 onCreate={createNewBubble}
             />
-            {/* Диалог управления категориями задач */}
-            <Dialog
+            {/* Диалог управления категориями задач - вынесен в отдельный компонент с поддержкой DnD */}
+            <TasksCategoriesDialog
                 open={categoriesDialog}
                 onClose={() => setCategoriesDialog(false)}
-                maxWidth="sm"
-                fullWidth
-                fullScreen={isSmallScreen}
-                PaperProps={{
-                    sx: {
-                        borderRadius: isSmallScreen ? 0 : 3,
-                        ...getDialogPaperStyles(),
-                        margin: isMobile ? 1 : 3,
-                        position: isMobile ? 'relative' : 'static'
+                tags={tags}
+                deletingTags={deletingTags}
+                canCreateMoreTags={canCreateMoreTags}
+                onAddTag={() => {
+                    if (canCreateMoreTags()) {
+                        setCategoriesDialog(false);
+                        handleOpenTagDialog();
                     }
                 }}
-            >
-                <DialogTitle sx={{
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    {t('bubbles.taskCategories')}
-                    <IconButton
-                        onClick={() => setCategoriesDialog(false)}
-                        sx={{ color: 'white' }}
-                    >
-                        <CloseOutlined />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent sx={{ padding: isMobile ? 2 : 3, paddingTop: isMobile ? 4 : 5, paddingBottom: isMobile ? 10 : 0 }}>
-                    {/* Список существующих категорий */}
-                    {tags.length > 0 ? (
-                        <List sx={{ padding: 0, marginTop: 3 }}>
-                            {tags.map(tag => {
-                                const isDeleting = deletingTags.has(tag.id);
-
-                                return (
-                                    <ListItem
-                                        key={tag.id}
-                                        sx={{
-                                            // border: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333',
-                                            border: '1px solid #E0E0E0',
-                                            borderRadius: 2,
-                                            marginBottom: 1,
-                                            padding: 2,
-                                            opacity: isDeleting ? 0.7 : 1,
-                                            transition: 'opacity 0.3s ease'
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                                            {!isDeleting && (
-                                                <Box
-                                                    sx={{
-                                                        width: 24,
-                                                        height: 24,
-                                                        borderRadius: '50%',
-                                                        backgroundColor: tag.color,
-                                                        border: '2px solid #E0E0E0'
-                                                    }}
-                                                />
-                                            )}
-                                            <Box sx={{ flex: 1 }}>
-                                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                                                    {isDeleting ? (
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <DeleteOutlined sx={{ fontSize: 20, color: 'text.secondary' }} />
-                                                            {t('bubbles.tagDeleted')}
-                                                        </Box>
-                                                    ) : (
-                                                        tag.name
-                                                    )}
-                                                </Typography>
-                                                {!isDeleting && (
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {getBubbleCountByTag(tag.id)} {getBubbleCountByTag(tag.id) === 1 ? t('bubbles.bubble') : t('bubbles.bubbles')}
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                                {isDeleting ? (
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        onClick={() => handleUndoDeleteTag(tag.id)}
-                                                        sx={{
-                                                            color: 'primary.main',
-                                                            borderColor: 'primary.main',
-                                                            textTransform: 'none',
-                                                            fontSize: '0.75rem',
-                                                            padding: '4px 8px'
-                                                        }}
-                                                    >
-                                                        {t('bubbles.undo')}
-                                                    </Button>
-                                                ) : (
-                                                    <>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => {
-                                                                setCategoriesDialog(false);
-                                                                handleOpenTagDialog(tag);
-                                                            }}
-                                                            sx={{ color: 'primary.main' }}
-                                                        >
-                                                            <Edit fontSize="small" />
-                                                        </IconButton>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleDeleteTag(tag.id)}
-                                                            sx={{ color: 'error.main' }}
-                                                        >
-                                                            <DeleteOutlined fontSize="small" />
-                                                        </IconButton>
-                                                    </>
-                                                )}
-                                            </Box>
-                                        </Box>
-                                    </ListItem>
-                                );
-                            })}
-                        </List>
-                    ) : (
-                        <Box sx={{
-                            textAlign: 'center',
-                            padding: 4,
-                            marginTop: 3,
-                            color: 'text.secondary'
-                        }}>
-                            <Category sx={{ fontSize: 48, marginBottom: 2, opacity: 0.5 }} />
-                            <Typography variant="h6" gutterBottom>
-                                {t('bubbles.noCategoriesYet')}
-                            </Typography>
-                            <Typography variant="body2">
-                                {t('bubbles.createFirstCategory')}
-                            </Typography>
-                        </Box>
-                    )}
-                </DialogContent>
-
-                {/* Футер для десктопа */}
-                {!isMobile && (
-                    <Box sx={{
-                        borderTop: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333',
-                        padding: 3,
-                        textAlign: 'center',
-                        backgroundColor: 'transparent'
-                    }}>
-                        <Button
-                            variant="text"
-                            startIcon={<Add />}
-                            onClick={() => {
-                                if (canCreateMoreTags()) {
-                                    setCategoriesDialog(false);
-                                    handleOpenTagDialog();
-                                }
-                            }}
-                            disabled={!canCreateMoreTags()}
-                            sx={{
-                                backgroundColor: 'transparent',
-                                color: canCreateMoreTags()
-                                    ? (themeMode === 'light' ? '#757575' : '#aaaaaa')
-                                    : (themeMode === 'light' ? '#B0B0B0' : '#666666'),
-                                borderRadius: 2,
-                                padding: '12px 24px',
-                                textTransform: 'none',
-                                fontWeight: 500,
-                                minWidth: 140,
-                                fontSize: '14px',
-                                border: 'none',
-                                '&:hover': {
-                                    backgroundColor: canCreateMoreTags()
-                                        ? (themeMode === 'light' ? 'rgba(117, 117, 117, 0.08)' : 'rgba(255, 255, 255, 0.1)')
-                                        : 'transparent'
-                                },
-                                '& .MuiButton-startIcon': {
-                                    color: canCreateMoreTags()
-                                        ? (themeMode === 'light' ? '#757575' : '#aaaaaa')
-                                        : (themeMode === 'light' ? '#B0B0B0' : '#666666'),
-                                    marginRight: 1.5,
-                                    fontSize: '20px'
-                                }
-                            }}
-                        >
-                            {canCreateMoreTags() ? t('bubbles.addTag') : t('bubbles.maxCategoriesReached')}
-                        </Button>
-                    </Box>
-                )}
-
-                {/* Плавающая кнопка для мобильного */}
-                {isMobile && (
-                    <Box sx={{
-                        position: 'absolute',
-                        bottom: 16,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        zIndex: 1001
-                    }}>
-                        <Button
-                            variant="text"
-                            startIcon={<Add />}
-                            onClick={() => {
-                                if (canCreateMoreTags()) {
-                                    setCategoriesDialog(false);
-                                    handleOpenTagDialog();
-                                }
-                            }}
-                            disabled={!canCreateMoreTags()}
-                            sx={{
-                                backgroundColor: 'transparent',
-                                color: canCreateMoreTags()
-                                    ? (themeMode === 'light' ? '#757575' : '#aaaaaa')
-                                    : (themeMode === 'light' ? '#B0B0B0' : '#666666'),
-                                borderRadius: 2,
-                                padding: '12px 24px',
-                                textTransform: 'none',
-                                fontWeight: 500,
-                                minWidth: 140,
-                                fontSize: '14px',
-                                border: 'none',
-                                '&:hover': {
-                                    backgroundColor: canCreateMoreTags()
-                                        ? (themeMode === 'light' ? 'rgba(117, 117, 117, 0.08)' : 'rgba(255, 255, 255, 0.1)')
-                                        : 'transparent'
-                                },
-                                '& .MuiButton-startIcon': {
-                                    color: canCreateMoreTags()
-                                        ? (themeMode === 'light' ? '#757575' : '#aaaaaa')
-                                        : (themeMode === 'light' ? '#B0B0B0' : '#666666'),
-                                    marginRight: 1.5,
-                                    fontSize: '20px'
-                                }
-                            }}
-                        >
-                            {canCreateMoreTags() ? t('bubbles.addTag') : t('bubbles.maxCategoriesReached')}
-                        </Button>
-                    </Box>
-                )}
-
-
-            </Dialog>
+                onEditTag={(tag) => {
+                    setCategoriesDialog(false);
+                    handleOpenTagDialog(tag);
+                }}
+                onDeleteTag={(tagId) => handleDeleteTag(tagId)}
+                onUndoDeleteTag={(tagId) => handleUndoDeleteTag(tagId)}
+                getBubbleCountByTag={getBubbleCountByTag}
+                themeMode={themeMode}
+                isMobile={isMobile}
+                isSmallScreen={isSmallScreen}
+                getDialogPaperStyles={getDialogPaperStyles}
+                onReorderTags={(updated) => {
+                    setTags(updated);
+                    saveTagsToFirestore(updated);
+                }}
+            />
 
             {/* Диалог настроек шрифта */}
             <Dialog
@@ -3602,7 +3390,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
             {/* Панель категорий - только для десктопа */}
             {!isMobile && (
-                <Categories
+                <TasksCategoriesPanel
                     open={categoriesPanelEnabled}
                     onClose={() => setCategoriesPanelEnabled(false)}
                     tags={tags}
@@ -3613,6 +3401,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     onOpenTagDialog={() => setCategoriesDialog(true)}
                     bubbles={bubbles}
                     isPermanent={categoriesPanelEnabled}
+                    onReorderTags={(updated) => {
+                        setTags(updated);
+                        saveTagsToFirestore(updated);
+                    }}
                 />
             )}
 
