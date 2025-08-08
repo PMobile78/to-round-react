@@ -133,6 +133,7 @@ const TasksCategoriesPanel = ({
                         }
                     }}
                 >
+                    <Box sx={{ width: 4 }} />
                     <ListItemIcon sx={{ minWidth: 40 }}>
                         <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                     </ListItemIcon>
@@ -186,6 +187,7 @@ const TasksCategoriesPanel = ({
                         }
                     }}
                 >
+                    <Box sx={{ width: 4 }} />
                     <ListItemIcon sx={{ minWidth: 40 }}>
                         <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                     </ListItemIcon>
@@ -227,7 +229,7 @@ const TasksCategoriesPanel = ({
                             onClick={() => onCategorySelect(category.id)}
                             selected={selectedCategory === category.id}
                             sx={{
-                                padding: '16px 20px',
+                                padding: '16px 16px 16px 0px',
                                 cursor: 'pointer',
                                 borderLeft: selectedCategory === category.id ? '4px solid #3B7DED' : '4px solid transparent',
                                 backgroundColor: selectedCategory === category.id
@@ -255,7 +257,6 @@ const TasksCategoriesPanel = ({
                                 className="drag-handle"
                                 sx={{
                                     color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
-                                    mr: 1,
                                     cursor: 'grab'
                                 }}
                             />
@@ -277,7 +278,8 @@ const TasksCategoriesPanel = ({
                                     color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
                                     fontWeight: 'bold',
                                     fontSize: '12px',
-                                    backgroundColor: 'transparent'
+                                    backgroundColor: 'transparent',
+                                    ml: 'auto'
                                 }}
                             >
                                 {getBubbleCount(category.id)}
