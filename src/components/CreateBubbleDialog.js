@@ -197,6 +197,11 @@ export default function CreateBubbleDialog(props) {
                         value={selectedTagId}
                         onChange={(e) => setSelectedTagId(e.target.value)}
                         label={t('bubbles.categoryLabel')}
+                        MenuProps={{
+                            PaperProps: {
+                                sx: { maxWidth: 350 }
+                            }
+                        }}
                         sx={{ '& .MuiSelect-select': { fontSize: isMobile ? 16 : 14 } }}
                     >
                         <MenuItem value="">
@@ -204,9 +209,9 @@ export default function CreateBubbleDialog(props) {
                         </MenuItem>
                         {tags.map(tag => (
                             <MenuItem key={tag.id} value={tag.id}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: tag.color, border: '1px solid #ccc' }} />
-                                    {tag.name}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: tag.color, border: '1px solid #ccc', flexShrink: 0 }} />
+                                    <Typography sx={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tag.name}</Typography>
                                 </Box>
                             </MenuItem>
                         ))}

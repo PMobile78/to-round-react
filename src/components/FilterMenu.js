@@ -69,6 +69,7 @@ export function FilterMenu({
                     sx: {
                         borderRadius: 1,
                         minWidth: 280,
+                        maxWidth: 350,
                         boxShadow: 1,
                         backgroundColor: themeMode === 'light' ? '#ffffff' : '#1e1e1e',
                         color: themeMode === 'light' ? '#000000' : '#ffffff',
@@ -154,7 +155,8 @@ export function FilterMenu({
                         {t('bubbles.noTag')}
                     </Typography>
                     <Typography variant="caption" sx={{
-                        color: themeMode === 'light' ? '#666666' : '#aaaaaa'
+                        color: themeMode === 'light' ? '#666666' : '#aaaaaa',
+                        ml: 1
                     }}>
                         {getBubbleCountByTag ? getBubbleCountByTag(null) : 0}
                     </Typography>
@@ -182,12 +184,17 @@ export function FilterMenu({
                             <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: tag.color, border: '1px solid', borderColor: 'divider', mr: 1 }} />
                             <Typography variant="body2" sx={{
                                 flex: 1,
-                                color: themeMode === 'light' ? '#000000' : '#ffffff'
+                                minWidth: 0,
+                                color: themeMode === 'light' ? '#000000' : '#ffffff',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
                             }}>
                                 {tag.name}
                             </Typography>
                             <Typography variant="caption" sx={{
-                                color: themeMode === 'light' ? '#666666' : '#aaaaaa'
+                                color: themeMode === 'light' ? '#666666' : '#aaaaaa',
+                                ml: 1
                             }}>
                                 {getBubbleCountByTag ? getBubbleCountByTag(tag.id) : 0}
                             </Typography>

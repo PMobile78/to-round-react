@@ -3010,7 +3010,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                 }
                             }}
                         >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
                                 <Box
                                     sx={{
                                         width: 24,
@@ -3020,7 +3020,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                         border: '2px solid #B0B0B0'
                                     }}
                                 />
-                                <Typography sx={{ color: 'white' }}>
+                                <Typography sx={{ color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
                                     {t('bubbles.noTag')} <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>{getBubbleCountByTagForBubblesView(null)}</Box>
                                 </Typography>
                             </Box>
@@ -3046,7 +3046,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                     }
                                 }}
                             >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
                                     <Box
                                         sx={{
                                             width: 24,
@@ -3056,7 +3056,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                                             border: `2px solid ${tag.color}`
                                         }}
                                     />
-                                    <Typography sx={{ color: 'white' }}>
+                                    <Typography sx={{ color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
                                         {tag.name} <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>{getBubbleCountByTagForBubblesView(tag.id)}</Box>
                                     </Typography>
                                 </Box>
