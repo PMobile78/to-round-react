@@ -19,6 +19,7 @@ import { CloseOutlined, DeleteOutlined, CheckCircle, Clear } from '@mui/icons-ma
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import ru from 'date-fns/locale/ru';
 import AddNotification from './AddNotification';
 
@@ -132,6 +133,12 @@ export default function EditBubbleDialog(props) {
                                 value={editDueDate}
                                 onChange={setEditDueDate}
                                 ampm={false}
+                                views={["year", "month", "day", "hours", "minutes"]}
+                                viewRenderers={{
+                                    hours: renderTimeViewClock,
+                                    minutes: renderTimeViewClock,
+                                    seconds: renderTimeViewClock,
+                                }}
                                 inputFormat="dd.MM.yyyy HH:mm"
                                 renderInput={(params) => (
                                     <TextField
