@@ -95,11 +95,19 @@ export default function EditBubbleDialog(props) {
                     label={t('bubbles.titleLabel')}
                     fullWidth
                     variant="outlined"
+                    multiline
+                    minRows={2}
+                    maxRows={4}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     sx={{
                         marginTop: 3,
-                        '& .MuiInputBase-input': { fontSize: isMobile ? 16 : 14 }
+                        '& .MuiInputBase-input': {
+                            fontSize: isMobile ? 16 : 14,
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word',
+                            whiteSpace: 'pre-wrap'
+                        }
                     }}
                 />
                 <TextField
