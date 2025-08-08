@@ -55,6 +55,7 @@ import {
 } from '../services/firestoreService';
 
 import ListView from '../components/ListView';
+import TaskListDrawer from '../components/ListViewDrawer';
 import SearchField from '../components/SearchField';
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
@@ -3216,70 +3217,39 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             </Dialog>
 
             {/* Боковая панель списка задач */}
-            <Drawer
-                anchor="right"
+            <TaskListDrawer
                 open={listViewDialog}
                 onClose={() => setListViewDialog(false)}
-                PaperProps={{
-                    sx: {
-                        width: isMobile ? '100%' : '60%',
-                        maxWidth: isMobile ? '100%' : '800px',
-                        backgroundColor: themeMode === 'light' ? '#FFFFFF' : '#1e1e1e'
-                    }
-                }}
-            >
-                <Box sx={{
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '16px 24px',
-                    borderBottom: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333'
-                }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                        {t('bubbles.listView')}
-                    </Typography>
-                    <IconButton
-                        onClick={() => setListViewDialog(false)}
-                        sx={{ color: 'white' }}
-                    >
-                        <CloseOutlined />
-                    </IconButton>
-                </Box>
-                <Box sx={{ height: 'calc(100vh - 73px)', overflow: 'auto' }}>
-                    <ListView
-                        bubbles={bubbles}
-                        setBubbles={setBubbles}
-                        tags={tags}
-                        listFilter={listFilter}
-                        setListFilter={setListFilter}
-                        listSortBy={listSortBy}
-                        setListSortBy={setListSortBy}
-                        listSortOrder={listSortOrder}
-                        setListSortOrder={setListSortOrder}
-                        listFilterTags={listFilterTags}
-                        setListFilterTags={setListFilterTags}
-                        listShowNoTag={listShowNoTag}
-                        setListShowNoTag={setListShowNoTag}
-                        listSearchQuery={listSearchQuery}
-                        setListSearchQuery={setListSearchQuery}
-                        setSelectedBubble={setSelectedBubble}
-                        setTitle={setTitle}
-                        setDescription={setDescription}
-                        setSelectedTagId={setSelectedTagId}
-                        setEditDialog={setEditDialog}
-                        handleListTagFilterChange={handleListTagFilterChange}
-                        handleListNoTagFilterChange={handleListNoTagFilterChange}
-                        clearAllListFilters={clearAllListFilters}
-                        selectAllListFilters={selectAllListFilters}
-                        getBubbleCountByTagForListView={getBubbleCountByTagForListView}
-                        themeMode={themeMode}
-                        isAllListFiltersSelected={isAllListFiltersSelected()} // функция возвращает bool
-                        onOpenFilterMenu={() => setFilterDrawerOpen(true)}
-                    />
-                </Box>
-            </Drawer>
+                isMobile={isMobile}
+                themeMode={themeMode}
+                bubbles={bubbles}
+                setBubbles={setBubbles}
+                tags={tags}
+                listFilter={listFilter}
+                setListFilter={setListFilter}
+                listSortBy={listSortBy}
+                setListSortBy={setListSortBy}
+                listSortOrder={listSortOrder}
+                setListSortOrder={setListSortOrder}
+                listFilterTags={listFilterTags}
+                setListFilterTags={setListFilterTags}
+                listShowNoTag={listShowNoTag}
+                setListShowNoTag={setListShowNoTag}
+                listSearchQuery={listSearchQuery}
+                setListSearchQuery={setListSearchQuery}
+                setSelectedBubble={setSelectedBubble}
+                setTitle={setTitle}
+                setDescription={setDescription}
+                setSelectedTagId={setSelectedTagId}
+                setEditDialog={setEditDialog}
+                handleListTagFilterChange={handleListTagFilterChange}
+                handleListNoTagFilterChange={handleListNoTagFilterChange}
+                clearAllListFilters={clearAllListFilters}
+                selectAllListFilters={selectAllListFilters}
+                getBubbleCountByTagForListView={getBubbleCountByTagForListView}
+                isAllListFiltersSelected={isAllListFiltersSelected()}
+                onOpenFilterMenu={() => setFilterDrawerOpen(true)}
+            />
 
             {/* Панель категорий - только для десктопа */}
             {!isMobile && (
