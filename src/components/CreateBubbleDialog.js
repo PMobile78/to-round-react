@@ -95,7 +95,7 @@ export default function CreateBubbleDialog(props) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     sx={{
-                        marginBottom: 2,
+                        marginTop: 3,
                         '& .MuiInputBase-input': { fontSize: isMobile ? 16 : 14 }
                     }}
                 />
@@ -117,7 +117,9 @@ export default function CreateBubbleDialog(props) {
                         },
                         '& .MuiInputBase-root': { wordBreak: 'break-word', overflowWrap: 'break-word' },
                         '& .MuiOutlinedInput-root': { wordBreak: 'break-word', overflowWrap: 'break-word' },
-                        maxWidth: '100%'
+                        maxWidth: '100%',
+                        marginTop: 2,
+                        marginBottom: 2
                     }}
                 />
                 <Box sx={{ marginTop: 1, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
