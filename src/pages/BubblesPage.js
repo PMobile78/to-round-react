@@ -71,6 +71,7 @@ import EditBubbleDialog from '../components/EditBubbleDialog';
 import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
 import TaskFilterDrawer from '../components/TaskFilterDrawer';
 import CreateBubbleDialog from '../components/CreateBubbleDialog';
+import TagEditorDialog from '../components/TagEditorDialog';
 
 
 const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
@@ -2579,123 +2580,21 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             </Menu>
 
             {/* Диалог создания/редактирования тега */}
-            <Dialog
+            <TagEditorDialog
                 open={tagDialog}
                 onClose={handleCloseTagDialog}
-                maxWidth="sm"
-                fullWidth
-                fullScreen={isSmallScreen}
-            >
-                <DialogTitle>
-                    {editingTag ? t('bubbles.editTag') : t('bubbles.createTag')}
-                </DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label={t('bubbles.tagName')}
-                        fullWidth
-                        variant="outlined"
-                        value={tagName}
-                        onChange={(e) => setTagName(e.target.value)}
-                        sx={{
-                            marginBottom: 2,
-                            '& .MuiInputBase-input': {
-                                fontSize: isMobile ? 16 : 14
-                            }
-                        }}
-                    />
-                    <Box sx={{ marginBottom: 2 }}>
-                        <Typography sx={{ marginBottom: 2 }}>{t('bubbles.selectColor')}:</Typography>
-                        <Box sx={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(5, 1fr)',
-                            gap: 1.5,
-                            maxWidth: 300,
-                            margin: '0 auto'
-                        }}>
-                            {COLOR_PALETTE.map((color, index) => {
-                                // Если редактируем тег, его текущий цвет всегда доступен
-                                const isUsed = editingTag
-                                    ? (!isColorAvailable(color) && color !== editingTag.color)
-                                    : (!isColorAvailable(color) && color !== tagColor);
-                                const isSelected = tagColor === color;
-
-                                return (
-                                    <Box
-                                        key={index}
-                                        onClick={() => {
-                                            if (!isUsed) {
-                                                setTagColor(color);
-                                            }
-                                        }}
-                                        sx={{
-                                            width: 40,
-                                            height: 40,
-                                            borderRadius: '50%',
-                                            backgroundColor: isUsed ? `${color}50` : color, // Полупрозрачный фон для занятых
-                                            border: isSelected
-                                                ? '3px solid #1976d2'
-                                                : isUsed
-                                                    ? `3px solid ${color}`
-                                                    : 'none',
-                                            cursor: isUsed ? 'not-allowed' : 'pointer',
-                                            position: 'relative',
-                                            transition: 'all 0.2s ease',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            '&:hover': {
-                                                transform: !isUsed ? 'scale(1.1)' : 'none',
-                                                boxShadow: !isUsed ? '0 4px 8px rgba(0,0,0,0.2)' : 'none'
-                                            }
-                                        }}
-                                    >
-                                        {isSelected && (
-                                            <Box
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: '50%',
-                                                    left: '50%',
-                                                    transform: 'translate(-50%, -50%)',
-                                                    color: 'white',
-                                                    fontSize: '16px',
-                                                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-                                                }}
-                                            >
-                                                ✓
-                                            </Box>
-                                        )}
-                                    </Box>
-                                );
-                            })}
-                        </Box>
-                        {!canCreateMoreTags() && !editingTag && (
-                            <Typography
-                                variant="body2"
-                                color="error"
-                                sx={{ textAlign: 'center', marginTop: 2 }}
-                            >
-                                {t('bubbles.noMoreColors')}
-                            </Typography>
-                        )}
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseTagDialog}>{t('bubbles.cancel')}</Button>
-                    <Button
-                        onClick={handleSaveTag}
-                        variant="contained"
-                        disabled={
-                            !tagName.trim() ||
-                            (!editingTag && !isColorAvailable(tagColor)) ||
-                            (editingTag && editingTag.color !== tagColor && !isColorAvailable(tagColor))
-                        }
-                    >
-                        {editingTag ? t('bubbles.save') : t('bubbles.create')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                isSmallScreen={isSmallScreen}
+                isMobile={isMobile}
+                colorPalette={COLOR_PALETTE}
+                editingTag={editingTag}
+                tagName={tagName}
+                setTagName={setTagName}
+                tagColor={tagColor}
+                setTagColor={setTagColor}
+                isColorAvailable={isColorAvailable}
+                canCreateMoreTags={canCreateMoreTags}
+                onSave={handleSaveTag}
+            />
 
             {/* Левое главное меню */}
             <MainMenuDrawer
