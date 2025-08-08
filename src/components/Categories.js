@@ -258,7 +258,7 @@ const Categories = ({
             }} />
 
             {/* Настройки категорий */}
-            <List sx={{ padding: 0 }}>
+            {/* <List sx={{ padding: 0 }}>
                 <ListItem
                     button
                     onClick={() => {
@@ -287,7 +287,7 @@ const Categories = ({
                         }}
                     />
                 </ListItem>
-            </List>
+            </List> */}
         </Box>
     );
 };
