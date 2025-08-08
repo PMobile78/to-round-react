@@ -1,6 +1,8 @@
 import React from 'react';
-import { Drawer, Box, IconButton, Typography } from '@mui/material';
-import { Check, CloseOutlined } from '@mui/icons-material';
+import { Drawer, Box, IconButton, Typography, Button, Divider, MenuItem, Checkbox } from '@mui/material';
+import { Check, Clear, CloseOutlined } from '@mui/icons-material';
+import { alpha } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 const TaskFilterDrawer = ({
     open,
@@ -17,120 +19,127 @@ const TaskFilterDrawer = ({
     isAllSelected,
     getBubbleCountByTagForBubblesView
 }) => {
+    const { t } = useTranslation();
+    const containerBg = themeMode === 'light' ? '#ffffff' : '#1e1e1e';
+    const textColor = themeMode === 'light' ? '#000000' : '#ffffff';
+
     return (
         <Drawer
             anchor="right"
             open={open}
             onClose={onClose}
             PaperProps={{
+                elevation: 1,
                 sx: {
                     width: isMobile ? '85%' : 350,
                     maxWidth: '90%',
-                    backgroundColor: '#2C3E50',
-                    color: 'white'
+                    backgroundColor: containerBg,
+                    color: textColor,
+                    boxShadow: 1
                 }
             }}
         >
             <Box sx={{ padding: 0 }}>
                 {/* Header */}
-                <Box sx={{ padding: 2, paddingBottom: 1 }}>
-                    <IconButton onClick={onClose} sx={{ color: 'white', padding: 0, marginBottom: 1 }}>
+                <Box sx={{ padding: 2, paddingBottom: 1, backgroundColor: containerBg }}>
+                    <IconButton onClick={onClose} sx={{ color: textColor, padding: 0, marginBottom: 1 }}>
                         <CloseOutlined />
                     </IconButton>
 
                     {/* Title with select all/clear all */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="body2" sx={{ color: '#BDC3C7', lineHeight: 1.3 }}>
-                            Выберите категории для фильтрации
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: themeMode === 'light' ? '#e0e0e0' : '#333333', pb: 1 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: textColor }}>
+                            {t('bubbles.categories')}
                         </Typography>
-                        <IconButton
-                            onClick={isAllSelected ? onClearAll : onSelectAll}
-                            sx={{
-                                color: 'white',
-                                backgroundColor: isAllSelected ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
-                                padding: '4px'
-                            }}
-                        >
-                            <Check />
-                        </IconButton>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                            <Button
+                                size="small"
+                                onClick={onSelectAll}
+                                startIcon={<Check />}
+                                sx={{
+                                    minWidth: 'auto',
+                                    p: '4px 8px',
+                                    fontSize: '0.75rem',
+                                    color: themeMode === 'light' ? '#1976d2' : '#90caf9'
+                                }}
+                            >
+                                {t('bubbles.selectAll')}
+                            </Button>
+                            <Button
+                                size="small"
+                                onClick={onClearAll}
+                                startIcon={<Clear />}
+                                sx={{
+                                    minWidth: 'auto',
+                                    p: '4px 8px',
+                                    fontSize: '0.75rem',
+                                    color: themeMode === 'light' ? '#1976d2' : '#90caf9'
+                                }}
+                            >
+                                {t('bubbles.clearAll')}
+                            </Button>
+                        </Box>
                     </Box>
                 </Box>
 
                 {/* Categories list */}
-                <Box sx={{ paddingX: 0 }}>
+                <Box sx={{ paddingX: 0, backgroundColor: containerBg }}>
                     {/* No tag */}
-                    <Box
+                    <MenuItem
                         onClick={onToggleNoTag}
+                        disableRipple
                         sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '16px 20px',
-                            borderBottom: '1px solid rgba(255,255,255,0.1)',
-                            cursor: 'pointer',
-                            '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' }
+                            p: '12px 16px',
+                            backgroundColor: containerBg,
+                            '&:hover': {
+                                backgroundColor: themeMode === 'light' ? '#f5f5f5' : '#333333'
+                            }
                         }}
                     >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
-                            <Box
-                                sx={{
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: '50%',
-                                    backgroundColor: '#B0B0B0',
-                                    border: '2px solid #B0B0B0'
-                                }}
-                            />
-                            <Typography
-                                sx={{ color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}
-                            >
-                                Без тега{' '}
-                                <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                                    {getBubbleCountByTagForBubblesView ? getBubbleCountByTagForBubblesView(null) : 0}
-                                </Box>
-                            </Typography>
-                        </Box>
-                        {showNoTag && <Check sx={{ color: 'white', fontSize: '20px' }} />}
-                    </Box>
+                        <Checkbox checked={showNoTag} size="small" sx={{ mr: 1 }} />
+                        <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: 'grey.400', border: '1px solid', borderColor: 'divider', mr: 1, flexShrink: 0 }} />
+                        <Typography variant="body2" sx={{ flex: 1, minWidth: 0, color: textColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {t('bubbles.noTag')}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: themeMode === 'light' ? '#666666' : '#aaaaaa', ml: 1 }}>
+                            {getBubbleCountByTagForBubblesView ? getBubbleCountByTagForBubblesView(null) : 0}
+                        </Typography>
+                    </MenuItem>
+
+                    {tags.length > 0 && <Divider sx={{ my: 0.5 }} />}
 
                     {/* Tags */}
-                    {tags.map((tag) => (
-                        <Box
-                            key={tag.id}
-                            onClick={() => onToggleTag(tag.id)}
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '16px 20px',
-                                borderBottom: '1px solid rgba(255,255,255,0.1)',
-                                cursor: 'pointer',
-                                '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' }
-                            }}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
-                                <Box
-                                    sx={{
-                                        width: 24,
-                                        height: 24,
-                                        borderRadius: '50%',
-                                        backgroundColor: tag.color,
-                                        border: `2px solid ${tag.color}`
-                                    }}
-                                />
-                                <Typography
-                                    sx={{ color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}
-                                >
-                                    {tag.name}{' '}
-                                    <Box component="span" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                                        {getBubbleCountByTagForBubblesView ? getBubbleCountByTagForBubblesView(tag.id) : 0}
-                                    </Box>
+                    {tags.length > 0 ? (
+                        tags.map((tag) => (
+                            <MenuItem
+                                key={tag.id}
+                                onClick={() => onToggleTag(tag.id)}
+                                disableRipple
+                                sx={{
+                                    p: '12px 16px',
+                                    backgroundColor: containerBg,
+                                    '&:hover': {
+                                        backgroundColor: themeMode === 'light' ? '#f5f5f5' : '#333333'
+                                    }
+                                }}
+                            >
+                                <Checkbox checked={filterTags.includes(tag.id)} size="small" sx={{ mr: 1 }} />
+                                <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: tag.color, border: '1px solid', borderColor: 'divider', mr: 1, flexShrink: 0 }} />
+                                <Typography variant="body2" sx={{ flex: 1, minWidth: 0, color: textColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {tag.name}
                                 </Typography>
-                            </Box>
-                            {filterTags.includes(tag.id) && <Check sx={{ color: 'white', fontSize: '20px' }} />}
-                        </Box>
-                    ))}
+                                <Typography variant="caption" sx={{ color: themeMode === 'light' ? '#666666' : '#aaaaaa', ml: 1 }}>
+                                    {getBubbleCountByTagForBubblesView ? getBubbleCountByTagForBubblesView(tag.id) : 0}
+                                </Typography>
+                            </MenuItem>
+                        ))
+                    ) : (
+                        <MenuItem disabled sx={{ p: '12px 16px', justifyContent: 'center' }}>
+                            <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#666666' : '#aaaaaa' }}>
+                                {t('bubbles.noTagsAvailable')}
+                            </Typography>
+                        </MenuItem>
+                    )}
                 </Box>
             </Box>
         </Drawer>
