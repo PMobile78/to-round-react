@@ -40,6 +40,9 @@ import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
 import ThemeToggle from '../components/ThemeToggle';
+import MainMenuDrawer from '../components/MainMenuDrawer';
+import FontSettingsDialog from '../components/FontSettingsDialog';
+import LogoutConfirmDialog from '../components/LogoutConfirmDialog';
 import { logoutUser } from '../services/authService';
 import {
     saveBubblesToFirestore,
@@ -2695,256 +2698,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             </Dialog>
 
             {/* Левое главное меню */}
-            <Drawer
-                anchor="left"
+            <MainMenuDrawer
                 open={menuDrawerOpen}
                 onClose={() => setMenuDrawerOpen(false)}
-                PaperProps={{
-                    sx: {
-                        width: isMobile ? '70%' : 300,
-                        maxWidth: '85%',
-                        backgroundColor: themeMode === 'light' ? '#FFFFFF' : '#1e1e1e',
-                        zIndex: 1300 // Выше панели категорий
-                    }
-                }}
-            >
-                <Box sx={{ padding: 0 }}>
-                    {/* Заголовок и логотип */}
-                    <Box sx={{
-                        padding: 3,
-                        paddingBottom: 2,
-                        borderBottom: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333'
-                    }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginBottom: 2 }}>
-                            <Typography variant="h6" sx={{
-                                fontWeight: 'bold',
-                                color: themeMode === 'light' ? '#2C3E50' : '#ffffff'
-                            }}>
-                                ToROUND
-                            </Typography>
-                        </Box>
-                    </Box>
-
-                    {/* Пункты меню */}
-                    <List sx={{ padding: 0 }}>
-                        {/* Language Selector */}
-                        <ListItem sx={{ padding: '16px 24px' }}>
-                            <ListItemIcon sx={{ minWidth: 40 }}>
-                                <LanguageOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-                            </ListItemIcon>
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="body2" sx={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                    fontWeight: 500,
-                                    marginBottom: 1
-                                }}>
-                                    {t('language.title')}
-                                </Typography>
-                                <LanguageSelector themeMode={themeMode} />
-                            </Box>
-                        </ListItem>
-
-                        <Divider sx={{
-                            backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
-                            margin: '8px 0'
-                        }} />
-
-                        {/* Theme Toggle */}
-                        <ListItem sx={{ padding: '16px 24px' }}>
-                            <ListItemIcon sx={{ minWidth: 40 }}>
-                                <PaletteOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-                            </ListItemIcon>
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="body2" sx={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                    fontWeight: 500,
-                                    marginBottom: 1
-                                }}>
-                                    {t('theme.title')}
-                                </Typography>
-                                <ThemeToggle {...themeToggleProps} toggleTheme={toggleTheme} size="small" />
-                            </Box>
-                        </ListItem>
-
-                        <Divider sx={{
-                            backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
-                            margin: '8px 0'
-                        }} />
-
-                        {/* Task categories */}
-                        <ListItem
-                            button
-                            onClick={() => {
-                                setMenuDrawerOpen(false);
-                                setCategoriesDialog(true);
-                            }}
-                            sx={{
-                                padding: '16px 24px',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
-                                }
-                            }}
-                        >
-                            <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Sell sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-                            </ListItemIcon>
-                            <ListItemText
-                                primary={t('bubbles.taskCategories')}
-                                primaryTypographyProps={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                    fontWeight: 500
-                                }}
-                            />
-                        </ListItem>
-
-                        {/* Font Settings */}
-                        <ListItem
-                            button
-                            onClick={() => {
-                                setMenuDrawerOpen(false);
-                                setFontSettingsDialog(true);
-                            }}
-                            sx={{
-                                padding: '16px 24px',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
-                                }
-                            }}
-                        >
-                            <ListItemIcon sx={{ minWidth: 40 }}>
-                                <FormatSizeOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-                            </ListItemIcon>
-                            <ListItemText
-                                primary={t('bubbles.fontSettings')}
-                                primaryTypographyProps={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                    fontWeight: 500
-                                }}
-                            />
-                        </ListItem>
-
-                        {/* Bubble Background Toggle */}
-                        <ListItem sx={{ padding: '16px 24px' }}>
-                            <ListItemIcon sx={{ minWidth: 40 }}>
-                                <FormatColorFillOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-                            </ListItemIcon>
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="body2" sx={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                    fontWeight: 500,
-                                    marginBottom: 1
-                                }}>
-                                    {t('bubbles.bubbleBackground')}
-                                </Typography>
-                                <Switch
-                                    checked={bubbleBackgroundEnabled}
-                                    onChange={handleToggleBubbleBackground}
-                                    size="small"
-                                    sx={{
-                                        '& .MuiSwitch-switchBase.Mui-checked': {
-                                            color: themeMode === 'light' ? '#3B7DED' : '#90CAF9'
-                                        },
-                                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                            backgroundColor: themeMode === 'light' ? '#3B7DED' : '#90CAF9'
-                                        }
-                                    }}
-                                />
-                            </Box>
-                        </ListItem>
-
-                        {/* Categories Panel Toggle */}
-                        {/* Переключатель панели категорий */}
-                        <ListItem sx={{ padding: '16px 24px' }}>
-                            <ListItemIcon sx={{ minWidth: 40 }}>
-                                <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-                            </ListItemIcon>
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="body2" sx={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                    fontWeight: 500,
-                                    marginBottom: 1
-                                }}>
-                                    {t('bubbles.taskCategoriesPanel')}
-                                </Typography>
-                                <Switch
-                                    checked={categoriesPanelEnabled}
-                                    onChange={handleToggleCategoriesPanel}
-                                    size="small"
-                                    sx={{
-                                        '& .MuiSwitch-switchBase.Mui-checked': {
-                                            color: themeMode === 'light' ? '#3B7DED' : '#90CAF9'
-                                        },
-                                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                            backgroundColor: themeMode === 'light' ? '#3B7DED' : '#90CAF9'
-                                        }
-                                    }}
-                                />
-                            </Box>
-                        </ListItem>
-
-                        {/* About */}
-                        <ListItem
-                            button
-                            onClick={() => {
-                                setMenuDrawerOpen(false);
-                                // TODO: Добавить логику для About
-                            }}
-                            sx={{
-                                padding: '16px 24px',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
-                                }
-                            }}
-                        >
-                            <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Info sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-                            </ListItemIcon>
-                            <ListItemText
-                                primary={t('bubbles.about')}
-                                primaryTypographyProps={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                    fontWeight: 500
-                                }}
-                            />
-                        </ListItem>
-
-                        <Divider sx={{
-                            backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
-                            margin: '8px 0'
-                        }} />
-
-                        {/* Logout */}
-                        <ListItem
-                            button
-                            onClick={() => {
-                                setMenuDrawerOpen(false);
-                                handleLogout();
-                            }}
-                            sx={{
-                                padding: '16px 24px',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    backgroundColor: themeMode === 'light' ? '#FFEBEE' : '#4A1418'
-                                }
-                            }}
-                        >
-                            <ListItemIcon sx={{ minWidth: 40 }}>
-                                <Logout sx={{ color: themeMode === 'light' ? '#D32F2F' : '#FF8A80' }} />
-                            </ListItemIcon>
-                            <ListItemText
-                                primary={t('auth.logout')}
-                                primaryTypographyProps={{
-                                    color: themeMode === 'light' ? '#D32F2F' : '#FF8A80',
-                                    fontWeight: 500
-                                }}
-                            />
-                        </ListItem>
-                    </List>
-                </Box>
-            </Drawer>
+                isMobile={isMobile}
+                themeMode={themeMode}
+                themeToggleProps={themeToggleProps}
+                toggleTheme={toggleTheme}
+                bubbleBackgroundEnabled={bubbleBackgroundEnabled}
+                onToggleBubbleBackground={handleToggleBubbleBackground}
+                categoriesPanelEnabled={categoriesPanelEnabled}
+                onToggleCategoriesPanel={handleToggleCategoriesPanel}
+                onOpenCategoriesDialog={() => setCategoriesDialog(true)}
+                onOpenFontSettingsDialog={() => setFontSettingsDialog(true)}
+                onAbout={() => { }}
+                onLogout={handleLogout}
+            />
 
             {/* Боковое меню фильтрации (вынесено в компонент) */}
             <TaskFilterDrawer
@@ -3024,197 +2793,26 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             />
 
             {/* Диалог настроек шрифта */}
-            <Dialog
+            <FontSettingsDialog
                 open={fontSettingsDialog}
                 onClose={() => setFontSettingsDialog(false)}
-                maxWidth="sm"
-                fullWidth
-                fullScreen={isSmallScreen}
-                PaperProps={{
-                    sx: {
-                        borderRadius: isSmallScreen ? 0 : 3,
-                        ...getDialogPaperStyles(),
-                        margin: isMobile ? 1 : 3
-                    }
-                }}
-            >
-                <DialogTitle sx={{
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    {t('bubbles.fontSettings')}
-                    <IconButton
-                        onClick={() => setFontSettingsDialog(false)}
-                        sx={{ color: 'white' }}
-                    >
-                        <CloseOutlined />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent sx={{ padding: isMobile ? 2 : 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                        {t('bubbles.fontSizeLabel')}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 3 }}>
-                        <Typography variant="body2" sx={{ minWidth: 40 }}>
-                            {t('bubbles.small')}
-                        </Typography>
-                        <Box sx={{ flex: 1 }}>
-                            <Box
-                                component="input"
-                                type="range"
-                                min="8"
-                                max="20"
-                                value={fontSize}
-                                onChange={(e) => handleFontSizeChange(parseInt(e.target.value))}
-                                sx={{
-                                    width: '100%',
-                                    height: 6,
-                                    borderRadius: 3,
-                                    appearance: 'none',
-                                    backgroundColor: '#E0E0E0',
-                                    outline: 'none',
-                                    cursor: 'pointer',
-                                    background: `linear-gradient(to right, #1976d2 0%, #1976d2 ${((fontSize - 8) / 12) * 100}%, #E0E0E0 ${((fontSize - 8) / 12) * 100}%, #E0E0E0 100%)`,
-                                    '&::-webkit-slider-thumb': {
-                                        appearance: 'none',
-                                        width: 20,
-                                        height: 20,
-                                        borderRadius: '50%',
-                                        backgroundColor: '#1976d2',
-                                        cursor: 'pointer',
-                                        border: '2px solid white',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                                    },
-                                    '&::-moz-range-thumb': {
-                                        width: 20,
-                                        height: 20,
-                                        borderRadius: '50%',
-                                        backgroundColor: '#1976d2',
-                                        cursor: 'pointer',
-                                        border: '2px solid white',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                                    }
-                                }}
-                            />
-                        </Box>
-                        <Typography variant="body2" sx={{ minWidth: 40 }}>
-                            {t('bubbles.large')}
-                        </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 2 }}>
-                        {t('bubbles.currentSize')}: {fontSize}px
-                    </Typography>
-
-                    {/* Предварительный просмотр */}
-                    <Box sx={{
-                        border: '1px solid #E0E0E0',
-                        borderRadius: 2,
-                        padding: 2,
-                        backgroundColor: '#F5F5F5',
-                        textAlign: 'center',
-                        minHeight: 60,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <Typography sx={{
-                            fontSize: isMobile ? fontSize * 0.75 : fontSize,
-                            fontWeight: 'bold',
-                            color: '#2C3E50'
-                        }}>
-                            {t('bubbles.previewText')}
-                        </Typography>
-                    </Box>
-                </DialogContent>
-                <DialogActions sx={{ padding: isMobile ? 2 : 3 }}>
-                    <Button
-                        onClick={() => setFontSettingsDialog(false)}
-                        color="inherit"
-                        fullWidth={isSmallScreen}
-                    >
-                        {t('bubbles.close')}
-                    </Button>
-                    <Button
-                        onClick={() => {
-                            handleFontSizeChange(12); // Сброс к значению по умолчанию
-                        }}
-                        variant="outlined"
-                        fullWidth={isSmallScreen}
-                    >
-                        {t('bubbles.reset')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                isSmallScreen={isSmallScreen}
+                isMobile={isMobile}
+                themeMode={themeMode}
+                getDialogPaperStyles={getDialogPaperStyles}
+                fontSize={fontSize}
+                onFontSizeChange={handleFontSizeChange}
+                onReset={() => handleFontSizeChange(12)}
+            />
 
             {/* Диалог подтверждения выхода */}
-            <Dialog
+            <LogoutConfirmDialog
                 open={logoutDialog}
                 onClose={() => setLogoutDialog(false)}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{
-                    sx: {
-                        borderRadius: 3,
-                        ...getDialogPaperStyles(),
-                        margin: isMobile ? 1 : 3
-                    }
-                }}
-            >
-                <DialogTitle sx={{
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    {t('auth.logoutConfirm')}
-                    <IconButton
-                        onClick={() => setLogoutDialog(false)}
-                        sx={{ color: 'white' }}
-                    >
-                        <CloseOutlined />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent sx={{ padding: isMobile ? 2 : 3 }}>
-                    <Typography variant="body1" sx={{ textAlign: 'center', padding: 2 }}>
-                        {t('auth.logoutMessage')}
-                    </Typography>
-                </DialogContent>
-                <DialogActions sx={{
-                    padding: isMobile ? 2 : 3,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 2
-                }}>
-                    <Button
-                        onClick={() => setLogoutDialog(false)}
-                        color="inherit"
-                        variant="outlined"
-                        fullWidth
-                        sx={{
-                            borderRadius: 2,
-                            minHeight: isMobile ? 48 : 36
-                        }}
-                    >
-                        {t('bubbles.cancel')}
-                    </Button>
-                    <Button
-                        onClick={confirmLogout}
-                        color="primary"
-                        variant="contained"
-                        fullWidth
-                        sx={{
-                            borderRadius: 2,
-                            minHeight: isMobile ? 48 : 36
-                        }}
-                    >
-                        {t('auth.approveLogout')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                isMobile={isMobile}
+                getDialogPaperStyles={getDialogPaperStyles}
+                onConfirm={confirmLogout}
+            />
 
             {/* Боковая панель списка задач */}
             <TaskListDrawer
