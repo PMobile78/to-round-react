@@ -30,6 +30,7 @@ import {
     clearBubblesFromFirestore,
     saveTagsToFirestore,
     subscribeToTagsUpdates,
+    subscribeToBubblesUpdates,
     BUBBLE_STATUS,
     markBubbleAsDone,
     markBubbleAsDeleted,
@@ -352,6 +353,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         };
 
         loadInitialBubbles();
+        // Subscribe to live bubbles updates (dueDate changes from server)
+        const unsubscribeBubbles = subscribeToBubblesUpdates((serverBubbles) => {
+            setBubbles(prev => {
+                const map = new Map(prev.map(b => [b.id, b]));
+                const merged = serverBubbles.map(sb => {
+                    const ex = map.get(sb.id);
+                    return ex ? { ...ex, ...sb, body: ex.body } : sb;
+                });
+                return merged;
+            });
+        });
 
         // Create mouse and constraints for drag and drop
         const mouse = Mouse.create(render.canvas);
@@ -429,6 +441,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             Engine.clear(engine);
             render.canvas.remove();
             render.textures = {};
+            if (typeof unsubscribeBubbles === 'function') unsubscribeBubbles();
         };
     }, []); // Убираем themeMode из зависимостей
 
