@@ -1,0 +1,12 @@
+{
+    "reminder": {
+        "title": "Task reminder",
+        "bodyNoTitle": "{{minutes}} min before",
+        "bodyWithTitle": "{{minutes}} min before: {{title}}"
+    },
+    "overdue": {
+        "title": "Overdue task!",
+        "bodyNoTitle": "You have an overdue task.",
+        "bodyWithTitle": "Overdue: {{title}}"
+    }
+}

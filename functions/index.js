@@ -6,6 +6,8 @@ const { isAfter, addMinutes, subMinutes } = require('date-fns');
 admin.initializeApp();
 const db = admin.firestore();
 const HOMEPAGE_URL = 'https://pmobile78.github.io/to-round-react';
+const en = require('./locales/notifications.en.json');
+const uk = require('./locales/notifications.uk.json');
 
 // Data model notes:
 // - User bubbles stored in doc `user-bubbles/{uid}` with array field `bubbles`
@@ -39,31 +41,30 @@ function normalizeLang(lang) {
     return (base === 'uk' || base === 'en') ? base : 'en';
 }
 
+function interpolate(template, vars) {
+    return String(template).replace(/\{\{(\w+)\}\}/g, (_, k) => {
+        const v = vars[k];
+        return v == null ? '' : String(v);
+    });
+}
+
 function buildTextsPerLang(tokenLanguage, type, minutesBefore, bubbleTitle) {
     const lang = normalizeLang(tokenLanguage);
+    const dict = lang === 'uk' ? uk : en;
     const hasTitle = typeof bubbleTitle === 'string' && bubbleTitle.trim().length > 0;
     if (type === 'reminder') {
-        if (lang === 'uk') {
-            return {
-                title: 'Нагадування про завдання',
-                body: hasTitle ? `За ${minutesBefore} хв до строку: ${bubbleTitle}` : `За ${minutesBefore} хв до строку`
-            };
-        }
         return {
-            title: 'Task reminder',
-            body: hasTitle ? `${minutesBefore} min before: ${bubbleTitle}` : `${minutesBefore} min before`
-        };
-    }
-    // overdue
-    if (lang === 'uk') {
-        return {
-            title: 'Прострочене завдання!',
-            body: hasTitle ? `Прострочено: ${bubbleTitle}` : 'У вас є прострочене завдання'
+            title: dict.reminder.title,
+            body: hasTitle
+                ? interpolate(dict.reminder.bodyWithTitle, { minutes: minutesBefore, title: bubbleTitle })
+                : interpolate(dict.reminder.bodyNoTitle, { minutes: minutesBefore })
         };
     }
     return {
-        title: 'Overdue task!',
-        body: hasTitle ? `Overdue: ${bubbleTitle}` : 'You have an overdue task.'
+        title: dict.overdue.title,
+        body: hasTitle
+            ? interpolate(dict.overdue.bodyWithTitle, { title: bubbleTitle })
+            : dict.overdue.bodyNoTitle
     };
 }
 

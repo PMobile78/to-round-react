@@ -1,0 +1,12 @@
+{
+    "reminder": {
+        "title": "Нагадування про завдання",
+        "bodyNoTitle": "За {{minutes}} хв до строку",
+        "bodyWithTitle": "За {{minutes}} хв до строку: {{title}}"
+    },
+    "overdue": {
+        "title": "Прострочене завдання!",
+        "bodyNoTitle": "У вас є прострочене завдання",
+        "bodyWithTitle": "Прострочено: {{title}}"
+    }
+}
