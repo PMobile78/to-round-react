@@ -24,11 +24,12 @@ try {
         const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || 'Уведомление';
         const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || '';
         const icon = (payload.notification && payload.notification.icon) || '/icons/icon-192x192.png';
+        const url = (payload.fcmOptions && payload.fcmOptions.link) || (payload.data && payload.data.url) || null;
 
         self.registration.showNotification(title, {
             body,
             icon,
-            data: payload.data || {}
+            data: Object.assign({}, payload.data || {}, url ? { url } : {})
         });
     });
 } catch (e) {
