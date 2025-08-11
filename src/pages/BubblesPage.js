@@ -164,7 +164,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [listFilter, setListFilter] = useState('active'); // 'active', 'done', 'postpone', 'deleted'
     const [listSortBy, setListSortBy] = useState(() => {
         const saved = localStorage.getItem('bubbles-list-sort-by');
-        return saved ? saved : 'createdAt';
+        return saved ? saved : 'updatedAt';
     }); // 'createdAt', 'updatedAt', 'title', 'tag'
     const [listSortOrder, setListSortOrder] = useState(() => {
         const saved = localStorage.getItem('bubbles-list-sort-order');
