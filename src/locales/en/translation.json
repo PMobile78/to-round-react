@@ -109,6 +109,7 @@
         "customNotification": "Custom notification",
         "customReminder": "Custom reminder",
         "value": "Value",
+        "minutes": "Minutes",
         "minutesBefore": "Minutes before",
         "hours": "Hours",
         "days": "Days",

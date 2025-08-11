@@ -20,6 +20,7 @@ import {
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import MainMenuDrawer from '../components/MainMenuDrawer';
+import AboutDialog from '../components/AboutDialog';
 import FontSettingsDialog from '../components/FontSettingsDialog';
 import LogoutConfirmDialog from '../components/LogoutConfirmDialog';
 import { logoutUser } from '../services/authService';
@@ -334,7 +335,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             updatedAt: storedBubble.updatedAt || new Date().toISOString(),
                             deletedAt: storedBubble.deletedAt || null,
                             dueDate: storedBubble.dueDate || null, // ← добавлено поле dueDate
-                            notifications: storedBubble.notifications || []
+                            notifications: storedBubble.notifications || [],
+                            recurrence: storedBubble.recurrence || null
                         };
                         initialBubbles.push(bubble);
                     });
@@ -1874,6 +1876,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             if (typeof selectedBubble.radius === 'number') {
                 setEditBubbleSize(selectedBubble.radius);
             }
+            setEditRecurrence(selectedBubble.recurrence || null);
         }
         // eslint-disable-next-line
     }, [editDialog, selectedBubble?.id]);
@@ -1886,6 +1889,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Состояния для диалога уведомлений
     const [notifDialogOpen, setNotifDialogOpen] = useState(false);
     const [notifValue, setNotifValue] = useState(null);
+    const [aboutOpen, setAboutOpen] = useState(false);
 
     // Внутри компонента:
     const [createNotifications, setCreateNotifications] = useState([]); // для создания
@@ -2451,9 +2455,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 onToggleCategoriesPanel={handleToggleCategoriesPanel}
                 onOpenCategoriesDialog={() => setCategoriesDialog(true)}
                 onOpenFontSettingsDialog={() => setFontSettingsDialog(true)}
-                onAbout={() => { }}
+                onAbout={() => setAboutOpen(true)}
                 onLogout={handleLogout}
             />
+
+            <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} t={t} />
 
             {/* Боковое меню фильтрации (вынесено в компонент) */}
             <TaskFilterDrawer

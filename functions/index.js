@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 const admin = require('firebase-admin');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
-const { isAfter, addMinutes, subMinutes } = require('date-fns');
+const { isAfter, addMinutes, subMinutes, addHours, addDays, addWeeks, addMonths } = require('date-fns');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -187,6 +187,29 @@ function buildOverdueKey(userId, bubble) {
     return `overdue:${userId}:${String(bubble.id)}:${String(bubble.dueDate)}`;
 }
 
+function computeNextDueDate(currentDue, recurrence) {
+    const every = Number(recurrence?.every) || 1;
+    const unit = String(recurrence?.unit || 'days');
+    switch (unit) {
+        case 'minutes': return addMinutes(currentDue, every);
+        case 'hours': return addHours(currentDue, every);
+        case 'days': return addDays(currentDue, every);
+        case 'weeks': return addWeeks(currentDue, every);
+        case 'months': return addMonths(currentDue, every);
+        default: return addDays(currentDue, every);
+    }
+}
+
+async function updateBubbleDueDate(userId, bubbleId, nextDue) {
+    const docRef = db.collection('user-bubbles').doc(userId);
+    const snapshot = await docRef.get();
+    if (!snapshot.exists) return;
+    const data = snapshot.data() || {};
+    const list = Array.isArray(data.bubbles) ? data.bubbles : [];
+    const updated = list.map(b => (b.id === bubbleId ? { ...b, dueDate: nextDue.toISOString(), updatedAt: new Date().toISOString() } : b));
+    await docRef.set({ ...data, bubbles: updated, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+}
+
 // Runs every minute to check reminders and overdue tasks (Gen 2)
 exports.scheduleDueDateNotifications = onSchedule({
     schedule: 'every 1 minutes',
@@ -202,15 +225,18 @@ exports.scheduleDueDateNotifications = onSchedule({
             // 1) Reminder notifications
             const reminder = shouldTriggerReminderNow(bubble, now);
             if (reminder) {
-                const title = 'Напоминание о задаче';
-                const body = bubble.title ? `${reminder.minutesBefore} мин до срока: ${bubble.title}` : `${reminder.minutesBefore} мин до срока`;
                 const key = buildReminderKey(userId, bubble, reminder.minutesBefore);
                 try {
                     if (!(await wasNotificationSent(key))) {
                         const url = `${HOMEPAGE_URL}/?bubbleId=${encodeURIComponent(String(bubble.id || ''))}`;
                         await sendFcmToUser(userId, {
-                            notification: { title, body },
-                            data: { bubbleId: String(bubble.id || ''), type: 'reminder', minutesBefore: String(reminder.minutesBefore), url }
+                            data: {
+                                bubbleId: String(bubble.id || ''),
+                                type: 'reminder',
+                                minutesBefore: String(reminder.minutesBefore),
+                                url,
+                                bubbleTitle: String(bubble.title || '')
+                            }
                         });
                         await markNotificationSent(key);
                     }
@@ -222,20 +248,34 @@ exports.scheduleDueDateNotifications = onSchedule({
 
             // 2) Overdue notification
             if (isBubbleOverdue(bubble)) {
-                const title = 'Просроченная задача!';
-                const body = bubble.title ? `Просрочено: ${bubble.title}` : 'У вас есть просроченная задача';
                 const key = buildOverdueKey(userId, bubble);
                 try {
                     if (!(await wasNotificationSent(key))) {
                         const url = `${HOMEPAGE_URL}/?bubbleId=${encodeURIComponent(String(bubble.id || ''))}`;
                         await sendFcmToUser(userId, {
-                            notification: { title, body },
-                            data: { bubbleId: String(bubble.id || ''), type: 'overdue', url }
+                            data: {
+                                bubbleId: String(bubble.id || ''),
+                                type: 'overdue',
+                                url,
+                                bubbleTitle: String(bubble.title || '')
+                            }
                         });
                         await markNotificationSent(key);
                     }
                 } catch (e) {
                     console.error('FCM overdue error', userId, bubble.id, e);
+                }
+
+                // Auto-reschedule dueDate if recurrence is configured
+                try {
+                    if (bubble.recurrence && bubble.dueDate) {
+                        const nextDue = computeNextDueDate(new Date(bubble.dueDate), bubble.recurrence);
+                        if (nextDue) {
+                            await updateBubbleDueDate(userId, bubble.id, nextDue);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Reschedule error', userId, bubble.id, e);
                 }
             }
         }
