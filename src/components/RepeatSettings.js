@@ -17,7 +17,7 @@ export default function RepeatSettings({ value, onChange, t }) {
     }, [enabled, unit, every]);
 
     return (
-        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ mt: 1, mb: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
             <FormControlLabel
                 control={<Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />}
                 label={t ? t('bubbles.repeatEvery') : 'Repeat every'}

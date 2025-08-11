@@ -138,6 +138,7 @@ export default function EditBubbleDialog(props) {
                     <Box sx={{ flex: 1 }}>
                         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
                             <DateTimePicker
+                                key={editDueDate ? new Date(editDueDate).getTime() : 'no-date'}
                                 label={t('bubbles.dueDateLabel')}
                                 value={editDueDate}
                                 onChange={setEditDueDate}

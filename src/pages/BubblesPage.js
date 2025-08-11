@@ -363,14 +363,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 });
 
                 // If edit dialog is open for a selected bubble, reflect live updates
-                if (editDialog && selectedBubble) {
+                if (editDialog && selectedBubble && selectedBubble.id) {
                     const updated = merged.find(b => String(b.id) === String(selectedBubble.id));
                     if (updated) {
                         // Update selected bubble fields but keep the Matter.js body instance
                         setSelectedBubble(prevSel => (prevSel ? { ...prevSel, ...updated, body: prevSel.body } : updated));
                         // Update edit form states for dueDate/notifications/recurrence
                         if (updated.dueDate) {
-                            try { setEditDueDate(new Date(updated.dueDate)); } catch (_) { setEditDueDate(null); }
+                            try { const d = new Date(updated.dueDate); if (!isNaN(d.getTime())) setEditDueDate(d); else setEditDueDate(null); } catch (_) { setEditDueDate(null); }
                         } else {
                             setEditDueDate(null);
                         }
