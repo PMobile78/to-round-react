@@ -81,6 +81,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // 600px and below
+    const isNarrowHeader = useMediaQuery('(max-width:1130px)');
 
     // Predefined color palette
     // const COLOR_PALETTE = [
@@ -2115,37 +2116,39 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     alignItems: 'flex-end'
                 }}>
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                        {/* Search field for desktop */}
-                        <Box sx={{
-                            maxWidth: 320,
-                            minWidth: 200,
-                            position: 'relative'
-                        }}>
-                            <SearchField
-                                searchQuery={bubblesSearchQuery}
-                                setSearchQuery={setBubblesSearchQuery}
-                                size="small"
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        height: 36
-                                    }
-                                }}
-                            />
-                            {debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim() && (
-                                <Typography variant="caption" sx={{
-                                    color: 'text.secondary',
-                                    marginTop: 0.5,
-                                    display: 'block',
-                                    textAlign: 'center',
-                                    position: 'absolute',
-                                    left: 0,
-                                    right: 0,
-                                    fontSize: '11px'
-                                }}>
-                                    {t('bubbles.searchResults', { count: searchFoundBubbles.length })}
-                                </Typography>
-                            )}
-                        </Box>
+                        {/* Search field for desktop (hidden on narrow header) */}
+                        {!isNarrowHeader && (
+                            <Box sx={{
+                                maxWidth: 320,
+                                minWidth: 200,
+                                position: 'relative'
+                            }}>
+                                <SearchField
+                                    searchQuery={bubblesSearchQuery}
+                                    setSearchQuery={setBubblesSearchQuery}
+                                    size="small"
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            height: 36
+                                        }
+                                    }}
+                                />
+                                {debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim() && (
+                                    <Typography variant="caption" sx={{
+                                        color: 'text.secondary',
+                                        marginTop: 0.5,
+                                        display: 'block',
+                                        textAlign: 'center',
+                                        position: 'absolute',
+                                        left: 0,
+                                        right: 0,
+                                        fontSize: '11px'
+                                    }}>
+                                        {t('bubbles.searchResults', { count: searchFoundBubbles.length })}
+                                    </Typography>
+                                )}
+                            </Box>
+                        )}
 
                         {/* View Mode Toggle */}
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -2198,6 +2201,36 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
 
                     </Box>
+                    {isNarrowHeader && (
+                        <Box sx={{
+                            position: 'fixed',
+                            top: showInstructions ? 120 : 70,
+                            left: (!isMobile && categoriesPanelEnabled) ? 340 : 20,
+                            right: 20,
+                            zIndex: 1000,
+                        }}>
+                            <SearchField
+                                searchQuery={bubblesSearchQuery}
+                                setSearchQuery={setBubblesSearchQuery}
+                                size="small"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': { height: 40 }
+                                }}
+                            />
+                            {debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim() && (
+                                <Typography variant="caption" sx={{
+                                    color: 'text.secondary',
+                                    marginTop: 0.5,
+                                    display: 'block',
+                                    textAlign: 'center',
+                                    fontSize: '11px'
+                                }}>
+                                    {t('bubbles.searchResults', { count: searchFoundBubbles.length })}
+                                </Typography>
+                            )}
+                        </Box>
+                    )}
+
                     {showInstructions && (
                         <Box sx={{
                             backgroundColor: 'rgba(0, 0, 0, 0.3)',
