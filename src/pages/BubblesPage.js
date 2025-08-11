@@ -886,11 +886,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             selectedTagId || null
         );
 
-        // Set title, description, dueDate
+        // Set title, description, dueDate, recurrence
         newBubble.title = title;
         newBubble.description = description;
         newBubble.dueDate = dueDate ? new Date(dueDate).toISOString() : null;
         newBubble.notifications = createNotifications;
+        newBubble.recurrence = createRecurrence;
 
         Matter.World.add(engineRef.current.world, newBubble.body);
         setBubbles(prev => {
@@ -964,7 +965,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             body: newBody, // Используем новое тело
                             updatedAt: new Date().toISOString(),
                             dueDate: editDueDate ? new Date(editDueDate).toISOString() : null,
-                            notifications: editNotifications
+                            notifications: editNotifications,
+                            recurrence: editRecurrence
                         };
                     }
                     return bubble;
@@ -1851,6 +1853,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         if (editDialog && selectedBubble) {
             // notifications
             setEditNotifications(Array.isArray(selectedBubble.notifications) ? selectedBubble.notifications : []);
+            setEditRecurrence(selectedBubble.recurrence || null);
             // due date
             let val = selectedBubble.dueDate;
             if (val) {
@@ -1887,6 +1890,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Внутри компонента:
     const [createNotifications, setCreateNotifications] = useState([]); // для создания
     const [editNotifications, setEditNotifications] = useState([]); // для редактирования
+    const [createRecurrence, setCreateRecurrence] = useState(null); // { every, unit }
+    const [editRecurrence, setEditRecurrence] = useState(null);
 
     // Открытие конкретного бабла по deep-link событию из index.js
     useEffect(() => {
@@ -2374,6 +2379,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 handleDeleteBubble={handleDeleteBubble}
                 handleMarkAsDone={handleMarkAsDone}
                 handleSaveBubble={handleSaveBubble}
+                editRecurrence={editRecurrence}
+                setEditRecurrence={setEditRecurrence}
             />
             {/* Меню управления тегами */}
             {/* Меню управления тегами */}
@@ -2487,6 +2494,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 setNotifValue={setNotifValue}
                 createNotifications={createNotifications}
                 setCreateNotifications={setCreateNotifications}
+                createRecurrence={createRecurrence}
+                setCreateRecurrence={setCreateRecurrence}
                 handleDeleteCreateNotification={handleDeleteCreateNotification}
                 tags={tags}
                 selectedTagId={selectedTagId}

@@ -22,6 +22,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import ru from 'date-fns/locale/ru';
 import AddNotification from './AddNotification';
+import RepeatSettings from './RepeatSettings';
 
 export default function CreateBubbleDialog(props) {
     const {
@@ -191,6 +192,11 @@ export default function CreateBubbleDialog(props) {
                         themeMode={themeMode}
                     />
                 </Box>
+                <RepeatSettings
+                    value={props.createRecurrence}
+                    onChange={props.setCreateRecurrence}
+                    t={t}
+                />
                 <FormControl fullWidth margin="dense" variant="outlined">
                     <InputLabel>{t('bubbles.categoryLabel')}</InputLabel>
                     <Select
