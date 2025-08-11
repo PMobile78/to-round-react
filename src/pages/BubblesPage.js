@@ -1846,10 +1846,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         });
     }, []);
 
-    // При открытии диалога редактирования подставлять dueDate
+    // При открытии диалога редактирования подставлять все поля (title/description/tag/size/dueDate/notifications)
     useEffect(() => {
         if (editDialog && selectedBubble) {
+            // notifications
             setEditNotifications(Array.isArray(selectedBubble.notifications) ? selectedBubble.notifications : []);
+            // due date
             let val = selectedBubble.dueDate;
             if (val) {
                 if (typeof val === 'string') {
@@ -1861,6 +1863,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 }
             } else {
                 setEditDueDate(null);
+            }
+            // basic fields for Save button logic
+            setTitle(selectedBubble.title || '');
+            setDescription(selectedBubble.description || '');
+            setSelectedTagId(selectedBubble.tagId || '');
+            if (typeof selectedBubble.radius === 'number') {
+                setEditBubbleSize(selectedBubble.radius);
             }
         }
         // eslint-disable-next-line

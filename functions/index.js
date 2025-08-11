@@ -25,10 +25,46 @@ async function getUserFcmTokens(userId) {
     const col = await db.collection('user-fcm-tokens').doc(userId).collection('tokens').get();
     const tokens = [];
     col.forEach((d) => {
-        const t = d.data()?.token || d.id;
-        if (t) tokens.push({ id: d.id, token: t });
+        const data = d.data() || {};
+        const t = data.token || d.id;
+        if (t) tokens.push({ id: d.id, token: t, language: data.language || '' });
     });
     return tokens;
+}
+
+function normalizeLang(lang) {
+    if (!lang || typeof lang !== 'string') return 'en';
+    const base = lang.toLowerCase().split('-')[0];
+    if (base === 'ru') return 'en'; // requested: remove Russian
+    return (base === 'uk' || base === 'en') ? base : 'en';
+}
+
+function buildTextsPerLang(tokenLanguage, type, minutesBefore, bubbleTitle) {
+    const lang = normalizeLang(tokenLanguage);
+    const hasTitle = typeof bubbleTitle === 'string' && bubbleTitle.trim().length > 0;
+    if (type === 'reminder') {
+        if (lang === 'uk') {
+            return {
+                title: 'Нагадування про завдання',
+                body: hasTitle ? `За ${minutesBefore} хв до строку: ${bubbleTitle}` : `За ${minutesBefore} хв до строку`
+            };
+        }
+        return {
+            title: 'Task reminder',
+            body: hasTitle ? `${minutesBefore} min before: ${bubbleTitle}` : `${minutesBefore} min before`
+        };
+    }
+    // overdue
+    if (lang === 'uk') {
+        return {
+            title: 'Прострочене завдання!',
+            body: hasTitle ? `Прострочено: ${bubbleTitle}` : 'У вас є прострочене завдання'
+        };
+    }
+    return {
+        title: 'Overdue task!',
+        body: hasTitle ? `Overdue: ${bubbleTitle}` : 'You have an overdue task.'
+    };
 }
 
 async function sendFcmToUser(userId, payload) {
@@ -36,19 +72,23 @@ async function sendFcmToUser(userId, payload) {
     if (!tokens.length) return { skipped: true, reason: 'no-token' };
 
     const url = payload?.data?.url;
-    const messageBase = {
-        notification: payload.notification,
-        data: payload.data || {},
-        webpush: {
-            fcmOptions: url ? { link: url } : undefined,
-            headers: { TTL: '86400', Urgency: 'high' }
-        }
-    };
+    const type = (payload?.data?.type || '').toString();
+    const minutesBefore = Number(payload?.data?.minutesBefore);
+    const bubbleTitle = payload?.data?.bubbleTitle || '';
 
     const results = [];
     for (const { id, token } of tokens) {
         try {
-            await admin.messaging().send({ token, ...messageBase });
+            const tokenObj = tokens.find(t => t.token === token);
+            const { title, body } = buildTextsPerLang(tokenObj?.language, type, minutesBefore, bubbleTitle);
+            await admin.messaging().send({
+                token,
+                data: Object.assign({}, payload.data || {}, { title, body }),
+                webpush: {
+                    fcmOptions: url ? { link: url } : undefined,
+                    headers: { TTL: '86400', Urgency: 'high' }
+                }
+            });
             results.push({ token, ok: true });
         } catch (e) {
             console.error('FCM send error for token', token, e?.code, e?.message);
