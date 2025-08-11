@@ -2,44 +2,23 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import {
     Box,
     Typography,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    TextField,
     Button,
     IconButton,
     useMediaQuery,
     useTheme,
     Fab,
     Tooltip,
-    FormControl,
-    InputLabel,
-    Select,
     MenuItem,
-    Switch,
     Menu,
     ListItemIcon,
     ListItemText,
-    Drawer,
-    List,
-    ListItem,
-    Divider,
-    Slider,
 
 } from '@mui/material';
 import {
-    CloseOutlined, DeleteOutlined, Add, Clear, Edit, Logout, FilterList, Check, Menu as MenuIcon, Info, Category, Sell, CheckCircle, ViewList, Search,
-    LanguageOutlined,
-    PaletteOutlined,
-    FormatColorFillOutlined,
-    FormatSizeOutlined,
-    LabelOutlined,
+    CloseOutlined, DeleteOutlined, Add, FilterList, Menu as MenuIcon, ViewList,
 } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
-import LanguageSelector from '../components/LanguageSelector';
-import ThemeToggle from '../components/ThemeToggle';
 import MainMenuDrawer from '../components/MainMenuDrawer';
 import FontSettingsDialog from '../components/FontSettingsDialog';
 import LogoutConfirmDialog from '../components/LogoutConfirmDialog';
@@ -57,17 +36,11 @@ import {
     cleanupOldDeletedBubbles
 } from '../services/firestoreService';
 
-import ListView from '../components/ListView';
 import TaskListDrawer from '../components/ListViewDrawer';
-import SearchField from '../components/SearchField';
 import ResponsiveSearch from '../components/ResponsiveSearch';
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
 import useSearch from '../hooks/useSearch';
-import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { ru } from 'date-fns/locale';
-import AddNotification from '../components/AddNotification';
 import EditBubbleDialog from '../components/EditBubbleDialog';
 import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
 import TaskFilterDrawer from '../components/TaskFilterDrawer';
@@ -82,7 +55,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // 600px and below
-    const isNarrowHeader = useMediaQuery('(max-width:1130px)');
 
     // Predefined color palette
     // const COLOR_PALETTE = [
