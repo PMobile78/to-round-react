@@ -72,6 +72,8 @@ import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
 import TaskFilterDrawer from '../components/TaskFilterDrawer';
 import CreateBubbleDialog from '../components/CreateBubbleDialog';
 import TagEditorDialog from '../components/TagEditorDialog';
+import { useMatterResize } from '../hooks/useMatterResize';
+import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
 
 
 const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
@@ -264,37 +266,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     };
 
     // Function to get canvas dimensions depending on screen size
-    const getCanvasSize = () => {
-        return {
-            width: window.innerWidth - (!isMobile && categoriesPanelEnabled ? 320 : 0),
-            height: window.innerHeight
-        };
-    };
+    // Размер канваса вычисляется через утилиту, учитывая панель категорий
+    const getCanvasSize = () => computeCanvasSize({ isMobile, categoriesPanelEnabled });
 
 
 
-    // Function for creating world boundaries
-    const createWorldBounds = (width, height) => {
-        const { Bodies } = Matter;
-        return [
-            Bodies.rectangle(width / 2, -25, width, 50, {
-                isStatic: true,
-                render: { fillStyle: 'transparent' }
-            }),
-            Bodies.rectangle(width / 2, height + 25, width, 50, {
-                isStatic: true,
-                render: { fillStyle: 'transparent' }
-            }),
-            Bodies.rectangle(-25, height / 2, 50, height, {
-                isStatic: true,
-                render: { fillStyle: 'transparent' }
-            }),
-            Bodies.rectangle(width + 25, height / 2, 50, height, {
-                isStatic: true,
-                render: { fillStyle: 'transparent' }
-            })
-        ];
-    };
+    // Используем утилиту createWorldBounds
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -467,74 +444,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const runner = Runner.create();
         Runner.run(runner, engine);
 
-        // Window resize handler
-        const handleResize = () => {
-            // Recalculate canvas size using current breakpoint values
-            const newSize = {
-                width: window.innerWidth,
-                height: window.innerHeight
-            };
-
-            // Update renderer dimensions
-            render.canvas.width = newSize.width;
-            render.canvas.height = newSize.height;
-            render.options.width = newSize.width;
-            render.options.height = newSize.height;
-            setCanvasSize(newSize);
-
-            // Remove old boundaries
-            if (wallsRef.current.length > 0) {
-                World.remove(engine.world, wallsRef.current);
-            }
-
-            // Create new boundaries
-            const newWalls = createWorldBounds(newSize.width, newSize.height);
-            wallsRef.current = newWalls;
-            World.add(engine.world, newWalls);
-
-            // Correct bubble positions if they go beyond new boundaries
-            const allBodies = engine.world.bodies.filter(body => body.label === 'Circle Body');
-            allBodies.forEach(body => {
-                const radius = body.circleRadius;
-                let corrected = false;
-
-                // Check and correct X position
-                if (body.position.x - radius < 0) {
-                    Matter.Body.setPosition(body, { x: radius, y: body.position.y });
-                    corrected = true;
-                } else if (body.position.x + radius > newSize.width) {
-                    Matter.Body.setPosition(body, { x: newSize.width - radius, y: body.position.y });
-                    corrected = true;
-                }
-
-                // Check and correct Y position
-                if (body.position.y - radius < 0) {
-                    Matter.Body.setPosition(body, { x: body.position.x, y: radius });
-                    corrected = true;
-                } else if (body.position.y + radius > newSize.height) {
-                    Matter.Body.setPosition(body, { x: body.position.x, y: newSize.height - radius });
-                    corrected = true;
-                }
-
-                // If position was corrected, reset velocity
-                if (corrected) {
-                    Matter.Body.setVelocity(body, { x: 0, y: 0 });
-                }
-            });
-        };
-
-        // Add debounce for resize event
-        let resizeTimeout;
-        const debouncedResize = () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(handleResize, 100);
-        };
-
-        window.addEventListener('resize', debouncedResize);
+        // Resize sync is handled by useMatterResize hook
 
         return () => {
-            clearTimeout(resizeTimeout);
-            window.removeEventListener('resize', debouncedResize);
+            // cleanup handled below; resize listeners removed by hook
             Render.stop(render);
             World.clear(engine.world);
             Engine.clear(engine);
@@ -542,6 +455,18 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             render.textures = {};
         };
     }, []); // Убираем themeMode из зависимостей
+
+    // Перестраиваем размеры канваса и границы мира при ресайзе окна
+    // и при переключении панели категорий — без перезагрузки страницы
+    useMatterResize({
+        engineRef,
+        renderRef,
+        wallsRef,
+        isMobile,
+        categoriesPanelEnabled,
+        setCanvasSize,
+        matterReady: Boolean(engineRef.current && renderRef.current),
+    });
 
     // Separate useEffect for theme change - update background and bubble fill styles
     useEffect(() => {
@@ -1609,13 +1534,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const newValue = !categoriesPanelEnabled;
         setCategoriesPanelEnabled(newValue);
         localStorage.setItem('bubbles-categories-panel-enabled', JSON.stringify(newValue));
-
-        // Полное обновление страницы для десктопной версии
-        if (!isMobile) {
-            setTimeout(() => {
-                window.location.reload();
-            }, 100);
-        }
     };
 
     // Функция выхода
