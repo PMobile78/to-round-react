@@ -25,7 +25,6 @@ export async function initMessagingAndSaveToken() {
 
         const messaging = getMessaging(app);
         const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: await navigator.serviceWorker.ready });
-        console.log('[FCM] Token acquired:', token);
 
         await saveToken(token);
 
