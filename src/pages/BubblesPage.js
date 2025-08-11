@@ -298,7 +298,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        const { Engine, Render, Runner, Bodies, World, Mouse, MouseConstraint, Events } = Matter;
+        const { Engine, Render, Runner, Bodies, World, Mouse, MouseConstraint, Events, Query } = Matter;
 
         // Creating a Physics Engine
         const engine = Engine.create();
@@ -414,52 +414,52 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
         World.add(engine.world, mouseConstraint);
 
-        // Click handler for bubbles
+        // Click / tap handler for bubbles (robust against short drags)
         let clickStartTime = 0;
-        let isDragging = false;
-
-        Events.on(mouseConstraint, 'startdrag', () => {
-            isDragging = true;
-        });
-
-        Events.on(mouseConstraint, 'enddrag', () => {
-            setTimeout(() => {
-                isDragging = false;
-            }, 50);
-        });
+        let clickStartPos = { x: 0, y: 0 };
+        let downBodyId = null;
 
         Events.on(mouseConstraint, 'mousedown', (event) => {
             clickStartTime = Date.now();
+            clickStartPos = { ...event.mouse.position };
+            const bodies = engine.world.bodies.filter(b => b.label === 'Circle Body');
+            const hits = Query.point(bodies, clickStartPos);
+            downBodyId = hits && hits.length > 0 ? hits[0].id : null;
+        });
+
+        Events.on(mouseConstraint, 'mouseup', (event) => {
+            const clickDuration = Date.now() - clickStartTime;
             const mousePosition = event.mouse.position;
 
-            setTimeout(() => {
-                const clickDuration = Date.now() - clickStartTime;
-                if (!isDragging && clickDuration < 200) {
-                    const currentBubbles = engine.world.bodies.filter(body => body.label === 'Circle Body');
-                    const clickedBody = currentBubbles.find(body => {
-                        const distance = Math.sqrt(
-                            (body.position.x - mousePosition.x) ** 2 +
-                            (body.position.y - mousePosition.y) ** 2
-                        );
-                        return distance <= body.circleRadius;
-                    });
+            const dx = mousePosition.x - clickStartPos.x;
+            const dy = mousePosition.y - clickStartPos.y;
+            const moveDistSq = dx * dx + dy * dy;
 
-                    if (clickedBody) {
-                        setBubbles(currentBubbles => {
-                            const clickedBubble = currentBubbles.find(bubble => bubble.body.id === clickedBody.id);
-                            if (clickedBubble) {
-                                setSelectedBubble(clickedBubble);
-                                setTitle(clickedBubble.title || '');
-                                setDescription(clickedBubble.description || '');
-                                setSelectedTagId(clickedBubble.tagId || '');
-                                setEditBubbleSize(clickedBubble.radius); // Устанавливаем текущий размер пузыря
-                                setEditDialog(true);
-                            }
-                            return currentBubbles;
-                        });
-                    }
+            const durationThresholdMs = 450;
+            const moveThresholdSq = 100; // ~10px
+
+            if (clickDuration <= durationThresholdMs && moveDistSq <= moveThresholdSq) {
+                const bodies = engine.world.bodies.filter(b => b.label === 'Circle Body');
+                const upHits = Query.point(bodies, mousePosition);
+                const upBody = upHits && upHits.length > 0 ? upHits[0] : null;
+
+                const targetBodyId = upBody ? upBody.id : null;
+                if (targetBodyId && (!downBodyId || downBodyId === targetBodyId)) {
+                    setBubbles(currentBubblesState => {
+                        const clickedBubble = currentBubblesState.find(b => b.body.id === targetBodyId);
+                        if (clickedBubble) {
+                            setSelectedBubble(clickedBubble);
+                            setTitle(clickedBubble.title || '');
+                            setDescription(clickedBubble.description || '');
+                            setSelectedTagId(clickedBubble.tagId || '');
+                            setEditBubbleSize(clickedBubble.radius);
+                            setEditDialog(true);
+                        }
+                        return currentBubblesState;
+                    });
                 }
-            }, 150);
+            }
+            downBodyId = null;
         });
 
         // Start render and engine
