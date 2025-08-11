@@ -19,11 +19,11 @@ firebase.initializeApp({
 try {
     const messaging = firebase.messaging();
 
-    // Handle background messages
+    // Handle background messages (show data-only notifications to avoid duplicates)
     messaging.onBackgroundMessage((payload) => {
-        const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || 'Уведомление';
-        const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || '';
-        const icon = (payload.notification && payload.notification.icon) || '/icons/icon-192x192.png';
+        const title = (payload.data && payload.data.title) || 'Уведомление';
+        const body = (payload.data && payload.data.body) || '';
+        const icon = '/icons/icon-192x192.png';
         const url = (payload.fcmOptions && payload.fcmOptions.link) || (payload.data && payload.data.url) || null;
 
         self.registration.showNotification(title, {
@@ -40,9 +40,9 @@ try {
 self.addEventListener('push', function (event) {
     try {
         const payload = event.data ? event.data.json() : {};
-        const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || 'Уведомление';
-        const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || '';
-        const icon = (payload.notification && payload.notification.icon) || '/icons/icon-192x192.png';
+        const title = (payload.data && payload.data.title) || 'Уведомление';
+        const body = (payload.data && payload.data.body) || '';
+        const icon = '/icons/icon-192x192.png';
         const url = (payload.fcmOptions && payload.fcmOptions.link) || (payload.data && payload.data.url) || null;
         event.waitUntil(self.registration.showNotification(title, {
             body,
