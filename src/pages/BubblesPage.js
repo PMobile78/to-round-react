@@ -361,6 +361,26 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     const ex = map.get(sb.id);
                     return ex ? { ...ex, ...sb, body: ex.body } : sb;
                 });
+
+                // If edit dialog is open for a selected bubble, reflect live updates
+                if (editDialog && selectedBubble) {
+                    const updated = merged.find(b => String(b.id) === String(selectedBubble.id));
+                    if (updated) {
+                        // Update selected bubble fields but keep the Matter.js body instance
+                        setSelectedBubble(prevSel => (prevSel ? { ...prevSel, ...updated, body: prevSel.body } : updated));
+                        // Update edit form states for dueDate/notifications/recurrence
+                        if (updated.dueDate) {
+                            try { setEditDueDate(new Date(updated.dueDate)); } catch (_) { setEditDueDate(null); }
+                        } else {
+                            setEditDueDate(null);
+                        }
+                        if (Array.isArray(updated.notifications)) {
+                            setEditNotifications(updated.notifications);
+                        }
+                        setEditRecurrence(updated.recurrence || null);
+                    }
+                }
+
                 return merged;
             });
         });
