@@ -21,25 +21,46 @@ async function fetchAllUserBubbles() {
     return results;
 }
 
-async function getUserFcmToken(userId) {
-    const ref = db.collection('user-fcm-tokens').doc(userId);
-    const snap = await ref.get();
-    return snap.exists ? snap.data().token : null;
+async function getUserFcmTokens(userId) {
+    const col = await db.collection('user-fcm-tokens').doc(userId).collection('tokens').get();
+    const tokens = [];
+    col.forEach((d) => {
+        const t = d.data()?.token || d.id;
+        if (t) tokens.push({ id: d.id, token: t });
+    });
+    return tokens;
 }
 
 async function sendFcmToUser(userId, payload) {
-    const token = await getUserFcmToken(userId);
-    if (!token) return { skipped: true, reason: 'no-token' };
+    const tokens = await getUserFcmTokens(userId);
+    if (!tokens.length) return { skipped: true, reason: 'no-token' };
 
     const url = payload?.data?.url;
-
-    await admin.messaging().send({
-        token,
+    const messageBase = {
         notification: payload.notification,
         data: payload.data || {},
-        webpush: url ? { fcmOptions: { link: url } } : undefined
-    });
-    return { ok: true };
+        webpush: {
+            fcmOptions: url ? { link: url } : undefined,
+            headers: { TTL: '86400', Urgency: 'high' }
+        }
+    };
+
+    const results = [];
+    for (const { id, token } of tokens) {
+        try {
+            await admin.messaging().send({ token, ...messageBase });
+            results.push({ token, ok: true });
+        } catch (e) {
+            console.error('FCM send error for token', token, e?.code, e?.message);
+            results.push({ token, ok: false, error: e });
+            // Cleanup invalid tokens
+            const code = e?.errorInfo?.code || e?.code || '';
+            if (String(code).includes('registration-token-not-registered') || String(code).includes('invalid-argument')) {
+                await db.collection('user-fcm-tokens').doc(userId).collection('tokens').doc(id).delete().catch(() => { });
+            }
+        }
+    }
+    return { ok: true, results };
 }
 
 // Helper: decide if bubble is overdue

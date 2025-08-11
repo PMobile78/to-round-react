@@ -6,7 +6,8 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
-const VAPID_KEY = import.meta?.env?.VITE_FIREBASE_VAPID_KEY || process.env.REACT_APP_FIREBASE_VAPID_KEY || 'BGuf9B4yPtX9L7RSGD9SnorV_6VlAZ4BWiQgSjD33XhfnGq75x3ev_pTxVj-0UUlc58qyv6_Xxt9hJDWOczgYQw'; // ✅ Your real VAPID key. ToDo Move to .env.    
+// Используем только process.env, чтобы избежать предупреждения webpack об import.meta
+const VAPID_KEY = process.env.REACT_APP_FIREBASE_VAPID_KEY || 'BGuf9B4yPtX9L7RSGD9SnorV_6VlAZ4BWiQgSjD33XhfnGq75x3ev_pTxVj-0UUlc58qyv6_Xxt9hJDWOczgYQw'; // ToDo Move to .env
 
 export async function initMessagingAndSaveToken() {
     try {
@@ -72,11 +73,15 @@ async function saveToken(token) {
     const currentUser = getAuth().currentUser;
     if (!currentUser) return;
 
-    const ref = doc(db, 'user-fcm-tokens', currentUser.uid);
-    await setDoc(ref, {
+    // Сохраняем токен как документ в подколлекции: user-fcm-tokens/{uid}/tokens/{token}
+    const tokenRef = doc(db, 'user-fcm-tokens', currentUser.uid, 'tokens', token);
+    await setDoc(tokenRef, {
+        userId: currentUser.uid,
         token,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        language: typeof navigator !== 'undefined' ? navigator.language : 'unknown',
         updatedAt: serverTimestamp(),
-        userId: currentUser.uid
+        createdAt: serverTimestamp()
     }, { merge: true });
 }
 
