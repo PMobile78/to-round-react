@@ -1684,67 +1684,68 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         let animationFrame;
         let pulsePhase = 0;
 
-        const showNotificationAndVibrate = (bubble) => {
-            // if (navigator.vibrate) {
-            //     navigator.vibrate([200, 100, 200]);
-            // }
-            if (typeof window !== 'undefined' && 'Notification' in window) {
-                try {
-                    console.log('[NOTIFY] Notification.permission:', Notification.permission);
-                    if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.getRegistrations().then(regs => {
-                            console.log('[NOTIFY] ServiceWorker registrations:', regs);
-                        });
-                    }
-                    const title = t('bubbles.overdueNotificationTitle');
-                    let body = '';
-                    if (bubble.title) {
-                        body = t('bubbles.overdueNotificationBodyWithTitle', { title: bubble.title });
-                    } else {
-                        body = t('bubbles.overdueNotificationBody');
-                    }
-                    if (Notification.permission === "granted") {
-                        try {
-                            if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-                                console.log('[NOTIFY] Trying to show notification via ServiceWorker:', title, body);
-                                navigator.serviceWorker.ready.then(function (registration) {
-                                    registration.showNotification(title, { body })
-                                        .then(() => console.log('[NOTIFY] showNotification success'))
-                                        .catch(e => console.error('[NOTIFY] showNotification error:', e));
-                                }).catch(e => console.error('[NOTIFY] navigator.serviceWorker.ready error:', e));
-                            } else {
-                                console.warn('[NOTIFY] ServiceWorker not supported');
-                            }
-                        } catch (e) {
-                            console.error('[NOTIFY] Exception in showNotification:', e);
-                        }
-                    } else if (Notification.permission !== "denied") {
-                        console.log('[NOTIFY] Requesting notification permission...');
-                        Notification.requestPermission().then(permission => {
-                            console.log('[NOTIFY] Permission result:', permission);
-                            if (permission === "granted") {
-                                try {
-                                    if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-                                        console.log('[NOTIFY] Trying to show notification via ServiceWorker (after permission):', title, body);
-                                        navigator.serviceWorker.ready.then(function (registration) {
-                                            registration.showNotification(title, { body })
-                                                .then(() => console.log('[NOTIFY] showNotification success'))
-                                                .catch(e => console.error('[NOTIFY] showNotification error:', e));
-                                        }).catch(e => console.error('[NOTIFY] navigator.serviceWorker.ready error:', e));
-                                    } else {
-                                        console.warn('[NOTIFY] ServiceWorker not supported');
-                                    }
-                                } catch (e) {
-                                    console.error('[NOTIFY] Exception in showNotification (after permission):', e);
-                                }
-                            }
-                        }).catch(e => console.error('[NOTIFY] requestPermission error:', e));
-                    }
-                } catch (e) {
-                    console.error('[NOTIFY] Outer catch:', e);
-                }
-            }
-        };
+        // Temporarily disabled local notifications to test FCM only
+        // const showNotificationAndVibrate = (bubble) => {
+        //     // if (navigator.vibrate) {
+        //     //     navigator.vibrate([200, 100, 200]);
+        //     // }
+        //     if (typeof window !== 'undefined' && 'Notification' in window) {
+        //         try {
+        //             console.log('[NOTIFY] Notification.permission:', Notification.permission);
+        //             if ('serviceWorker' in navigator) {
+        //                 navigator.serviceWorker.getRegistrations().then(regs => {
+        //                     console.log('[NOTIFY] ServiceWorker registrations:', regs);
+        //                 });
+        //             }
+        //             const title = t('bubbles.overdueNotificationTitle');
+        //             let body = '';
+        //             if (bubble.title) {
+        //                 body = t('bubbles.overdueNotificationBodyWithTitle', { title: bubble.title });
+        //             } else {
+        //                 body = t('bubbles.overdueNotificationBody');
+        //             }
+        //             if (Notification.permission === "granted") {
+        //                 try {
+        //                     if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+        //                         console.log('[NOTIFY] Trying to show notification via ServiceWorker:', title, body);
+        //                         navigator.serviceWorker.ready.then(function (registration) {
+        //                             registration.showNotification(title, { body })
+        //                                 .then(() => console.log('[NOTIFY] showNotification success'))
+        //                                 .catch(e => console.error('[NOTIFY] showNotification error:', e));
+        //                         }).catch(e => console.error('[NOTIFY] navigator.serviceWorker.ready error:', e));
+        //                     } else {
+        //                         console.warn('[NOTIFY] ServiceWorker not supported');
+        //                     }
+        //                 } catch (e) {
+        //                     console.error('[NOTIFY] Exception in showNotification:', e);
+        //                 }
+        //             } else if (Notification.permission !== "denied") {
+        //                 console.log('[NOTIFY] Requesting notification permission...');
+        //                 Notification.requestPermission().then(permission => {
+        //                     console.log('[NOTIFY] Permission result:', permission);
+        //                     if (permission === "granted") {
+        //                         try {
+        //                             if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+        //                                 console.log('[NOTIFY] Trying to show notification via ServiceWorker (after permission):', title, body);
+        //                                 navigator.serviceWorker.ready.then(function (registration) {
+        //                                     registration.showNotification(title, { body })
+        //                                         .then(() => console.log('[NOTIFY] showNotification success'))
+        //                                         .catch(e => console.error('[NOTIFY] showNotification error:', e));
+        //                                 }).catch(e => console.error('[NOTIFY] navigator.serviceWorker.ready error:', e));
+        //                             } else {
+        //                                 console.warn('[NOTIFY] ServiceWorker not supported');
+        //                             }
+        //                         } catch (e) {
+        //                             console.error('[NOTIFY] Exception in showNotification (after permission):', e);
+        //                         }
+        //                     }
+        //                 }).catch(e => console.error('[NOTIFY] requestPermission error:', e));
+        //             }
+        //         } catch (e) {
+        //             console.error('[NOTIFY] Outer catch:', e);
+        //         }
+        //     }
+        // };
 
         const animate = () => {
             const now = Date.now();
@@ -1773,7 +1774,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 if (activeNotifIdx !== null) {
                     const key = `${bubble.id}:${activeNotifTargetTime}`;
                     if (!notifiedBubbleNotificationsRef.current.has(key)) {
-                        showNotificationAndVibrate(bubble);
+                        // showNotificationAndVibrate(bubble); // disabled for FCM testing
                         notifiedBubbleNotificationsRef.current.add(key);
                     }
                     // Пульсация
@@ -1797,7 +1798,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 // 3. Если нет активных уведомлений, но dueDate просрочен — пульсация по dueDate
                 if (now >= due) {
                     if (!notifiedBubblesRef.current.has(bubble.id)) {
-                        showNotificationAndVibrate(bubble);
+                        // showNotificationAndVibrate(bubble); // disabled for FCM testing
                         notifiedBubblesRef.current.add(bubble.id);
                     }
                     const baseRadius = bubble.radius;
@@ -1877,6 +1878,42 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Внутри компонента:
     const [createNotifications, setCreateNotifications] = useState([]); // для создания
     const [editNotifications, setEditNotifications] = useState([]); // для редактирования
+
+    // Открытие конкретного бабла по deep-link событию из index.js
+    useEffect(() => {
+        function handleOpenBubble(e) {
+            const bubbleId = e?.detail?.bubbleId;
+            if (!bubbleId) return;
+            const found = bubbles.find(b => String(b.id) === String(bubbleId));
+            if (found) {
+                setSelectedBubble(found);
+                setEditDialog(true);
+            }
+        }
+        window.addEventListener('open-bubble', handleOpenBubble);
+        return () => window.removeEventListener('open-bubble', handleOpenBubble);
+        // eslint-disable-next-line
+    }, [bubbles]);
+
+    // Авто-открытие по URL-параметру (?bubbleId=...) даже если событие было пропущено
+    const deepLinkHandledRef = React.useRef(false);
+    useEffect(() => {
+        if (deepLinkHandledRef.current) return;
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const bubbleId = params.get('bubbleId');
+            if (!bubbleId) return;
+            const found = bubbles.find(b => String(b.id) === String(bubbleId));
+            if (found) {
+                deepLinkHandledRef.current = true;
+                setSelectedBubble(found);
+                setEditDialog(true);
+            }
+        } catch (e) {
+            // ignore
+        }
+        // eslint-disable-next-line
+    }, [bubbles]);
 
     // Вспомогательная функция для вычисления offset в миллисекундах
     function getOffsetMs(notification) {

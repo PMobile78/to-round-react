@@ -2,6 +2,20 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './i18n';
+import { initMessagingAndSaveToken } from './firebaseMessaging';
+
+// Handle notification deep links like /?bubbleId=...
+function handleDeepLink() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const bubbleId = params.get('bubbleId');
+        if (bubbleId) {
+            window.dispatchEvent(new CustomEvent('open-bubble', { detail: { bubbleId } }));
+        }
+    } catch (e) {
+        // ignore
+    }
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -23,8 +37,14 @@ if ('serviceWorker' in navigator) {
             } else if (registration.active) {
                 console.log('[SW] Service worker active');
             }
+
+            // Initialize FCM after SW is ready and process deep links
+            initMessagingAndSaveToken();
+            handleDeepLink();
         }, function (err) {
             console.error('[SW] Registration failed:', err);
         });
     });
+} else {
+    handleDeepLink();
 }
