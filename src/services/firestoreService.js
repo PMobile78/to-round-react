@@ -151,6 +151,15 @@ export const updateBubbleStatus = async (bubbleId, newStatus, bubblesData) => {
                     updatedBubble.deletedAt = null;
                 }
 
+                // When task is completed, clear scheduling fields
+                if (newStatus === BUBBLE_STATUS.DONE) {
+                    updatedBubble.dueDate = null;
+                    updatedBubble.notifications = [];
+                    updatedBubble.recurrence = null;
+                    updatedBubble.overdueSticky = false;
+                    updatedBubble.overdueAt = null;
+                }
+
                 return updatedBubble;
             }
             return bubble;
