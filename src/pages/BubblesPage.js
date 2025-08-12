@@ -2293,32 +2293,40 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     alignItems: 'flex-end'
                 }}>
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                        <ResponsiveSearch
-                            searchQuery={bubblesSearchQuery}
-                            setSearchQuery={setBubblesSearchQuery}
-                            themeMode={themeMode}
-                            placement="desktop"
-                            showInstructions={showInstructions}
-                            resultsCount={t('bubbles.searchResults', { count: searchFoundBubbles.length })}
-                            showResultsCount
-                            categoriesPanelEnabled={categoriesPanelEnabled}
-                        />
+                        <Tooltip title={t('bubbles.searchPlaceholder')} placement="bottom">
+                            <Box sx={{ display: 'inline-flex' }}>
+                                <ResponsiveSearch
+                                    searchQuery={bubblesSearchQuery}
+                                    setSearchQuery={setBubblesSearchQuery}
+                                    themeMode={themeMode}
+                                    placement="desktop"
+                                    showInstructions={showInstructions}
+                                    resultsCount={t('bubbles.searchResults', { count: searchFoundBubbles.length })}
+                                    showResultsCount
+                                    categoriesPanelEnabled={categoriesPanelEnabled}
+                                />
+                            </Box>
+                        </Tooltip>
 
                         {/* View Mode Toggle */}
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                             {/* Иконка поиска теперь инкапсулирована внутри ResponsiveSearch */}
-                            <Button
-                                onClick={() => setListViewDialog(true)}
-                                variant="outlined"
-                                size="small"
-                                startIcon={<ViewList />}
-                                sx={{
-                                    ...getOutlinedButtonStyles(),
-                                    height: 36
-                                }}
-                            >
-                                {t('bubbles.listView')}
-                            </Button>
+                            <Tooltip title={t('bubbles.listView')} placement="bottom">
+                                <span>
+                                    <Button
+                                        onClick={() => setListViewDialog(true)}
+                                        variant="outlined"
+                                        size="small"
+                                        startIcon={<ViewList />}
+                                        sx={{
+                                            ...getOutlinedButtonStyles(),
+                                            height: 36
+                                        }}
+                                    >
+                                        {t('bubbles.listView')}
+                                    </Button>
+                                </span>
+                            </Tooltip>
                             <Tooltip
                                 title={categoriesPanelEnabled ? t('bubbles.filterDisabled') : t('bubbles.filterButton')}
                                 placement="top"
@@ -2401,24 +2409,32 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         gap: 1,
                         alignItems: 'center'
                     }}>
-                        <ResponsiveSearch
-                            searchQuery={bubblesSearchQuery}
-                            setSearchQuery={setBubblesSearchQuery}
-                            themeMode={themeMode}
-                            placement="mobile"
-                            showInstructions={showInstructions}
-                            resultsCount={t('bubbles.searchResults', { count: searchFoundBubbles.length })}
-                            showResultsCount
-                            categoriesPanelEnabled={categoriesPanelEnabled}
-                        />
+                        <Tooltip title={t('bubbles.searchPlaceholder')} placement="bottom-start">
+                            <Box sx={{ display: 'inline-flex' }}>
+                                <ResponsiveSearch
+                                    searchQuery={bubblesSearchQuery}
+                                    setSearchQuery={setBubblesSearchQuery}
+                                    themeMode={themeMode}
+                                    placement="mobile"
+                                    showInstructions={showInstructions}
+                                    resultsCount={t('bubbles.searchResults', { count: searchFoundBubbles.length })}
+                                    showResultsCount
+                                    categoriesPanelEnabled={categoriesPanelEnabled}
+                                />
+                            </Box>
+                        </Tooltip>
 
                         {/* View Mode Toggle for Mobile */}
-                        <IconButton
-                            onClick={() => setListViewDialog(true)}
-                            sx={getButtonStyles()}
-                        >
-                            <ViewList />
-                        </IconButton>
+                        <Tooltip title={t('bubbles.listView')} placement="bottom-start">
+                            <span>
+                                <IconButton
+                                    onClick={() => setListViewDialog(true)}
+                                    sx={getButtonStyles()}
+                                >
+                                    <ViewList />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                         <Tooltip
                             title={categoriesPanelEnabled ? t('bubbles.filterDisabled') : t('bubbles.filterButton')}
                             placement="top"
