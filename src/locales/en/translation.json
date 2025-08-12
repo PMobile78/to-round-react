@@ -130,7 +130,8 @@
         "1dayBefore": "1 day before",
         "custom": "Custom...",
         "exportJson": "Export JSON",
-        "importJson": "Import JSON"
+        "importJson": "Import JSON",
+        "reload": "Reload"
     },
     "auth": {
         "welcome": "Welcome",

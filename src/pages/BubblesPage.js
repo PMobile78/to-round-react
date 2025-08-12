@@ -2203,12 +2203,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     >
                         <MenuIcon />
                     </IconButton>
-                    <IconButton
-                        onClick={() => window.location.reload()}
-                        sx={{ ...getButtonStyles(), ml: 1 }}
-                    >
-                        <Refresh />
-                    </IconButton>
+                    <Tooltip title={t('bubbles.reload')}>
+                        <IconButton
+                            onClick={() => window.location.reload()}
+                            sx={{ ...getButtonStyles(), ml: 1 }}
+                        >
+                            <Refresh />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
             )}
 

@@ -131,7 +131,8 @@
         "1dayBefore": "1 день до",
         "custom": "Власне...",
         "exportJson": "Експорт JSON",
-        "importJson": "Імпорт JSON"
+        "importJson": "Імпорт JSON",
+        "reload": "Перезавантажити"
     },
     "auth": {
         "welcome": "Ласкаво просимо",
