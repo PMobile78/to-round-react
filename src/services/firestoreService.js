@@ -60,7 +60,9 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             deletedAt: bubble.deletedAt || null,
             dueDate: bubble.dueDate || null,
             notifications: bubble.notifications || [],
-            recurrence: bubble.recurrence || null
+            recurrence: bubble.recurrence || null,
+            overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
+            overdueAt: bubble.overdueAt || null
         }));
 
         await setDoc(bubblesRef, {
@@ -87,7 +89,9 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             deletedAt: bubble.deletedAt || null,
             dueDate: bubble.dueDate || null,
             notifications: bubble.notifications || [],
-            recurrence: bubble.recurrence || null
+            recurrence: bubble.recurrence || null,
+            overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
+            overdueAt: bubble.overdueAt || null
         }));
         localStorage.setItem(`bubbles_${userId}`, JSON.stringify(bubblesForStorage));
     }

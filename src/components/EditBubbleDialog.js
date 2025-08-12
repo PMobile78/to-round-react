@@ -54,7 +54,11 @@ export default function EditBubbleDialog(props) {
         setEditBubbleSize,
         handleDeleteBubble,
         handleMarkAsDone,
-        handleSaveBubble
+        handleSaveBubble,
+        editRecurrence,
+        setEditRecurrence,
+        onStopPulsing,
+        showStopPulsing
     } = props;
 
     return (
@@ -173,12 +177,34 @@ export default function EditBubbleDialog(props) {
                             />
                         </LocalizationProvider>
                     </Box>
+                    {!isMobile && showStopPulsing ? (
+                        <Button
+                            onClick={onStopPulsing}
+                            variant="outlined"
+                            color="warning"
+                            sx={{ mt: 1, ml: 0.5, whiteSpace: 'nowrap' }}
+                        >
+                            {t('bubbles.stopPulsing') || 'Stop pulsing'}
+                        </Button>
+                    ) : null}
                     {editDueDate && (
                         <IconButton onClick={() => { setEditDueDate(null); setEditNotifications([]); }} sx={{ mt: 1 }}>
                             <Clear />
                         </IconButton>
                     )}
                 </Box>
+                {isMobile && showStopPulsing ? (
+                    <Box sx={{ mt: 1 }}>
+                        <Button
+                            onClick={onStopPulsing}
+                            variant="outlined"
+                            color="warning"
+                            fullWidth
+                        >
+                            {t('bubbles.stopPulsing') || 'Stop pulsing'}
+                        </Button>
+                    </Box>
+                ) : null}
                 {editDueDate && isOverdue(editDueDate) && (
                     <Box sx={{
                         display: 'flex', alignItems: 'center', gap: 1, marginTop: 1, padding: 1,

@@ -362,6 +362,21 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     return ex ? { ...ex, ...sb, body: ex.body } : sb;
                 });
 
+                // detect server state and make sticky by server flag (persists across reloads)
+                try {
+                    merged.forEach(sb => {
+                        const id = sb.id;
+                        const newDue = sb?.dueDate ? new Date(sb.dueDate).getTime() : null;
+                        const prevDue = lastDueRef.current.get(id) ?? null;
+                        if (sb?.overdueSticky) {
+                            stickyPulseRef.current.add(id);
+                        } else {
+                            stickyPulseRef.current.delete(id);
+                        }
+                        if (newDue && Number.isFinite(newDue)) lastDueRef.current.set(id, newDue);
+                    });
+                } catch (_) { }
+
                 // If edit dialog is open for a selected bubble, reflect live updates
                 if (editDialog && selectedBubble && selectedBubble.id) {
                     const updated = merged.find(b => String(b.id) === String(selectedBubble.id));
@@ -378,6 +393,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             setEditNotifications(updated.notifications);
                         }
                         setEditRecurrence(updated.recurrence || null);
+                        // keep sticky pulsing even if editor opened (until user presses Stop)
                     }
                 }
 
@@ -1713,6 +1729,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // В начале компонента:
     const notifiedBubblesRef = useRef(new Set());
     const notifiedBubbleNotificationsRef = useRef(new Set()); // bubbleId:idx
+    const stickyPulseRef = useRef(new Set()); // keep pulsing after repeat-every reschedule
+    const lastDueRef = useRef(new Map());
+
+    // Keep pulsing even if editor opened; stop only by explicit Stop button
 
     // --- Пульсация для просроченных задач и уведомлений ---
     useEffect(() => {
@@ -1790,6 +1810,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             bubbles.forEach(bubble => {
                 if (!bubble.body || bubble.status !== BUBBLE_STATUS.ACTIVE || !bubble.dueDate) return;
                 const due = new Date(bubble.dueDate).getTime();
+
+                // Если открыт редактор этой бульбашки и включён Repeat — не мерцать
+                if (editDialog && selectedBubble && selectedBubble.id === bubble.id && bubble.recurrence) {
+                    if (Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
+                        const scale = bubble.radius / bubble.body.circleRadius;
+                        Matter.Body.scale(bubble.body, scale, scale);
+                    }
+                    const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
+                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    return;
+                }
                 // 1. Найти ближайшее сработавшее уведомление, которое не удалено
                 let activeNotifIdx = null;
                 let activeNotifTargetTime = null;
@@ -1833,7 +1864,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     return; // не пульсируем по dueDate, если есть активное уведомление
                 }
                 // 3. Если нет активных уведомлений, но dueDate просрочен — пульсация по dueDate
-                if (now >= due) {
+                const shouldPulseOverdue = now >= due || stickyPulseRef.current.has(bubble.id);
+                if (shouldPulseOverdue || bubble.overdueSticky) {
                     if (!notifiedBubblesRef.current.has(bubble.id)) {
                         // showNotificationAndVibrate(bubble); // disabled for FCM testing
                         notifiedBubblesRef.current.add(bubble.id);
@@ -2416,6 +2448,54 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 handleDeleteBubble={handleDeleteBubble}
                 handleMarkAsDone={handleMarkAsDone}
                 handleSaveBubble={handleSaveBubble}
+                onStopPulsing={async () => {
+                    try {
+                        if (!selectedBubble) return;
+                        stickyPulseRef.current.delete(selectedBubble.id);
+                        notifiedBubblesRef.current.delete(selectedBubble.id);
+                        setBubbles(prev => {
+                            const updated = prev.map(b => b.id === selectedBubble.id ? { ...b, overdueSticky: false } : b);
+                            saveBubblesToFirestore(updated);
+                            return updated;
+                        });
+                        // Close edit dialog after stop pulsing
+                        setEditDialog(false);
+                        setSelectedBubble(null);
+                    } catch (e) { /* ignore */ }
+                }}
+                showStopPulsing={(() => {
+                    try {
+                        if (!selectedBubble || selectedBubble.status !== BUBBLE_STATUS.ACTIVE || !selectedBubble.dueDate) return false;
+                        const now = Date.now();
+                        const due = new Date(selectedBubble.dueDate).getTime();
+                        // active notification window
+                        if (Array.isArray(selectedBubble.notifications) && selectedBubble.notifications.length > 0) {
+                            for (const notif of selectedBubble.notifications) {
+                                let offsetMs = 0;
+                                if (typeof notif === 'string') {
+                                    const m = notif.match(/^(\d+)([mhdw])$/i);
+                                    if (m) {
+                                        const val = Number(m[1]);
+                                        const u = m[2].toLowerCase();
+                                        offsetMs = u === 'm' ? val * 60 * 1000 : u === 'h' ? val * 60 * 60 * 1000 : u === 'd' ? val * 24 * 60 * 60 * 1000 : val * 7 * 24 * 60 * 60 * 1000;
+                                    }
+                                } else if (typeof notif === 'object') {
+                                    const v = Number(notif.value);
+                                    const unit = notif.unit;
+                                    if (Number.isFinite(v) && v > 0) {
+                                        offsetMs = unit === 'minutes' ? v * 60 * 1000 : unit === 'hours' ? v * 60 * 60 * 1000 : unit === 'days' ? v * 24 * 60 * 60 * 1000 : unit === 'weeks' ? v * 7 * 24 * 60 * 60 * 1000 : 0;
+                                    }
+                                }
+                                const targetTime = due - offsetMs;
+                                if (Number.isFinite(targetTime) && now >= targetTime && now < due) return true;
+                            }
+                        }
+                        if (now >= due) return true;
+                        if (selectedBubble.overdueSticky) return true;
+                        if (stickyPulseRef.current.has(selectedBubble.id)) return true;
+                        return false;
+                    } catch (_) { return false; }
+                })()}
                 editRecurrence={editRecurrence}
                 setEditRecurrence={setEditRecurrence}
             />

@@ -210,6 +210,16 @@ async function updateBubbleDueDate(userId, bubbleId, nextDue) {
     await docRef.set({ ...data, bubbles: updated, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 }
 
+async function updateBubbleFields(userId, bubbleId, fields) {
+    const docRef = db.collection('user-bubbles').doc(userId);
+    const snapshot = await docRef.get();
+    if (!snapshot.exists) return;
+    const data = snapshot.data() || {};
+    const list = Array.isArray(data.bubbles) ? data.bubbles : [];
+    const updated = list.map(b => (b.id === bubbleId ? { ...b, ...fields } : b));
+    await docRef.set({ ...data, bubbles: updated, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+}
+
 // Runs every minute to check reminders and overdue tasks (Gen 2)
 exports.scheduleDueDateNotifications = onSchedule({
     schedule: 'every 1 minutes',
@@ -262,6 +272,8 @@ exports.scheduleDueDateNotifications = onSchedule({
                         });
                         await markNotificationSent(key);
                     }
+                    // mark overdue in Firestore (sticky pulse across devices)
+                    await updateBubbleFields(userId, bubble.id, { overdueSticky: true, overdueAt: new Date().toISOString() });
                 } catch (e) {
                     console.error('FCM overdue error', userId, bubble.id, e);
                 }
@@ -272,6 +284,8 @@ exports.scheduleDueDateNotifications = onSchedule({
                         const nextDue = computeNextDueDate(new Date(bubble.dueDate), bubble.recurrence);
                         if (nextDue) {
                             await updateBubbleDueDate(userId, bubble.id, nextDue);
+                            // keep sticky flag until user stops or dueDate manually changed/deleted
+                            await updateBubbleFields(userId, bubble.id, { overdueSticky: true });
                         }
                     }
                 } catch (e) {
