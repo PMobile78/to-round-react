@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Drawer, Box, Typography, List, ListItem, ListItemIcon, ListItemText, Divider, Switch } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,7 +9,9 @@ import {
     LabelOutlined,
     Info,
     Logout,
-    Sell
+    Sell,
+    FileDownload,
+    FileUpload
 } from '@mui/icons-material';
 import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
@@ -28,9 +30,41 @@ const MainMenuDrawer = ({
     onOpenCategoriesDialog,
     onOpenFontSettingsDialog,
     onAbout,
-    onLogout
+    onLogout,
+    onExportJson,
+    onImportJson
 }) => {
     const { t } = useTranslation();
+    const fileInputRef = useRef(null);
+
+    const handleImportClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileChange = (event) => {
+        try {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const text = reader.result;
+                    const parsed = JSON.parse(text);
+                    onClose();
+                    onImportJson && onImportJson(parsed);
+                } catch (e) {
+                    console.error('Invalid JSON file', e);
+                    // optionally, show UI feedback in future
+                }
+            };
+            reader.readAsText(file);
+        } catch (e) {
+            console.error('Failed to import JSON', e);
+        }
+    };
 
     return (
         <Drawer
@@ -63,6 +97,44 @@ const MainMenuDrawer = ({
                 </Box>
 
                 <List sx={{ padding: 0 }}>
+                    <ListItem
+                        button
+                        onClick={() => {
+                            onClose();
+                            onExportJson && onExportJson();
+                        }}
+                        sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <FileDownload sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={t('bubbles.exportJson')}
+                            primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
+                        />
+                    </ListItem>
+
+                    <ListItem
+                        button
+                        onClick={handleImportClick}
+                        sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <FileUpload sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={t('bubbles.importJson')}
+                            primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
+                        />
+                        <input
+                            type="file"
+                            accept="application/json"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            style={{ display: 'none' }}
+                        />
+                    </ListItem>
+
                     <ListItem sx={{ padding: '16px 24px' }}>
                         <ListItemIcon sx={{ minWidth: 40 }}>
                             <LanguageOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />

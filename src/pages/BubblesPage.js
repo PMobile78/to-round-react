@@ -52,6 +52,46 @@ import { useMatterResize } from '../hooks/useMatterResize';
 import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
 
 
+// Helpers for JSON export
+const exportJsonFile = (dataObject, filename) => {
+    try {
+        const blob = new Blob([JSON.stringify(dataObject, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+    } catch (e) {
+        console.error('Export JSON failed', e);
+    }
+};
+
+// Подготовка данных пузырей к экспорту (без Matter.js ссылок)
+const sanitizeBubblesForExport = (bubblesData) => {
+    return (bubblesData || []).map((bubble) => ({
+        id: bubble.id,
+        radius: bubble.radius,
+        title: bubble.title || '',
+        description: bubble.description || '',
+        fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
+        strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
+        tagId: bubble.tagId || null,
+        status: bubble.status || BUBBLE_STATUS.ACTIVE,
+        createdAt: bubble.createdAt || new Date().toISOString(),
+        updatedAt: bubble.updatedAt || new Date().toISOString(),
+        deletedAt: bubble.deletedAt || null,
+        dueDate: bubble.dueDate || null,
+        notifications: bubble.notifications || [],
+        recurrence: bubble.recurrence || null,
+        overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
+        overdueAt: bubble.overdueAt || null
+    }));
+};
+
+
 const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
@@ -716,7 +756,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             const filteredIds = new Set(getFilteredBubbles.map(b => b.id));
 
             bubbles.forEach(bubble => {
-                if (bubble.body) {
+                if (bubble && bubble.body) {
                     const isVisible = filteredIds.has(bubble.id);
                     const isCurrentlyInWorld = engineRef.current.world.bodies.includes(bubble.body);
 
@@ -754,7 +794,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const filteredIds = new Set(getFilteredBubbles.map(b => b.id));
 
         bubbles.forEach(bubble => {
-            if (bubble.body) {
+            if (bubble && bubble.body) {
                 const isVisible = filteredIds.has(bubble.id);
                 const isCurrentlyInWorld = engineRef.current.world.bodies.includes(bubble.body);
                 const isFound = foundBubblesIds.has(bubble.id);
@@ -1625,14 +1665,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             if (!engineRef.current) return undefined;
 
             const updatePositions = () => {
-                const filteredBubbles = filteredBubblesRef.current;
-                const newPositions = filteredBubbles.map(bubble => ({
-                    id: bubble.id,
-                    x: bubble.body.position.x,
-                    y: bubble.body.position.y,
-                    radius: bubble.radius,
-                    title: bubble.title
-                }));
+                const filteredBubbles = filteredBubblesRef.current || [];
+                const newPositions = filteredBubbles
+                    .filter(bubble => bubble && bubble.body && bubble.body.position)
+                    .map(bubble => ({
+                        id: bubble.id,
+                        x: bubble.body.position.x,
+                        y: bubble.body.position.y,
+                        radius: bubble.radius,
+                        title: bubble.title
+                    }));
                 setPositions(newPositions);
             };
 
@@ -1961,6 +2003,39 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [editNotifications, setEditNotifications] = useState([]); // для редактирования
     const [createRecurrence, setCreateRecurrence] = useState(null); // { every, unit }
     const [editRecurrence, setEditRecurrence] = useState(null);
+
+    // Export current data to JSON
+    const handleExportJson = useCallback(() => {
+        const pad = (n) => String(n).padStart(2, '0');
+        const now = new Date();
+        const filename = `todo-round-export-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.json`;
+        const data = {
+            version: 1,
+            exportedAt: now.toISOString(),
+            bubbles: sanitizeBubblesForExport(bubbles),
+            tags
+        };
+        exportJsonFile(data, filename);
+    }, [bubbles, tags]);
+
+    // Import data from JSON (replace existing)
+    const handleImportJson = useCallback(async (data) => {
+        try {
+            const importedTags = Array.isArray(data?.tags) ? data.tags : [];
+            const importedBubbles = Array.isArray(data?.bubbles) ? data.bubbles : [];
+
+            setTags(importedTags);
+            await saveTagsToFirestore(importedTags);
+
+            setBubbles(importedBubbles);
+            await saveBubblesToFirestore(importedBubbles);
+
+            // Перезагружаем страницу после успешного импорта
+            window.location.reload();
+        } catch (e) {
+            console.error('Import JSON failed', e);
+        }
+    }, []);
 
     // Открытие конкретного бабла по deep-link событию из index.js
     useEffect(() => {
@@ -2570,6 +2645,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 onOpenFontSettingsDialog={() => setFontSettingsDialog(true)}
                 onAbout={() => setAboutOpen(true)}
                 onLogout={handleLogout}
+                onExportJson={handleExportJson}
+                onImportJson={handleImportJson}
             />
 
             <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} t={t} />

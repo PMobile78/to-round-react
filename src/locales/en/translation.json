@@ -126,7 +126,9 @@
         "15minutesBefore": "15 minutes before",
         "1hourBefore": "1 hour before",
         "1dayBefore": "1 day before",
-        "custom": "Custom..."
+        "custom": "Custom...",
+        "exportJson": "Export JSON",
+        "importJson": "Import JSON"
     },
     "auth": {
         "welcome": "Welcome",

@@ -127,7 +127,9 @@
         "15minutesBefore": "15 хвилин до",
         "1hourBefore": "1 година до",
         "1dayBefore": "1 день до",
-        "custom": "Власне..."
+        "custom": "Власне...",
+        "exportJson": "Експорт JSON",
+        "importJson": "Імпорт JSON"
     },
     "auth": {
         "welcome": "Ласкаво просимо",
