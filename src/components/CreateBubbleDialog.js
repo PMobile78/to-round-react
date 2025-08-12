@@ -196,6 +196,7 @@ export default function CreateBubbleDialog(props) {
                     value={props.createRecurrence}
                     onChange={props.setCreateRecurrence}
                     t={t}
+                    disabled={!dueDate}
                 />
                 <FormControl fullWidth margin="dense" variant="outlined">
                     <InputLabel>{t('bubbles.categoryLabel')}</InputLabel>

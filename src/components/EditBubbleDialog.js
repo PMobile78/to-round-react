@@ -233,6 +233,7 @@ export default function EditBubbleDialog(props) {
                     value={props.editRecurrence}
                     onChange={props.setEditRecurrence}
                     t={t}
+                    disabled={!editDueDate}
                 />
                 <FormControl fullWidth margin="dense" variant="outlined">
                     <InputLabel>{t('bubbles.categoryLabel')}</InputLabel>
