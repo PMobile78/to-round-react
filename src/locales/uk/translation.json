@@ -43,6 +43,8 @@
         "taskCategoriesPanel": "Панель категорій завдань",
         "settings": "Налаштування",
         "about": "Про програму",
+        "memoryUsage": "Використання пам'яті",
+        "memoryLimit": "Ліміт",
         "noCategoriesYet": "Поки що немає категорій",
         "createFirstCategory": "Створіть свою першу категорію для організації завдань",
         "bubble": "бульбашка",

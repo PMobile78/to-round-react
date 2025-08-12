@@ -15,7 +15,7 @@ import {
 
 } from '@mui/material';
 import {
-    CloseOutlined, DeleteOutlined, Add, FilterList, Menu as MenuIcon, ViewList,
+    CloseOutlined, DeleteOutlined, Add, FilterList, Menu as MenuIcon, ViewList, Refresh,
 } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
@@ -2194,13 +2194,20 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     display: 'flex',
                     justifyContent: 'flex-start',
                     alignItems: 'center',
-                    padding: '0 10px'
+                    padding: '0 10px',
+                    gap: 1
                 }}>
                     <IconButton
                         onClick={() => setMenuDrawerOpen(true)}
                         sx={getButtonStyles()}
                     >
                         <MenuIcon />
+                    </IconButton>
+                    <IconButton
+                        onClick={() => window.location.reload()}
+                        sx={{ ...getButtonStyles(), ml: 1 }}
+                    >
+                        <Refresh />
                     </IconButton>
                 </Box>
             )}

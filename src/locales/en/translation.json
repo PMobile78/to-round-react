@@ -43,6 +43,8 @@
         "taskCategoriesPanel": "Tasks categories panel",
         "settings": "Settings",
         "about": "About",
+        "memoryUsage": "Memory usage",
+        "memoryLimit": "Limit",
         "noCategoriesYet": "No categories yet",
         "createFirstCategory": "Create your first category to organize your tasks",
         "bubble": "bubble",
