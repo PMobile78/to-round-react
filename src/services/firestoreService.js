@@ -94,31 +94,6 @@ export const saveBubblesToFirestore = async (bubblesData) => {
 
         await batch.commit();
 
-        // Transitional dual-write to legacy array for compatibility/visibility in console
-        try {
-            const bubblesForStorage = bubblesData.map(bubble => ({
-                id: bubble.id,
-                radius: bubble.radius,
-                title: bubble.title || '',
-                description: bubble.description || '',
-                fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
-                strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
-                tagId: bubble.tagId || null,
-                status: bubble.status || BUBBLE_STATUS.ACTIVE,
-                createdAt: bubble.createdAt || new Date().toISOString(),
-                updatedAt: bubble.updatedAt || new Date().toISOString(),
-                deletedAt: bubble.deletedAt || null,
-                dueDate: bubble.dueDate || null,
-                notifications: bubble.notifications || [],
-                recurrence: bubble.recurrence || null,
-                overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-                overdueAt: bubble.overdueAt || null
-            }));
-            await setDoc(parentRef, { bubbles: bubblesForStorage, updatedAt: serverTimestamp(), userId }, { merge: true });
-        } catch (_) {
-            // ignore dual-write failure
-        }
-
     } catch (error) {
         console.error('Error saving bubbles to Firestore (normalized). Trying legacy doc...', error);
         try {

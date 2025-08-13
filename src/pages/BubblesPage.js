@@ -71,6 +71,21 @@ const exportJsonFile = (dataObject, filename) => {
 
 // Подготовка данных пузырей к экспорту (без Matter.js ссылок)
 const sanitizeBubblesForExport = (bubblesData) => {
+    const toIsoOrNull = (value) => {
+        try {
+            if (!value) return null;
+            if (typeof value === 'string') return value;
+            // Firestore Timestamp
+            if (value && typeof value.toDate === 'function') {
+                const d = value.toDate();
+                return Number.isFinite(d?.getTime?.()) ? d.toISOString() : null;
+            }
+            const d = new Date(value);
+            return Number.isFinite(d?.getTime?.()) ? d.toISOString() : null;
+        } catch (_) {
+            return null;
+        }
+    };
     return (bubblesData || []).map((bubble) => ({
         id: bubble.id,
         radius: bubble.radius,
@@ -80,14 +95,14 @@ const sanitizeBubblesForExport = (bubblesData) => {
         strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
         tagId: bubble.tagId || null,
         status: bubble.status || BUBBLE_STATUS.ACTIVE,
-        createdAt: bubble.createdAt || new Date().toISOString(),
-        updatedAt: bubble.updatedAt || new Date().toISOString(),
-        deletedAt: bubble.deletedAt || null,
-        dueDate: bubble.dueDate || null,
-        notifications: bubble.notifications || [],
+        createdAt: typeof bubble.createdAt === 'string' ? bubble.createdAt : toIsoOrNull(bubble.createdAt) || new Date().toISOString(),
+        updatedAt: typeof bubble.updatedAt === 'string' ? bubble.updatedAt : toIsoOrNull(bubble.updatedAt) || new Date().toISOString(),
+        deletedAt: toIsoOrNull(bubble.deletedAt),
+        dueDate: toIsoOrNull(bubble.dueDate),
+        notifications: Array.isArray(bubble.notifications) ? bubble.notifications : [],
         recurrence: bubble.recurrence || null,
         overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-        overdueAt: bubble.overdueAt || null
+        overdueAt: toIsoOrNull(bubble.overdueAt)
     }));
 };
 
