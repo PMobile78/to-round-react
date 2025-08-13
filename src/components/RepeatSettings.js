@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, FormControlLabel, Switch, MenuItem, Select, InputLabel, FormControl, TextField } from '@mui/material';
 
-export default function RepeatSettings({ value, onChange, t, disabled = false }) {
+export default function RepeatSettings({ value, onChange, t, disabled = false, isMobile = false }) {
     const hasRepeat = !!value;
     const [enabled, setEnabled] = React.useState(hasRepeat);
     const [unit, setUnit] = React.useState(value?.unit || 'days');
@@ -26,30 +26,43 @@ export default function RepeatSettings({ value, onChange, t, disabled = false })
     }, [enabled, unit, every]);
 
     return (
-        <Box sx={{ mt: 1, mb: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Box
+            sx={{
+                mt: 1,
+                mb: 4,
+                display: 'flex',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                gap: 2,
+                flexWrap: 'wrap',
+                flexDirection: isMobile ? 'column' : 'row',
+                width: '100%'
+            }}
+        >
             <FormControlLabel
                 control={<Switch checked={enabled && !disabled} onChange={(e) => setEnabled(e.target.checked)} disabled={disabled} />}
                 label={t ? t('bubbles.repeatEvery') : 'Repeat every'}
             />
-            <TextField
-                type="number"
-                label={t ? t('bubbles.every') : 'Every'}
-                value={every}
-                onChange={(e) => setEvery(e.target.value)}
-                inputProps={{ min: 1 }}
-                sx={{ width: 120 }}
-                disabled={!enabled || disabled}
-            />
-            <FormControl sx={{ minWidth: 160 }} disabled={!enabled || disabled}>
-                <InputLabel>{t ? t('bubbles.unit') : 'Unit'}</InputLabel>
-                <Select value={unit} label={t ? t('bubbles.unit') : 'Unit'} onChange={(e) => setUnit(e.target.value)}>
-                    <MenuItem value="minutes">{t ? t('bubbles.minutes') : 'Minutes'}</MenuItem>
-                    <MenuItem value="hours">{t ? t('bubbles.hours') : 'Hours'}</MenuItem>
-                    <MenuItem value="days">{t ? t('bubbles.days') : 'Days'}</MenuItem>
-                    <MenuItem value="weeks">{t ? t('bubbles.weeks') : 'Weeks'}</MenuItem>
-                    <MenuItem value="months">{t ? t('bubbles.months') : 'Months'}</MenuItem>
-                </Select>
-            </FormControl>
+            <Box sx={{ display: 'flex', gap: 2, width: isMobile ? '100%' : 'auto', flexDirection: isMobile ? 'column' : 'row' }}>
+                <TextField
+                    type="number"
+                    label={t ? t('bubbles.every') : 'Every'}
+                    value={every}
+                    onChange={(e) => setEvery(e.target.value)}
+                    inputProps={{ min: 1 }}
+                    sx={{ width: isMobile ? '100%' : 120 }}
+                    disabled={!enabled || disabled}
+                />
+                <FormControl sx={{ minWidth: isMobile ? '100%' : 160 }} disabled={!enabled || disabled}>
+                    <InputLabel>{t ? t('bubbles.unit') : 'Unit'}</InputLabel>
+                    <Select value={unit} label={t ? t('bubbles.unit') : 'Unit'} onChange={(e) => setUnit(e.target.value)}>
+                        <MenuItem value="minutes">{t ? t('bubbles.minutes') : 'Minutes'}</MenuItem>
+                        <MenuItem value="hours">{t ? t('bubbles.hours') : 'Hours'}</MenuItem>
+                        <MenuItem value="days">{t ? t('bubbles.days') : 'Days'}</MenuItem>
+                        <MenuItem value="weeks">{t ? t('bubbles.weeks') : 'Weeks'}</MenuItem>
+                        <MenuItem value="months">{t ? t('bubbles.months') : 'Months'}</MenuItem>
+                    </Select>
+                </FormControl>
+            </Box>
         </Box>
     );
 }
