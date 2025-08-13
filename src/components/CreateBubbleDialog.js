@@ -21,6 +21,9 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import ru from 'date-fns/locale/ru';
+import enUS from 'date-fns/locale/en-US';
+import uk from 'date-fns/locale/uk';
+import i18n from '../i18n';
 import AddNotification from './AddNotification';
 import RepeatSettings from './RepeatSettings';
 
@@ -54,6 +57,9 @@ export default function CreateBubbleDialog(props) {
         setBubbleSize,
         onCreate
     } = props;
+
+    const currentLang = (typeof i18n.language === 'string' ? i18n.language : 'en') || 'en';
+    const adapterLocale = currentLang.startsWith('uk') ? uk : currentLang.startsWith('ru') ? ru : enUS;
 
     return (
         <Dialog
@@ -160,7 +166,7 @@ export default function CreateBubbleDialog(props) {
                 </FormControl>
                 <Box sx={{ marginTop: 1, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box sx={{ flex: 1 }}>
-                        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+                        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={adapterLocale}>
                             <DateTimePicker
                                 label={t('bubbles.dueDateLabel')}
                                 value={dueDate}
