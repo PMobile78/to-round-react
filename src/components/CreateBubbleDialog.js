@@ -166,6 +166,7 @@ export default function CreateBubbleDialog(props) {
                                 value={dueDate}
                                 onChange={setDueDate}
                                 ampm={false}
+                                closeOnSelect={false}
                                 views={["year", "month", "day", "hours", "minutes"]}
                                 viewRenderers={{
                                     hours: renderTimeViewClock,
