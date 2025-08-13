@@ -899,6 +899,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                 if (isVisible && !isCurrentlyInWorld) {
                     // Add bubble to physical world if it's visible and not already there
+                    // Ensure body size matches logical radius (fix for restored bubbles after pop animation)
+                    if (bubble.body && Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
+                        const scale = bubble.radius / bubble.body.circleRadius;
+                        Matter.Body.scale(bubble.body, scale, scale);
+                    }
                     Matter.World.add(engineRef.current.world, bubble.body);
 
                     // Update styles for the bubble
@@ -941,6 +946,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     Matter.World.remove(engineRef.current.world, bubble.body);
                 } else if (isVisible && isCurrentlyInWorld) {
                     // Update styles for visible bubbles based on search
+                    // Also normalize radius if it diverged from the stored one
+                    if (bubble.body && Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
+                        const scale = bubble.radius / bubble.body.circleRadius;
+                        Matter.Body.scale(bubble.body, scale, scale);
+                    }
                     bubble.body.render.opacity = hasSearchQuery ? (isFound ? 1 : 0.3) : 1;
 
                     // Обновляем стили для найденных пузырей
