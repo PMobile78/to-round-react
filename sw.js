@@ -36,23 +36,9 @@ try {
     // No-op if messaging is not available
 }
 
-// Fallback handler for generic Web Push events (in case Firebase hook doesn't fire)
-self.addEventListener('push', function (event) {
-    try {
-        const payload = event.data ? event.data.json() : {};
-        const title = (payload.data && payload.data.title) || 'Уведомление';
-        const body = (payload.data && payload.data.body) || '';
-        const icon = '/icons/icon-192x192.png';
-        const url = (payload.fcmOptions && payload.fcmOptions.link) || (payload.data && payload.data.url) || null;
-        event.waitUntil(self.registration.showNotification(title, {
-            body,
-            icon,
-            data: Object.assign({}, payload.data || {}, url ? { url } : {})
-        }));
-    } catch (err) {
-        // ignore
-    }
-});
+// Removed generic Web Push fallback to prevent duplicate notifications.
+// Firebase onBackgroundMessage handles data-only messages; when payload has
+// a notification field, the browser displays it automatically.
 
 self.addEventListener('notificationclick', function (event) {
     event.notification.close();
