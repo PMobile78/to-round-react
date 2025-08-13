@@ -4,6 +4,7 @@ import App from './App';
 import './i18n';
 import { initMessagingAndSaveToken, updateMessagingTokenLanguage } from './firebaseMessaging';
 import i18n from './i18n';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 // Handle notification deep links like /?bubbleId=...
 function handleDeepLink() {
@@ -55,6 +56,23 @@ if ('serviceWorker' in navigator) {
 try {
     i18n.on('languageChanged', (lng) => {
         updateMessagingTokenLanguage(lng);
+    });
+} catch (e) {
+    // ignore
+}
+
+// Update/save token after login to apply the current app language chosen on auth screen
+try {
+    const auth = getAuth();
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            try {
+                await initMessagingAndSaveToken();
+            } catch (e) { }
+            try {
+                await updateMessagingTokenLanguage(i18n.language);
+            } catch (e) { }
+        }
     });
 } catch (e) {
     // ignore
