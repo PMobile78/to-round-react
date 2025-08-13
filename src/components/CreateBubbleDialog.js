@@ -94,11 +94,19 @@ export default function CreateBubbleDialog(props) {
                     label={t('bubbles.titleLabel')}
                     fullWidth
                     variant="outlined"
+                    multiline
+                    minRows={2}
+                    maxRows={4}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     sx={{
                         marginTop: 3,
-                        '& .MuiInputBase-input': { fontSize: isMobile ? 16 : 14 }
+                        '& .MuiInputBase-input': {
+                            fontSize: isMobile ? 16 : 14,
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word',
+                            whiteSpace: 'pre-wrap'
+                        }
                     }}
                 />
                 <TextField
@@ -124,6 +132,32 @@ export default function CreateBubbleDialog(props) {
                         marginBottom: 2
                     }}
                 />
+                <FormControl fullWidth margin="dense" variant="outlined">
+                    <InputLabel>{t('bubbles.categoryLabel')}</InputLabel>
+                    <Select
+                        value={selectedTagId}
+                        onChange={(e) => setSelectedTagId(e.target.value)}
+                        label={t('bubbles.categoryLabel')}
+                        MenuProps={{
+                            PaperProps: {
+                                sx: { maxWidth: 350 }
+                            }
+                        }}
+                        sx={{ '& .MuiSelect-select': { fontSize: isMobile ? 16 : 14 } }}
+                    >
+                        <MenuItem value="">
+                            <em>{t('bubbles.noCategory')}</em>
+                        </MenuItem>
+                        {tags.map(tag => (
+                            <MenuItem key={tag.id} value={tag.id}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: tag.color, border: '1px solid #ccc', flexShrink: 0 }} />
+                                    <Typography sx={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tag.name}</Typography>
+                                </Box>
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
                 <Box sx={{ marginTop: 1, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box sx={{ flex: 1 }}>
                         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
@@ -197,33 +231,8 @@ export default function CreateBubbleDialog(props) {
                     onChange={props.setCreateRecurrence}
                     t={t}
                     disabled={!dueDate}
+                    isMobile={isMobile}
                 />
-                <FormControl fullWidth margin="dense" variant="outlined">
-                    <InputLabel>{t('bubbles.categoryLabel')}</InputLabel>
-                    <Select
-                        value={selectedTagId}
-                        onChange={(e) => setSelectedTagId(e.target.value)}
-                        label={t('bubbles.categoryLabel')}
-                        MenuProps={{
-                            PaperProps: {
-                                sx: { maxWidth: 350 }
-                            }
-                        }}
-                        sx={{ '& .MuiSelect-select': { fontSize: isMobile ? 16 : 14 } }}
-                    >
-                        <MenuItem value="">
-                            <em>{t('bubbles.noCategory')}</em>
-                        </MenuItem>
-                        {tags.map(tag => (
-                            <MenuItem key={tag.id} value={tag.id}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-                                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: tag.color, border: '1px solid #ccc', flexShrink: 0 }} />
-                                    <Typography sx={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tag.name}</Typography>
-                                </Box>
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
                 <Box sx={{ marginTop: 2, marginBottom: 1, width: isMobile ? '95%' : '100%', marginX: isMobile ? 'auto' : 0 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
                         {t('bubbles.bubbleSizeLabel', { size: bubbleSize })}
