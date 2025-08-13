@@ -670,8 +670,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setTextOverlayKey(prev => prev + 1);
     }, [themeMode]);
 
-    // Real-time tags synchronization
+    // Real-time tags synchronization (wait for auth user)
     useEffect(() => {
+        if (!user) return;
         const unsubscribe = subscribeToTagsUpdates((updatedTags) => {
             // Ensure updatedTags is always an array
             const tagsArray = Array.isArray(updatedTags) ? updatedTags : [];
@@ -719,7 +720,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [user]);
 
     // Синхронизация selectedCategory с фильтрами после загрузки тегов
     useEffect(() => {

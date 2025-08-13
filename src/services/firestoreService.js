@@ -26,6 +26,7 @@ const getUserDocumentId = () => {
 
 // Collections references
 const BUBBLES_COLLECTION = 'user-bubbles';
+const BUBBLES_SUBCOLLECTION = 'bubbles'; // normalized: one doc per bubble
 const TAGS_COLLECTION = 'user-tags';
 
 // Bubble statuses
@@ -43,69 +44,156 @@ const CLEANUP_PERIOD = 30 * 24 * 60 * 60 * 1000;
 export const saveBubblesToFirestore = async (bubblesData) => {
     try {
         const userId = getUserDocumentId();
-        const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
+        const parentRef = doc(db, BUBBLES_COLLECTION, userId);
+        const bubblesCol = collection(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION);
 
-        // Save only bubble content, without coordinates
-        const bubblesForStorage = bubblesData.map(bubble => ({
-            id: bubble.id,
-            radius: bubble.radius,
-            title: bubble.title || '',
-            description: bubble.description || '',
-            fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
-            strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
-            tagId: bubble.tagId || null,
-            status: bubble.status || BUBBLE_STATUS.ACTIVE,
-            createdAt: bubble.createdAt || new Date().toISOString(),
-            updatedAt: bubble.updatedAt || new Date().toISOString(),
-            deletedAt: bubble.deletedAt || null,
-            dueDate: bubble.dueDate || null,
-            notifications: bubble.notifications || [],
-            recurrence: bubble.recurrence || null,
-            overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-            overdueAt: bubble.overdueAt || null
-        }));
+        // existing docs
+        const existingSnap = await getDocs(bubblesCol);
+        const existingIds = new Set(existingSnap.docs.map(d => d.id));
 
-        await setDoc(bubblesRef, {
-            bubbles: bubblesForStorage,
-            updatedAt: serverTimestamp(),
-            userId
-        });
+        // Prepare batch upserts/deletes
+        const batch = writeBatch(db);
+
+        // Upsert incoming
+        const incomingIds = new Set();
+        for (const bubble of bubblesData) {
+            const id = String(bubble.id);
+            incomingIds.add(id);
+            const ref = doc(bubblesCol, id);
+            const toStore = {
+                id,
+                radius: bubble.radius,
+                title: bubble.title || '',
+                description: bubble.description || '',
+                fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
+                strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
+                tagId: bubble.tagId || null,
+                status: bubble.status || BUBBLE_STATUS.ACTIVE,
+                createdAt: bubble.createdAt || new Date().toISOString(),
+                updatedAt: bubble.updatedAt || new Date().toISOString(),
+                deletedAt: bubble.deletedAt || null,
+                dueDate: bubble.dueDate || null,
+                notifications: bubble.notifications || [],
+                recurrence: bubble.recurrence || null,
+                overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
+                overdueAt: bubble.overdueAt || null
+            };
+            batch.set(ref, toStore, { merge: true });
+        }
+
+        // Delete removed
+        for (const id of existingIds) {
+            if (!incomingIds.has(id)) {
+                const ref = doc(bubblesCol, id);
+                batch.delete(ref);
+            }
+        }
+
+        // Touch parent doc
+        batch.set(parentRef, { updatedAt: serverTimestamp(), userId, schema: 'normalized' }, { merge: true });
+
+        await batch.commit();
+
+        // Transitional dual-write to legacy array for compatibility/visibility in console
+        try {
+            const bubblesForStorage = bubblesData.map(bubble => ({
+                id: bubble.id,
+                radius: bubble.radius,
+                title: bubble.title || '',
+                description: bubble.description || '',
+                fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
+                strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
+                tagId: bubble.tagId || null,
+                status: bubble.status || BUBBLE_STATUS.ACTIVE,
+                createdAt: bubble.createdAt || new Date().toISOString(),
+                updatedAt: bubble.updatedAt || new Date().toISOString(),
+                deletedAt: bubble.deletedAt || null,
+                dueDate: bubble.dueDate || null,
+                notifications: bubble.notifications || [],
+                recurrence: bubble.recurrence || null,
+                overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
+                overdueAt: bubble.overdueAt || null
+            }));
+            await setDoc(parentRef, { bubbles: bubblesForStorage, updatedAt: serverTimestamp(), userId }, { merge: true });
+        } catch (_) {
+            // ignore dual-write failure
+        }
 
     } catch (error) {
-        console.error('Error saving bubbles to Firestore:', error);
-        // Fallback to localStorage with user-specific key
-        const userId = getCurrentUser()?.uid || 'anonymous';
-        const bubblesForStorage = bubblesData.map(bubble => ({
-            id: bubble.id,
-            radius: bubble.radius,
-            title: bubble.title || '',
-            description: bubble.description || '',
-            fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
-            strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
-            tagId: bubble.tagId || null,
-            status: bubble.status || BUBBLE_STATUS.ACTIVE,
-            createdAt: bubble.createdAt || new Date().toISOString(),
-            updatedAt: bubble.updatedAt || new Date().toISOString(),
-            deletedAt: bubble.deletedAt || null,
-            dueDate: bubble.dueDate || null,
-            notifications: bubble.notifications || [],
-            recurrence: bubble.recurrence || null,
-            overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-            overdueAt: bubble.overdueAt || null
-        }));
-        localStorage.setItem(`bubbles_${userId}`, JSON.stringify(bubblesForStorage));
+        console.error('Error saving bubbles to Firestore (normalized). Trying legacy doc...', error);
+        try {
+            // Legacy fallback: store as array in parent document
+            const userId = getCurrentUser()?.uid || 'anonymous';
+            const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
+            const bubblesForStorage = bubblesData.map(bubble => ({
+                id: bubble.id,
+                radius: bubble.radius,
+                title: bubble.title || '',
+                description: bubble.description || '',
+                fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
+                strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
+                tagId: bubble.tagId || null,
+                status: bubble.status || BUBBLE_STATUS.ACTIVE,
+                createdAt: bubble.createdAt || new Date().toISOString(),
+                updatedAt: bubble.updatedAt || new Date().toISOString(),
+                deletedAt: bubble.deletedAt || null,
+                dueDate: bubble.dueDate || null,
+                notifications: bubble.notifications || [],
+                recurrence: bubble.recurrence || null,
+                overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
+                overdueAt: bubble.overdueAt || null
+            }));
+            await setDoc(bubblesRef, { bubbles: bubblesForStorage, updatedAt: serverTimestamp(), userId }, { merge: true });
+        } catch (legacyError) {
+            console.error('Legacy save failed. Falling back to localStorage.', legacyError);
+            // Fallback to localStorage with user-specific key
+            const userId = getCurrentUser()?.uid || 'anonymous';
+            const bubblesForStorage = bubblesData.map(bubble => ({
+                id: bubble.id,
+                radius: bubble.radius,
+                title: bubble.title || '',
+                description: bubble.description || '',
+                fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
+                strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
+                tagId: bubble.tagId || null,
+                status: bubble.status || BUBBLE_STATUS.ACTIVE,
+                createdAt: bubble.createdAt || new Date().toISOString(),
+                updatedAt: bubble.updatedAt || new Date().toISOString(),
+                deletedAt: bubble.deletedAt || null,
+                dueDate: bubble.dueDate || null,
+                notifications: bubble.notifications || [],
+                recurrence: bubble.recurrence || null,
+                overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
+                overdueAt: bubble.overdueAt || null
+            }));
+            localStorage.setItem(`bubbles_${userId}`, JSON.stringify(bubblesForStorage));
+        }
     }
 };
 
 export const loadBubblesFromFirestore = async () => {
     try {
         const userId = getUserDocumentId();
-        const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
-        const docSnap = await getDoc(bubblesRef);
+        // Try new normalized storage first
+        const bubblesCol = collection(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION);
+        const snapshot = await getDocs(bubblesCol);
+        const normalized = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (normalized.length > 0) return normalized;
 
+        // Fallback to old array-based doc
+        const oldDocRef = doc(db, BUBBLES_COLLECTION, userId);
+        const docSnap = await getDoc(oldDocRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
-            return data.bubbles || [];
+            const legacy = Array.isArray(data.bubbles) ? data.bubbles : [];
+            if (legacy.length > 0) {
+                // One-time migrate to subcollection (best-effort)
+                try {
+                    await saveBubblesToFirestore(legacy);
+                    await setDoc(oldDocRef, { migratedToSubcollection: true, updatedAt: serverTimestamp(), userId }, { merge: true });
+                } catch (_) { /* ignore migration errors */ }
+            }
+            return legacy;
         }
         // Fallback to localStorage with user-specific key
         const stored = localStorage.getItem(`bubbles_${userId}`);
@@ -122,8 +210,21 @@ export const loadBubblesFromFirestore = async () => {
 export const clearBubblesFromFirestore = async () => {
     try {
         const userId = getUserDocumentId();
-        const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
-        await deleteDoc(bubblesRef);
+        try {
+            // Delete all docs in subcollection
+            const bubblesCol = collection(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION);
+            const snap = await getDocs(bubblesCol);
+            const batch = writeBatch(db);
+            snap.forEach(d => batch.delete(d.ref));
+            // keep parent doc with timestamp
+            const parentRef = doc(db, BUBBLES_COLLECTION, userId);
+            batch.set(parentRef, { updatedAt: serverTimestamp(), userId }, { merge: true });
+            await batch.commit();
+        } catch (normalizedErr) {
+            console.warn('Clear subcollection failed, trying legacy doc delete', normalizedErr);
+            const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
+            await deleteDoc(bubblesRef);
+        }
     } catch (error) {
         console.error('Error clearing bubbles from Firestore:', error);
         // Fallback to localStorage
@@ -273,16 +374,29 @@ export const loadTagsFromFirestore = async () => {
 export const subscribeToBubblesUpdates = (callback) => {
     try {
         const userId = getUserDocumentId();
-        const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
-
-        return onSnapshot(bubblesRef, (doc) => {
-            if (doc.exists()) {
-                const data = doc.data();
-                callback(data.bubbles || []);
-            } else {
-                callback([]);
-            }
+        const bubblesCol = collection(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION);
+        // Try subcollection listener first
+        const unsubscribe = onSnapshot(bubblesCol, (querySnap) => {
+            const list = [];
+            querySnap.forEach(d => list.push({ id: d.id, ...d.data() }));
+            callback(list);
+        }, (err) => {
+            console.warn('Subcollection onSnapshot error, falling back to legacy doc listener', err);
+            // Fallback listener to legacy doc
+            const legacyRef = doc(db, BUBBLES_COLLECTION, userId);
+            const unsubLegacy = onSnapshot(legacyRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    callback(data.bubbles || []);
+                } else {
+                    callback([]);
+                }
+            });
+            // Replace unsubscribe with legacy one
+            unsubscribe();
+            return unsubLegacy;
         });
+        return unsubscribe;
     } catch (error) {
         console.error('Error setting up bubbles listener:', error);
         return () => { }; // Return empty unsubscribe function

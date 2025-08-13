@@ -10,10 +10,28 @@ const en = require('./locales/notifications.en.json');
 const uk = require('./locales/notifications.uk.json');
 
 // Data model notes:
-// - User bubbles stored in doc `user-bubbles/{uid}` with array field `bubbles`
+// - NEW: User bubbles stored in subcollection `user-bubbles/{uid}/bubbles/{bubbleId}` (one doc per task)
+// - LEGACY: Previously, user bubbles were stored in `user-bubbles/{uid}` with array field `bubbles`
 // - FCM token stored in doc `user-fcm-tokens/{uid}` with field `token`
 
 async function fetchAllUserBubbles() {
+    // Try normalized schema via collectionGroup first
+    const grouped = new Map(); // userId -> bubbles[]
+    const cg = await db.collectionGroup('bubbles').get();
+    cg.forEach((d) => {
+        const parentUserDoc = d.ref.parent.parent; // user-bubbles/{uid}
+        const userId = parentUserDoc?.id;
+        if (!userId) return;
+        const list = grouped.get(userId) || [];
+        const bubbleData = d.data() || {};
+        list.push(Object.assign({ id: d.id }, bubbleData));
+        grouped.set(userId, list);
+    });
+    if (grouped.size > 0) {
+        return Array.from(grouped.entries()).map(([userId, bubbles]) => ({ userId, bubbles }));
+    }
+
+    // Fallback to legacy array-based storage
     const snapshot = await db.collection('user-bubbles').get();
     const results = [];
     snapshot.forEach((docSnap) => {
@@ -201,6 +219,14 @@ function computeNextDueDate(currentDue, recurrence) {
 }
 
 async function updateBubbleDueDate(userId, bubbleId, nextDue) {
+    const subDoc = db.collection('user-bubbles').doc(userId).collection('bubbles').doc(String(bubbleId));
+    const subSnap = await subDoc.get();
+    if (subSnap.exists) {
+        await subDoc.set({ dueDate: nextDue.toISOString(), updatedAt: new Date().toISOString() }, { merge: true });
+        await db.collection('user-bubbles').doc(userId).set({ updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        return;
+    }
+    // Legacy fallback: array in parent doc
     const docRef = db.collection('user-bubbles').doc(userId);
     const snapshot = await docRef.get();
     if (!snapshot.exists) return;
@@ -211,12 +237,21 @@ async function updateBubbleDueDate(userId, bubbleId, nextDue) {
 }
 
 async function updateBubbleFields(userId, bubbleId, fields) {
+    const subDoc = db.collection('user-bubbles').doc(userId).collection('bubbles').doc(String(bubbleId));
+    const subSnap = await subDoc.get();
+    const payload = Object.assign({}, fields, { updatedAt: new Date().toISOString() });
+    if (subSnap.exists) {
+        await subDoc.set(payload, { merge: true });
+        await db.collection('user-bubbles').doc(userId).set({ updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        return;
+    }
+    // Legacy fallback
     const docRef = db.collection('user-bubbles').doc(userId);
     const snapshot = await docRef.get();
     if (!snapshot.exists) return;
     const data = snapshot.data() || {};
     const list = Array.isArray(data.bubbles) ? data.bubbles : [];
-    const updated = list.map(b => (b.id === bubbleId ? { ...b, ...fields } : b));
+    const updated = list.map(b => (b.id === bubbleId ? { ...b, ...payload } : b));
     await docRef.set({ ...data, bubbles: updated, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 }
 
