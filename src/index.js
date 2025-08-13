@@ -2,7 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './i18n';
-import { initMessagingAndSaveToken } from './firebaseMessaging';
+import { initMessagingAndSaveToken, updateMessagingTokenLanguage } from './firebaseMessaging';
+import i18n from './i18n';
 
 // Handle notification deep links like /?bubbleId=...
 function handleDeepLink() {
@@ -40,6 +41,7 @@ if ('serviceWorker' in navigator) {
 
             // Initialize FCM after SW is ready and process deep links
             initMessagingAndSaveToken();
+            try { updateMessagingTokenLanguage(i18n.language); } catch (e) { }
             handleDeepLink();
         }, function (err) {
             console.error('[SW] Registration failed:', err);
@@ -47,4 +49,13 @@ if ('serviceWorker' in navigator) {
     });
 } else {
     handleDeepLink();
+}
+
+// Keep token language in sync with app language
+try {
+    i18n.on('languageChanged', (lng) => {
+        updateMessagingTokenLanguage(lng);
+    });
+} catch (e) {
+    // ignore
 }

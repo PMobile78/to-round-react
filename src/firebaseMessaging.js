@@ -5,6 +5,7 @@ import app from './firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import i18n from './i18n';
 
 // Используем только process.env, чтобы избежать предупреждения webpack об import.meta
 const VAPID_KEY = process.env.REACT_APP_FIREBASE_VAPID_KEY || 'BGuf9B4yPtX9L7RSGD9SnorV_6VlAZ4BWiQgSjD33XhfnGq75x3ev_pTxVj-0UUlc58qyv6_Xxt9hJDWOczgYQw'; // ToDo Move to .env
@@ -78,10 +79,32 @@ async function saveToken(token) {
         userId: currentUser.uid,
         token,
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        language: typeof navigator !== 'undefined' ? navigator.language : 'unknown',
+        language: (typeof i18n?.language === 'string' && i18n.language) || (typeof navigator !== 'undefined' ? navigator.language : 'unknown'),
         updatedAt: serverTimestamp(),
         createdAt: serverTimestamp()
     }, { merge: true });
+}
+
+export async function updateMessagingTokenLanguage(language) {
+    try {
+        const supported = await isSupported();
+        if (!supported) return;
+
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        const messaging = getMessaging(app);
+        const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: await navigator.serviceWorker.ready });
+
+        const tokenRef = doc(db, 'user-fcm-tokens', currentUser.uid, 'tokens', token);
+        await setDoc(tokenRef, {
+            language: (typeof language === 'string' && language) || (typeof i18n?.language === 'string' && i18n.language) || (typeof navigator !== 'undefined' ? navigator.language : 'unknown'),
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    } catch (e) {
+        // ignore
+    }
 }
 
 
