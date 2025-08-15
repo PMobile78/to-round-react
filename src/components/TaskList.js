@@ -42,7 +42,7 @@ import {
 // Auto-cleanup period for deleted tasks (30 days)
 const DELETED_TASKS_CLEANUP_DAYS = 30;
 
-const ListView = ({
+const TaskList = ({
     bubbles,
     setBubbles,
     tags,
@@ -555,15 +555,6 @@ const ListView = ({
                                             </Box>
                                         )}
 
-                                        {task.description && (
-                                            <HtmlRenderer
-                                                html={task.description}
-                                                themeMode={themeMode}
-                                                isMobile={isMobile}
-                                                sx={{ marginBottom: 1 }}
-                                            />
-                                        )}
-
                                         {/* Tag */}
                                         {tag && (
                                             <Chip
@@ -739,4 +730,4 @@ const ListView = ({
     );
 };
 
-export default ListView; 
+export default TaskList; 

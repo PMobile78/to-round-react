@@ -2,7 +2,7 @@ import React from 'react';
 import { Drawer, Box, Typography, IconButton } from '@mui/material';
 import { CloseOutlined } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import ListView from './ListView';
+import TaskList from './TaskList';
 
 const TaskListDrawer = ({
     open,
@@ -70,7 +70,7 @@ const TaskListDrawer = ({
                 </IconButton>
             </Box>
             <Box sx={{ height: 'calc(100vh - 73px)', overflow: 'auto' }}>
-                <ListView
+                <TaskList
                     bubbles={bubbles}
                     setBubbles={setBubbles}
                     tags={tags}
