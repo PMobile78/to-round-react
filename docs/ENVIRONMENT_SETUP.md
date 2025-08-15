@@ -30,7 +30,7 @@ REACT_APP_FIREBASE_VAPID_KEY=your_vapid_key
 ### App Configuration
 ```bash
 REACT_APP_NAME=To-Round
-REACT_APP_VERSION=1.0.0
+REACT_APP_VERSION=0.0.2
 REACT_APP_ENVIRONMENT=development
 ```
 
