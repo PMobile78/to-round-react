@@ -186,6 +186,30 @@
         "tomorrow": "Завтра",
         "upcoming": "Майбутні",
         "someday": "Колись",
-        "customize": "Налаштувати"
+        "customize": "Налаштувати",
+        "richTextEditor": {
+            "bold": "Жирний",
+            "italic": "Курсив",
+            "underline": "Підкреслений",
+            "strikethrough": "Закреслений",
+            "bulletList": "Маркований список",
+            "numberedList": "Нумерований список",
+            "taskList": "Список з галочками",
+            "alignLeft": "По лівому краю",
+            "alignCenter": "По центру",
+            "alignRight": "По правому краю",
+            "alignJustify": "По ширині",
+            "highlight": "Виділення",
+            "textColor": "Колір тексту",
+            "link": "Посилання",
+            "image": "Зображення",
+            "table": "Таблиця",
+            "codeBlock": "Блок коду",
+            "blockquote": "Цитата",
+            "horizontalRule": "Горизонтальна лінія",
+            "enterColor": "Введіть колір (наприклад: #ff0000 або red):",
+            "enterUrl": "Введіть URL:",
+            "enterImageUrl": "Введіть URL зображення:"
+        }
     }
 }

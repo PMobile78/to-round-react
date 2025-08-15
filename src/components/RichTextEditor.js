@@ -307,7 +307,7 @@ const RichTextEditor = ({
                 borderRadius: '4px 4px 0 0'
             }}>
                 {/* Text Formatting */}
-                <Tooltip title="Жирный">
+                <Tooltip title={t?.('categories.richTextEditor.bold') || 'Bold'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -321,7 +321,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Курсив">
+                <Tooltip title={t?.('categories.richTextEditor.italic') || 'Italic'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().toggleItalic().run()}
@@ -335,7 +335,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Подчёркнутый">
+                <Tooltip title={t?.('categories.richTextEditor.underline') || 'Underline'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().toggleUnderline().run()}
@@ -348,7 +348,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Зачёркнутый">
+                <Tooltip title={t?.('categories.richTextEditor.strikethrough') || 'Strikethrough'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().toggleStrike().run()}
@@ -364,7 +364,7 @@ const RichTextEditor = ({
                 <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
                 {/* Lists */}
-                <Tooltip title="Маркированный список">
+                <Tooltip title={t?.('categories.richTextEditor.bulletList') || 'Bullet List'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -377,7 +377,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Нумерованный список">
+                <Tooltip title={t?.('categories.richTextEditor.numberedList') || 'Numbered List'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().toggleOrderedList().run()}
@@ -390,7 +390,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Список с галочками">
+                <Tooltip title={t?.('categories.richTextEditor.taskList') || 'Task List'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().toggleTaskList().run()}
@@ -406,7 +406,7 @@ const RichTextEditor = ({
                 <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
                 {/* Text Alignment */}
-                <Tooltip title="По левому краю">
+                <Tooltip title={t?.('categories.richTextEditor.alignLeft') || 'Align Left'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().setTextAlign('left').run()}
@@ -419,7 +419,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="По центру">
+                <Tooltip title={t?.('categories.richTextEditor.alignCenter') || 'Align Center'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().setTextAlign('center').run()}
@@ -432,7 +432,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="По правому краю">
+                <Tooltip title={t?.('categories.richTextEditor.alignRight') || 'Align Right'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().setTextAlign('right').run()}
@@ -445,7 +445,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="По ширине">
+                <Tooltip title={t?.('categories.richTextEditor.alignJustify') || 'Align Justify'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().setTextAlign('justify').run()}
@@ -461,7 +461,7 @@ const RichTextEditor = ({
                 <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
                 {/* Highlight */}
-                <Tooltip title="Выделение">
+                <Tooltip title={t?.('categories.richTextEditor.highlight') || 'Highlight'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().toggleHighlight().run()}
@@ -474,11 +474,11 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Цвет текста">
+                <Tooltip title={t?.('categories.richTextEditor.textColor') || 'Text Color'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => {
-                            const color = prompt('Введите цвет (например: #ff0000 или red):', '#000000');
+                            const color = prompt(t?.('categories.richTextEditor.enterColor') || 'Enter color (e.g.: #ff0000 or red):', '#000000');
                             if (color) {
                                 editor.chain().focus().setColor(color).run();
                             }
@@ -495,11 +495,11 @@ const RichTextEditor = ({
                 <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
                 {/* Additional Tools */}
-                <Tooltip title="Ссылка">
+                <Tooltip title={t?.('categories.richTextEditor.link') || 'Link'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => {
-                            const url = prompt('Введите URL:', 'https://');
+                            const url = prompt(t?.('categories.richTextEditor.enterUrl') || 'Enter URL:', 'https://');
                             if (url) {
                                 editor.chain().focus().setLink({ href: url }).run();
                             }
@@ -513,11 +513,11 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Изображение">
+                <Tooltip title={t?.('categories.richTextEditor.image') || 'Image'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => {
-                            const url = prompt('Введите URL изображения:', 'https://');
+                            const url = prompt(t?.('categories.richTextEditor.enterImageUrl') || 'Enter image URL:', 'https://');
                             if (url) {
                                 editor.chain().focus().setImage({ src: url }).run();
                             }
@@ -531,7 +531,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Таблица">
+                <Tooltip title={t?.('categories.richTextEditor.table') || 'Table'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
@@ -544,7 +544,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Блок кода">
+                <Tooltip title={t?.('categories.richTextEditor.codeBlock') || 'Code Block'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
@@ -557,7 +557,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Цитата">
+                <Tooltip title={t?.('categories.richTextEditor.blockquote') || 'Quote'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().toggleBlockquote().run()}
@@ -570,7 +570,7 @@ const RichTextEditor = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Горизонтальная линия">
+                <Tooltip title={t?.('categories.richTextEditor.horizontalRule') || 'Horizontal Line'}>
                     <IconButton
                         size={buttonSize}
                         onClick={() => editor.chain().focus().setHorizontalRule().run()}

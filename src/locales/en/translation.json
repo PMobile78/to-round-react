@@ -186,6 +186,30 @@
         "upcoming": "Upcoming",
         "someday": "Someday",
         "customize": "Customize",
-        "allCategories": "All Categories"
+        "allCategories": "All Categories",
+        "richTextEditor": {
+            "bold": "Bold",
+            "italic": "Italic",
+            "underline": "Underline",
+            "strikethrough": "Strikethrough",
+            "bulletList": "Bullet List",
+            "numberedList": "Numbered List",
+            "taskList": "Task List",
+            "alignLeft": "Align Left",
+            "alignCenter": "Align Center",
+            "alignRight": "Align Right",
+            "alignJustify": "Align Justify",
+            "highlight": "Highlight",
+            "textColor": "Text Color",
+            "link": "Link",
+            "image": "Image",
+            "table": "Table",
+            "codeBlock": "Code Block",
+            "blockquote": "Quote",
+            "horizontalRule": "Horizontal Line",
+            "enterColor": "Enter color (e.g.: #ff0000 or red):",
+            "enterUrl": "Enter URL:",
+            "enterImageUrl": "Enter image URL:"
+        }
     }
 }
