@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box } from '@mui/material';
 
-const APP_VERSION = process.env.REACT_APP_BUILD_VERSION || '0.0.1';
+const APP_VERSION = process.env.REACT_APP_VERSION || 'dev';
 
 export default function AboutDialog({ open, onClose, t }) {
     const memoryInfo = useMemo(() => {
