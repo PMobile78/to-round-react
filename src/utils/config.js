@@ -15,7 +15,7 @@ export const config = {
     // App Configuration
     app: {
         name: process.env.REACT_APP_NAME || 'To-Round',
-        version: process.env.REACT_APP_VERSION || '1.0.0',
+        version: process.env.REACT_APP_VERSION || '0.0.2',
         environment: process.env.REACT_APP_ENVIRONMENT || 'development'
     }
 };
