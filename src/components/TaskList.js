@@ -26,6 +26,7 @@ import {
     FilterList // добавил иконку фильтра
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import { FilterMenu } from './FilterMenu';
 import SearchField from './SearchField';
 import useSearch from '../hooks/useSearch';
@@ -255,8 +256,18 @@ const TaskList = ({
     const formatDate = useCallback((dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
-        // 24-часовой формат
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        // Используем текущую локаль приложения
+        const currentLang = (typeof i18n?.language === 'string' ? i18n.language : 'en') || 'en';
+        const locale = currentLang.startsWith('uk') ? 'uk-UA' : currentLang.startsWith('ru') ? 'ru-RU' : 'en-US';
+
+        return date.toLocaleDateString(locale, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
     }, []);
 
     // Функция для проверки просроченности due date

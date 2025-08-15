@@ -183,7 +183,7 @@ export default function EditBubbleDialog(props) {
                                     minutes: renderTimeViewClock,
                                     seconds: renderTimeViewClock,
                                 }}
-                                inputFormat="dd.MM.yyyy HH:mm"
+                                inputFormat={currentLang.startsWith('uk') ? "dd.MM.yyyy HH:mm" : currentLang.startsWith('ru') ? "dd.MM.yyyy HH:mm" : "MM/dd/yyyy HH:mm"}
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
