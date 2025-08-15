@@ -48,6 +48,7 @@ import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
 import TaskFilterDrawer from '../components/TaskFilterDrawer';
 import CreateBubbleDialog from '../components/CreateBubbleDialog';
 import TagEditorDialog from '../components/TagEditorDialog';
+import HtmlRenderer from '../components/HtmlRenderer';
 import { useMatterResize } from '../hooks/useMatterResize';
 import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
 
@@ -156,6 +157,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
+    // Режим редактора для создания и редактирования
+    const [useRichTextCreate, setUseRichTextCreate] = useState(false);
+    const [useRichTextEdit, setUseRichTextEdit] = useState(false);
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false); // Состояние панели категорий
     const [selectedCategory, setSelectedCategory] = useState(() => {
         // Восстанавливаем выбранную категорию на основе сохраненных фильтров
@@ -1106,6 +1110,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         newBubble.dueDate = dueDate ? new Date(dueDate).toISOString() : null;
         newBubble.notifications = createNotifications;
         newBubble.recurrence = createRecurrence;
+        // persist editor mode per task
+        newBubble.useRichText = !!useRichTextCreate;
 
         Matter.World.add(engineRef.current.world, newBubble.body);
         setBubbles(prev => {
@@ -2107,9 +2113,30 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 setEditBubbleSize(selectedBubble.radius);
             }
             setEditRecurrence(selectedBubble.recurrence || null);
+            setUseRichTextEdit(!!selectedBubble.useRichText);
         }
         // eslint-disable-next-line
     }, [editDialog, selectedBubble?.id]);
+
+    // Синхронизируем состояние переключателя «создания» с локальным предпочтением пользователя
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('bubbles-use-rich-text');
+            setUseRichTextCreate(saved ? JSON.parse(saved) : false);
+        } catch (_) { /* ignore */ }
+    }, [createDialog]);
+
+    const handleToggleEditUseRichText = (enabled) => {
+        setUseRichTextEdit(!!enabled);
+        if (!selectedBubble) return;
+        // Обновляем выбранный пузырь и сохраняем в БД
+        setSelectedBubble(prev => prev ? { ...prev, useRichText: !!enabled } : prev);
+        setBubbles(prev => {
+            const updated = prev.map(b => b.id === selectedBubble.id ? { ...b, useRichText: !!enabled, updatedAt: new Date().toISOString() } : b);
+            saveBubblesToFirestore(updated);
+            return updated;
+        });
+    };
 
     // Сброс уведомлений при смене языка
     useEffect(() => {
@@ -2738,6 +2765,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 })()}
                 editRecurrence={editRecurrence}
                 setEditRecurrence={setEditRecurrence}
+                useRichText={useRichTextEdit}
+                onToggleUseRichText={handleToggleEditUseRichText}
             />
             {/* Меню управления тегами */}
             {/* Меню управления тегами */}
@@ -2864,6 +2893,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 bubbleSize={bubbleSize}
                 setBubbleSize={setBubbleSize}
                 onCreate={createNewBubble}
+                useRichText={useRichTextCreate}
+                onToggleUseRichText={setUseRichTextCreate}
             />
             {/* Диалог управления категориями задач - вынесен в отдельный компонент с поддержкой DnD */}
             <TasksCategoriesDialog

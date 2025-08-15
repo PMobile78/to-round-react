@@ -29,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 import { FilterMenu } from './FilterMenu';
 import SearchField from './SearchField';
 import useSearch from '../hooks/useSearch';
+import HtmlRenderer from './HtmlRenderer';
 import {
     BUBBLE_STATUS,
     markBubbleAsDone,
@@ -555,15 +556,12 @@ const ListView = ({
                                         )}
 
                                         {task.description && (
-                                            <Typography variant="body2" sx={{
-                                                marginBottom: 1,
-                                                color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa',
-                                                wordBreak: 'break-word',
-                                                overflowWrap: 'break-word',
-                                                hyphens: 'auto'
-                                            }}>
-                                                {task.description}
-                                            </Typography>
+                                            <HtmlRenderer
+                                                html={task.description}
+                                                themeMode={themeMode}
+                                                isMobile={isMobile}
+                                                sx={{ marginBottom: 1 }}
+                                            />
                                         )}
 
                                         {/* Tag */}

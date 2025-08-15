@@ -78,6 +78,23 @@ export const useThemeMode = () => {
                 fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
             },
             components: {
+                MuiCssBaseline: {
+                    styleOverrides: {
+                        body: {
+                            '& a': {
+                                color: mode === 'light' ? '#1976d2' : '#90caf9',
+                                textDecoration: 'none',
+                                '&:hover': {
+                                    color: mode === 'light' ? '#1565c0' : '#64b5f6',
+                                    textDecoration: 'underline',
+                                },
+                                '&:visited': {
+                                    color: mode === 'light' ? '#7b1fa2' : '#ce93d8',
+                                }
+                            }
+                        }
+                    }
+                },
                 MuiPaper: {
                     styleOverrides: {
                         root: {
@@ -116,6 +133,19 @@ export const useThemeMode = () => {
                                     backgroundColor: mode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)',
                                     borderColor: mode === 'light' ? 'rgba(59, 125, 237, 0.8)' : 'rgba(255, 255, 255, 0.8)',
                                 }
+                            }
+                        }
+                    }
+                },
+                MuiLink: {
+                    styleOverrides: {
+                        root: {
+                            color: mode === 'light' ? '#1976d2' : '#90caf9',
+                            '&:hover': {
+                                color: mode === 'light' ? '#1565c0' : '#64b5f6',
+                            },
+                            '&:visited': {
+                                color: mode === 'light' ? '#7b1fa2' : '#ce93d8',
                             }
                         }
                     }

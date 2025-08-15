@@ -26,6 +26,7 @@ import uk from 'date-fns/locale/uk';
 import i18n from '../i18n';
 import AddNotification from './AddNotification';
 import RepeatSettings from './RepeatSettings';
+import RichTextEditor from './RichTextEditor';
 
 export default function EditBubbleDialog(props) {
     const {
@@ -61,7 +62,9 @@ export default function EditBubbleDialog(props) {
         editRecurrence,
         setEditRecurrence,
         onStopPulsing,
-        showStopPulsing
+        showStopPulsing,
+        useRichText,
+        onToggleUseRichText
     } = props;
 
     const currentLang = (typeof i18n.language === 'string' ? i18n.language : 'en') || 'en';
@@ -121,29 +124,24 @@ export default function EditBubbleDialog(props) {
                         }
                     }}
                 />
-                <TextField
-                    margin="dense"
-                    label={t('bubbles.descriptionLabel')}
-                    fullWidth
-                    variant="outlined"
-                    multiline
-                    rows={isMobile ? 4 : 3}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    sx={{
-                        '& .MuiInputBase-input': {
-                            fontSize: isMobile ? 16 : 14,
-                            wordBreak: 'break-word',
-                            overflowWrap: 'break-word',
-                            whiteSpace: 'pre-wrap'
-                        },
-                        '& .MuiInputBase-root': { wordBreak: 'break-word', overflowWrap: 'break-word' },
-                        '& .MuiOutlinedInput-root': { wordBreak: 'break-word', overflowWrap: 'break-word' },
-                        maxWidth: '100%',
-                        marginTop: 2,
-                        marginBottom: 2
-                    }}
-                />
+                <Box sx={{ marginTop: 2, marginBottom: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
+                        {t('bubbles.descriptionLabel')}
+                    </Typography>
+                    <RichTextEditor
+                        value={description}
+                        onChange={setDescription}
+                        placeholder={t('bubbles.descriptionPlaceholder') || 'Введите описание...'}
+                        isMobile={isMobile}
+                        themeMode={themeMode}
+                        useRichText={useRichText}
+                        onToggleRichText={(enabled) => {
+                            onToggleUseRichText?.(enabled);
+                            try { localStorage.setItem('bubbles-use-rich-text', JSON.stringify(enabled)); } catch (_) { }
+                        }}
+                        t={t}
+                    />
+                </Box>
                 <FormControl fullWidth margin="dense" variant="outlined">
                     <InputLabel>{t('bubbles.categoryLabel')}</InputLabel>
                     <Select

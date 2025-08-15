@@ -76,7 +76,8 @@ export const saveBubblesToFirestore = async (bubblesData) => {
                 notifications: bubble.notifications || [],
                 recurrence: bubble.recurrence || null,
                 overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-                overdueAt: bubble.overdueAt || null
+                overdueAt: bubble.overdueAt || null,
+                useRichText: !!bubble.useRichText
             };
             batch.set(ref, toStore, { merge: true });
         }
@@ -116,7 +117,8 @@ export const saveBubblesToFirestore = async (bubblesData) => {
                 notifications: bubble.notifications || [],
                 recurrence: bubble.recurrence || null,
                 overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-                overdueAt: bubble.overdueAt || null
+                overdueAt: bubble.overdueAt || null,
+                useRichText: !!bubble.useRichText
             }));
             await setDoc(bubblesRef, { bubbles: bubblesForStorage, updatedAt: serverTimestamp(), userId }, { merge: true });
         } catch (legacyError) {
@@ -139,7 +141,8 @@ export const saveBubblesToFirestore = async (bubblesData) => {
                 notifications: bubble.notifications || [],
                 recurrence: bubble.recurrence || null,
                 overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-                overdueAt: bubble.overdueAt || null
+                overdueAt: bubble.overdueAt || null,
+                useRichText: !!bubble.useRichText
             }));
             localStorage.setItem(`bubbles_${userId}`, JSON.stringify(bubblesForStorage));
         }
