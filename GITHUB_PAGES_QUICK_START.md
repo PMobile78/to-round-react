@@ -21,10 +21,8 @@
 ## Шаг 2: Включите GitHub Pages
 
 1. **Settings** → **Pages**
-2. **Source**: `Deploy from a branch`
-3. **Branch**: `gh-pages` (создается автоматически)
-4. **Folder**: `/ (root)`
-5. **Save**
+2. **Source**: `GitHub Actions` (рекомендуется)
+3. **Save**
 
 ## Шаг 3: Запушьте изменения
 
