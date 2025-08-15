@@ -2,18 +2,23 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { config, validateConfig } from './utils/config';
+
+// Validate Firebase configuration
+if (!validateConfig()) {
+    throw new Error('Invalid Firebase configuration. Please check your environment variables.');
+}
 
 // Your web app's Firebase configuration
-// Configuration based on your real Firebase data
-// ⚠️ IMPORTANT: You still need to create a Web App and get the web appId
+// Configuration from environment variables
 const firebaseConfig = {
-    apiKey: "AIzaSyAat5vcOBIOeJXoGFfqkNybC9J-v0G8yA4", // ✅ Your real API key
-    authDomain: "todo-flutter-fb8bf.firebaseapp.com",  // ✅ Standard authDomain
-    projectId: "todo-flutter-fb8bf",                   // ✅ Your project ID
-    storageBucket: "todo-flutter-fb8bf.appspot.com",  // ✅ Your storage bucket  
-    messagingSenderId: "699564548059",                 // ✅ Your messaging sender ID
-    appId: "1:699564548059:web:0e45b2291da108955fd1fe",   // ❌ CREATE WEB APP!
-    measurementId: "G-94PRVB1G5L"
+    apiKey: config.firebase.apiKey,
+    authDomain: config.firebase.authDomain,
+    projectId: config.firebase.projectId,
+    storageBucket: config.firebase.storageBucket,
+    messagingSenderId: config.firebase.messagingSenderId,
+    appId: config.firebase.appId,
+    measurementId: config.firebase.measurementId
 };
 
 // Initialize Firebase

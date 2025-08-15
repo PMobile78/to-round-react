@@ -1,4 +1,11 @@
-// Firebase Messaging (background notifications)
+const fs = require('fs');
+const path = require('path');
+
+// Загружаем переменные окружения
+require('dotenv').config();
+
+// Читаем шаблон Service Worker
+const swTemplate = `// Firebase Messaging (background notifications)
 // Note: using compat libs inside SW for simplicity
 // These scripts are hosted by Google and safe to import here
 importScripts('https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js');
@@ -6,13 +13,13 @@ importScripts('https://www.gstatic.com/firebasejs/9.6.11/firebase-messaging-comp
 
 // Firebase configuration from environment variables
 firebase.initializeApp({
-    apiKey: 'AIzaSyAat5vcOBIOeJXoGFfqkNybC9J-v0G8yA4',
-    authDomain: 'todo-flutter-fb8bf.firebaseapp.com',
-    projectId: 'todo-flutter-fb8bf',
-    storageBucket: 'todo-flutter-fb8bf.appspot.com',
-    messagingSenderId: '699564548059',
-    appId: '1:699564548059:web:0e45b2291da108955fd1fe',
-    measurementId: 'G-94PRVB1G5L'
+    apiKey: '${process.env.REACT_APP_FIREBASE_API_KEY}',
+    authDomain: '${process.env.REACT_APP_FIREBASE_AUTH_DOMAIN}',
+    projectId: '${process.env.REACT_APP_FIREBASE_PROJECT_ID}',
+    storageBucket: '${process.env.REACT_APP_FIREBASE_STORAGE_BUCKET}',
+    messagingSenderId: '${process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID}',
+    appId: '${process.env.REACT_APP_FIREBASE_APP_ID}',
+    measurementId: '${process.env.REACT_APP_FIREBASE_MEASUREMENT_ID}'
 });
 
 try {
@@ -57,3 +64,16 @@ self.addEventListener('notificationclick', function (event) {
         })());
     }
 });
+`;
+
+// Создаем директорию scripts если её нет
+const scriptsDir = path.join(__dirname);
+if (!fs.existsSync(scriptsDir)) {
+    fs.mkdirSync(scriptsDir, { recursive: true });
+}
+
+// Записываем сгенерированный Service Worker
+const swPath = path.join(__dirname, '..', 'public', 'sw.js');
+fs.writeFileSync(swPath, swTemplate);
+
+console.log('Service Worker generated successfully with environment variables');

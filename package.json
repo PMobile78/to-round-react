@@ -5,12 +5,13 @@
   "homepage": "https://pmobile78.github.io/to-round-react",
   "main": "src/pages/BubblesPage.js",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "npm run generate-sw && react-scripts start",
+    "build": "npm run generate-sw && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "generate-sw": "node scripts/generate-sw.js"
   },
   "keywords": [
     "react",
@@ -77,6 +78,7 @@
     ]
   },
   "devDependencies": {
+    "dotenv": "^16.6.1",
     "gh-pages": "^6.3.0"
   }
 }

@@ -6,9 +6,10 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import i18n from './i18n';
+import { config } from './utils/config';
 
-// Используем только process.env, чтобы избежать предупреждения webpack об import.meta
-const VAPID_KEY = process.env.REACT_APP_FIREBASE_VAPID_KEY || 'BGuf9B4yPtX9L7RSGD9SnorV_6VlAZ4BWiQgSjD33XhfnGq75x3ev_pTxVj-0UUlc58qyv6_Xxt9hJDWOczgYQw'; // ToDo Move to .env
+// VAPID Key from configuration
+const VAPID_KEY = config.firebase.vapidKey;
 
 export async function initMessagingAndSaveToken() {
     try {

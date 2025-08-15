@@ -1,0 +1,122 @@
+# Настройка GitHub Pages с переменными окружения
+
+## 🚀 Быстрый старт
+
+### 1. Настройка GitHub Secrets
+
+1. Перейдите в ваш репозиторий на GitHub
+2. **Settings** → **Secrets and variables** → **Actions**
+3. Нажмите **"New repository secret"**
+4. Добавьте следующие secrets:
+
+```
+FIREBASE_API_KEY=AIzaSyAat5vcOBIOeJXoGFfqkNybC9J-v0G8yA4
+FIREBASE_AUTH_DOMAIN=todo-flutter-fb8bf.firebaseapp.com
+FIREBASE_PROJECT_ID=todo-flutter-fb8bf
+FIREBASE_STORAGE_BUCKET=todo-flutter-fb8bf.appspot.com
+FIREBASE_MESSAGING_SENDER_ID=699564548059
+FIREBASE_APP_ID=1:699564548059:web:0e45b2291da108955fd1fe
+FIREBASE_MEASUREMENT_ID=G-94PRVB1G5L
+FIREBASE_VAPID_KEY=BGuf9B4yPtX9L7RSGD9SnorV_6VlAZ4BWiQgSjD33XhfnGq75x3ev_pTxVj-0UUlc58qyv6_Xxt9hJDWOczgYQw
+```
+
+### 2. Включение GitHub Pages
+
+1. **Settings** → **Pages**
+2. **Source**: Deploy from a branch
+3. **Branch**: `gh-pages` (создается автоматически)
+4. **Folder**: `/ (root)`
+5. Нажмите **Save**
+
+### 3. Деплой
+
+Просто запушьте изменения в ветку `main` или `master`:
+
+```bash
+git add .
+git commit -m "Update with environment variables"
+git push origin main
+```
+
+GitHub Actions автоматически:
+- Создаст `.env.production` с вашими secrets
+- Сгенерирует Service Worker
+- Соберет приложение
+- Задеплоит на GitHub Pages
+
+## 📁 Структура файлов
+
+```
+.github/
+  workflows/
+    deploy.yml          # GitHub Actions workflow
+src/
+  utils/
+    config.js           # Конфигурация приложения
+scripts/
+  generate-sw.js        # Генерация Service Worker
+.env.example            # Шаблон переменных
+```
+
+## 🔧 GitHub Actions Workflow
+
+Workflow автоматически:
+
+1. **Checkout** - клонирует репозиторий
+2. **Setup Node.js** - устанавливает Node.js 18
+3. **Install dependencies** - устанавливает зависимости
+4. **Create .env.production** - создает файл с переменными из secrets
+5. **Generate Service Worker** - генерирует SW с переменными
+6. **Build** - собирает приложение
+7. **Deploy** - деплоит на GitHub Pages
+
+## 🔒 Безопасность
+
+- ✅ Secrets хранятся в GitHub (не в коде)
+- ✅ Переменные доступны только во время сборки
+- ✅ `.env` файлы не коммитятся в репозиторий
+
+## 🐛 Устранение неполадок
+
+### Ошибка "Missing required Firebase configuration"
+Проверьте, что все secrets добавлены в GitHub.
+
+### Деплой не происходит
+1. Проверьте, что workflow запустился в **Actions**
+2. Убедитесь, что ветка называется `main` или `master`
+3. Проверьте логи на ошибки
+
+### Service Worker не работает
+1. Проверьте, что `generate-sw` выполнился успешно
+2. Убедитесь, что VAPID ключ корректный
+
+### Приложение не загружается
+1. Проверьте homepage в `package.json`
+2. Убедитесь, что GitHub Pages включены
+3. Проверьте, что ветка `gh-pages` создалась
+
+## 📊 Мониторинг
+
+- **Actions** - статус деплоя
+- **Pages** - статус GitHub Pages
+- **Settings** → **Pages** - настройки деплоя
+
+## 🔄 Обновление
+
+Для обновления приложения:
+
+1. Внесите изменения в код
+2. Запушьте в `main`/`master`
+3. GitHub Actions автоматически задеплоит
+
+```bash
+git add .
+git commit -m "Update app"
+git push origin main
+```
+
+## 📚 Дополнительные ссылки
+
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [GitHub Pages Documentation](https://docs.github.com/en/pages)
+- [Environment Variables Setup](../ENVIRONMENT_SETUP.md)
