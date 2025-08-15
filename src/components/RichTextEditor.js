@@ -66,6 +66,50 @@ const RichTextEditor = ({
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
+    // Custom resize (especially for mobile): height in px
+    const [editorHeight, setEditorHeight] = React.useState(300);
+    const dragInfoRef = React.useRef({ startY: 0, startHeight: 300, active: false });
+
+    const stopGlobalDragListeners = React.useCallback(() => {
+        window.removeEventListener('mousemove', handleDragMove);
+        window.removeEventListener('mouseup', handleDragEnd);
+        window.removeEventListener('touchmove', handleDragMove, { passive: false });
+        window.removeEventListener('touchend', handleDragEnd);
+    }, []);
+
+    const handleDragEnd = React.useCallback(() => {
+        dragInfoRef.current.active = false;
+        stopGlobalDragListeners();
+    }, [stopGlobalDragListeners]);
+
+    const handleDragMove = React.useCallback((e) => {
+        if (!dragInfoRef.current.active) return;
+        const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+        if (typeof clientY !== 'number') return;
+        if (e.cancelable) {
+            e.preventDefault();
+        }
+        const delta = clientY - dragInfoRef.current.startY;
+        const next = Math.max(180, Math.min(900, dragInfoRef.current.startHeight + delta));
+        setEditorHeight(next);
+    }, []);
+
+    const handleDragStart = React.useCallback((e) => {
+        const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+        if (typeof clientY !== 'number') return;
+        dragInfoRef.current.startY = clientY;
+        dragInfoRef.current.startHeight = editorHeight;
+        dragInfoRef.current.active = true;
+        window.addEventListener('mousemove', handleDragMove);
+        window.addEventListener('mouseup', handleDragEnd);
+        window.addEventListener('touchmove', handleDragMove, { passive: false });
+        window.addEventListener('touchend', handleDragEnd);
+    }, [editorHeight, handleDragEnd, handleDragMove]);
+
+    React.useEffect(() => {
+        return () => stopGlobalDragListeners();
+    }, [stopGlobalDragListeners]);
+
     const onChangeRef = React.useRef(onChange);
     onChangeRef.current = onChange;
 
@@ -651,53 +695,100 @@ const RichTextEditor = ({
                 <Box sx={{
                     border: `1px solid ${themeMode === 'light' ? '#ccc' : '#555'}`,
                     borderRadius: '0 0 4px 4px',
-                    overflow: 'auto',
-                    resize: 'vertical',
-                    minHeight: '300px'
+                    // Desktop: стандартный ресайз и прокрутка контейнера
+                    // Mobile: кастомный ресайз, прокрутка внутри ProseMirror
+                    overflow: isMobile ? 'hidden' : 'auto',
+                    resize: isMobile ? 'none' : 'vertical',
+                    minHeight: '220px',
+                    height: isMobile ? `${editorHeight}px` : undefined,
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}>
                     <MenuBar />
-                    <EditorContent
-                        editor={editor}
-                        sx={{
-                            padding: isMobile ? '16px' : '20px',
-                            '--caret-color': themeMode === 'light' ? '#000' : '#fff',
-                            '& .ProseMirror': {
-                                outline: 'none',
-                                fontSize: isMobile ? '16px' : '14px',
-                                lineHeight: '1.5',
-                                minHeight: '300px',
-                                padding: `${isMobile ? '16px' : '20px'} !important`,
-                                backgroundColor: themeMode === 'light' ? '#fff' : '#333',
-                                color: themeMode === 'light' ? '#000' : '#fff',
-                                caretColor: `var(--caret-color) !important`,
-                                '&:focus': {
+                    <Box sx={{
+                        flex: 1,
+                        minHeight: 0,
+                        overflowY: isMobile ? 'auto' : 'visible',
+                        WebkitOverflowScrolling: isMobile ? 'touch' : undefined,
+                        touchAction: isMobile ? 'pan-y' : undefined,
+                        overscrollBehavior: isMobile ? 'contain' : undefined,
+                        // Отступ вокруг контента
+                        padding: isMobile ? '16px' : '20px'
+                    }}>
+                        <EditorContent
+                            editor={editor}
+                            sx={{
+                                '--caret-color': themeMode === 'light' ? '#000' : '#fff',
+                                '& .ProseMirror': {
+                                    outline: 'none',
+                                    fontSize: isMobile ? '16px' : '14px',
+                                    lineHeight: '1.5',
+                                    minHeight: isMobile ? 'auto' : '300px',
+                                    // Добавим внутренние отступы у реального поля
+                                    padding: `${isMobile ? '16px' : '20px'} !important`,
+                                    paddingBottom: isMobile ? '36px !important' : `${isMobile ? '16px' : '20px'} !important`,
+                                    backgroundColor: themeMode === 'light' ? '#fff' : '#333',
+                                    color: themeMode === 'light' ? '#000' : '#fff',
                                     caretColor: `var(--caret-color) !important`,
+                                    '&:focus': {
+                                        caretColor: `var(--caret-color) !important`,
+                                    },
+                                    '& *': {
+                                        caretColor: `var(--caret-color) !important`,
+                                    },
+                                    '& p': {
+                                        caretColor: `var(--caret-color) !important`,
+                                    },
+                                    '& p:empty': {
+                                        caretColor: `var(--caret-color) !important`,
+                                    },
+                                    '& p.is-editor-empty': {
+                                        caretColor: `var(--caret-color) !important`,
+                                    },
+                                    '& div': {
+                                        caretColor: `var(--caret-color) !important`,
+                                    }
                                 },
-                                '& *': {
-                                    caretColor: `var(--caret-color) !important`,
-                                },
-                                '& p': {
-                                    caretColor: `var(--caret-color) !important`,
-                                },
-                                '& p:empty': {
-                                    caretColor: `var(--caret-color) !important`,
-                                },
-                                '& p.is-editor-empty': {
-                                    caretColor: `var(--caret-color) !important`,
-                                },
-                                '& div': {
-                                    caretColor: `var(--caret-color) !important`,
+                                '& .ProseMirror p.is-editor-empty:first-child::before': {
+                                    color: themeMode === 'light' ? '#adb5bd' : '#6c757d',
+                                    content: `attr(data-placeholder)`,
+                                    float: 'left',
+                                    height: 0,
+                                    pointerEvents: 'none',
                                 }
-                            },
-                            '& .ProseMirror p.is-editor-empty:first-child::before': {
-                                color: themeMode === 'light' ? '#adb5bd' : '#6c757d',
-                                content: `attr(data-placeholder)`,
-                                float: 'left',
-                                height: 0,
-                                pointerEvents: 'none',
-                            }
-                        }}
-                    />
+                            }}
+                        />
+                    </Box>
+                    {isMobile && (
+                        <Box
+                            onMouseDown={handleDragStart}
+                            onTouchStart={handleDragStart}
+                            sx={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: 28,
+                                cursor: 'ns-resize',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
+                                borderTop: `1px solid ${themeMode === 'light' ? '#e0e0e0' : '#444'}`,
+                                '&:active': {
+                                    backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)'
+                                }
+                            }}
+                        >
+                            <Box sx={{
+                                width: 36,
+                                height: 4,
+                                borderRadius: 2,
+                                backgroundColor: themeMode === 'light' ? '#9e9e9e' : '#bdbdbd'
+                            }} />
+                        </Box>
+                    )}
                 </Box>
             ) : (
                 <SimpleTextField />
