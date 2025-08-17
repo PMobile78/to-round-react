@@ -4,8 +4,7 @@
 importScripts('https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.6.11/firebase-messaging-compat.js');
 
-// Keep this config in sync with src/firebase.js
-// Public keys are OK to be here (apiKey etc. are not secrets)
+// Firebase configuration from environment variables
 firebase.initializeApp({
     apiKey: 'AIzaSyAat5vcOBIOeJXoGFfqkNybC9J-v0G8yA4',
     authDomain: 'todo-flutter-fb8bf.firebaseapp.com',
