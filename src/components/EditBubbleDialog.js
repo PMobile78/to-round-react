@@ -13,7 +13,8 @@ import {
     Slider,
     Button,
     IconButton,
-    Typography
+    Typography,
+    Divider
 } from '@mui/material';
 import { CloseOutlined, DeleteOutlined, CheckCircle, Clear } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -285,6 +286,7 @@ export default function EditBubbleDialog(props) {
                     />
                 </Box>
             </DialogContent>
+            <Divider />
             <DialogActions sx={{
                 padding: isMobile ? 2 : 3,
                 display: 'flex',
