@@ -2154,6 +2154,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [createRecurrence, setCreateRecurrence] = useState(null); // { every, unit }
     const [editRecurrence, setEditRecurrence] = useState(null);
 
+    // Stable callbacks for recurrence setters
+    const handleSetCreateRecurrence = useCallback((value) => {
+        setCreateRecurrence(value);
+    }, []);
+
+    const handleSetEditRecurrence = useCallback((value) => {
+        setEditRecurrence(value);
+    }, []);
+
     // Export current data to JSON
     const handleExportJson = useCallback(() => {
         const pad = (n) => String(n).padStart(2, '0');
@@ -2764,7 +2773,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     } catch (_) { return false; }
                 })()}
                 editRecurrence={editRecurrence}
-                setEditRecurrence={setEditRecurrence}
+                setEditRecurrence={handleSetEditRecurrence}
                 useRichText={useRichTextEdit}
                 onToggleUseRichText={handleToggleEditUseRichText}
             />
@@ -2885,7 +2894,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 createNotifications={createNotifications}
                 setCreateNotifications={setCreateNotifications}
                 createRecurrence={createRecurrence}
-                setCreateRecurrence={setCreateRecurrence}
+                setCreateRecurrence={handleSetCreateRecurrence}
                 handleDeleteCreateNotification={handleDeleteCreateNotification}
                 tags={tags}
                 selectedTagId={selectedTagId}

@@ -122,6 +122,16 @@
         "weeks": "Тижнів",
         "months": "Місяців",
         "repeatEvery": "Повторювати кожні",
+        "weekDays": {
+            "monday": "ПН",
+            "tuesday": "ВТ",
+            "wednesday": "СР",
+            "thursday": "ЧТ",
+            "friday": "ПТ",
+            "saturday": "СБ",
+            "sunday": "НД"
+        },
+        "selectWeekDays": "Оберіть дні тижня",
         "every": "Кожні",
         "unit": "Одиниця",
         "tags": "Теги",

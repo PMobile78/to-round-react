@@ -121,6 +121,16 @@
         "weeks": "Weeks",
         "months": "Months",
         "repeatEvery": "Repeat every",
+        "weekDays": {
+            "monday": "MON",
+            "tuesday": "TUE",
+            "wednesday": "WED",
+            "thursday": "THU",
+            "friday": "FRI",
+            "saturday": "SAT",
+            "sunday": "SUN"
+        },
+        "selectWeekDays": "Select days of the week",
         "every": "Every",
         "unit": "Unit",
         "tags": "Tags",
