@@ -201,22 +201,44 @@ const RichTextEditor = ({
         style.textContent = `
             .ProseMirror {
                 caret-color: ${caretColor} !important;
-                padding: ${isMobile ? '16px' : '20px'} !important;
+                padding: ${isMobile ? '8px' : '12px'} !important;
             }
             .ProseMirror * {
                 caret-color: ${caretColor} !important;
             }
             .ProseMirror p {
                 caret-color: ${caretColor} !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .ProseMirror p:empty {
                 caret-color: ${caretColor} !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .ProseMirror div {
                 caret-color: ${caretColor} !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .ProseMirror br {
                 caret-color: ${caretColor} !important;
+            }
+            
+            /* Убираем отступы между элементами */
+            .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            .ProseMirror ul, .ProseMirror ol {
+                margin: 0 !important;
+                padding-left: 1.5em !important;
+            }
+            
+            .ProseMirror li {
+                margin: 0 !important;
+                padding: 0 !important;
             }
             
             /* Стили для TaskList */
@@ -668,6 +690,7 @@ const RichTextEditor = ({
             backgroundColor: themeMode === 'light' ? '#f8f9fa' : '#2a2a2a',
             borderRadius: '4px 4px 0 0'
         }}>
+            {/* Временно закомментирован переключатель режимов
             <FormControlLabel
                 control={
                     <Switch
@@ -685,114 +708,133 @@ const RichTextEditor = ({
                     </Box>
                 }
             />
+            */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <TextFields sx={{ fontSize: 16 }} />
+                <Typography variant="body2">
+                    {t?.('bubbles.richTextMode') || 'Rich Text'}
+                </Typography>
+            </Box>
         </Box>
     );
 
     return (
         <Box>
             <SettingsPanel />
+            {/* Временно закомментирован режим plain text - всегда используем rich text
             {useRichText ? (
+            */}
+            <Box sx={{
+                border: `1px solid ${themeMode === 'light' ? '#ccc' : '#555'}`,
+                borderRadius: '0 0 4px 4px',
+                // Desktop: стандартный ресайз и прокрутка контейнера
+                // Mobile: кастомный ресайз, прокрутка внутри ProseMirror
+                overflow: isMobile ? 'hidden' : 'auto',
+                resize: isMobile ? 'none' : 'vertical',
+                minHeight: '220px',
+                height: isMobile ? `${editorHeight}px` : undefined,
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
+                <MenuBar />
                 <Box sx={{
-                    border: `1px solid ${themeMode === 'light' ? '#ccc' : '#555'}`,
-                    borderRadius: '0 0 4px 4px',
-                    // Desktop: стандартный ресайз и прокрутка контейнера
-                    // Mobile: кастомный ресайз, прокрутка внутри ProseMirror
-                    overflow: isMobile ? 'hidden' : 'auto',
-                    resize: isMobile ? 'none' : 'vertical',
-                    minHeight: '220px',
-                    height: isMobile ? `${editorHeight}px` : undefined,
-                    position: 'relative',
-                    display: 'flex',
-                    flexDirection: 'column'
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: isMobile ? 'auto' : 'visible',
+                    WebkitOverflowScrolling: isMobile ? 'touch' : undefined,
+                    touchAction: isMobile ? 'pan-y' : undefined,
+                    overscrollBehavior: isMobile ? 'contain' : undefined,
+                    // Отступ вокруг контента - уменьшен
+                    padding: '8px'
                 }}>
-                    <MenuBar />
-                    <Box sx={{
-                        flex: 1,
-                        minHeight: 0,
-                        overflowY: isMobile ? 'auto' : 'visible',
-                        WebkitOverflowScrolling: isMobile ? 'touch' : undefined,
-                        touchAction: isMobile ? 'pan-y' : undefined,
-                        overscrollBehavior: isMobile ? 'contain' : undefined,
-                        // Отступ вокруг контента
-                        padding: isMobile ? '16px' : '20px'
-                    }}>
-                        <EditorContent
-                            editor={editor}
-                            sx={{
-                                '--caret-color': themeMode === 'light' ? '#000' : '#fff',
-                                '& .ProseMirror': {
-                                    outline: 'none',
-                                    fontSize: isMobile ? '16px' : '14px',
-                                    lineHeight: '1.5',
-                                    minHeight: isMobile ? 'auto' : '300px',
-                                    // Добавим внутренние отступы у реального поля
-                                    padding: `${isMobile ? '16px' : '20px'} !important`,
-                                    paddingBottom: isMobile ? '36px !important' : `${isMobile ? '16px' : '20px'} !important`,
-                                    backgroundColor: themeMode === 'light' ? '#fff' : '#333',
-                                    color: themeMode === 'light' ? '#000' : '#fff',
+                    <EditorContent
+                        editor={editor}
+                        sx={{
+                            '--caret-color': themeMode === 'light' ? '#000' : '#fff',
+                            '& .ProseMirror': {
+                                outline: 'none',
+                                fontSize: isMobile ? '16px' : '14px',
+                                lineHeight: '1.5',
+                                minHeight: isMobile ? 'auto' : '300px',
+                                // Добавим внутренние отступы у реального поля - уменьшены
+                                padding: `${isMobile ? '8px' : '12px'} !important`,
+                                paddingBottom: isMobile ? '28px !important' : `${isMobile ? '8px' : '12px'} !important`,
+                                backgroundColor: themeMode === 'light' ? '#fff' : '#333',
+                                color: themeMode === 'light' ? '#000' : '#fff',
+                                caretColor: `var(--caret-color) !important`,
+                                '&:focus': {
                                     caretColor: `var(--caret-color) !important`,
-                                    '&:focus': {
-                                        caretColor: `var(--caret-color) !important`,
-                                    },
-                                    '& *': {
-                                        caretColor: `var(--caret-color) !important`,
-                                    },
-                                    '& p': {
-                                        caretColor: `var(--caret-color) !important`,
-                                    },
-                                    '& p:empty': {
-                                        caretColor: `var(--caret-color) !important`,
-                                    },
-                                    '& p.is-editor-empty': {
-                                        caretColor: `var(--caret-color) !important`,
-                                    },
-                                    '& div': {
-                                        caretColor: `var(--caret-color) !important`,
-                                    }
                                 },
-                                '& .ProseMirror p.is-editor-empty:first-child::before': {
-                                    color: themeMode === 'light' ? '#adb5bd' : '#6c757d',
-                                    content: `attr(data-placeholder)`,
-                                    float: 'left',
-                                    height: 0,
-                                    pointerEvents: 'none',
+                                '& *': {
+                                    caretColor: `var(--caret-color) !important`,
+                                },
+                                '& p': {
+                                    caretColor: `var(--caret-color) !important`,
+                                    margin: '0 !important',
+                                    padding: '0 !important',
+                                },
+                                '& p:empty': {
+                                    caretColor: `var(--caret-color) !important`,
+                                    margin: '0 !important',
+                                    padding: '0 !important',
+                                },
+                                '& p.is-editor-empty': {
+                                    caretColor: `var(--caret-color) !important`,
+                                    margin: '0 !important',
+                                    padding: '0 !important',
+                                },
+                                '& div': {
+                                    caretColor: `var(--caret-color) !important`,
+                                    margin: '0 !important',
+                                    padding: '0 !important',
                                 }
-                            }}
-                        />
-                    </Box>
-                    {isMobile && (
-                        <Box
-                            onMouseDown={handleDragStart}
-                            onTouchStart={handleDragStart}
-                            sx={{
-                                position: 'absolute',
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                height: 28,
-                                cursor: 'ns-resize',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
-                                borderTop: `1px solid ${themeMode === 'light' ? '#e0e0e0' : '#444'}`,
-                                '&:active': {
-                                    backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)'
-                                }
-                            }}
-                        >
-                            <Box sx={{
-                                width: 36,
-                                height: 4,
-                                borderRadius: 2,
-                                backgroundColor: themeMode === 'light' ? '#9e9e9e' : '#bdbdbd'
-                            }} />
-                        </Box>
-                    )}
+                            },
+                            '& .ProseMirror p.is-editor-empty:first-child::before': {
+                                color: themeMode === 'light' ? '#adb5bd' : '#6c757d',
+                                content: `attr(data-placeholder)`,
+                                float: 'left',
+                                height: 0,
+                                pointerEvents: 'none',
+                            }
+                        }}
+                    />
                 </Box>
+                {isMobile && (
+                    <Box
+                        onMouseDown={handleDragStart}
+                        onTouchStart={handleDragStart}
+                        sx={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: 28,
+                            cursor: 'ns-resize',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
+                            borderTop: `1px solid ${themeMode === 'light' ? '#e0e0e0' : '#444'}`,
+                            '&:active': {
+                                backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)'
+                            }
+                        }}
+                    >
+                        <Box sx={{
+                            width: 36,
+                            height: 4,
+                            borderRadius: 2,
+                            backgroundColor: themeMode === 'light' ? '#9e9e9e' : '#bdbdbd'
+                        }} />
+                    </Box>
+                )}
+            </Box>
+            {/*
             ) : (
                 <SimpleTextField />
             )}
+            */}
         </Box>
     );
 };
