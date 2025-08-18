@@ -208,6 +208,12 @@ function buildOverdueKey(userId, bubble) {
 function computeNextDueDate(currentDue, recurrence) {
     const every = Number(recurrence?.every) || 1;
     const unit = String(recurrence?.unit || 'days');
+
+    // Special handling for weekly recurrence with specific week days
+    if (unit === 'weeks' && Array.isArray(recurrence?.weekDays) && recurrence.weekDays.length > 0) {
+        return computeNextWeeklyDueDate(currentDue, recurrence.weekDays, every);
+    }
+
     switch (unit) {
         case 'minutes': return addMinutes(currentDue, every);
         case 'hours': return addHours(currentDue, every);
@@ -215,6 +221,37 @@ function computeNextDueDate(currentDue, recurrence) {
         case 'weeks': return addWeeks(currentDue, every);
         case 'months': return addMonths(currentDue, every);
         default: return addDays(currentDue, every);
+    }
+}
+
+function computeNextWeeklyDueDate(currentDue, weekDays, every) {
+    // Sort week days (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    const sortedWeekDays = [...weekDays].sort((a, b) => a - b);
+
+    // Get current day of week (0-6)
+    const currentDayOfWeek = currentDue.getDay();
+
+    // Find the next occurrence in the current week
+    let nextDayOfWeek = null;
+    for (const day of sortedWeekDays) {
+        if (day > currentDayOfWeek) {
+            nextDayOfWeek = day;
+            break;
+        }
+    }
+
+    // If no next day in current week, go to first day of next week cycle
+    if (nextDayOfWeek === null) {
+        nextDayOfWeek = sortedWeekDays[0];
+        // Add weeks based on 'every' setting
+        const nextDate = addWeeks(currentDue, every);
+        // Set to the first day of the next cycle
+        const daysToAdd = (nextDayOfWeek - nextDate.getDay() + 7) % 7;
+        return addDays(nextDate, daysToAdd);
+    } else {
+        // Same week, just different day
+        const daysToAdd = nextDayOfWeek - currentDayOfWeek;
+        return addDays(currentDue, daysToAdd);
     }
 }
 
