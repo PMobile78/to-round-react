@@ -21,7 +21,7 @@ export default function ResponsiveSearch({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
-    const isNarrowHeader = useMediaQuery('(max-width:1130px)');
+    const isNarrowHeader = useMediaQuery('(max-width:1230px)');
 
     const [isExpanded, setIsExpanded] = useState(false);
 
