@@ -491,10 +491,18 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             createdAt: storedBubble.createdAt || new Date().toISOString(),
                             updatedAt: storedBubble.updatedAt || new Date().toISOString(),
                             deletedAt: storedBubble.deletedAt || null,
-                            dueDate: storedBubble.dueDate || null, // ← добавлено поле dueDate
+                            dueDate: storedBubble.dueDate || null,
                             notifications: storedBubble.notifications || [],
-                            recurrence: storedBubble.recurrence || null
+                            recurrence: storedBubble.recurrence || null,
+                            overdueSticky: storedBubble.overdueSticky || false,
+                            overdueAt: storedBubble.overdueAt || null
                         };
+
+                        // Инициализируем stickyPulseRef для задач с overdueSticky
+                        if (bubble.overdueSticky) {
+                            stickyPulseRef.current.add(bubble.id);
+                            console.log('📥 Initial load: Added to stickyPulseRef:', bubble.id, 'overdueSticky:', bubble.overdueSticky);
+                        }
                         initialBubbles.push(bubble);
                     });
                     // Убираем добавление всех пузырей в физический мир - они будут добавлены после фильтрации
@@ -524,11 +532,20 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         const id = sb.id;
                         const newDue = sb?.dueDate ? new Date(sb.dueDate).getTime() : null;
                         const prevDue = lastDueRef.current.get(id) ?? null;
+
+                        // Игнорируем серверные обновления для задач с overdueSticky - управляем только вручную
                         if (sb?.overdueSticky) {
-                            stickyPulseRef.current.add(id);
-                        } else {
-                            stickyPulseRef.current.delete(id);
+                            console.log('🔄 Server sync: Ignoring overdueSticky updates for bubble:', id, 'overdueSticky:', sb.overdueSticky);
+                            return; // Пропускаем эту задачу
                         }
+
+                        // Обрабатываем только случаи, когда overdueSticky = false
+                        if (!sb?.overdueSticky) {
+                            stickyPulseRef.current.delete(id);
+                            manuallyStoppedPulsingRef.current.delete(id); // очищаем флаг ручной остановки
+                            console.log('🔄 Server sync: Removed from stickyPulseRef:', id, 'overdueSticky:', sb.overdueSticky);
+                        }
+
                         if (newDue && Number.isFinite(newDue)) lastDueRef.current.set(id, newDue);
                     });
                 } catch (_) { }
@@ -1176,6 +1193,21 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             setBubbles(prev => {
                 const updatedBubbles = prev.map(bubble => {
                     if (bubble.id === selectedBubble.id) {
+                        const newDueDate = editDueDate ? new Date(editDueDate).toISOString() : null;
+
+                        // Проверяем, изменилась ли дата на будущую и нужно ли отключить пульсацию
+                        const shouldDisablePulsing = newDueDate &&
+                            new Date(newDueDate) > new Date();
+
+                        // Отключаем пульсацию при удалении даты
+                        const shouldDisablePulsingOnDelete = !newDueDate && bubble.dueDate;
+
+                        // Очищаем флаг ручной остановки при изменении даты
+                        if (shouldDisablePulsing || shouldDisablePulsingOnDelete) {
+                            manuallyStoppedPulsingRef.current.delete(bubble.id);
+                            console.log('📅 Date changed: Cleared manual stop flag for bubble:', bubble.id);
+                        }
+
                         return {
                             ...bubble,
                             title,
@@ -1184,9 +1216,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             radius: editBubbleSize,
                             body: newBody, // Используем новое тело
                             updatedAt: new Date().toISOString(),
-                            dueDate: editDueDate ? new Date(editDueDate).toISOString() : null,
+                            dueDate: newDueDate,
                             notifications: editNotifications,
-                            recurrence: editRecurrence
+                            recurrence: editRecurrence,
+                            // Отключаем пульсацию, если дата изменена на будущую или удалена
+                            overdueSticky: (shouldDisablePulsing || shouldDisablePulsingOnDelete) ? false : bubble.overdueSticky,
+                            overdueAt: (shouldDisablePulsing || shouldDisablePulsingOnDelete) ? null : bubble.overdueAt
                         };
                     }
                     return bubble;
@@ -1902,6 +1937,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const notifiedBubbleNotificationsRef = useRef(new Set()); // bubbleId:idx
     const stickyPulseRef = useRef(new Set()); // keep pulsing after repeat-every reschedule
     const lastDueRef = useRef(new Map());
+    const manuallyStoppedPulsingRef = useRef(new Set()); // задачи, которые пользователь остановил вручную
 
     // Keep pulsing even if editor opened; stop only by explicit Stop button
 
@@ -2727,48 +2763,98 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 onStopPulsing={async () => {
                     try {
                         if (!selectedBubble) return;
+
+                        console.log('🛑 Stop pulsing clicked for bubble:', selectedBubble.id);
+                        console.log('Before stop - overdueSticky:', selectedBubble.overdueSticky);
+                        console.log('Before stop - stickyPulseRef has:', stickyPulseRef.current.has(selectedBubble.id));
+
+                        // Очищаем локальные ссылки на пульсацию
                         stickyPulseRef.current.delete(selectedBubble.id);
                         notifiedBubblesRef.current.delete(selectedBubble.id);
+
+                        // Добавляем задачу в список вручную остановленных
+                        manuallyStoppedPulsingRef.current.add(selectedBubble.id);
+
+                        // Очищаем все уведомления для этой задачи
+                        const keysToDelete = [];
+                        notifiedBubbleNotificationsRef.current.forEach(key => {
+                            if (key.startsWith(selectedBubble.id + ':')) {
+                                keysToDelete.push(key);
+                            }
+                        });
+                        keysToDelete.forEach(key => {
+                            notifiedBubbleNotificationsRef.current.delete(key);
+                        });
+
+                        // Принудительно обновляем данные в Firebase, чтобы перезаписать overdueSticky
+                        const updatedBubble = {
+                            ...selectedBubble,
+                            overdueSticky: false,
+                            overdueAt: null,
+                            updatedAt: new Date().toISOString()
+                        };
+
+                        console.log('After stop - updatedBubble.overdueSticky:', updatedBubble.overdueSticky);
+                        console.log('After stop - manuallyStoppedPulsingRef has:', manuallyStoppedPulsingRef.current.has(selectedBubble.id));
+
                         setBubbles(prev => {
-                            const updated = prev.map(b => b.id === selectedBubble.id ? { ...b, overdueSticky: false } : b);
+                            const updated = prev.map(b => b.id === selectedBubble.id ? updatedBubble : b);
                             saveBubblesToFirestore(updated);
                             return updated;
                         });
+
                         // Close edit dialog after stop pulsing
                         setEditDialog(false);
                         setSelectedBubble(null);
-                    } catch (e) { /* ignore */ }
+                    } catch (e) {
+                        console.error('Error stopping pulsing:', e);
+                    }
                 }}
                 showStopPulsing={(() => {
                     try {
-                        if (!selectedBubble || selectedBubble.status !== BUBBLE_STATUS.ACTIVE || !selectedBubble.dueDate) return false;
+                        if (!selectedBubble || selectedBubble.status !== BUBBLE_STATUS.ACTIVE) return false;
+
                         const now = Date.now();
-                        const due = new Date(selectedBubble.dueDate).getTime();
-                        // active notification window
-                        if (Array.isArray(selectedBubble.notifications) && selectedBubble.notifications.length > 0) {
-                            for (const notif of selectedBubble.notifications) {
-                                let offsetMs = 0;
-                                if (typeof notif === 'string') {
-                                    const m = notif.match(/^(\d+)([mhdw])$/i);
-                                    if (m) {
-                                        const val = Number(m[1]);
-                                        const u = m[2].toLowerCase();
-                                        offsetMs = u === 'm' ? val * 60 * 1000 : u === 'h' ? val * 60 * 60 * 1000 : u === 'd' ? val * 24 * 60 * 60 * 1000 : val * 7 * 24 * 60 * 60 * 1000;
+
+                        // Проверяем наличие dueDate и просроченность
+                        if (selectedBubble.dueDate) {
+                            const due = new Date(selectedBubble.dueDate).getTime();
+
+                            // active notification window
+                            if (Array.isArray(selectedBubble.notifications) && selectedBubble.notifications.length > 0) {
+                                for (const notif of selectedBubble.notifications) {
+                                    let offsetMs = 0;
+                                    if (typeof notif === 'string') {
+                                        const m = notif.match(/^(\d+)([mhdw])$/i);
+                                        if (m) {
+                                            const val = Number(m[1]);
+                                            const u = m[2].toLowerCase();
+                                            offsetMs = u === 'm' ? val * 60 * 1000 : u === 'h' ? val * 60 * 60 * 1000 : u === 'd' ? val * 24 * 60 * 60 * 1000 : val * 7 * 24 * 60 * 60 * 1000;
+                                        }
+                                    } else if (typeof notif === 'object') {
+                                        const v = Number(notif.value);
+                                        const unit = notif.unit;
+                                        if (Number.isFinite(v) && v > 0) {
+                                            offsetMs = unit === 'minutes' ? v * 60 * 1000 : unit === 'hours' ? v * 60 * 60 * 1000 : unit === 'days' ? v * 24 * 60 * 60 * 1000 : unit === 'weeks' ? v * 7 * 24 * 60 * 60 * 1000 : 0;
+                                        }
                                     }
-                                } else if (typeof notif === 'object') {
-                                    const v = Number(notif.value);
-                                    const unit = notif.unit;
-                                    if (Number.isFinite(v) && v > 0) {
-                                        offsetMs = unit === 'minutes' ? v * 60 * 1000 : unit === 'hours' ? v * 60 * 60 * 1000 : unit === 'days' ? v * 24 * 60 * 60 * 1000 : unit === 'weeks' ? v * 7 * 24 * 60 * 60 * 1000 : 0;
-                                    }
+                                    const targetTime = due - offsetMs;
+                                    if (Number.isFinite(targetTime) && now >= targetTime && now < due) return true;
                                 }
-                                const targetTime = due - offsetMs;
-                                if (Number.isFinite(targetTime) && now >= targetTime && now < due) return true;
                             }
+
+                            if (now >= due) return true;
                         }
-                        if (now >= due) return true;
-                        if (selectedBubble.overdueSticky) return true;
-                        if (stickyPulseRef.current.has(selectedBubble.id)) return true;
+
+                        // Показываем кнопку Stop для задач с overdueSticky или в stickyPulseRef
+                        if (selectedBubble.overdueSticky || stickyPulseRef.current.has(selectedBubble.id)) {
+                            console.log('🔘 Show stop button for bubble:', selectedBubble.id, {
+                                overdueSticky: selectedBubble.overdueSticky,
+                                inStickyPulseRef: stickyPulseRef.current.has(selectedBubble.id)
+                            });
+                            return true;
+                        }
+
                         return false;
                     } catch (_) { return false; }
                 })()}

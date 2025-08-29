@@ -243,11 +243,21 @@ function computeNextWeeklyDueDate(currentDue, weekDays, every) {
     // If no next day in current week, go to first day of next week cycle
     if (nextDayOfWeek === null) {
         nextDayOfWeek = sortedWeekDays[0];
-        // Add weeks based on 'every' setting
-        const nextDate = addWeeks(currentDue, every);
-        // Set to the first day of the next cycle
-        const daysToAdd = (nextDayOfWeek - nextDate.getDay() + 7) % 7;
-        return addDays(nextDate, daysToAdd);
+
+        // Calculate how many days to add to get to the next occurrence
+        let daysToAdd;
+        if (every === 1) {
+            // For every week: just go to next week's target day
+            daysToAdd = (7 - currentDayOfWeek + nextDayOfWeek) % 7;
+            if (daysToAdd === 0) daysToAdd = 7; // If same day, go to next week
+        } else {
+            // For every N weeks: add N weeks, then adjust to target day
+            const nextDate = addWeeks(currentDue, every);
+            daysToAdd = (nextDayOfWeek - nextDate.getDay() + 7) % 7;
+            return addDays(nextDate, daysToAdd);
+        }
+
+        return addDays(currentDue, daysToAdd);
     } else {
         // Same week, just different day
         const daysToAdd = nextDayOfWeek - currentDayOfWeek;
@@ -344,8 +354,10 @@ exports.scheduleDueDateNotifications = onSchedule({
                         });
                         await markNotificationSent(key);
                     }
-                    // mark overdue in Firestore (sticky pulse across devices)
-                    await updateBubbleFields(userId, bubble.id, { overdueSticky: true, overdueAt: new Date().toISOString() });
+                    // mark overdue in Firestore (sticky pulse across devices) - только если overdueSticky еще не установлен
+                    if (!bubble.overdueSticky) {
+                        await updateBubbleFields(userId, bubble.id, { overdueSticky: true, overdueAt: new Date().toISOString() });
+                    }
                 } catch (e) {
                     console.error('FCM overdue error', userId, bubble.id, e);
                 }
@@ -356,8 +368,10 @@ exports.scheduleDueDateNotifications = onSchedule({
                         const nextDue = computeNextDueDate(new Date(bubble.dueDate), bubble.recurrence);
                         if (nextDue) {
                             await updateBubbleDueDate(userId, bubble.id, nextDue);
-                            // keep sticky flag until user stops or dueDate manually changed/deleted
-                            await updateBubbleFields(userId, bubble.id, { overdueSticky: true });
+                            // keep sticky flag until user stops or dueDate manually changed/deleted - только если overdueSticky еще установлен
+                            if (bubble.overdueSticky) {
+                                await updateBubbleFields(userId, bubble.id, { overdueSticky: true });
+                            }
                         }
                     }
                 } catch (e) {
