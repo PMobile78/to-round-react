@@ -903,7 +903,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         }
     }, [bubbles, getFilteredBubbles]);
 
-    // Используем хук поиска только для определения найденных пузырей (не для фильтрации)
+    // Use the search hook only to determine which bubbles are found (not to filter)
     const {
         filteredItems: searchFoundBubbles,
         searchQuery: currentBubblesSearchQuery,
