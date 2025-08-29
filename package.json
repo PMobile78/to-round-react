@@ -1,6 +1,6 @@
 {
   "name": "interactive-bubbles",
-  "version": "0.0.25",
+  "version": "0.0.26",
   "description": "Interactive Bubbles component with internationalization support",
   "homepage": "https://pmobile78.github.io/to-round-react",
   "main": "src/pages/BubblesPage.js",
