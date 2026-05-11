@@ -53,16 +53,45 @@ import {
     HorizontalRule as HorizontalRuleIcon
 } from '@mui/icons-material';
 
-const RichTextEditor = ({
+function htmlToPlainText(html) {
+    if (!html || typeof html !== 'string') return '';
+    const trimmed = html.trim();
+    if (!trimmed || trimmed === '<p></p>' || trimmed === '<p><br></p>') return '';
+    try {
+        if (typeof window !== 'undefined' && typeof DOMParser !== 'undefined') {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const text = (doc.body?.textContent || '').replace(/\u00a0/g, ' ').trim();
+            return text;
+        }
+    } catch (_) { /* ignore */ }
+    return html.replace(/<[^>]*>/g, '').trim();
+}
+
+function escapeHtmlPlain(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+/** Обертка простого текста в минимальный HTML для TipTap (если ещё не разметка). */
+function plainToRichHtml(value) {
+    const raw = value == null ? '' : String(value);
+    const t = raw.trim();
+    if (!t) return '';
+    if (t.startsWith('<') && t.includes('>')) return raw;
+    return `<p>${escapeHtmlPlain(t).replace(/\r\n/g, '\n').replace(/\n/g, '<br>')}</p>`;
+}
+
+function TipTapRichEditor({
     value = '',
     onChange,
     placeholder = 'Введите описание...',
     isMobile = false,
     themeMode = 'light',
-    useRichText = false,
-    onToggleRichText,
     t
-}) => {
+}) {
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -163,19 +192,19 @@ const RichTextEditor = ({
                 style: {
                     fontSize: isMobile ? '16px' : '14px',
                     lineHeight: '1.5',
-                    minHeight: useRichText ? '300px' : '120px',
+                    minHeight: '300px',
                     padding: isMobile ? '16px' : '20px',
                     border: `1px solid ${themeMode === 'light' ? '#ccc' : '#555'}`,
                     borderRadius: '4px',
                     backgroundColor: themeMode === 'light' ? '#fff' : '#333',
                     color: themeMode === 'light' ? '#000' : '#fff',
                     caretColor: themeMode === 'light' ? '#000' : '#fff',
-                    resize: useRichText ? 'vertical' : 'vertical',
+                    resize: 'vertical',
                     overflow: 'auto'
                 }
             }
         }
-    }, [useRichText, isMobile, themeMode, placeholder]);
+    }, [isMobile, themeMode, placeholder]);
 
     // Обновляем содержимое редактора при изменении value
     React.useEffect(() => {
@@ -651,93 +680,19 @@ const RichTextEditor = ({
         );
     };
 
-    // Обычное текстовое поле
-    const SimpleTextField = () => (
+    return (
         <Box sx={{
             border: `1px solid ${themeMode === 'light' ? '#ccc' : '#555'}`,
             borderRadius: '4px',
-            overflow: 'hidden'
-        }}>
-            <textarea
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder={placeholder}
-                style={{
-                    width: '100%',
-                    minHeight: '120px',
-                    padding: isMobile ? '16px' : '20px',
-                    fontSize: isMobile ? '16px' : '14px',
-                    lineHeight: '1.5',
-                    border: 'none',
-                    outline: 'none',
-                    resize: 'vertical',
-                    backgroundColor: themeMode === 'light' ? '#fff' : '#333',
-                    color: themeMode === 'light' ? '#000' : '#fff',
-                    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif'
-                }}
-            />
-        </Box>
-    );
-
-    // Панель настроек
-    const SettingsPanel = () => (
-        <Box sx={{
+            overflow: isMobile ? 'hidden' : 'auto',
+            resize: isMobile ? 'none' : 'vertical',
+            minHeight: '220px',
+            height: isMobile ? `${editorHeight}px` : undefined,
+            position: 'relative',
             display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            padding: 1,
-            borderBottom: `1px solid ${themeMode === 'light' ? '#e0e0e0' : '#444'}`,
-            backgroundColor: themeMode === 'light' ? '#f8f9fa' : '#2a2a2a',
-            borderRadius: '4px 4px 0 0'
+            flexDirection: 'column'
         }}>
-            {/* Временно закомментирован переключатель режимов
-            <FormControlLabel
-                control={
-                    <Switch
-                        checked={useRichText}
-                        onChange={(e) => onToggleRichText?.(e.target.checked)}
-                        size="small"
-                    />
-                }
-                label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        {useRichText ? <TextFields sx={{ fontSize: 16 }} /> : <Code sx={{ fontSize: 16 }} />}
-                        <Typography variant="body2">
-                            {useRichText ? (t?.('bubbles.richTextMode') || 'Rich Text') : (t?.('bubbles.plainTextMode') || 'Plain Text')}
-                        </Typography>
-                    </Box>
-                }
-            />
-            */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <TextFields sx={{ fontSize: 16 }} />
-                <Typography variant="body2">
-                    {t?.('bubbles.richTextMode') || 'Rich Text'}
-                </Typography>
-            </Box>
-        </Box>
-    );
-
-    return (
-        <Box>
-            <SettingsPanel />
-            {/* Временно закомментирован режим plain text - всегда используем rich text
-            {useRichText ? (
-            */}
-            <Box sx={{
-                border: `1px solid ${themeMode === 'light' ? '#ccc' : '#555'}`,
-                borderRadius: '0 0 4px 4px',
-                // Desktop: стандартный ресайз и прокрутка контейнера
-                // Mobile: кастомный ресайз, прокрутка внутри ProseMirror
-                overflow: isMobile ? 'hidden' : 'auto',
-                resize: isMobile ? 'none' : 'vertical',
-                minHeight: '220px',
-                height: isMobile ? `${editorHeight}px` : undefined,
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
-                <MenuBar />
+            <MenuBar />
                 <Box sx={{
                     flex: 1,
                     minHeight: 0,
@@ -830,13 +785,112 @@ const RichTextEditor = ({
                     </Box>
                 )}
             </Box>
-            {/*
-            ) : (
-                <SimpleTextField />
-            )}
-            */}
-        </Box>
     );
 };
 
-export default RichTextEditor;
+/** Переключение обычного текста и Rich (TipTap). */
+export default function RichTextEditor({
+    value = '',
+    onChange,
+    placeholder = 'Введите описание...',
+    isMobile = false,
+    themeMode = 'light',
+    useRichText = false,
+    onToggleRichText,
+    t
+}) {
+    const handleEditorModeChange = React.useCallback((event) => {
+        const rich = event.target.checked;
+        if (!rich) {
+            onChange(htmlToPlainText(value));
+        } else {
+            const html = plainToRichHtml(value);
+            if (html !== value) onChange(html);
+        }
+        onToggleRichText?.(rich);
+    }, [value, onChange, onToggleRichText]);
+
+    const plainTextArea = (
+        <Box sx={{
+            border: `1px solid ${themeMode === 'light' ? '#ccc' : '#555'}`,
+            borderRadius: '4px',
+            overflow: 'hidden'
+        }}>
+            <textarea
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                style={{
+                    width: '100%',
+                    minHeight: '120px',
+                    padding: isMobile ? '16px' : '20px',
+                    fontSize: isMobile ? '16px' : '14px',
+                    lineHeight: '1.5',
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'vertical',
+                    backgroundColor: themeMode === 'light' ? '#fff' : '#333',
+                    color: themeMode === 'light' ? '#000' : '#fff',
+                    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif'
+                }}
+            />
+        </Box>
+    );
+
+    return (
+        <Box>
+            <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                flexWrap: 'wrap',
+                gap: 1,
+                marginBottom: 1,
+                padding: 1,
+                borderRadius: 1,
+                backgroundColor: themeMode === 'light' ? '#f8f9fa' : '#2a2a2a',
+                border: `1px solid ${themeMode === 'light' ? '#e0e0e0' : '#444'}`
+            }}>
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={!!useRichText}
+                            onChange={handleEditorModeChange}
+                            size="small"
+                        />
+                    }
+                    label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {useRichText ? <TextFields sx={{ fontSize: 18 }} /> : <Code sx={{ fontSize: 18 }} />}
+                            <Typography component="span" variant="body2">
+                                {useRichText ? (t?.('bubbles.richTextMode') || 'Rich Text') : (t?.('bubbles.plainTextMode') || 'Plain Text')}
+                            </Typography>
+                        </Box>
+                    }
+                    labelPlacement="start"
+                    sx={{
+                        mr: 0,
+                        ml: 0,
+                        gap: 0.5,
+                        '& .MuiFormControlLabel-label': {
+                            ml: '0 !important'
+                        }
+                    }}
+                />
+            </Box>
+            {useRichText ? (
+                <TipTapRichEditor
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    isMobile={isMobile}
+                    themeMode={themeMode}
+                    t={t}
+                />
+            ) : (
+                plainTextArea
+            )}
+        </Box>
+    );
+}
+
