@@ -224,18 +224,6 @@ export default function EditBubbleDialog(props) {
                         </IconButton>
                     )}
                 </Box>
-                {isMobile && showStopPulsing ? (
-                    <Box sx={{ mt: 1 }}>
-                        <Button
-                            onClick={onStopPulsing}
-                            variant="outlined"
-                            color="warning"
-                            fullWidth
-                        >
-                            {t('bubbles.stopPulsing') || 'Stop pulsing'}
-                        </Button>
-                    </Box>
-                ) : null}
                 {editDueDate && isOverdue(editDueDate) && (
                     <Box sx={{
                         display: 'flex', alignItems: 'center', gap: 1, marginTop: 1, padding: 1,
@@ -288,25 +276,56 @@ export default function EditBubbleDialog(props) {
             </DialogContent>
             <Divider />
             <DialogActions sx={{
-                padding: isMobile ? 2 : 3,
+                padding: isSmallScreen ? 1.5 : 3,
                 display: 'flex',
                 justifyContent: 'space-between',
                 flexDirection: isSmallScreen ? 'column' : 'row',
-                gap: isSmallScreen ? 1 : 0
+                gap: isSmallScreen ? 0.75 : 0
             }}>
-                <Box sx={{ display: 'flex', gap: 1, flexDirection: isSmallScreen ? 'column' : 'row', order: isSmallScreen ? 3 : 1 }}>
-                    <Button onClick={handleDeleteBubble} variant="outlined" color="error" startIcon={<DeleteOutlined />} fullWidth={isSmallScreen} sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36 }}>
+                <Box sx={{ display: 'flex', gap: isSmallScreen ? 0.75 : 1, flexDirection: isSmallScreen ? 'column' : 'row', order: isSmallScreen ? 3 : 1, width: isSmallScreen ? '100%' : 'auto' }}>
+                    <Button
+                        onClick={handleDeleteBubble}
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteOutlined />}
+                        fullWidth={isSmallScreen}
+                        size={isSmallScreen ? 'small' : 'medium'}
+                        sx={{ borderRadius: 2, ...(!isSmallScreen && { minHeight: 36 }) }}
+                    >
                         {t('bubbles.deleteBubble')}
                     </Button>
-                    <Button onClick={handleMarkAsDone} variant="outlined" color="success" startIcon={<CheckCircle />} fullWidth={isSmallScreen} sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36 }}>
+                    <Button
+                        onClick={handleMarkAsDone}
+                        variant="outlined"
+                        color="success"
+                        startIcon={<CheckCircle />}
+                        fullWidth={isSmallScreen}
+                        size={isSmallScreen ? 'small' : 'medium'}
+                        sx={{ borderRadius: 2, ...(!isSmallScreen && { minHeight: 36 }) }}
+                    >
                         {t('bubbles.markAsDone')}
                     </Button>
+                    {isMobile && showStopPulsing ? (
+                        <Button
+                            onClick={onStopPulsing}
+                            variant="outlined"
+                            color="warning"
+                            fullWidth={isSmallScreen}
+                            size="small"
+                            sx={{
+                                borderRadius: 2,
+                                ...(!isSmallScreen ? { alignSelf: 'flex-start', whiteSpace: 'nowrap' } : {})
+                            }}
+                        >
+                            {t('bubbles.stopPulsing') || 'Stop pulsing'}
+                        </Button>
+                    ) : null}
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1, flexDirection: isSmallScreen ? 'column' : 'row', width: isSmallScreen ? '100%' : 'auto', order: isSmallScreen ? 1 : 2 }}>
-                    <Button onClick={onClose} color="inherit" fullWidth={isSmallScreen} sx={{ minHeight: isMobile ? 48 : 36, order: isSmallScreen ? 2 : 1 }}>
+                <Box sx={{ display: 'flex', gap: isSmallScreen ? 0.75 : 1, flexDirection: isSmallScreen ? 'column' : 'row', width: isSmallScreen ? '100%' : 'auto', order: isSmallScreen ? 1 : 2 }}>
+                    <Button onClick={onClose} color="inherit" fullWidth={isSmallScreen} size={isSmallScreen ? 'small' : 'medium'} sx={{ order: isSmallScreen ? 2 : 1, ...(!isSmallScreen && { minHeight: 36 }) }}>
                         {t('bubbles.cancel')}
                     </Button>
-                    <Button onClick={handleSaveBubble} variant="contained" fullWidth={isSmallScreen} sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36, order: isSmallScreen ? 1 : 2 }} disabled={!title.trim()}>
+                    <Button onClick={handleSaveBubble} variant="contained" fullWidth={isSmallScreen} size={isSmallScreen ? 'small' : 'medium'} sx={{ borderRadius: 2, order: isSmallScreen ? 1 : 2, ...(!isSmallScreen && { minHeight: 36 }) }} disabled={!title.trim()}>
                         {t('bubbles.save')}
                     </Button>
                 </Box>
