@@ -1190,6 +1190,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         setBubbleSize(45); // Сброс размера к значению по умолчанию
         setDueDate(null); // Сброс даты
         setCreateNotifications([]); // сброс уведомлений
+        setUseRichTextCreate(false); // новая задача: по умолчанию обычный текст
         setCreateDialog(true);
     };
 
@@ -2276,14 +2277,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         }
         // eslint-disable-next-line
     }, [editDialog, selectedBubble?.id]);
-
-    // Синхронизируем состояние переключателя «создания» с локальным предпочтением пользователя
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem('bubbles-use-rich-text');
-            setUseRichTextCreate(saved ? JSON.parse(saved) : false);
-        } catch (_) { /* ignore */ }
-    }, [createDialog]);
 
     const handleToggleEditUseRichText = (enabled) => {
         setUseRichTextEdit(!!enabled);
