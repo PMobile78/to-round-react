@@ -48,7 +48,6 @@ import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
 import TaskFilterDrawer from '../components/TaskFilterDrawer';
 import CreateBubbleDialog from '../components/CreateBubbleDialog';
 import TagEditorDialog from '../components/TagEditorDialog';
-import HtmlRenderer from '../components/HtmlRenderer';
 import { useMatterResize } from '../hooks/useMatterResize';
 import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
 
@@ -1182,8 +1181,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const categoryReserved = new Set(['all', 'no-tags', 'planned-tasks']);
         const tagFromPanel =
             selectedCategory &&
-            !categoryReserved.has(selectedCategory) &&
-            tags.some((t) => t.id === selectedCategory)
+                !categoryReserved.has(selectedCategory) &&
+                tags.some((t) => t.id === selectedCategory)
                 ? selectedCategory
                 : '';
         setSelectedTagId(tagFromPanel);
