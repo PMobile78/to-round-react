@@ -1,3 +1,5 @@
+import packageJson from '../../package.json';
+
 // Конфигурация приложения из переменных окружения
 export const config = {
     // Firebase Configuration
@@ -15,7 +17,7 @@ export const config = {
     // App Configuration
     app: {
         name: process.env.REACT_APP_NAME || 'To-Round',
-        version: process.env.REACT_APP_VERSION || '0.0.2',
+        version: process.env.REACT_APP_VERSION || packageJson.version || '0.0.2',
         environment: process.env.REACT_APP_ENVIRONMENT || 'development'
     }
 };
