@@ -151,6 +151,18 @@ const sanitizeBubblesForExport = (bubblesData) => {
     }));
 };
 
+/** Режим «Запланированные» на холсте (как вкладка в списке задач): совпадает с фильтром по дате. */
+const BUBBLES_PLANNED_TASKS_VIEW_LS_KEY = 'bubbles-planned-tasks-only';
+
+function readBubbleViewPlannedTasksFromLS() {
+    try {
+        const raw = localStorage.getItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY);
+        return raw != null && JSON.parse(raw) === true;
+    } catch (_) {
+        return false;
+    }
+}
+
 
 const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const { t, i18n } = useTranslation();
@@ -198,6 +210,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const saved = localStorage.getItem('bubbles-show-no-tag');
         return saved ? JSON.parse(saved) : true;
     }); // Показывать ли пузыри без тегов
+    const [bubbleViewPlannedTasksOnly, setBubbleViewPlannedTasksOnly] = useState(readBubbleViewPlannedTasksFromLS);
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
@@ -206,6 +219,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [useRichTextEdit, setUseRichTextEdit] = useState(false);
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false); // Состояние панели категорий
     const [selectedCategory, setSelectedCategory] = useState(() => {
+        if (readBubbleViewPlannedTasksFromLS()) {
+            return 'planned-tasks';
+        }
         // Восстанавливаем выбранную категорию на основе сохраненных фильтров
         const savedFilterTags = localStorage.getItem('bubbles-filter-tags');
         const savedShowNoTag = localStorage.getItem('bubbles-show-no-tag');
@@ -831,7 +847,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(true));
             }
 
-            if (savedFilterTags && savedShowNoTag) {
+            if (bubbleViewPlannedTasksOnly) {
+                const allTagIds = tags.map((tag) => tag.id);
+                setFilterTags(allTagIds);
+                setShowNoTag(true);
+                setSelectedCategory('planned-tasks');
+                localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
+                localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
+            } else if (savedFilterTags && savedShowNoTag) {
                 const filterTags = JSON.parse(savedFilterTags);
                 const showNoTag = JSON.parse(savedShowNoTag);
 
@@ -857,14 +880,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 }
             }
         }
-    }, [tags]);
+    }, [tags, bubbleViewPlannedTasksOnly]);
 
     // Синхронизация selectedCategory при изменении фильтров
     useEffect(() => {
         if (tags.length > 0) {
-            // Если выбраны все теги и включен показ пузырей без тегов - это "all"
+            // Если выбраны все теги и включен показ пузырей без тегов - это "all" или «Запланированные»
             if (filterTags.length === tags.length && showNoTag) {
-                setSelectedCategory('all');
+                setSelectedCategory(bubbleViewPlannedTasksOnly ? 'planned-tasks' : 'all');
             }
             // Если не выбраны теги, но включен показ пузырей без тегов - это "no-tags"
             else if (filterTags.length === 0 && showNoTag) {
@@ -883,7 +906,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 setSelectedCategory(null);
             }
         }
-    }, [filterTags, showNoTag, tags]);
+    }, [filterTags, showNoTag, tags, bubbleViewPlannedTasksOnly]);
 
 
 
@@ -907,26 +930,39 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         // Check if all tags are selected and showNoTag is true - show all bubbles
         const allTagsSelected = tags.length > 0 && filterTags.length === tags.length && showNoTag;
 
+        let tagFiltered;
         if (allTagsSelected) {
-            return filteredByStatus;
+            tagFiltered = filteredByStatus;
+        } else {
+            tagFiltered = filteredByStatus.filter(bubble => {
+                // Проверяем, существует ли тег для пузыря
+                const tagExists = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
+
+                // Если выбраны теги и пузырь имеет один из выбранных тегов (который существует)
+                if (filterTags.length > 0 && bubble.tagId && tagExists && filterTags.includes(bubble.tagId)) {
+                    return true;
+                }
+                // Если включен фильтр "No Tag" и у пузыря нет тега или тег был удален
+                if (showNoTag && (!bubble.tagId || !tagExists)) {
+                    return true;
+                }
+                return false;
+            });
         }
 
-        return filteredByStatus.filter(bubble => {
-            // Проверяем, существует ли тег для пузыря
-            const tagExists = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
+        if (!bubbleViewPlannedTasksOnly) {
+            return tagFiltered;
+        }
 
-            // Если выбраны теги и пузырь имеет один из выбранных тегов (который существует)
-            if (filterTags.length > 0 && bubble.tagId && tagExists && filterTags.includes(bubble.tagId)) {
-                return true;
-            }
-            // Если включен фильтр "No Tag" и у пузыря нет тега или тег был удален
-            if (showNoTag && (!bubble.tagId || !tagExists)) {
-                return true;
-            }
-            return false;
-        });
-    }, [bubbles, tags, filterTags, showNoTag]);
-
+        // Как в TaskList для вкладки «Запланированные»: dueDate строго в будущем, не выполнены и не удалены
+        const now = new Date();
+        return tagFiltered.filter((bubble) => (
+            bubble.dueDate &&
+            new Date(bubble.dueDate) > now &&
+            bubble.status !== BUBBLE_STATUS.DELETED &&
+            bubble.status !== BUBBLE_STATUS.DONE
+        ));
+    }, [bubbles, tags, filterTags, showNoTag, bubbleViewPlannedTasksOnly]);
     // Применение фильтрации при загрузке пузырей
     useEffect(() => {
         if (bubbles.length > 0 && engineRef.current) {
@@ -1581,6 +1617,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Memoized functions for filter management
     const handleTagFilterChange = useCallback((tagId) => {
+        setBubbleViewPlannedTasksOnly(false);
+        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
         setFilterTags(prev => {
             const newFilterTags = prev.includes(tagId)
                 ? prev.filter(id => id !== tagId)
@@ -1594,6 +1632,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     }, []);
 
     const handleNoTagFilterChange = useCallback(() => {
+        setBubbleViewPlannedTasksOnly(false);
+        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
         setShowNoTag(prev => {
             const newShowNoTag = !prev;
             localStorage.setItem('bubbles-show-no-tag', JSON.stringify(newShowNoTag));
@@ -1605,6 +1645,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     }, []);
 
     const clearAllFilters = useCallback(() => {
+        setBubbleViewPlannedTasksOnly(false);
+        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
         setFilterTags([]);
         setShowNoTag(false);
         setSelectedCategory(null); // Сбрасываем выбранную категорию
@@ -1613,6 +1655,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     }, []);
 
     const selectAllFilters = useCallback(() => {
+        setBubbleViewPlannedTasksOnly(false);
+        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
         const allTagIds = tags.map(tag => tag.id);
         setFilterTags(allTagIds);
         setShowNoTag(true);
@@ -1773,6 +1817,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         return counts;
     };
 
+    const plannedTasksBubbleCount = useMemo(() => {
+        const now = new Date();
+        return bubbles.filter((bubble) => (
+            bubble.dueDate &&
+            new Date(bubble.dueDate) > now &&
+            bubble.status !== BUBBLE_STATUS.DELETED &&
+            bubble.status !== BUBBLE_STATUS.DONE
+        )).length;
+    }, [bubbles]);
+
     // Функция для проверки просроченности due date
     const isOverdue = (dueDate) => {
         if (!dueDate) return false;
@@ -1785,19 +1839,33 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         // Панель не закрывается при выборе категории, если она постоянно включена
 
         if (categoryId === 'all') {
+            setBubbleViewPlannedTasksOnly(false);
+            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
             // Показываем все пузыри - устанавливаем все теги
             const allTagIds = tags.map(tag => tag.id);
             setFilterTags(allTagIds);
             setShowNoTag(true);
             localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
             localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
+        } else if (categoryId === 'planned-tasks') {
+            const allTagIds = tags.map(tag => tag.id);
+            setBubbleViewPlannedTasksOnly(true);
+            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(true));
+            setFilterTags(allTagIds);
+            setShowNoTag(true);
+            localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
+            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
         } else if (categoryId === 'no-tags') {
+            setBubbleViewPlannedTasksOnly(false);
+            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
             // Показываем только пузыри без тегов
             setFilterTags([]);
             setShowNoTag(true);
             localStorage.setItem('bubbles-filter-tags', JSON.stringify([]));
             localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
         } else {
+            setBubbleViewPlannedTasksOnly(false);
+            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
             // Устанавливаем фильтр только на выбранную категорию
             setFilterTags([categoryId]);
             setShowNoTag(false); // Отключаем показ пузырей без тегов
@@ -3138,6 +3206,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     onCategorySelect={handleCategorySelect}
                     themeMode={themeMode}
                     bubbleCounts={getCategoryBubbleCounts()}
+                    plannedTasksCount={plannedTasksBubbleCount}
                     onOpenTagDialog={() => setCategoriesDialog(true)}
                     bubbles={bubbles}
                     isPermanent={categoriesPanelEnabled}

@@ -16,6 +16,7 @@ import {
     AllInclusive,
     DragHandle,
     DragIndicator,
+    LocalOffer,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
@@ -30,7 +31,8 @@ const TasksCategoriesPanel = ({
     onOpenTagDialog,
     bubbles = [],
     isPermanent = false,
-    onReorderTags
+    onReorderTags,
+    plannedTasksCount = 0,
 }) => {
     const { t } = useTranslation();
 
@@ -208,6 +210,57 @@ const TasksCategoriesPanel = ({
                         }}
                     >
                         {bubbles.filter(bubble => bubble.status === 'active' && !bubble.tagId).length}
+                    </Typography>
+                </ListItem>
+
+
+                {/* Запланированные (как вкладка в списке задач): dueDate в будущем */}
+                <ListItem
+                    button
+                    onClick={() => onCategorySelect('planned-tasks')}
+                    selected={selectedCategory === 'planned-tasks'}
+                    sx={{
+                        padding: '16px 20px',
+                        cursor: 'pointer',
+                        borderLeft: selectedCategory === 'planned-tasks' ? '4px solid #3B7DED' : '4px solid transparent',
+                        backgroundColor: selectedCategory === 'planned-tasks'
+                            ? (themeMode === 'light' ? '#E3F2FD' : '#1A237E')
+                            : 'transparent',
+                        '&:hover': {
+                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                        },
+                        '&.Mui-selected': {
+                            backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E',
+                            '&:hover': {
+                                backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E'
+                            }
+                        }
+                    }}
+                >
+                    <Box sx={{ width: 4 }} />
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                        <LocalOffer sx={{ color: '#FF9800' }} />
+                    </ListItemIcon>
+                    <ListItemText
+                        primary={t('bubbles.postponedTasks')}
+                        primaryTypographyProps={{
+                            color: selectedCategory === 'planned-tasks'
+                                ? '#3B7DED'
+                                : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
+                            fontWeight: selectedCategory === 'planned-tasks' ? 700 : 500,
+                            noWrap: true
+                        }}
+                    />
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            fontWeight: 'bold',
+                            fontSize: '12px',
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        {plannedTasksCount}
                     </Typography>
                 </ListItem>
 
