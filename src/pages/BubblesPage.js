@@ -2930,6 +2930,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     try {
                         if (!selectedBubble || selectedBubble.status !== BUBBLE_STATUS.ACTIVE) return false;
 
+                        const rec = selectedBubble.recurrence;
+                        const every = rec && typeof rec === 'object' ? Number(rec.every) : NaN;
+                        if (!Number.isFinite(every) || every < 1) return false;
+
                         const now = Date.now();
 
                         // Проверяем наличие dueDate и просроченность
