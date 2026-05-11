@@ -70,6 +70,50 @@ const exportJsonFile = (dataObject, filename) => {
     }
 };
 
+// Функция для сохранения локального времени без конвертации в UTC
+// Сохраняет время в формате "YYYY-MM-DDTHH:mm:ss", который интерпретируется как локальное время
+const formatLocalDateTime = (date) => {
+    if (!date) return null;
+    try {
+        const d = date instanceof Date ? date : new Date(date);
+        if (!Number.isFinite(d.getTime())) return null;
+
+        // Форматируем локальное время без конвертации в UTC
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const seconds = String(d.getSeconds()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    } catch (_) {
+        return null;
+    }
+};
+
+// Функция для парсинга локального времени из строки
+// Интерпретирует строку как локальное время, а не UTC
+const parseLocalDateTime = (dateString) => {
+    if (!dateString) return null;
+    try {
+        // Если это ISO строка с Z или +/-, парсим как обычно
+        if (dateString.includes('Z') || dateString.includes('+') || dateString.includes('-', 10)) {
+            return new Date(dateString);
+        }
+        // Иначе интерпретируем как локальное время (формат "YYYY-MM-DDTHH:mm:ss")
+        const [datePart, timePart] = dateString.split('T');
+        if (!datePart || !timePart) return new Date(dateString);
+
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hours, minutes, seconds = 0] = timePart.split(':').map(Number);
+
+        return new Date(year, month - 1, day, hours, minutes, seconds);
+    } catch (_) {
+        return null;
+    }
+};
+
 // Подготовка данных пузырей к экспорту (без Matter.js ссылок)
 const sanitizeBubblesForExport = (bubblesData) => {
     const toIsoOrNull = (value) => {
@@ -530,7 +574,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 try {
                     merged.forEach(sb => {
                         const id = sb.id;
-                        const newDue = sb?.dueDate ? new Date(sb.dueDate).getTime() : null;
+                        const newDue = sb?.dueDate ? (parseLocalDateTime(sb.dueDate)?.getTime() ?? null) : null;
                         const prevDue = lastDueRef.current.get(id) ?? null;
 
                         // Игнорируем серверные обновления для задач с overdueSticky - управляем только вручную
@@ -558,7 +602,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         setSelectedBubble(prevSel => (prevSel ? { ...prevSel, ...updated, body: prevSel.body } : updated));
                         // Update edit form states for dueDate/notifications/recurrence
                         if (updated.dueDate) {
-                            try { const d = new Date(updated.dueDate); if (!isNaN(d.getTime())) setEditDueDate(d); else setEditDueDate(null); } catch (_) { setEditDueDate(null); }
+                            try { const d = parseLocalDateTime(updated.dueDate); if (d && !isNaN(d.getTime())) setEditDueDate(d); else setEditDueDate(null); } catch (_) { setEditDueDate(null); }
                         } else {
                             setEditDueDate(null);
                         }
@@ -1124,7 +1168,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         // Set title, description, dueDate, recurrence
         newBubble.title = title;
         newBubble.description = description;
-        newBubble.dueDate = dueDate ? new Date(dueDate).toISOString() : null;
+        newBubble.dueDate = formatLocalDateTime(dueDate);
         newBubble.notifications = createNotifications;
         newBubble.recurrence = createRecurrence;
         // persist editor mode per task
@@ -1193,11 +1237,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             setBubbles(prev => {
                 const updatedBubbles = prev.map(bubble => {
                     if (bubble.id === selectedBubble.id) {
-                        const newDueDate = editDueDate ? new Date(editDueDate).toISOString() : null;
+                        const newDueDate = formatLocalDateTime(editDueDate);
 
                         // Проверяем, изменилась ли дата на будущую и нужно ли отключить пульсацию
                         const shouldDisablePulsing = newDueDate &&
-                            new Date(newDueDate) > new Date();
+                            parseLocalDateTime(newDueDate) > new Date();
 
                         // Отключаем пульсацию при удалении даты
                         const shouldDisablePulsingOnDelete = !newDueDate && bubble.dueDate;
@@ -1732,7 +1776,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Функция для проверки просроченности due date
     const isOverdue = (dueDate) => {
         if (!dueDate) return false;
-        return new Date(dueDate) < new Date();
+        const parsed = parseLocalDateTime(dueDate);
+        return parsed ? parsed < new Date() : false;
     };
 
     const handleCategorySelect = (categoryId) => {
@@ -2016,7 +2061,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             pulsePhase += 0.12;
             bubbles.forEach(bubble => {
                 if (!bubble.body || bubble.status !== BUBBLE_STATUS.ACTIVE || !bubble.dueDate) return;
-                const due = new Date(bubble.dueDate).getTime();
+                const parsedDue = parseLocalDateTime(bubble.dueDate);
+                if (!parsedDue) return;
+                const due = parsedDue.getTime();
 
                 // Если открыт редактор этой бульбашки и включён Repeat — не мерцать
                 if (editDialog && selectedBubble && selectedBubble.id === bubble.id && bubble.recurrence) {
@@ -2132,7 +2179,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             let val = selectedBubble.dueDate;
             if (val) {
                 if (typeof val === 'string') {
-                    setEditDueDate(new Date(val));
+                    const parsed = parseLocalDateTime(val);
+                    setEditDueDate(parsed);
                 } else if (val instanceof Date) {
                     setEditDueDate(val);
                 } else {
@@ -2818,7 +2866,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                         // Проверяем наличие dueDate и просроченность
                         if (selectedBubble.dueDate) {
-                            const due = new Date(selectedBubble.dueDate).getTime();
+                            const parsedDue = parseLocalDateTime(selectedBubble.dueDate);
+                            if (!parsedDue) return false;
+                            const due = parsedDue.getTime();
 
                             // active notification window
                             if (Array.isArray(selectedBubble.notifications) && selectedBubble.notifications.length > 0) {

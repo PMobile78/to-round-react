@@ -126,10 +126,55 @@ async function sendFcmToUser(userId, payload) {
 function isBubbleOverdue(bubble) {
     if (!bubble || !bubble.dueDate) return false;
     try {
-        const due = new Date(bubble.dueDate);
+        const due = parseLocalDateTime(bubble.dueDate) || new Date(bubble.dueDate);
         return isAfter(new Date(), due);
     } catch (_) {
         return false;
+    }
+}
+
+// Функция для парсинга локального времени из строки
+// Интерпретирует строку без часового пояса как локальное время сервера
+function parseLocalDateTime(dateString) {
+    if (!dateString) return null;
+    try {
+        // Если это ISO строка с Z или +/-, парсим как обычно
+        if (dateString.includes('Z') || dateString.includes('+') || (dateString.match(/-/g) || []).length > 2) {
+            return new Date(dateString);
+        }
+        // Иначе интерпретируем как локальное время (формат "YYYY-MM-DDTHH:mm:ss")
+        const [datePart, timePart] = dateString.split('T');
+        if (!datePart || !timePart) return new Date(dateString);
+        
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hours, minutes, seconds = 0] = timePart.split(':').map(Number);
+        
+        // Создаем Date объект в локальном времени сервера
+        return new Date(year, month - 1, day, hours, minutes, seconds);
+    } catch (_) {
+        return null;
+    }
+}
+
+// Функция для форматирования локального времени без конвертации в UTC
+// Сохраняет время в формате "YYYY-MM-DDTHH:mm:ss"
+function formatLocalDateTime(date) {
+    if (!date) return null;
+    try {
+        const d = date instanceof Date ? date : new Date(date);
+        if (!Number.isFinite(d.getTime())) return null;
+        
+        // Форматируем локальное время без конвертации в UTC
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const seconds = String(d.getSeconds()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    } catch (_) {
+        return null;
     }
 }
 
@@ -137,7 +182,7 @@ function isBubbleOverdue(bubble) {
 // bubble.notifications: array like [{ minutesBefore: 5 }, { minutesBefore: 60 }]
 function shouldTriggerReminderNow(bubble, now) {
     if (!bubble?.dueDate || !Array.isArray(bubble.notifications)) return null;
-    const due = new Date(bubble.dueDate);
+    const due = parseLocalDateTime(bubble.dueDate) || new Date(bubble.dueDate);
     for (const notif of bubble.notifications) {
         const minutesBefore = computeMinutesBefore(notif);
         if (!Number.isFinite(minutesBefore)) continue;
@@ -266,10 +311,12 @@ function computeNextWeeklyDueDate(currentDue, weekDays, every) {
 }
 
 async function updateBubbleDueDate(userId, bubbleId, nextDue) {
+    // Форматируем время в локальном формате без UTC конвертации
+    const formattedDueDate = formatLocalDateTime(nextDue) || nextDue.toISOString();
     const subDoc = db.collection('user-bubbles').doc(userId).collection('bubbles').doc(String(bubbleId));
     const subSnap = await subDoc.get();
     if (subSnap.exists) {
-        await subDoc.set({ dueDate: nextDue.toISOString(), updatedAt: new Date().toISOString() }, { merge: true });
+        await subDoc.set({ dueDate: formattedDueDate, updatedAt: new Date().toISOString() }, { merge: true });
         await db.collection('user-bubbles').doc(userId).set({ updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
         return;
     }
@@ -279,7 +326,7 @@ async function updateBubbleDueDate(userId, bubbleId, nextDue) {
     if (!snapshot.exists) return;
     const data = snapshot.data() || {};
     const list = Array.isArray(data.bubbles) ? data.bubbles : [];
-    const updated = list.map(b => (b.id === bubbleId ? { ...b, dueDate: nextDue.toISOString(), updatedAt: new Date().toISOString() } : b));
+    const updated = list.map(b => (b.id === bubbleId ? { ...b, dueDate: formattedDueDate, updatedAt: new Date().toISOString() } : b));
     await docRef.set({ ...data, bubbles: updated, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 }
 
@@ -365,7 +412,8 @@ exports.scheduleDueDateNotifications = onSchedule({
                 // Auto-reschedule dueDate if recurrence is configured
                 try {
                     if (bubble.recurrence && bubble.dueDate) {
-                        const nextDue = computeNextDueDate(new Date(bubble.dueDate), bubble.recurrence);
+                        const currentDue = parseLocalDateTime(bubble.dueDate) || new Date(bubble.dueDate);
+                        const nextDue = computeNextDueDate(currentDue, bubble.recurrence);
                         if (nextDue) {
                             await updateBubbleDueDate(userId, bubble.id, nextDue);
                             // keep sticky flag until user stops or dueDate manually changed/deleted - только если overdueSticky еще установлен
