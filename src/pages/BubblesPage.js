@@ -1179,7 +1179,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const openCreateDialog = () => {
         setTitle('');
         setDescription('');
-        setSelectedTagId('');
+        const categoryReserved = new Set(['all', 'no-tags', 'planned-tasks']);
+        const tagFromPanel =
+            selectedCategory &&
+            !categoryReserved.has(selectedCategory) &&
+            tags.some((t) => t.id === selectedCategory)
+                ? selectedCategory
+                : '';
+        setSelectedTagId(tagFromPanel);
         setBubbleSize(45); // Сброс размера к значению по умолчанию
         setDueDate(null); // Сброс даты
         setCreateNotifications([]); // сброс уведомлений
