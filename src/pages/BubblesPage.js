@@ -2550,6 +2550,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         onCategorySelect={handleCategorySelect}
                         themeMode={themeMode}
                         bubbleCounts={getCategoryBubbleCounts()}
+                        bubbles={bubbles}
+                        plannedTasksCount={plannedTasksBubbleCount}
                     />
                 </Box>
             )}

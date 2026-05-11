@@ -1,28 +1,60 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     Box,
     Select,
     MenuItem,
     FormControl,
     Typography,
-    Chip
+    Chip,
+    ListSubheader,
 } from '@mui/material';
-import { LabelOutlined, AllInclusive } from '@mui/icons-material';
+import { LabelOutlined, AllInclusive, LocalOffer } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { BUBBLE_STATUS } from '../services/firestoreService';
+
+const ellipsisLabelSx = {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    minWidth: 0,
+};
+
+const labelRowSx = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    flex: 1,
+    minWidth: 0,
+};
+
+const menuRowSx = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 1,
+    padding: '12px 16px',
+};
 
 const MobileCategorySelector = ({
     tags,
     selectedCategory,
     onCategorySelect,
     themeMode,
-    bubbleCounts = {}
+    bubbleCounts = {},
+    bubbles = [],
+    plannedTasksCount = 0,
 }) => {
     const { t } = useTranslation();
-    const [open, setOpen] = useState(false);
 
     const getBubbleCount = (categoryId) => {
         if (categoryId === 'all') {
             return Object.values(bubbleCounts).reduce((sum, count) => sum + count, 0);
+        }
+        if (categoryId === 'no-tags') {
+            return bubbles.filter((b) => b.status === BUBBLE_STATUS.ACTIVE && !b.tagId).length;
+        }
+        if (categoryId === 'planned-tasks') {
+            return plannedTasksCount;
         }
         return bubbleCounts[categoryId] || 0;
     };
@@ -38,16 +70,18 @@ const MobileCategorySelector = ({
             <MenuItem
                 key={category.id}
                 value={category.id}
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '12px 16px'
-                }}
+                sx={menuRowSx}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <LabelOutlined sx={{ color: category.color, fontSize: 20 }} />
-                    <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff' }}>
+                <Box sx={labelRowSx}>
+                    <LabelOutlined sx={{ color: category.color, fontSize: 20, flexShrink: 0 }} />
+                    <Typography
+                        variant="body2"
+                        title={category.name}
+                        sx={{
+                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            ...ellipsisLabelSx,
+                        }}
+                    >
                         {category.name}
                     </Typography>
                 </Box>
@@ -55,6 +89,7 @@ const MobileCategorySelector = ({
                     label={count}
                     size="small"
                     sx={{
+                        flexShrink: 0,
                         backgroundColor: 'transparent',
                         color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
                         fontWeight: 'bold',
@@ -71,16 +106,11 @@ const MobileCategorySelector = ({
         return (
             <MenuItem
                 value="all"
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '12px 16px'
-                }}
+                sx={menuRowSx}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa', fontSize: 20 }} />
-                    <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff' }}>
+                <Box sx={labelRowSx}>
+                    <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa', fontSize: 20, flexShrink: 0 }} />
+                    <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', ...ellipsisLabelSx }}>
                         {t('categories.allCategories')}
                     </Typography>
                 </Box>
@@ -88,6 +118,40 @@ const MobileCategorySelector = ({
                     label={count}
                     size="small"
                     sx={{
+                        flexShrink: 0,
+                        backgroundColor: 'transparent',
+                        color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                        fontWeight: 'bold',
+                        fontSize: '12px',
+                        border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}`
+                    }}
+                />
+            </MenuItem>
+        );
+    };
+
+    const renderPresetRow = (value, label, icon) => {
+        const count = getBubbleCount(value);
+        return (
+            <MenuItem
+                value={value}
+                sx={menuRowSx}
+            >
+                <Box sx={labelRowSx}>
+                    <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{icon}</Box>
+                    <Typography
+                        variant="body2"
+                        title={typeof label === 'string' ? label : undefined}
+                        sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', ...ellipsisLabelSx }}
+                    >
+                        {label}
+                    </Typography>
+                </Box>
+                <Chip
+                    label={count}
+                    size="small"
+                    sx={{
+                        flexShrink: 0,
                         backgroundColor: 'transparent',
                         color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
                         fontWeight: 'bold',
@@ -104,6 +168,12 @@ const MobileCategorySelector = ({
         if (selectedCategory === 'all') {
             return t('categories.allCategories');
         }
+        if (selectedCategory === 'no-tags') {
+            return t('bubbles.noTags');
+        }
+        if (selectedCategory === 'planned-tasks') {
+            return t('bubbles.postponedTasks');
+        }
         const category = tags.find(tag => tag.id === selectedCategory);
         return category ? category.name : '';
     };
@@ -112,6 +182,12 @@ const MobileCategorySelector = ({
         if (!selectedCategory) return null;
         if (selectedCategory === 'all') {
             return <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />;
+        }
+        if (selectedCategory === 'no-tags') {
+            return <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />;
+        }
+        if (selectedCategory === 'planned-tasks') {
+            return <LocalOffer sx={{ color: '#FF9800' }} />;
         }
         const category = tags.find(tag => tag.id === selectedCategory);
         return category ? (
@@ -126,15 +202,35 @@ const MobileCategorySelector = ({
                 onChange={handleChange}
                 displayEmpty
                 renderValue={(value) => {
-                    if (value === '') return null; // показываем пусто при множественном выборе
+                    if (value === '') return null;
+                    const fullName = getSelectedCategoryName();
                     return (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {getSelectedCategoryIcon()}
-                            <Typography variant="body2" sx={{
-                                color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                fontSize: '14px'
-                            }}>
-                                {getSelectedCategoryName()}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                minWidth: 0,
+                                width: '100%',
+                                maxWidth: '100%',
+                                overflow: 'hidden',
+                                pr: 0.5,
+                            }}
+                        >
+                            <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                                {getSelectedCategoryIcon()}
+                            </Box>
+                            <Typography
+                                variant="body2"
+                                title={fullName}
+                                sx={{
+                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                    fontSize: '14px',
+                                    flex: 1,
+                                    ...ellipsisLabelSx,
+                                }}
+                            >
+                                {fullName}
                             </Typography>
                         </Box>
                     );
@@ -153,7 +249,8 @@ const MobileCategorySelector = ({
                         alignItems: 'center',
                         gap: 1,
                         padding: '10px 16px',
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        overflow: 'hidden',
                     },
                     '& .MuiOutlinedInput-notchedOutline': {
                         border: 'none'
@@ -173,6 +270,29 @@ const MobileCategorySelector = ({
                 }}
             >
                 {renderAllCategoriesOption()}
+                {renderPresetRow(
+                    'no-tags',
+                    t('bubbles.noTags'),
+                    <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa', fontSize: 20 }} />
+                )}
+                {renderPresetRow(
+                    'planned-tasks',
+                    t('bubbles.postponedTasks'),
+                    <LocalOffer sx={{ color: '#FF9800', fontSize: 20 }} />
+                )}
+                {tags.length > 0 && (
+                    <ListSubheader
+                        sx={{
+                            lineHeight: '32px',
+                            backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.98)' : 'rgba(52, 73, 94, 0.98)',
+                            color: themeMode === 'light' ? '#757575' : '#aaaaaa',
+                            fontSize: '0.7rem',
+                            letterSpacing: 1
+                        }}
+                    >
+                        {t('bubbles.tags', { defaultValue: 'Tags' })}
+                    </ListSubheader>
+                )}
                 {tags.map(renderCategoryOption)}
             </Select>
         </FormControl>
