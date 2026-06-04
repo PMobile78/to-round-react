@@ -247,9 +247,14 @@ async function cleanupOldNotificationSent() {
         .where('sentAt', '<=', cutoff)
         .get();
     if (old.empty) return;
-    const batch = db.batch();
-    old.forEach((doc) => batch.delete(doc.ref));
-    await batch.commit();
+    const BATCH_SIZE = 500;
+    const docsToDelete = old.docs;
+    for (let i = 0; i < docsToDelete.length; i += BATCH_SIZE) {
+        const chunk = docsToDelete.slice(i, i + BATCH_SIZE);
+        const batch = db.batch();
+        chunk.forEach((doc) => batch.delete(doc.ref));
+        await batch.commit();
+    }
     console.log(`Cleaned up ${old.size} old notification-sent entries`);
 }
 
