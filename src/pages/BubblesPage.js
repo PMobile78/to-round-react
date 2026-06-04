@@ -2314,8 +2314,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             setEditRecurrence(selectedBubble.recurrence || null);
             setUseRichTextEdit(!!selectedBubble.useRichText);
         }
-        // eslint-disable-next-line
-    }, [editDialog, selectedBubble?.id]);
+    }, [editDialog, selectedBubble]);
 
     const handleToggleEditUseRichText = (enabled) => {
         setUseRichTextEdit(!!enabled);
@@ -2408,6 +2407,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         window.addEventListener('open-bubble', handleOpenBubble);
         return () => window.removeEventListener('open-bubble', handleOpenBubble);
         // eslint-disable-next-line
+        // Intentional: setSelectedBubble/setEditDialog are stable useState setters and do not
+        // need to be listed. bubbles is in the array so the handler always sees the latest list.
     }, [bubbles]);
 
     // Авто-открытие по URL-параметру (?bubbleId=...) даже если событие было пропущено
@@ -2428,6 +2429,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             // ignore
         }
         // eslint-disable-next-line
+        // Intentional: setSelectedBubble/setEditDialog are stable useState setters; deepLinkHandledRef
+        // is a ref — neither needs to be listed. bubbles is listed so the effect retries until loaded.
     }, [bubbles]);
 
     // Вспомогательная функция для вычисления offset в миллисекундах
