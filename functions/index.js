@@ -379,6 +379,7 @@ exports.scheduleDueDateNotifications = onSchedule({
     const users = await fetchAllUserBubbles();
 
     await Promise.all(users.map(async ({ userId, bubbles }) => {
+        try {
         const tokens = await getUserFcmTokens(userId);
 
         for (const bubble of bubbles) {
@@ -449,6 +450,9 @@ exports.scheduleDueDateNotifications = onSchedule({
                     console.error('Reschedule error', userId, bubble.id, e);
                 }
             }
+        }
+        } catch (e) {
+            console.error('Error processing user', userId, e);
         }
     }));
 
