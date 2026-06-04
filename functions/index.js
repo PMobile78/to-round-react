@@ -96,10 +96,9 @@ async function sendFcmToUser(userId, payload) {
     const bubbleTitle = payload?.data?.bubbleTitle || '';
 
     const results = [];
-    for (const { id, token } of tokens) {
+    for (const { id, token, language } of tokens) {
         try {
-            const tokenObj = tokens.find(t => t.token === token);
-            const { title, body } = buildTextsPerLang(tokenObj?.language, type, minutesBefore, bubbleTitle);
+            const { title, body } = buildTextsPerLang(language, type, minutesBefore, bubbleTitle);
             await admin.messaging().send({
                 token,
                 data: Object.assign({}, payload.data || {}, { title, body }),
