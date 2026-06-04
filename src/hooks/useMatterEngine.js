@@ -285,6 +285,7 @@ export function useMatterEngine({
 
         return () => {
             // cleanup handled below; resize listeners removed by hook
+            Runner.stop(runner);
             Render.stop(render);
             World.clear(engine.world);
             Engine.clear(engine);
