@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box } from '@mui/material';
+import DOMPurify from 'dompurify';
 
 const HtmlRenderer = ({
     html,
@@ -59,7 +60,11 @@ const HtmlRenderer = ({
                 },
                 ...sx
             }}
-            dangerouslySetInnerHTML={{ __html: html }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html, {
+                ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'blockquote', 'code', 'pre', 'a', 'img', 'span', 'div'],
+                ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target', 'rel'],
+                ALLOW_DATA_ATTR: false,
+            }) }}
         />
     );
 };

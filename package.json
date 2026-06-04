@@ -55,6 +55,7 @@
     "@tiptap/react": "^3.2.0",
     "@tiptap/starter-kit": "^3.2.0",
     "date-fns": "^4.1.0",
+    "dompurify": "^3.4.8",
     "firebase": "latest",
     "i18next": "latest",
     "i18next-browser-languagedetector": "latest",

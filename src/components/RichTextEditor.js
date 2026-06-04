@@ -596,7 +596,10 @@ function TipTapRichEditor({
                         onClick={() => {
                             const url = prompt(t?.('categories.richTextEditor.enterUrl') || 'Enter URL:', 'https://');
                             if (url) {
-                                editor.chain().focus().setLink({ href: url }).run();
+                                const sanitizedUrl = url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/') ? url : null;
+                                if (sanitizedUrl) {
+                                    editor.chain().focus().setLink({ href: sanitizedUrl }).run();
+                                }
                             }
                         }}
                         sx={{
@@ -614,7 +617,10 @@ function TipTapRichEditor({
                         onClick={() => {
                             const url = prompt(t?.('categories.richTextEditor.enterImageUrl') || 'Enter image URL:', 'https://');
                             if (url) {
-                                editor.chain().focus().setImage({ src: url }).run();
+                                const sanitizedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : null;
+                                if (sanitizedUrl) {
+                                    editor.chain().focus().setImage({ src: sanitizedUrl }).run();
+                                }
                             }
                         }}
                         sx={{
