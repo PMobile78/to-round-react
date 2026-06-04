@@ -358,16 +358,16 @@ export const subscribeToBubblesUpdates = (callback) => {
     try {
         const userId = getUserDocumentId();
         const bubblesCol = collection(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION);
-        // Try subcollection listener first
-        const unsubscribe = onSnapshot(bubblesCol, (querySnap) => {
+        let currentUnsub = null;
+        currentUnsub = onSnapshot(bubblesCol, (querySnap) => {
             const list = [];
             querySnap.forEach(d => list.push({ id: d.id, ...d.data() }));
             callback(list);
         }, (err) => {
             console.warn('Subcollection onSnapshot error, falling back to legacy doc listener', err);
-            // Fallback listener to legacy doc
+            currentUnsub?.();  // close the primary (may already be closed by Firebase)
             const legacyRef = doc(db, BUBBLES_COLLECTION, userId);
-            const unsubLegacy = onSnapshot(legacyRef, (docSnap) => {
+            currentUnsub = onSnapshot(legacyRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     callback(data.bubbles || []);
@@ -375,14 +375,11 @@ export const subscribeToBubblesUpdates = (callback) => {
                     callback([]);
                 }
             });
-            // Replace unsubscribe with legacy one
-            unsubscribe();
-            return unsubLegacy;
         });
-        return unsubscribe;
+        return () => currentUnsub?.();  // always calls whatever is current
     } catch (error) {
         console.error('Error setting up bubbles listener:', error);
-        return () => { }; // Return empty unsubscribe function
+        return () => { };
     }
 };
 
