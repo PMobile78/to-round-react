@@ -233,15 +233,17 @@ export function useMatterEngine({
         let clickStartPos = { x: 0, y: 0 };
         let downBodyId = null;
 
-        Events.on(mouseConstraint, 'mousedown', (event) => {
+        const mousedownHandler = (event) => {
             clickStartTime = Date.now();
             clickStartPos = { ...event.mouse.position };
             const bodies = engine.world.bodies.filter(b => b.label === 'Circle Body');
             const hits = Query.point(bodies, clickStartPos);
             downBodyId = hits && hits.length > 0 ? hits[0].id : null;
-        });
+        };
 
-        Events.on(mouseConstraint, 'mouseup', (event) => {
+        Events.on(mouseConstraint, 'mousedown', mousedownHandler);
+
+        const mouseupHandler = (event) => {
             const clickDuration = Date.now() - clickStartTime;
             const mousePosition = event.mouse.position;
 
@@ -274,7 +276,9 @@ export function useMatterEngine({
                 }
             }
             downBodyId = null;
-        });
+        };
+
+        Events.on(mouseConstraint, 'mouseup', mouseupHandler);
 
         // Start render and engine
         Render.run(render);
@@ -285,6 +289,8 @@ export function useMatterEngine({
 
         return () => {
             // cleanup handled below; resize listeners removed by hook
+            Events.off(mouseConstraint, 'mousedown', mousedownHandler);
+            Events.off(mouseConstraint, 'mouseup', mouseupHandler);
             Runner.stop(runner);
             Render.stop(render);
             World.clear(engine.world);
