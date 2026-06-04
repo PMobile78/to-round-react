@@ -17,7 +17,7 @@ const uk = require('./locales/notifications.uk.json');
 async function fetchAllUserBubbles() {
     // Try normalized schema via collectionGroup first
     const grouped = new Map(); // userId -> bubbles[]
-    const cg = await db.collectionGroup('bubbles').get();
+    const cg = await db.collectionGroup('bubbles').where('status', '==', 'active').get();
     cg.forEach((d) => {
         const parentUserDoc = d.ref.parent.parent; // user-bubbles/{uid}
         const userId = parentUserDoc?.id;
@@ -241,6 +241,19 @@ async function markNotificationSent(key) {
     await ref.set({ sentAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 }
 
+// Clean up notification-sent entries older than 7 days to prevent unbounded collection growth
+async function cleanupOldNotificationSent() {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const old = await db.collection('notification-sent')
+        .where('sentAt', '<=', cutoff)
+        .get();
+    if (old.empty) return;
+    const batch = db.batch();
+    old.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+    console.log(`Cleaned up ${old.size} old notification-sent entries`);
+}
+
 function buildReminderKey(userId, bubble, minutesBefore) {
     return `reminder:${userId}:${String(bubble.id)}:${String(minutesBefore)}:${String(bubble.dueDate)}`;
 }
@@ -354,6 +367,16 @@ exports.scheduleDueDateNotifications = onSchedule({
     region: 'europe-west1'
 }, async (event) => {
     const now = new Date();
+
+    // Run cleanup once per hour (on the 0-minute of each hour)
+    if (now.getMinutes() === 0) {
+        try {
+            await cleanupOldNotificationSent();
+        } catch (e) {
+            console.error('cleanupOldNotificationSent error', e);
+        }
+    }
+
     const users = await fetchAllUserBubbles();
 
     for (const { userId, bubbles } of users) {
