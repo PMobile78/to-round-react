@@ -285,7 +285,7 @@ export const saveTagsToFirestore = async (tagsData) => {
             tags: tagsData,
             updatedAt: serverTimestamp(),
             userId
-        });
+        }, { merge: true });
 
     } catch (error) {
         logger.error('Error saving tags to Firestore:', error);
