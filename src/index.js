@@ -30,17 +30,7 @@ root.render(
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
         const swPath = '/to-round-react/sw.js';
-        logger.log('[SW] Attempting to register Service Worker at', swPath);
         navigator.serviceWorker.register(swPath).then(function (registration) {
-            logger.log('[SW] Service Worker registered:', registration);
-            if (registration.installing) {
-                logger.log('[SW] Service worker installing');
-            } else if (registration.waiting) {
-                logger.log('[SW] Service worker installed');
-            } else if (registration.active) {
-                logger.log('[SW] Service worker active');
-            }
-
             // Initialize FCM after SW is ready and process deep links
             initMessagingAndSaveToken();
             try { updateMessagingTokenLanguage(i18n.language); } catch (e) { }

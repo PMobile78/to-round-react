@@ -144,7 +144,6 @@ export function useMatterEngine({
                         // Инициализируем stickyPulseRef для задач с overdueSticky
                         if (bubble.overdueSticky) {
                             stickyPulseRef.current.add(bubble.id);
-                            logger.log('📥 Initial load: Added to stickyPulseRef:', bubble.id, 'overdueSticky:', bubble.overdueSticky);
                         }
                         initialBubbles.push(bubble);
                     });
@@ -178,15 +177,13 @@ export function useMatterEngine({
 
                         // Игнорируем серверные обновления для задач с overdueSticky - управляем только вручную
                         if (sb?.overdueSticky) {
-                            logger.log('🔄 Server sync: Ignoring overdueSticky updates for bubble:', id, 'overdueSticky:', sb.overdueSticky);
-                            return; // Пропускаем эту задачу
+                            return;
                         }
 
                         // Обрабатываем только случаи, когда overdueSticky = false
                         if (!sb?.overdueSticky) {
                             stickyPulseRef.current.delete(id);
-                            manuallyStoppedPulsingRef.current.delete(id); // очищаем флаг ручной остановки
-                            logger.log('🔄 Server sync: Removed from stickyPulseRef:', id, 'overdueSticky:', sb.overdueSticky);
+                            manuallyStoppedPulsingRef.current.delete(id);
                         }
 
                         if (newDue && Number.isFinite(newDue)) lastDueRef.current.set(id, newDue);

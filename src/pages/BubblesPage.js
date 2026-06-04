@@ -933,7 +933,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         // Очищаем флаг ручной остановки при изменении даты
                         if (shouldDisablePulsing || shouldDisablePulsingOnDelete) {
                             manuallyStoppedPulsingRef.current.delete(bubble.id);
-                            logger.log('📅 Date changed: Cleared manual stop flag for bubble:', bubble.id);
                         }
 
                         return {
@@ -2480,10 +2479,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     try {
                         if (!selectedBubble) return;
 
-                        logger.log('🛑 Stop pulsing clicked for bubble:', selectedBubble.id);
-                        logger.log('Before stop - overdueSticky:', selectedBubble.overdueSticky);
-                        logger.log('Before stop - stickyPulseRef has:', stickyPulseRef.current.has(selectedBubble.id));
-
                         // Очищаем локальные ссылки на пульсацию
                         stickyPulseRef.current.delete(selectedBubble.id);
                         notifiedBubblesRef.current.delete(selectedBubble.id);
@@ -2509,9 +2504,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             overdueAt: null,
                             updatedAt: new Date().toISOString()
                         };
-
-                        logger.log('After stop - updatedBubble.overdueSticky:', updatedBubble.overdueSticky);
-                        logger.log('After stop - manuallyStoppedPulsingRef has:', manuallyStoppedPulsingRef.current.has(selectedBubble.id));
 
                         setBubbles(prev => {
                             const updated = prev.map(b => b.id === selectedBubble.id ? updatedBubble : b);
@@ -2570,10 +2562,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                         // Показываем кнопку Stop для задач с overdueSticky или в stickyPulseRef
                         if (selectedBubble.overdueSticky || stickyPulseRef.current.has(selectedBubble.id)) {
-                            logger.log('🔘 Show stop button for bubble:', selectedBubble.id, {
-                                overdueSticky: selectedBubble.overdueSticky,
-                                inStickyPulseRef: stickyPulseRef.current.has(selectedBubble.id)
-                            });
                             return true;
                         }
 

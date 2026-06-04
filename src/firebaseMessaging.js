@@ -16,13 +16,11 @@ export async function initMessagingAndSaveToken() {
     try {
         const supported = await isSupported();
         if (!supported) {
-            logger.log('[FCM] Messaging not supported in this browser');
             return null;
         }
 
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-            logger.log('[FCM] Notification permission not granted');
             return null;
         }
 
@@ -33,7 +31,6 @@ export async function initMessagingAndSaveToken() {
 
         // Foreground message handler — показываем через Service Worker, чтобы клик открывал URL
         onMessage(messaging, async (payload) => {
-            logger.log('[FCM] Message in foreground:', payload);
             try {
                 const registration = await navigator.serviceWorker.ready;
                 const title = payload?.notification?.title || payload?.data?.title || 'Уведомление';
