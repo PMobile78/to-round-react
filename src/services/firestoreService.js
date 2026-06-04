@@ -97,9 +97,11 @@ export const saveBubblesToFirestore = async (bubblesData) => {
 
     } catch (error) {
         console.error('Error saving bubbles to Firestore (normalized). Trying legacy doc...', error);
+        const currentUser = getCurrentUser();
+        if (!currentUser) return;
         try {
             // Legacy fallback: store as array in parent document
-            const userId = getCurrentUser()?.uid || 'anonymous';
+            const userId = currentUser.uid;
             const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
             const bubblesForStorage = bubblesData.map(bubble => ({
                 id: bubble.id,
@@ -124,7 +126,7 @@ export const saveBubblesToFirestore = async (bubblesData) => {
         } catch (legacyError) {
             console.error('Legacy save failed. Falling back to localStorage.', legacyError);
             // Fallback to localStorage with user-specific key
-            const userId = getCurrentUser()?.uid || 'anonymous';
+            const userId = currentUser.uid;
             const bubblesForStorage = bubblesData.map(bubble => ({
                 id: bubble.id,
                 radius: bubble.radius,
@@ -179,8 +181,9 @@ export const loadBubblesFromFirestore = async () => {
     } catch (error) {
         console.error('Error loading bubbles from Firestore:', error);
         // Fallback to localStorage with user-specific key
-        const userId = getCurrentUser()?.uid || 'anonymous';
-        const stored = localStorage.getItem(`bubbles_${userId}`);
+        const uid = getCurrentUser()?.uid;
+        if (!uid) return [];
+        const stored = localStorage.getItem(`bubbles_${uid}`);
         return stored ? JSON.parse(stored) : [];
     }
 };
@@ -206,8 +209,8 @@ export const clearBubblesFromFirestore = async () => {
     } catch (error) {
         console.error('Error clearing bubbles from Firestore:', error);
         // Fallback to localStorage
-        const userId = getCurrentUser()?.uid || 'anonymous';
-        localStorage.removeItem(`bubbles_${userId}`);
+        const uid = getCurrentUser()?.uid;
+        if (uid) localStorage.removeItem(`bubbles_${uid}`);
     }
 };
 
@@ -321,8 +324,9 @@ export const saveTagsToFirestore = async (tagsData) => {
     } catch (error) {
         console.error('Error saving tags to Firestore:', error);
         // Fallback to localStorage with user-specific key
-        const userId = getCurrentUser()?.uid || 'anonymous';
-        localStorage.setItem(`tags_${userId}`, JSON.stringify(tagsData));
+        const uid = getCurrentUser()?.uid;
+        if (!uid) return;
+        localStorage.setItem(`tags_${uid}`, JSON.stringify(tagsData));
     }
 };
 
@@ -342,8 +346,9 @@ export const loadTagsFromFirestore = async () => {
     } catch (error) {
         console.error('Error loading tags from Firestore:', error);
         // Fallback to localStorage with user-specific key
-        const userId = getCurrentUser()?.uid || 'anonymous';
-        const stored = localStorage.getItem(`tags_${userId}`);
+        const uid = getCurrentUser()?.uid;
+        if (!uid) return [];
+        const stored = localStorage.getItem(`tags_${uid}`);
         return stored ? JSON.parse(stored) : [];
     }
 };

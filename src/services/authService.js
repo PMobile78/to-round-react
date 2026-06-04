@@ -56,7 +56,13 @@ export const loginUser = async (email, password) => {
 // User logout
 export const logoutUser = async () => {
     try {
+        const uid = auth.currentUser?.uid;
         await signOut(auth);
+        // Clear user-specific localStorage data after sign-out
+        if (uid) {
+            localStorage.removeItem(`bubbles_${uid}`);
+            localStorage.removeItem(`tags_${uid}`);
+        }
         return { success: true };
     } catch (error) {
         console.error('Error logging out:', error);
