@@ -15,7 +15,8 @@ function getVersionFromPackageJson() {
 }
 
 function incrementVersion(version, type = 'patch') {
-    const parts = version.split('.').map(Number);
+    const clean = version.replace(/-[^.]*$/, '');
+    const parts = clean.split('.').map(Number);
 
     switch (type) {
         case 'major':
