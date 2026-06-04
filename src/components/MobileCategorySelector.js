@@ -105,6 +105,7 @@ const MobileCategorySelector = ({
         const count = getBubbleCount('all');
         return (
             <MenuItem
+                key="all-categories"
                 value="all"
                 sx={menuRowSx}
             >
@@ -134,6 +135,7 @@ const MobileCategorySelector = ({
         const count = getBubbleCount(value);
         return (
             <MenuItem
+                key={value}
                 value={value}
                 sx={menuRowSx}
             >
