@@ -1,4 +1,5 @@
 import packageJson from '../../package.json';
+import logger from './logger';
 
 // Конфигурация приложения из переменных окружения
 export const config = {
@@ -36,7 +37,7 @@ export const validateConfig = () => {
     const missingKeys = requiredFirebaseKeys.filter(key => !config.firebase[key]);
 
     if (missingKeys.length > 0) {
-        console.error('Missing required Firebase configuration keys:', missingKeys);
+        logger.error('Missing required Firebase configuration keys:', missingKeys);
         return false;
     }
 

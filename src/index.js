@@ -5,6 +5,7 @@ import './i18n';
 import { initMessagingAndSaveToken, updateMessagingTokenLanguage } from './firebaseMessaging';
 import i18n from './i18n';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import logger from './utils/logger';
 
 // Handle notification deep links like /?bubbleId=...
 function handleDeepLink() {
@@ -29,15 +30,15 @@ root.render(
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
         const swPath = '/to-round-react/sw.js';
-        console.log('[SW] Attempting to register Service Worker at', swPath);
+        logger.log('[SW] Attempting to register Service Worker at', swPath);
         navigator.serviceWorker.register(swPath).then(function (registration) {
-            console.log('[SW] Service Worker registered:', registration);
+            logger.log('[SW] Service Worker registered:', registration);
             if (registration.installing) {
-                console.log('[SW] Service worker installing');
+                logger.log('[SW] Service worker installing');
             } else if (registration.waiting) {
-                console.log('[SW] Service worker installed');
+                logger.log('[SW] Service worker installed');
             } else if (registration.active) {
-                console.log('[SW] Service worker active');
+                logger.log('[SW] Service worker active');
             }
 
             // Initialize FCM after SW is ready and process deep links
@@ -45,7 +46,7 @@ if ('serviceWorker' in navigator) {
             try { updateMessagingTokenLanguage(i18n.language); } catch (e) { }
             handleDeepLink();
         }, function (err) {
-            console.error('[SW] Registration failed:', err);
+            logger.error('[SW] Registration failed:', err);
         });
     });
 } else {

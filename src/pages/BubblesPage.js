@@ -47,6 +47,7 @@ import EditBubbleDialog from '../components/EditBubbleDialog';
 import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
 import TaskFilterDrawer from '../components/TaskFilterDrawer';
 import CreateBubbleDialog from '../components/CreateBubbleDialog';
+import logger from '../utils/logger';
 import TagEditorDialog from '../components/TagEditorDialog';
 import { useMatterResize } from '../hooks/useMatterResize';
 import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
@@ -65,7 +66,7 @@ const exportJsonFile = (dataObject, filename) => {
         URL.revokeObjectURL(url);
         document.body.removeChild(link);
     } catch (e) {
-        console.error('Export JSON failed', e);
+        logger.error('Export JSON failed', e);
     }
 };
 
@@ -599,7 +600,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         // Инициализируем stickyPulseRef для задач с overdueSticky
                         if (bubble.overdueSticky) {
                             stickyPulseRef.current.add(bubble.id);
-                            console.log('📥 Initial load: Added to stickyPulseRef:', bubble.id, 'overdueSticky:', bubble.overdueSticky);
+                            logger.log('📥 Initial load: Added to stickyPulseRef:', bubble.id, 'overdueSticky:', bubble.overdueSticky);
                         }
                         initialBubbles.push(bubble);
                     });
@@ -609,7 +610,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 setBubbles(initialBubbles);
                 // Не добавляем пузыри в физический мир сразу - они будут добавлены после применения фильтров
             } catch (error) {
-                console.error('Error loading initial bubbles:', error);
+                logger.error('Error loading initial bubbles:', error);
                 setBubbles([]);
             }
         };
@@ -633,7 +634,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                         // Игнорируем серверные обновления для задач с overdueSticky - управляем только вручную
                         if (sb?.overdueSticky) {
-                            console.log('🔄 Server sync: Ignoring overdueSticky updates for bubble:', id, 'overdueSticky:', sb.overdueSticky);
+                            logger.log('🔄 Server sync: Ignoring overdueSticky updates for bubble:', id, 'overdueSticky:', sb.overdueSticky);
                             return; // Пропускаем эту задачу
                         }
 
@@ -641,7 +642,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         if (!sb?.overdueSticky) {
                             stickyPulseRef.current.delete(id);
                             manuallyStoppedPulsingRef.current.delete(id); // очищаем флаг ручной остановки
-                            console.log('🔄 Server sync: Removed from stickyPulseRef:', id, 'overdueSticky:', sb.overdueSticky);
+                            logger.log('🔄 Server sync: Removed from stickyPulseRef:', id, 'overdueSticky:', sb.overdueSticky);
                         }
 
                         if (newDue && Number.isFinite(newDue)) lastDueRef.current.set(id, newDue);
@@ -1331,7 +1332,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         // Очищаем флаг ручной остановки при изменении даты
                         if (shouldDisablePulsing || shouldDisablePulsingOnDelete) {
                             manuallyStoppedPulsingRef.current.delete(bubble.id);
-                            console.log('📅 Date changed: Cleared manual stop flag for bubble:', bubble.id);
+                            logger.log('📅 Date changed: Cleared manual stop flag for bubble:', bubble.id);
                         }
 
                         return {
@@ -1376,7 +1377,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 const updatedBubbles = await markBubbleAsDeleted(selectedBubble.id, bubbles);
                 setBubbles(updatedBubbles);
             } catch (error) {
-                console.error('Error deleting bubble:', error);
+                logger.error('Error deleting bubble:', error);
             }
         }
         setEditDialog(false);
@@ -1481,7 +1482,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     setBubbles(updatedBubbles);
                 }
             } catch (error) {
-                console.error('Error marking bubble as done:', error);
+                logger.error('Error marking bubble as done:', error);
             }
         }
         setEditDialog(false);
@@ -2389,7 +2390,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             // to reattach physics bodies to the freshly imported bubbles.
             window.location.reload();
         } catch (e) {
-            console.error('Import JSON failed', e);
+            logger.error('Import JSON failed', e);
         }
     }, []);
 
@@ -2927,9 +2928,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     try {
                         if (!selectedBubble) return;
 
-                        console.log('🛑 Stop pulsing clicked for bubble:', selectedBubble.id);
-                        console.log('Before stop - overdueSticky:', selectedBubble.overdueSticky);
-                        console.log('Before stop - stickyPulseRef has:', stickyPulseRef.current.has(selectedBubble.id));
+                        logger.log('🛑 Stop pulsing clicked for bubble:', selectedBubble.id);
+                        logger.log('Before stop - overdueSticky:', selectedBubble.overdueSticky);
+                        logger.log('Before stop - stickyPulseRef has:', stickyPulseRef.current.has(selectedBubble.id));
 
                         // Очищаем локальные ссылки на пульсацию
                         stickyPulseRef.current.delete(selectedBubble.id);
@@ -2957,8 +2958,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             updatedAt: new Date().toISOString()
                         };
 
-                        console.log('After stop - updatedBubble.overdueSticky:', updatedBubble.overdueSticky);
-                        console.log('After stop - manuallyStoppedPulsingRef has:', manuallyStoppedPulsingRef.current.has(selectedBubble.id));
+                        logger.log('After stop - updatedBubble.overdueSticky:', updatedBubble.overdueSticky);
+                        logger.log('After stop - manuallyStoppedPulsingRef has:', manuallyStoppedPulsingRef.current.has(selectedBubble.id));
 
                         setBubbles(prev => {
                             const updated = prev.map(b => b.id === selectedBubble.id ? updatedBubble : b);
@@ -2970,7 +2971,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         setEditDialog(false);
                         setSelectedBubble(null);
                     } catch (e) {
-                        console.error('Error stopping pulsing:', e);
+                        logger.error('Error stopping pulsing:', e);
                     }
                 }}
                 showStopPulsing={(() => {
@@ -3017,7 +3018,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                         // Показываем кнопку Stop для задач с overdueSticky или в stickyPulseRef
                         if (selectedBubble.overdueSticky || stickyPulseRef.current.has(selectedBubble.id)) {
-                            console.log('🔘 Show stop button for bubble:', selectedBubble.id, {
+                            logger.log('🔘 Show stop button for bubble:', selectedBubble.id, {
                                 overdueSticky: selectedBubble.overdueSticky,
                                 inStickyPulseRef: stickyPulseRef.current.has(selectedBubble.id)
                             });

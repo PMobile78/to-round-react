@@ -7,6 +7,7 @@ import {
     updateProfile
 } from 'firebase/auth';
 import { auth } from '../firebase';
+import logger from '../utils/logger';
 
 const firebaseErrorMessages = {
     'auth/user-not-found': 'User not found.',
@@ -36,7 +37,7 @@ export const createUser = async (email, password, displayName = '') => {
 
         return { success: true, user };
     } catch (error) {
-        console.error('Error creating user:', error);
+        logger.error('Error creating user:', error);
         return { success: false, error: mapFirebaseError(error) };
     }
 };
@@ -48,7 +49,7 @@ export const loginUser = async (email, password) => {
         const user = userCredential.user;
         return { success: true, user };
     } catch (error) {
-        console.error('Error logging in:', error);
+        logger.error('Error logging in:', error);
         return { success: false, error: mapFirebaseError(error) };
     }
 };
@@ -65,7 +66,7 @@ export const logoutUser = async () => {
         }
         return { success: true };
     } catch (error) {
-        console.error('Error logging out:', error);
+        logger.error('Error logging out:', error);
         return { success: false, error: mapFirebaseError(error) };
     }
 };
@@ -76,7 +77,7 @@ export const resetPassword = async (email) => {
         await sendPasswordResetEmail(auth, email);
         return { success: true };
     } catch (error) {
-        console.error('Error sending password reset email:', error);
+        logger.error('Error sending password reset email:', error);
         return { success: false, error: mapFirebaseError(error) };
     }
 };

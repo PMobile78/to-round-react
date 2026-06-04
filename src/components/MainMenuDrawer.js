@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import logger from '../utils/logger';
 import { Drawer, Box, Typography, List, ListItem, ListItemIcon, ListItemText, Divider, Switch } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import {
@@ -56,13 +57,13 @@ const MainMenuDrawer = ({
                     onClose();
                     onImportJson && onImportJson(parsed);
                 } catch (e) {
-                    console.error('Invalid JSON file', e);
+                    logger.error('Invalid JSON file', e);
                     // optionally, show UI feedback in future
                 }
             };
             reader.readAsText(file);
         } catch (e) {
-            console.error('Failed to import JSON', e);
+            logger.error('Failed to import JSON', e);
         }
     };
 

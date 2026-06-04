@@ -7,6 +7,7 @@ import { db } from './firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import i18n from './i18n';
 import { config } from './utils/config';
+import logger from './utils/logger';
 
 // VAPID Key from configuration
 const VAPID_KEY = config.firebase.vapidKey;
@@ -15,13 +16,13 @@ export async function initMessagingAndSaveToken() {
     try {
         const supported = await isSupported();
         if (!supported) {
-            console.log('[FCM] Messaging not supported in this browser');
+            logger.log('[FCM] Messaging not supported in this browser');
             return null;
         }
 
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-            console.log('[FCM] Notification permission not granted');
+            logger.log('[FCM] Notification permission not granted');
             return null;
         }
 
@@ -32,7 +33,7 @@ export async function initMessagingAndSaveToken() {
 
         // Foreground message handler — показываем через Service Worker, чтобы клик открывал URL
         onMessage(messaging, async (payload) => {
-            console.log('[FCM] Message in foreground:', payload);
+            logger.log('[FCM] Message in foreground:', payload);
             try {
                 const registration = await navigator.serviceWorker.ready;
                 const title = payload?.notification?.title || payload?.data?.title || 'Уведомление';
@@ -50,7 +51,7 @@ export async function initMessagingAndSaveToken() {
 
         return token;
     } catch (e) {
-        console.error('[FCM] init error:', e);
+        logger.error('[FCM] init error:', e);
         return null;
     }
 }

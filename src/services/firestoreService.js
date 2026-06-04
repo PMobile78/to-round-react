@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getCurrentUser } from './authService';
+import logger from '../utils/logger';
 
 // Get user ID for document creation
 const getUserDocumentId = () => {
@@ -98,7 +99,7 @@ export const saveBubblesToFirestore = async (bubblesData) => {
         await batch.commit();
 
     } catch (error) {
-        console.error('Error saving bubbles to Firestore (normalized). Trying legacy doc...', error);
+        logger.error('Error saving bubbles to Firestore (normalized). Trying legacy doc...', error);
         const currentUser = getCurrentUser();
         if (!currentUser) return;
         try {
@@ -108,7 +109,7 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             const bubblesForStorage = bubblesData.map(serializeBubble);
             await setDoc(bubblesRef, { bubbles: bubblesForStorage, updatedAt: serverTimestamp(), userId }, { merge: true });
         } catch (legacyError) {
-            console.error('Legacy save failed. Falling back to localStorage.', legacyError);
+            logger.error('Legacy save failed. Falling back to localStorage.', legacyError);
             // Fallback to localStorage with user-specific key
             const userId = currentUser.uid;
             const bubblesForStorage = bubblesData.map(serializeBubble);
@@ -145,7 +146,7 @@ export const loadBubblesFromFirestore = async () => {
         const stored = localStorage.getItem(`bubbles_${userId}`);
         return stored ? JSON.parse(stored) : [];
     } catch (error) {
-        console.error('Error loading bubbles from Firestore:', error);
+        logger.error('Error loading bubbles from Firestore:', error);
         // Fallback to localStorage with user-specific key
         const uid = getCurrentUser()?.uid;
         if (!uid) return [];
@@ -168,12 +169,12 @@ export const clearBubblesFromFirestore = async () => {
             batch.set(parentRef, { updatedAt: serverTimestamp(), userId }, { merge: true });
             await batch.commit();
         } catch (normalizedErr) {
-            console.warn('Clear subcollection failed, trying legacy doc delete', normalizedErr);
+            logger.warn('Clear subcollection failed, trying legacy doc delete', normalizedErr);
             const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
             await deleteDoc(bubblesRef);
         }
     } catch (error) {
-        console.error('Error clearing bubbles from Firestore:', error);
+        logger.error('Error clearing bubbles from Firestore:', error);
         // Fallback to localStorage
         const uid = getCurrentUser()?.uid;
         if (uid) localStorage.removeItem(`bubbles_${uid}`);
@@ -216,7 +217,7 @@ export const updateBubbleStatus = async (bubbleId, newStatus, bubblesData) => {
         await saveBubblesToFirestore(updatedBubbles);
         return updatedBubbles;
     } catch (error) {
-        console.error('Error updating bubble status:', error);
+        logger.error('Error updating bubble status:', error);
         throw error;
     }
 };
@@ -255,7 +256,7 @@ export const cleanupOldDeletedBubbles = async (bubblesData) => {
 
         return bubblesData;
     } catch (error) {
-        console.error('Error cleaning up old deleted bubbles:', error);
+        logger.error('Error cleaning up old deleted bubbles:', error);
         return bubblesData;
     }
 };
@@ -288,7 +289,7 @@ export const saveTagsToFirestore = async (tagsData) => {
         });
 
     } catch (error) {
-        console.error('Error saving tags to Firestore:', error);
+        logger.error('Error saving tags to Firestore:', error);
         // Fallback to localStorage with user-specific key
         const uid = getCurrentUser()?.uid;
         if (!uid) return;
@@ -310,7 +311,7 @@ export const loadTagsFromFirestore = async () => {
         const stored = localStorage.getItem(`tags_${userId}`);
         return stored ? JSON.parse(stored) : [];
     } catch (error) {
-        console.error('Error loading tags from Firestore:', error);
+        logger.error('Error loading tags from Firestore:', error);
         // Fallback to localStorage with user-specific key
         const uid = getCurrentUser()?.uid;
         if (!uid) return [];
@@ -330,7 +331,7 @@ export const subscribeToBubblesUpdates = (callback) => {
             querySnap.forEach(d => list.push({ id: d.id, ...d.data() }));
             callback(list);
         }, (err) => {
-            console.warn('Subcollection onSnapshot error, falling back to legacy doc listener', err);
+            logger.warn('Subcollection onSnapshot error, falling back to legacy doc listener', err);
             currentUnsub?.();  // close the primary (may already be closed by Firebase)
             const legacyRef = doc(db, BUBBLES_COLLECTION, userId);
             currentUnsub = onSnapshot(legacyRef, (docSnap) => {
@@ -344,7 +345,7 @@ export const subscribeToBubblesUpdates = (callback) => {
         });
         return () => currentUnsub?.();  // always calls whatever is current
     } catch (error) {
-        console.error('Error setting up bubbles listener:', error);
+        logger.error('Error setting up bubbles listener:', error);
         return () => { };
     }
 };
@@ -365,7 +366,7 @@ export const subscribeToTagsUpdates = (callback) => {
             }
         });
     } catch (error) {
-        console.error('Error setting up tags listener:', error);
+        logger.error('Error setting up tags listener:', error);
         return () => { }; // Return empty unsubscribe function
     }
 };
