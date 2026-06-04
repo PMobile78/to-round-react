@@ -2,7 +2,7 @@ import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messagi
 import app from './firebase';
 
 // Store FCM token in Firestore under the current user document
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import i18n from './i18n';
@@ -74,14 +74,19 @@ async function saveToken(token) {
 
     // Сохраняем токен как документ в подколлекции: user-fcm-tokens/{uid}/tokens/{token}
     const tokenRef = doc(db, 'user-fcm-tokens', currentUser.uid, 'tokens', token);
-    await setDoc(tokenRef, {
+    const tokenData = {
         userId: currentUser.uid,
         token,
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
         language: (typeof i18n?.language === 'string' && i18n.language) || (typeof navigator !== 'undefined' ? navigator.language : 'unknown'),
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
-    }, { merge: true });
+    };
+    const snap = await getDoc(tokenRef);
+    if (!snap.exists()) {
+        await setDoc(tokenRef, { ...tokenData, createdAt: serverTimestamp() });
+    } else {
+        await updateDoc(tokenRef, tokenData);
+    }
 }
 
 export async function updateMessagingTokenLanguage(language) {
