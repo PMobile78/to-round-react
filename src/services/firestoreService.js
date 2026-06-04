@@ -2,6 +2,7 @@ import {
     collection,
     doc,
     setDoc,
+    updateDoc,
     getDoc,
     getDocs,
     deleteDoc,
@@ -184,37 +185,35 @@ export const clearBubblesFromFirestore = async () => {
 // Update bubble status
 export const updateBubbleStatus = async (bubbleId, newStatus, bubblesData) => {
     try {
-        const updatedBubbles = bubblesData.map(bubble => {
-            if (bubble.id === bubbleId) {
-                const updatedBubble = {
-                    ...bubble,
-                    status: newStatus,
-                    updatedAt: new Date().toISOString()
-                };
+        const bubble = bubblesData.find(b => b.id === bubbleId);
+        if (!bubble) throw new Error(`Bubble ${bubbleId} not found`);
 
-                // Set deletedAt when status is deleted
-                if (newStatus === BUBBLE_STATUS.DELETED) {
-                    updatedBubble.deletedAt = new Date().toISOString();
-                } else if (bubble.status === BUBBLE_STATUS.DELETED && newStatus !== BUBBLE_STATUS.DELETED) {
-                    // Clear deletedAt when restoring from deleted
-                    updatedBubble.deletedAt = null;
-                }
+        const fields = {
+            status: newStatus,
+            updatedAt: new Date().toISOString()
+        };
 
-                // When task is completed, clear scheduling fields
-                if (newStatus === BUBBLE_STATUS.DONE) {
-                    updatedBubble.dueDate = null;
-                    updatedBubble.notifications = [];
-                    updatedBubble.recurrence = null;
-                    updatedBubble.overdueSticky = false;
-                    updatedBubble.overdueAt = null;
-                }
+        if (newStatus === BUBBLE_STATUS.DELETED) {
+            fields.deletedAt = new Date().toISOString();
+        } else if (bubble.status === BUBBLE_STATUS.DELETED && newStatus !== BUBBLE_STATUS.DELETED) {
+            fields.deletedAt = null;
+        }
 
-                return updatedBubble;
-            }
-            return bubble;
-        });
+        if (newStatus === BUBBLE_STATUS.DONE) {
+            fields.dueDate = null;
+            fields.notifications = [];
+            fields.recurrence = null;
+            fields.overdueSticky = false;
+            fields.overdueAt = null;
+        }
 
-        await saveBubblesToFirestore(updatedBubbles);
+        const userId = getUserDocumentId();
+        const ref = doc(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION, String(bubbleId));
+        await updateDoc(ref, fields);
+
+        const updatedBubbles = bubblesData.map(b =>
+            b.id === bubbleId ? { ...b, ...fields } : b
+        );
         return updatedBubbles;
     } catch (error) {
         logger.error('Error updating bubble status:', error);
