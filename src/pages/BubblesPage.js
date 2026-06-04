@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
+import { lsGet, lsSet } from '../utils/storage';
 import MainMenuDrawer from '../components/MainMenuDrawer';
 import AboutDialog from '../components/AboutDialog';
 import FontSettingsDialog from '../components/FontSettingsDialog';
@@ -194,12 +195,7 @@ const sanitizeBubblesForExport = (bubblesData) => {
 const BUBBLES_PLANNED_TASKS_VIEW_LS_KEY = 'bubbles-planned-tasks-only';
 
 function readBubbleViewPlannedTasksFromLS() {
-    try {
-        const raw = localStorage.getItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY);
-        return raw != null && JSON.parse(raw) === true;
-    } catch (_) {
-        return false;
-    }
+    return lsGet(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, false) === true;
 }
 
 
@@ -333,14 +329,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Позиция FAB (перетаскиваемая), сохраняется в localStorage
     const fabRef = useRef(null);
-    const [fabPosition, setFabPosition] = useState(() => {
-        try {
-            const saved = localStorage.getItem('bubbles-fab-position');
-            return saved ? JSON.parse(saved) : null;
-        } catch (_) {
-            return null;
-        }
-    });
+    const [fabPosition, setFabPosition] = useState(() => lsGet('bubbles-fab-position', null));
     const [isDraggingFab, setIsDraggingFab] = useState(false);
     const dragOffsetRef = useRef({ x: 0, y: 0 });
     const dragStartRef = useRef({ x: 0, y: 0 });
@@ -372,11 +361,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     useEffect(() => {
         if (!fabPosition) return;
-        try {
-            localStorage.setItem('bubbles-fab-position', JSON.stringify(fabPosition));
-        } catch (_) {
-            // ignore
-        }
+        lsSet('bubbles-fab-position', fabPosition);
     }, [fabPosition]);
 
     const onFabPointerMove = (event) => {
