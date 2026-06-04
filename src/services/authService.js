@@ -8,6 +8,21 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase';
 
+const firebaseErrorMessages = {
+    'auth/user-not-found': 'User not found.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/email-already-in-use': 'Email is already registered.',
+    'auth/weak-password': 'Password is too weak.',
+    'auth/invalid-email': 'Invalid email address.',
+    'auth/too-many-requests': 'Too many attempts. Please try again later.',
+    'auth/network-request-failed': 'Network error. Please check your connection.',
+    'auth/popup-closed-by-user': 'Sign-in popup was closed.',
+};
+
+const mapFirebaseError = (error) => {
+    return firebaseErrorMessages[error.code] || 'An unexpected error occurred.';
+};
+
 // Create new user
 export const createUser = async (email, password, displayName = '') => {
     try {
@@ -22,7 +37,7 @@ export const createUser = async (email, password, displayName = '') => {
         return { success: true, user };
     } catch (error) {
         console.error('Error creating user:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: mapFirebaseError(error) };
     }
 };
 
@@ -34,7 +49,7 @@ export const loginUser = async (email, password) => {
         return { success: true, user };
     } catch (error) {
         console.error('Error logging in:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: mapFirebaseError(error) };
     }
 };
 
@@ -45,7 +60,7 @@ export const logoutUser = async () => {
         return { success: true };
     } catch (error) {
         console.error('Error logging out:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: mapFirebaseError(error) };
     }
 };
 
@@ -56,7 +71,7 @@ export const resetPassword = async (email) => {
         return { success: true };
     } catch (error) {
         console.error('Error sending password reset email:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: mapFirebaseError(error) };
     }
 };
 
