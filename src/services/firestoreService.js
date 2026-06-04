@@ -37,6 +37,27 @@ export const BUBBLE_STATUS = {
     DELETED: 'deleted'
 };
 
+// Serialize a bubble into a plain storage object (single source of truth)
+const serializeBubble = (bubble) => ({
+    id: String(bubble.id),
+    radius: bubble.radius,
+    title: bubble.title || '',
+    description: bubble.description || '',
+    fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
+    strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
+    tagId: bubble.tagId || null,
+    status: bubble.status || BUBBLE_STATUS.ACTIVE,
+    createdAt: bubble.createdAt || new Date().toISOString(),
+    updatedAt: bubble.updatedAt || new Date().toISOString(),
+    deletedAt: bubble.deletedAt || null,
+    dueDate: bubble.dueDate || null,
+    notifications: bubble.notifications || [],
+    recurrence: bubble.recurrence || null,
+    overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
+    overdueAt: bubble.overdueAt || null,
+    useRichText: !!bubble.useRichText
+});
+
 // Auto-cleanup period (30 days in milliseconds)
 const CLEANUP_PERIOD = 30 * 24 * 60 * 60 * 1000;
 
@@ -60,26 +81,7 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             const id = String(bubble.id);
             incomingIds.add(id);
             const ref = doc(bubblesCol, id);
-            const toStore = {
-                id,
-                radius: bubble.radius,
-                title: bubble.title || '',
-                description: bubble.description || '',
-                fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
-                strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
-                tagId: bubble.tagId || null,
-                status: bubble.status || BUBBLE_STATUS.ACTIVE,
-                createdAt: bubble.createdAt || new Date().toISOString(),
-                updatedAt: bubble.updatedAt || new Date().toISOString(),
-                deletedAt: bubble.deletedAt || null,
-                dueDate: bubble.dueDate || null,
-                notifications: bubble.notifications || [],
-                recurrence: bubble.recurrence || null,
-                overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-                overdueAt: bubble.overdueAt || null,
-                useRichText: !!bubble.useRichText
-            };
-            batch.set(ref, toStore, { merge: true });
+            batch.set(ref, serializeBubble(bubble), { merge: true });
         }
 
         // Delete removed
@@ -103,49 +105,13 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             // Legacy fallback: store as array in parent document
             const userId = currentUser.uid;
             const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
-            const bubblesForStorage = bubblesData.map(bubble => ({
-                id: bubble.id,
-                radius: bubble.radius,
-                title: bubble.title || '',
-                description: bubble.description || '',
-                fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
-                strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
-                tagId: bubble.tagId || null,
-                status: bubble.status || BUBBLE_STATUS.ACTIVE,
-                createdAt: bubble.createdAt || new Date().toISOString(),
-                updatedAt: bubble.updatedAt || new Date().toISOString(),
-                deletedAt: bubble.deletedAt || null,
-                dueDate: bubble.dueDate || null,
-                notifications: bubble.notifications || [],
-                recurrence: bubble.recurrence || null,
-                overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-                overdueAt: bubble.overdueAt || null,
-                useRichText: !!bubble.useRichText
-            }));
+            const bubblesForStorage = bubblesData.map(serializeBubble);
             await setDoc(bubblesRef, { bubbles: bubblesForStorage, updatedAt: serverTimestamp(), userId }, { merge: true });
         } catch (legacyError) {
             console.error('Legacy save failed. Falling back to localStorage.', legacyError);
             // Fallback to localStorage with user-specific key
             const userId = currentUser.uid;
-            const bubblesForStorage = bubblesData.map(bubble => ({
-                id: bubble.id,
-                radius: bubble.radius,
-                title: bubble.title || '',
-                description: bubble.description || '',
-                fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
-                strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
-                tagId: bubble.tagId || null,
-                status: bubble.status || BUBBLE_STATUS.ACTIVE,
-                createdAt: bubble.createdAt || new Date().toISOString(),
-                updatedAt: bubble.updatedAt || new Date().toISOString(),
-                deletedAt: bubble.deletedAt || null,
-                dueDate: bubble.dueDate || null,
-                notifications: bubble.notifications || [],
-                recurrence: bubble.recurrence || null,
-                overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-                overdueAt: bubble.overdueAt || null,
-                useRichText: !!bubble.useRichText
-            }));
+            const bubblesForStorage = bubblesData.map(serializeBubble);
             localStorage.setItem(`bubbles_${userId}`, JSON.stringify(bubblesForStorage));
         }
     }
