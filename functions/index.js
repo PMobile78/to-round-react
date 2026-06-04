@@ -86,8 +86,7 @@ function buildTextsPerLang(tokenLanguage, type, minutesBefore, bubbleTitle) {
     };
 }
 
-async function sendFcmToUser(userId, payload) {
-    const tokens = await getUserFcmTokens(userId);
+async function sendFcmToUser(userId, payload, tokens) {
     if (!tokens.length) return { skipped: true, reason: 'no-token' };
 
     const url = payload?.data?.url;
@@ -379,7 +378,9 @@ exports.scheduleDueDateNotifications = onSchedule({
 
     const users = await fetchAllUserBubbles();
 
-    for (const { userId, bubbles } of users) {
+    await Promise.all(users.map(async ({ userId, bubbles }) => {
+        const tokens = await getUserFcmTokens(userId);
+
         for (const bubble of bubbles) {
             if (!bubble || bubble.status !== 'active') continue;
 
@@ -398,7 +399,7 @@ exports.scheduleDueDateNotifications = onSchedule({
                                 url,
                                 bubbleTitle: String(bubble.title || '')
                             }
-                        });
+                        }, tokens);
                         await markNotificationSent(key);
                     }
                 } catch (e) {
@@ -420,7 +421,7 @@ exports.scheduleDueDateNotifications = onSchedule({
                                 url,
                                 bubbleTitle: String(bubble.title || '')
                             }
-                        });
+                        }, tokens);
                         await markNotificationSent(key);
                     }
                     // mark overdue in Firestore (sticky pulse across devices) - только если overdueSticky еще не установлен
@@ -449,7 +450,7 @@ exports.scheduleDueDateNotifications = onSchedule({
                 }
             }
         }
-    }
+    }));
 
     return null;
 });
