@@ -113,6 +113,45 @@ const parseLocalDateTime = (dateString) => {
     }
 };
 
+// Whitelist-validate a single imported bubble — strips unknown/dangerous fields.
+const ALLOWED_BUBBLE_STATUSES = new Set(['active', 'done', 'postpone', 'deleted']);
+const sanitizeBubble = (raw) => {
+    if (!raw || typeof raw !== 'object') return null;
+    const id = raw.id != null ? String(raw.id) : null;
+    if (!id) return null;
+    return {
+        id,
+        title: typeof raw.title === 'string' ? raw.title : '',
+        description: typeof raw.description === 'string' ? raw.description : '',
+        radius: typeof raw.radius === 'number' && raw.radius > 0 ? raw.radius : 50,
+        status: ALLOWED_BUBBLE_STATUSES.has(raw.status) ? raw.status : 'active',
+        fillStyle: typeof raw.fillStyle === 'string' ? raw.fillStyle : 'transparent',
+        strokeStyle: typeof raw.strokeStyle === 'string' ? raw.strokeStyle : '#3B7DED',
+        tagId: typeof raw.tagId === 'string' ? raw.tagId : null,
+        dueDate: typeof raw.dueDate === 'string' ? raw.dueDate : null,
+        notifications: Array.isArray(raw.notifications) ? raw.notifications : [],
+        recurrence: raw.recurrence && typeof raw.recurrence === 'object' ? raw.recurrence : null,
+        overdueSticky: typeof raw.overdueSticky === 'boolean' ? raw.overdueSticky : false,
+        overdueAt: typeof raw.overdueAt === 'string' ? raw.overdueAt : null,
+        useRichText: typeof raw.useRichText === 'boolean' ? raw.useRichText : false,
+        createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
+        updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
+        deletedAt: typeof raw.deletedAt === 'string' ? raw.deletedAt : null,
+    };
+};
+
+// Whitelist-validate a single imported tag — strips unknown/dangerous fields.
+const sanitizeTag = (raw) => {
+    if (!raw || typeof raw !== 'object') return null;
+    const id = raw.id != null ? String(raw.id) : null;
+    if (!id) return null;
+    return {
+        id,
+        name: typeof raw.name === 'string' ? raw.name : '',
+        color: typeof raw.color === 'string' ? raw.color : '#3B7DED',
+    };
+};
+
 // Подготовка данных пузырей к экспорту (без Matter.js ссылок)
 const sanitizeBubblesForExport = (bubblesData) => {
     const toIsoOrNull = (value) => {
@@ -2331,8 +2370,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Import data from JSON (replace existing)
     const handleImportJson = useCallback(async (data) => {
         try {
-            const importedTags = Array.isArray(data?.tags) ? data.tags : [];
-            const importedBubbles = Array.isArray(data?.bubbles) ? data.bubbles : [];
+            const importedTags = Array.isArray(data?.tags)
+                ? data.tags.map(sanitizeTag).filter(Boolean)
+                : [];
+            const importedBubbles = Array.isArray(data?.bubbles)
+                ? data.bubbles.map(sanitizeBubble).filter(Boolean)
+                : [];
 
             setTags(importedTags);
             await saveTagsToFirestore(importedTags);
@@ -2340,7 +2383,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             setBubbles(importedBubbles);
             await saveBubblesToFirestore(importedBubbles);
 
-            // Перезагружаем страницу после успешного импорта
+            // TODO: replace with proper React state + Matter.js reinit to avoid full page reload.
+            // Imported bubbles are plain objects without Matter.js .body references; the physics
+            // engine initialisation useEffect runs only once on mount, so a reload is required
+            // to reattach physics bodies to the freshly imported bubbles.
             window.location.reload();
         } catch (e) {
             console.error('Import JSON failed', e);
