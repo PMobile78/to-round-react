@@ -473,7 +473,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 }
             });
         }
-    }, [themeMode, bubbles, tags]);
+    }, [themeMode, tags]);
 
     // Force TextOverlay re-render on theme change to update text opacity
     const [textOverlayKey, setTextOverlayKey] = useState(0);
