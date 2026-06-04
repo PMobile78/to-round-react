@@ -1553,7 +1553,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         radius: bubble.radius,
                         title: bubble.title
                     }));
-                setPositions(newPositions);
+                setPositions(prev => {
+                    if (prev.length === newPositions.length && newPositions.every((p, i) =>
+                        prev[i] && Math.round(prev[i].x) === Math.round(p.x) && Math.round(prev[i].y) === Math.round(p.y)
+                    )) return prev;
+                    return newPositions;
+                });
             };
 
             // Увеличиваем интервал до 33мс (~30fps) для лучшей производительности
