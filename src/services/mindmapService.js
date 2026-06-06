@@ -23,7 +23,7 @@ const getUserId = () => {
     return user.uid;
 };
 
-export const NODE_SHAPES = ['rounded', 'ellipse', 'pill', 'cloud', 'none'];
+export const NODE_SHAPES = ['rounded', 'square', 'circle', 'ellipse', 'pill', 'cloud', 'none'];
 export const LINE_STYLES = ['solid', 'dashed'];
 
 // Default palette for top-level branches (cycled through)

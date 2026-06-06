@@ -1,6 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Box, IconButton } from '@mui/material';
 import { Add, Close } from '@mui/icons-material';
+
+// Weather-style cloud silhouette: flat rounded bottom + rounded puffs on top.
+// Rendered as an SVG stretched to the node; non-scaling-stroke keeps the
+// outline an even thickness regardless of the node's size.
+const CLOUD_PATH =
+    'M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z';
 
 const shapeStyles = (shape, color, isRoot) => {
     const base = {
@@ -8,12 +14,16 @@ const shapeStyles = (shape, color, isRoot) => {
         backgroundColor: '#ffffff'
     };
     switch (shape) {
+        case 'square':
+            return { ...base, borderRadius: 2 };
+        case 'circle':
+            return { ...base, borderRadius: '50%' };
         case 'ellipse':
             return { ...base, borderRadius: '50%' };
         case 'pill':
-            return { ...base, borderRadius: '50%' };
+            return { ...base, borderRadius: 9999 };
         case 'cloud':
-            return { ...base, borderRadius: '50% 40% 55% 45% / 55% 50% 45% 50%' };
+            return { border: 'none', backgroundColor: 'transparent', borderRadius: 0 };
         case 'none':
             return {
                 border: 'none',
@@ -42,10 +52,29 @@ const MindMapNode = ({
 }) => {
     const [draft, setDraft] = useState(node.text);
     const inputRef = useRef(null);
+    const contentRef = useRef(null);
+    const [circleSize, setCircleSize] = useState(null);
+
+    const isCircle = node.shape === 'circle';
 
     useEffect(() => {
         setDraft(node.text);
     }, [node.text, editing]);
+
+    // For the circle shape, measure the natural content size and force an
+    // equal width/height (diameter) so the node renders as a true circle
+    // regardless of flexbox/aspect-ratio quirks.
+    useLayoutEffect(() => {
+        if (!isCircle) {
+            setCircleSize(null);
+            return;
+        }
+        const el = contentRef.current;
+        if (!el) return;
+        const pad = isRoot ? 20 : 16;
+        const diameter = Math.ceil(Math.max(el.scrollWidth, el.scrollHeight)) + pad * 2;
+        setCircleSize(Math.max(diameter, isRoot ? 90 : 60));
+    }, [isCircle, isRoot, editing, draft, node.text, node.fontSize, node.bold, node.icon, node.imageUrl]);
 
     useEffect(() => {
         if (editing && inputRef.current) {
@@ -78,82 +107,138 @@ const MindMapNode = ({
                 left: node.x,
                 top: node.y,
                 transform: 'translate(-50%, -50%)',
-                minWidth: isRoot ? 90 : 60,
-                maxWidth: node.shape === 'pill' ? 460 : 260,
+                boxSizing: 'border-box',
+                minWidth: isCircle ? undefined : (isRoot ? 90 : 60),
+                maxWidth: isCircle ? undefined : (node.shape === 'pill' ? 460 : node.shape === 'cloud' ? 420 : 260),
+                width: isCircle && circleSize ? circleSize : undefined,
+                height: isCircle && circleSize ? circleSize : undefined,
                 padding: node.shape === 'none'
                     ? '4px 6px'
                     : node.shape === 'pill'
                         ? (isRoot ? '16px 44px' : '10px 34px')
-                        : (isRoot ? '14px 22px' : '8px 14px'),
+                        : node.shape === 'cloud'
+                            ? (isRoot ? '24px 52px' : '18px 44px')
+                            : isCircle
+                                ? 0
+                                : (isRoot ? '14px 22px' : '8px 14px'),
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: 0.75,
                 cursor: editing ? 'text' : 'grab',
                 userSelect: 'none',
                 touchAction: 'none',
-                boxShadow: node.shape === 'none' ? 'none' : (selected ? `0 0 0 3px ${color}55, 0 4px 14px rgba(0,0,0,0.18)` : '0 2px 8px rgba(0,0,0,0.12)'),
+                boxShadow: (node.shape === 'none' || node.shape === 'cloud') ? 'none' : (selected ? `0 0 0 3px ${color}55, 0 4px 14px rgba(0,0,0,0.18)` : '0 2px 8px rgba(0,0,0,0.12)'),
                 transition: 'box-shadow 0.15s ease',
                 ...shapeStyles(node.shape, color, isRoot)
             }}
         >
-            {node.icon && (
-                <Box component="span" sx={{ fontSize: (node.fontSize || 16) + 4, lineHeight: 1 }}>
-                    {node.icon}
-                </Box>
-            )}
-            {node.imageUrl && (
-                <Box
-                    component="img"
-                    src={node.imageUrl}
-                    alt=""
-                    draggable={false}
-                    sx={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 1, flexShrink: 0 }}
-                />
-            )}
-            {editing ? (
-                <textarea
-                    ref={inputRef}
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onBlur={commit}
-                    onKeyDown={handleKeyDown}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    rows={1}
+            {node.shape === 'cloud' && (
+                <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    preserveAspectRatio="none"
                     style={{
-                        border: 'none',
-                        outline: 'none',
-                        resize: 'none',
-                        background: 'transparent',
-                        font: 'inherit',
-                        fontSize: node.fontSize || 16,
-                        fontWeight: node.bold ? 700 : 400,
-                        color: node.shape === 'none' ? color : '#2C3E50',
-                        textAlign: 'center',
-                        width: Math.max(60, (draft.length + 1) * (node.fontSize || 16) * 0.55),
-                        maxWidth: node.shape === 'pill' ? 430 : 230
-                    }}
-                />
-            ) : (
-                <Box
-                    component="span"
-                    sx={{
-                        fontSize: (node.fontSize || 16) + 'px',
-                        fontWeight: node.bold ? 700 : 400,
-                        color: node.shape === 'none' ? color : '#2C3E50',
-                        textAlign: 'center',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                        overflowWrap: 'anywhere',
-                        lineHeight: 1.2,
-                        display: '-webkit-box',
-                        WebkitBoxOrient: 'vertical',
-                        WebkitLineClamp: 3,
-                        overflow: 'hidden'
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        zIndex: -1,
+                        overflow: 'visible',
+                        filter: selected ? `drop-shadow(0 0 2px ${color})` : 'none'
                     }}
                 >
-                    {node.text || '\u00A0'}
-                </Box>
+                    <path
+                        d={CLOUD_PATH}
+                        fill="#ffffff"
+                        stroke={color}
+                        strokeWidth={selected ? 2 : 1.4}
+                        strokeLinejoin="round"
+                        vectorEffect="non-scaling-stroke"
+                    />
+                </svg>
             )}
+            <Box
+                ref={contentRef}
+                sx={{
+                    display: isCircle ? 'flex' : 'contents',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: isCircle ? 0.75 : 0,
+                    maxWidth: isCircle ? 200 : undefined,
+                    textAlign: 'center'
+                }}
+            >
+                {node.icon && (
+                    <Box component="span" sx={{ fontSize: (node.fontSize || 16) + 4, lineHeight: 1 }}>
+                        {node.icon}
+                    </Box>
+                )}
+                {node.imageUrl && (
+                    <Box
+                        component="img"
+                        src={node.imageUrl}
+                        alt=""
+                        draggable={false}
+                        sx={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 1, flexShrink: 0 }}
+                    />
+                )}
+                {editing ? (
+                    <textarea
+                        ref={inputRef}
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onBlur={commit}
+                        onKeyDown={handleKeyDown}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        rows={1}
+                        style={{
+                            border: 'none',
+                            outline: 'none',
+                            resize: 'none',
+                            background: 'transparent',
+                            font: 'inherit',
+                            fontSize: node.fontSize || 16,
+                            fontWeight: node.bold ? 700 : 400,
+                            color: node.shape === 'none' ? color : '#2C3E50',
+                            textAlign: 'center',
+                            width: Math.max(60, (draft.length + 1) * (node.fontSize || 16) * 0.55),
+                            maxWidth: node.shape === 'pill' ? 430 : 230
+                        }}
+                    />
+                ) : (
+                    <Box
+                        component="span"
+                        sx={{
+                            fontSize: (node.fontSize || 16) + 'px',
+                            fontWeight: node.bold ? 700 : 400,
+                            color: node.shape === 'none' ? color : '#2C3E50',
+                            textAlign: 'center',
+                            lineHeight: 1.2,
+                            ...(node.shape === 'pill'
+                                ? {
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    width: '100%',
+                                    minWidth: 0
+                                }
+                                : {
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'anywhere',
+                                    display: '-webkit-box',
+                                    WebkitBoxOrient: 'vertical',
+                                    WebkitLineClamp: 3,
+                                    overflow: 'hidden'
+                                })
+                        }}
+                    >
+                        {node.text || '\u00A0'}
+                    </Box>
+                )}
+            </Box>
 
             {selected && !editing && (
                 <>

@@ -5,7 +5,7 @@ import {
 import {
     FormatBold, Add, Remove, DeleteOutline, ImageOutlined,
     CropSquare, CircleOutlined, CloudOutlined, RemoveOutlined,
-    LinearScaleOutlined, MoreHorizOutlined, PanoramaWideAngleOutlined
+    LinearScaleOutlined, MoreHorizOutlined
 } from '@mui/icons-material';
 
 const QUICK_EMOJIS = ['💡', '⭐', '✅', '❗', '🎯', '📌', '🔥', '❤️', '📅', '💰', '🌱', '🚀'];
@@ -65,11 +65,19 @@ const MindMapToolbar = ({ node, isRoot, branchColors, onChange, onDelete, t }) =
                     value={node.shape}
                     onChange={(e, v) => v && onChange({ shape: v })}
                 >
-                    <ToggleButton value="rounded"><CropSquare fontSize="small" /></ToggleButton>
-                    <ToggleButton value="ellipse"><CircleOutlined fontSize="small" /></ToggleButton>
-                    <ToggleButton value="pill"><PanoramaWideAngleOutlined fontSize="small" /></ToggleButton>
-                    <ToggleButton value="cloud"><CloudOutlined fontSize="small" /></ToggleButton>
-                    <ToggleButton value="none"><RemoveOutlined fontSize="small" /></ToggleButton>
+                    <ToggleButton value="rounded" title={t('mindmap.shapeRounded')}>
+                        <Box sx={{ width: 14, height: 22, border: '2px solid currentColor', borderRadius: '999px' }} />
+                    </ToggleButton>
+                    <ToggleButton value="square" title={t('mindmap.shapeSquare')}><CropSquare fontSize="small" /></ToggleButton>
+                    <ToggleButton value="circle" title={t('mindmap.shapeCircle')}><CircleOutlined fontSize="small" /></ToggleButton>
+                    <ToggleButton value="ellipse" title={t('mindmap.shapeEllipse')}>
+                        <Box sx={{ width: 15, height: 24, border: '2px solid currentColor', borderRadius: '50%' }} />
+                    </ToggleButton>
+                    <ToggleButton value="pill" title={t('mindmap.shapePill')}>
+                        <Box sx={{ width: 22, height: 14, border: '2px solid currentColor', borderRadius: '999px' }} />
+                    </ToggleButton>
+                    <ToggleButton value="cloud" title={t('mindmap.shapeCloud')}><CloudOutlined fontSize="small" /></ToggleButton>
+                    <ToggleButton value="none" title={t('mindmap.shapeNone')}><RemoveOutlined fontSize="small" /></ToggleButton>
                 </ToggleButtonGroup>
 
                 <Divider orientation="vertical" flexItem />
