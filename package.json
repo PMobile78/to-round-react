@@ -1,6 +1,6 @@
 {
   "name": "interactive-bubbles",
-  "version": "0.0.43-toogle-main-screen",
+  "version": "0.0.44-mindmap",
   "description": "Interactive Bubbles component with internationalization support",
   "homepage": "https://pmobile78.github.io/to-round-react",
   "main": "src/pages/BubblesPage.js",

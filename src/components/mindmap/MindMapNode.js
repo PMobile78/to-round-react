@@ -10,6 +10,8 @@ const shapeStyles = (shape, color, isRoot) => {
     switch (shape) {
         case 'ellipse':
             return { ...base, borderRadius: '50%' };
+        case 'pill':
+            return { ...base, borderRadius: '50%' };
         case 'cloud':
             return { ...base, borderRadius: '50% 40% 55% 45% / 55% 50% 45% 50%' };
         case 'none':
@@ -77,8 +79,12 @@ const MindMapNode = ({
                 top: node.y,
                 transform: 'translate(-50%, -50%)',
                 minWidth: isRoot ? 90 : 60,
-                maxWidth: 260,
-                padding: node.shape === 'none' ? '4px 6px' : (isRoot ? '14px 22px' : '8px 14px'),
+                maxWidth: node.shape === 'pill' ? 460 : 260,
+                padding: node.shape === 'none'
+                    ? '4px 6px'
+                    : node.shape === 'pill'
+                        ? (isRoot ? '16px 44px' : '10px 34px')
+                        : (isRoot ? '14px 22px' : '8px 14px'),
                 display: 'flex',
                 alignItems: 'center',
                 gap: 0.75,
@@ -124,7 +130,7 @@ const MindMapNode = ({
                         color: node.shape === 'none' ? color : '#2C3E50',
                         textAlign: 'center',
                         width: Math.max(60, (draft.length + 1) * (node.fontSize || 16) * 0.55),
-                        maxWidth: 230
+                        maxWidth: node.shape === 'pill' ? 430 : 230
                     }}
                 />
             ) : (
@@ -137,7 +143,12 @@ const MindMapNode = ({
                         textAlign: 'center',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
-                        lineHeight: 1.2
+                        overflowWrap: 'anywhere',
+                        lineHeight: 1.2,
+                        display: '-webkit-box',
+                        WebkitBoxOrient: 'vertical',
+                        WebkitLineClamp: 3,
+                        overflow: 'hidden'
                     }}
                 >
                     {node.text || '\u00A0'}

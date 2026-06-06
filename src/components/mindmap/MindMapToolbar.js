@@ -5,7 +5,7 @@ import {
 import {
     FormatBold, Add, Remove, DeleteOutline, ImageOutlined,
     CropSquare, CircleOutlined, CloudOutlined, RemoveOutlined,
-    LinearScaleOutlined, MoreHorizOutlined
+    LinearScaleOutlined, MoreHorizOutlined, PanoramaWideAngleOutlined
 } from '@mui/icons-material';
 
 const QUICK_EMOJIS = ['💡', '⭐', '✅', '❗', '🎯', '📌', '🔥', '❤️', '📅', '💰', '🌱', '🚀'];
@@ -67,6 +67,7 @@ const MindMapToolbar = ({ node, isRoot, branchColors, onChange, onDelete, t }) =
                 >
                     <ToggleButton value="rounded"><CropSquare fontSize="small" /></ToggleButton>
                     <ToggleButton value="ellipse"><CircleOutlined fontSize="small" /></ToggleButton>
+                    <ToggleButton value="pill"><PanoramaWideAngleOutlined fontSize="small" /></ToggleButton>
                     <ToggleButton value="cloud"><CloudOutlined fontSize="small" /></ToggleButton>
                     <ToggleButton value="none"><RemoveOutlined fontSize="small" /></ToggleButton>
                 </ToggleButtonGroup>
