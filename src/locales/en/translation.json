@@ -64,6 +64,8 @@
         "markAsDone": "Mark as Done",
         "listView": "Tasks list",
         "bubblesView": "Bubbles View",
+        "mainViewTasks": "Tasks list as main screen",
+        "mainViewTasksDesc": "Show the tasks list instead of the bubbles canvas as the main screen",
         "activeTasks": "Active Tasks",
         "doneTasks": "Completed Tasks",
         "postponedTasks": "Planned Tasks",

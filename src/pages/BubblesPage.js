@@ -12,6 +12,7 @@ import {
     Menu,
     ListItemIcon,
     ListItemText,
+    Paper,
 
 } from '@mui/material';
 import {
@@ -40,6 +41,7 @@ import {
 } from '../services/firestoreService';
 
 import TaskListDrawer from '../components/ListViewDrawer';
+import TaskList from '../components/TaskList';
 import ResponsiveSearch from '../components/ResponsiveSearch';
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
@@ -303,6 +305,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const saved = localStorage.getItem('bubbles-background-enabled');
         return saved === null ? true : saved === 'true';
     }); // Включен ли фон пузырей
+    const [mainView, setMainView] = useState(() => {
+        return localStorage.getItem('bubbles-main-view') === 'tasks' ? 'tasks' : 'bubbles';
+    }); // Режим главного окна: 'bubbles' (canvas) | 'tasks' (список задач)
 
     // Состояние поиска для Bubbles View
     const [bubblesSearchQuery, setBubblesSearchQuery] = useState('');
@@ -1512,6 +1517,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         localStorage.setItem('bubbles-show-instructions', 'false');
     };
 
+    const handleToggleMainView = () => {
+        const next = mainView === 'tasks' ? 'bubbles' : 'tasks';
+        setMainView(next);
+        localStorage.setItem('bubbles-main-view', next);
+    };
+
     const handleToggleBubbleBackground = () => {
         const newValue = !bubbleBackgroundEnabled;
         setBubbleBackgroundEnabled(newValue);
@@ -2024,16 +2035,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     return (
         <Box sx={{
-            width: (!isMobile && categoriesPanelEnabled) ? 'calc(100vw - 320px)' : '100vw',
+            width: (!isMobile && categoriesPanelEnabled && mainView === 'bubbles') ? 'calc(100vw - 320px)' : '100vw',
             height: '100vh',
             overflow: 'hidden',
             position: 'relative',
             background: theme.palette.background.bubbleView,
-            marginLeft: (!isMobile && categoriesPanelEnabled) ? '320px' : '0px',
+            marginLeft: (!isMobile && categoriesPanelEnabled && mainView === 'bubbles') ? '320px' : '0px',
             transition: 'margin-left 0.3s ease, width 0.3s ease'
         }}>
             {/* Заголовок и кнопки - адаптивный */}
-            {!isMobile ? (
+            {mainView === 'bubbles' && (!isMobile ? (
                 <>
                     <Box sx={{
                         position: 'absolute',
@@ -2141,12 +2152,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         </IconButton>
                     </Tooltip>
                 </Box>
-            )}
+            ))}
 
 
 
             {/* Мобильный селектор категорий */}
-            {isMobile && categoriesPanelEnabled && (
+            {mainView === 'bubbles' && isMobile && categoriesPanelEnabled && (
                 <Box sx={{
                     position: 'absolute',
                     top: 70,
@@ -2168,7 +2179,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             )}
 
             {/* Плавающие кнопки для мобильных устройств */}
-            {isMobile && (
+            {mainView === 'bubbles' && isMobile && (
                 <>
                     <Box
                         ref={fabRef}
@@ -2229,7 +2240,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             )}
 
             {/* Селектор языка и инструкции */}
-            {!isMobile ? (
+            {mainView === 'bubbles' && (!isMobile ? (
                 <Box sx={{
                     position: 'absolute',
                     top: 20,
@@ -2451,7 +2462,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         </Box>
                     )}
                 </>
-            )}
+            ))}
 
             {/* Canvas for physics */}
             <div ref={canvasRef} style={{
@@ -2464,6 +2475,81 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             }} />
             {/* Текст поверх пузырей */}
             <TextOverlay key={textOverlayKey} />
+
+            {/* Полноэкранный режим списка задач (canvas остаётся смонтированным под панелью) */}
+            {mainView === 'tasks' && (
+                <Paper elevation={16} square sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 1200,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                }}>
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        padding: '12px 16px',
+                        backgroundColor: 'primary.main',
+                        color: 'white',
+                        flexShrink: 0
+                    }}>
+                        <IconButton onClick={() => setMenuDrawerOpen(true)} sx={{ color: 'white' }}>
+                            <MenuIcon />
+                        </IconButton>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
+                            {t('bubbles.listView')}
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            onClick={openCreateDialog}
+                            startIcon={<Add />}
+                            sx={{
+                                background: 'rgba(255,255,255,0.2)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255,255,255,0.3)',
+                                color: 'white',
+                                '&:hover': { background: 'rgba(255,255,255,0.3)' }
+                            }}
+                        >
+                            {t('bubbles.addBubble')}
+                        </Button>
+                    </Box>
+                    <Box sx={{ flex: 1, overflow: 'auto' }}>
+                        <TaskList
+                            bubbles={bubbles}
+                            setBubbles={setBubbles}
+                            tags={tags}
+                            listFilter={listFilter}
+                            setListFilter={setListFilter}
+                            listSortBy={listSortBy}
+                            setListSortBy={setListSortBy}
+                            listSortOrder={listSortOrder}
+                            setListSortOrder={setListSortOrder}
+                            listFilterTags={listFilterTags}
+                            setListFilterTags={setListFilterTags}
+                            listShowNoTag={listShowNoTag}
+                            setListShowNoTag={setListShowNoTag}
+                            listSearchQuery={listSearchQuery}
+                            setListSearchQuery={setListSearchQuery}
+                            setSelectedBubble={setSelectedBubble}
+                            setTitle={setTitle}
+                            setDescription={setDescription}
+                            setSelectedTagId={setSelectedTagId}
+                            setEditDialog={setEditDialog}
+                            handleListTagFilterChange={handleListTagFilterChange}
+                            handleListNoTagFilterChange={handleListNoTagFilterChange}
+                            clearAllListFilters={clearAllListFilters}
+                            selectAllListFilters={selectAllListFilters}
+                            getBubbleCountByTagForListView={getBubbleCountByTagForListView}
+                            themeMode={themeMode}
+                            isAllListFiltersSelected={isAllListFiltersSelected()}
+                            onOpenFilterMenu={() => setFilterDrawerOpen(true)}
+                        />
+                    </Box>
+                </Paper>
+            )}
 
             {/* Диалог редактирования */}
             <EditBubbleDialog
@@ -2660,6 +2746,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 toggleTheme={toggleTheme}
                 bubbleBackgroundEnabled={bubbleBackgroundEnabled}
                 onToggleBubbleBackground={handleToggleBubbleBackground}
+                mainView={mainView}
+                onToggleMainView={handleToggleMainView}
                 categoriesPanelEnabled={categoriesPanelEnabled}
                 onToggleCategoriesPanel={handleToggleCategoriesPanel}
                 onOpenCategoriesDialog={() => setCategoriesDialog(true)}
@@ -2811,7 +2899,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             />
 
             {/* Панель категорий - только для десктопа */}
-            {!isMobile && (
+            {mainView === 'bubbles' && !isMobile && (
                 <TasksCategoriesPanel
                     open={categoriesPanelEnabled}
                     onClose={() => setCategoriesPanelEnabled(false)}
