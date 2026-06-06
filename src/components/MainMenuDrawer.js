@@ -13,7 +13,8 @@ import {
     Sell,
     FileDownload,
     FileUpload,
-    ViewListOutlined
+    ViewListOutlined,
+    AccountTreeOutlined
 } from '@mui/icons-material';
 import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
@@ -33,6 +34,7 @@ const MainMenuDrawer = ({
     onToggleCategoriesPanel,
     onOpenCategoriesDialog,
     onOpenFontSettingsDialog,
+    onOpenMindMap,
     onAbout,
     onLogout,
     onExportJson,
@@ -101,6 +103,25 @@ const MainMenuDrawer = ({
                 </Box>
 
                 <List sx={{ padding: 0 }}>
+                    <ListItem
+                        button
+                        onClick={() => {
+                            onClose();
+                            onOpenMindMap && onOpenMindMap();
+                        }}
+                        sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <AccountTreeOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={t('mindmap.title')}
+                            primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
+                        />
+                    </ListItem>
+
+                    <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
+
                     <ListItem
                         button
                         onClick={() => {
