@@ -108,16 +108,18 @@ const MindMapNode = ({
                 top: node.y,
                 transform: 'translate(-50%, -50%)',
                 boxSizing: 'border-box',
-                minWidth: isCircle ? undefined : (isRoot ? 90 : 60),
-                maxWidth: isCircle ? undefined : (node.shape === 'pill' ? 460 : node.shape === 'cloud' ? 420 : 260),
-                width: isCircle && circleSize ? circleSize : undefined,
+                minWidth: (isCircle || node.shape === 'cloud') ? undefined : (isRoot ? 90 : 60),
+                maxWidth: isCircle ? undefined : (node.shape === 'pill' ? 460 : 260),
+                width: isCircle && circleSize
+                    ? circleSize
+                    : (node.shape === 'cloud' ? (isRoot ? 210 : 168) : 'max-content'),
                 height: isCircle && circleSize ? circleSize : undefined,
                 padding: node.shape === 'none'
                     ? '4px 6px'
                     : node.shape === 'pill'
                         ? (isRoot ? '16px 44px' : '10px 34px')
                         : node.shape === 'cloud'
-                            ? (isRoot ? '24px 52px' : '18px 44px')
+                            ? (isRoot ? '24px 38px' : '18px 30px')
                             : isCircle
                                 ? 0
                                 : (isRoot ? '14px 22px' : '8px 14px'),

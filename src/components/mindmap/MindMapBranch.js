@@ -2,20 +2,43 @@ import React from 'react';
 
 // Builds an organic, tapering colored ribbon (filled) between parent and child,
 // or a dashed stroked curve when lineStyle === 'dashed'.
-const buildRibbonPath = (p0, p3, w0, w1) => {
+// Control points lean along the dominant axis so the ribbon keeps a proper
+// cross-section (and width) whether the child sits to the side or below/above
+// the parent. Purely horizontal control points collapsed the ribbon at ~90°.
+const controlPoints = (p0, p3) => {
     const dx = p3.x - p0.x;
-    // Horizontal-leaning control points produce the classic mind-map S-curve.
-    const c1 = { x: p0.x + dx * 0.4, y: p0.y };
-    const c2 = { x: p3.x - dx * 0.4, y: p3.y };
+    const dy = p3.y - p0.y;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+        return {
+            c1: { x: p0.x + dx * 0.4, y: p0.y },
+            c2: { x: p3.x - dx * 0.4, y: p3.y }
+        };
+    }
+    return {
+        c1: { x: p0.x, y: p0.y + dy * 0.4 },
+        c2: { x: p3.x, y: p3.y - dy * 0.4 }
+    };
+};
 
-    const norm = (a, b) => {
-        const len = Math.hypot(a, b) || 1;
+const buildRibbonPath = (p0, p3, w0, w1) => {
+    const { c1, c2 } = controlPoints(p0, p3);
+
+    const norm = (a, b, fbA, fbB) => {
+        let len = Math.hypot(a, b);
+        if (len < 1e-3) {
+            // Degenerate tangent (control point coincides with endpoint):
+            // fall back to the overall parent→child direction.
+            a = fbA; b = fbB;
+            len = Math.hypot(a, b) || 1;
+        }
         // perpendicular to the tangent (a, b)
         return { x: -b / len, y: a / len };
     };
 
-    const n0 = norm(c1.x - p0.x, c1.y - p0.y);
-    const n3 = norm(p3.x - c2.x, p3.y - c2.y);
+    const fbx = p3.x - p0.x;
+    const fby = p3.y - p0.y;
+    const n0 = norm(c1.x - p0.x, c1.y - p0.y, fbx, fby);
+    const n3 = norm(p3.x - c2.x, p3.y - c2.y, fbx, fby);
 
     const h0 = w0 / 2;
     const h1 = w1 / 2;
@@ -40,10 +63,8 @@ const buildRibbonPath = (p0, p3, w0, w1) => {
 };
 
 const buildCenterPath = (p0, p3) => {
-    const dx = p3.x - p0.x;
-    const c1x = p0.x + dx * 0.4;
-    const c2x = p3.x - dx * 0.4;
-    return `M ${p0.x} ${p0.y} C ${c1x} ${p0.y} ${c2x} ${p3.y} ${p3.x} ${p3.y}`;
+    const { c1, c2 } = controlPoints(p0, p3);
+    return `M ${p0.x} ${p0.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${p3.x} ${p3.y}`;
 };
 
 const MindMapBranch = ({ parent, child, color, width = 6, lineStyle = 'solid' }) => {
