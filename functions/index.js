@@ -416,6 +416,35 @@ exports.scheduleDueDateNotifications = onSchedule({
 
             // 2) Overdue notification
             if (isBubbleOverdue(bubble)) {
+                // Пользователь вручную остановил пульсацию для текущего dueDate.
+                // Не шлём overdue-уведомление и не возвращаем overdueSticky обратно.
+                if (bubble.overduePulseSuppressed) {
+                    try {
+                        // Повторяющуюся задачу продвигаем сразу на ближайшее БУДУЩЕЕ вхождение
+                        // (пропуская весь «хвост» просрочки), чтобы остановка реально молчала
+                        // до следующего настоящего срока, и сбрасываем подавление вместе со
+                        // сменой даты — это уже новое вхождение.
+                        if (bubble.recurrence && bubble.dueDate) {
+                            const currentDue = parseLocalDateTime(bubble.dueDate) || new Date(bubble.dueDate);
+                            let nextDue = computeNextDueDate(currentDue, bubble.recurrence);
+                            let guard = 0;
+                            while (nextDue && nextDue.getTime() <= now.getTime() && guard < 100000) {
+                                const advanced = computeNextDueDate(nextDue, bubble.recurrence);
+                                if (!advanced || advanced.getTime() <= nextDue.getTime()) break; // нет прогресса — выходим
+                                nextDue = advanced;
+                                guard++;
+                            }
+                            if (nextDue) {
+                                await updateBubbleDueDate(userId, bubble.id, nextDue);
+                                await updateBubbleFields(userId, bubble.id, { overdueSticky: false, overdueAt: null, overduePulseSuppressed: false });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Suppressed reschedule error', userId, bubble.id, e);
+                    }
+                    continue;
+                }
+
                 const key = buildOverdueKey(userId, bubble);
                 try {
                     if (!(await wasNotificationSent(key))) {

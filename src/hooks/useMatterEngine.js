@@ -138,12 +138,17 @@ export function useMatterEngine({
                             notifications: storedBubble.notifications || [],
                             recurrence: storedBubble.recurrence || null,
                             overdueSticky: storedBubble.overdueSticky || false,
-                            overdueAt: storedBubble.overdueAt || null
+                            overdueAt: storedBubble.overdueAt || null,
+                            overduePulseSuppressed: storedBubble.overduePulseSuppressed || false
                         };
 
                         // Инициализируем stickyPulseRef для задач с overdueSticky
                         if (bubble.overdueSticky) {
                             stickyPulseRef.current.add(bubble.id);
+                        }
+                        // Восстанавливаем намерение «остановлено вручную» из персистентного поля
+                        if (bubble.overduePulseSuppressed) {
+                            manuallyStoppedPulsingRef.current.add(bubble.id);
                         }
                         initialBubbles.push(bubble);
                     });
@@ -173,18 +178,23 @@ export function useMatterEngine({
                     merged.forEach(sb => {
                         const id = sb.id;
                         const newDue = sb?.dueDate ? (parseLocalDateTime(sb.dueDate)?.getTime() ?? null) : null;
-                        const prevDue = lastDueRef.current.get(id) ?? null;
 
-                        // Игнорируем серверные обновления для задач с overdueSticky - управляем только вручную
+                        // Намерение «остановлено вручную» — персистентное поле и единственный
+                        // источник правды. Зеркалим его в ref независимо от overdueSticky,
+                        // иначе серверное эхо overdueSticky=false сбрасывало бы остановку.
+                        if (sb?.overduePulseSuppressed) {
+                            manuallyStoppedPulsingRef.current.add(id);
+                        } else {
+                            manuallyStoppedPulsingRef.current.delete(id);
+                        }
+
+                        // Игнорируем серверные обновления stickyPulseRef для задач с overdueSticky - управляем только вручную
                         if (sb?.overdueSticky) {
+                            if (newDue && Number.isFinite(newDue)) lastDueRef.current.set(id, newDue);
                             return;
                         }
 
-                        // Обрабатываем только случаи, когда overdueSticky = false
-                        if (!sb?.overdueSticky) {
-                            stickyPulseRef.current.delete(id);
-                            manuallyStoppedPulsingRef.current.delete(id);
-                        }
+                        stickyPulseRef.current.delete(id);
 
                         if (newDue && Number.isFinite(newDue)) lastDueRef.current.set(id, newDue);
                     });

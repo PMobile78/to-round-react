@@ -138,6 +138,7 @@ const sanitizeBubble = (raw) => {
         recurrence: raw.recurrence && typeof raw.recurrence === 'object' ? raw.recurrence : null,
         overdueSticky: typeof raw.overdueSticky === 'boolean' ? raw.overdueSticky : false,
         overdueAt: typeof raw.overdueAt === 'string' ? raw.overdueAt : null,
+        overduePulseSuppressed: typeof raw.overduePulseSuppressed === 'boolean' ? raw.overduePulseSuppressed : false,
         useRichText: typeof raw.useRichText === 'boolean' ? raw.useRichText : false,
         createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
         updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
@@ -190,7 +191,8 @@ const sanitizeBubblesForExport = (bubblesData) => {
         notifications: Array.isArray(bubble.notifications) ? bubble.notifications : [],
         recurrence: bubble.recurrence || null,
         overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-        overdueAt: toIsoOrNull(bubble.overdueAt)
+        overdueAt: toIsoOrNull(bubble.overdueAt),
+        overduePulseSuppressed: typeof bubble.overduePulseSuppressed === 'boolean' ? bubble.overduePulseSuppressed : false
     }));
 };
 
@@ -930,8 +932,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         // Отключаем пульсацию при удалении даты
                         const shouldDisablePulsingOnDelete = !newDueDate && bubble.dueDate;
 
-                        // Очищаем флаг ручной остановки при изменении даты
-                        if (shouldDisablePulsing || shouldDisablePulsingOnDelete) {
+                        // Дата изменилась на будущую или удалена — начинаем новый цикл:
+                        // сбрасываем и in-memory флаг, и персистентный overduePulseSuppressed.
+                        const dateChanged = shouldDisablePulsing || shouldDisablePulsingOnDelete;
+                        if (dateChanged) {
                             manuallyStoppedPulsingRef.current.delete(bubble.id);
                         }
 
@@ -947,8 +951,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             notifications: editNotifications,
                             recurrence: editRecurrence,
                             // Отключаем пульсацию, если дата изменена на будущую или удалена
-                            overdueSticky: (shouldDisablePulsing || shouldDisablePulsingOnDelete) ? false : bubble.overdueSticky,
-                            overdueAt: (shouldDisablePulsing || shouldDisablePulsingOnDelete) ? null : bubble.overdueAt
+                            overdueSticky: dateChanged ? false : bubble.overdueSticky,
+                            overdueAt: dateChanged ? null : bubble.overdueAt,
+                            overduePulseSuppressed: dateChanged ? false : bubble.overduePulseSuppressed
                         };
                     }
                     return bubble;
@@ -1745,6 +1750,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
                     return;
                 }
+                // 0. Пользователь остановил пульсацию вручную — не мерцать,
+                // пока не изменится/не перенесётся dueDate (флаг сбрасывается отдельно).
+                if (bubble.overduePulseSuppressed || manuallyStoppedPulsingRef.current.has(bubble.id)) {
+                    if (Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
+                        const scale = bubble.radius / bubble.body.circleRadius;
+                        Matter.Body.scale(bubble.body, scale, scale);
+                    }
+                    const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
+                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    return;
+                }
                 // 1. Найти ближайшее сработавшее уведомление, которое не удалено
                 let activeNotifIdx = null;
                 let activeNotifTargetTime = null;
@@ -2502,9 +2518,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             notifiedBubbleNotificationsRef.current.delete(key);
                         });
 
-                        // Принудительно обновляем данные в Firebase, чтобы перезаписать overdueSticky
+                        // Персистим намерение «остановлено вручную» + сбрасываем серверный sticky-флаг
                         const updatedBubble = {
                             ...selectedBubble,
+                            overduePulseSuppressed: true,
                             overdueSticky: false,
                             overdueAt: null,
                             updatedAt: new Date().toISOString()

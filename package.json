@@ -1,6 +1,6 @@
 {
   "name": "interactive-bubbles",
-  "version": "0.0.41-audit",
+  "version": "0.0.42-audit-fix-stop-pulsing",
   "description": "Interactive Bubbles component with internationalization support",
   "homepage": "https://pmobile78.github.io/to-round-react",
   "main": "src/pages/BubblesPage.js",

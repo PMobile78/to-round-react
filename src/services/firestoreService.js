@@ -57,6 +57,7 @@ const serializeBubble = (bubble) => ({
     recurrence: bubble.recurrence || null,
     overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
     overdueAt: bubble.overdueAt || null,
+    overduePulseSuppressed: typeof bubble.overduePulseSuppressed === 'boolean' ? bubble.overduePulseSuppressed : false,
     useRichText: !!bubble.useRichText
 });
 
@@ -205,6 +206,7 @@ export const updateBubbleStatus = async (bubbleId, newStatus, bubblesData) => {
             fields.recurrence = null;
             fields.overdueSticky = false;
             fields.overdueAt = null;
+            fields.overduePulseSuppressed = false;
         }
 
         const userId = getUserDocumentId();
