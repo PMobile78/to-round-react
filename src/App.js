@@ -3,6 +3,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box, CircularProgress } from '@mui/material';
 import BubblesPage from './pages/BubblesPage';
+import MindMapPage from './pages/MindMapPage';
 import AuthForm from './components/AuthForm';
 import { onAuthStateChange } from './services/authService';
 import { useThemeMode } from './hooks/useThemeMode';
@@ -10,6 +11,7 @@ import { useThemeMode } from './hooks/useThemeMode';
 function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [screen, setScreen] = useState('main'); // 'main' | 'mindmap'
     const { themeMode, actualTheme, toggleTheme, theme } = useThemeMode();
     useEffect(() => {
         const unsubscribe = onAuthStateChange((currentUser) => {
@@ -47,12 +49,20 @@ function App() {
         <ThemeProvider theme={theme}>
             <CssBaseline />
             {user ? (
-                <BubblesPage
-                    user={user}
-                    themeMode={actualTheme}
-                    toggleTheme={toggleTheme}
-                    themeToggleProps={{ themeMode, actualTheme }}
-                />
+                screen === 'mindmap' ? (
+                    <MindMapPage
+                        onBack={() => setScreen('main')}
+                        themeMode={actualTheme}
+                    />
+                ) : (
+                    <BubblesPage
+                        user={user}
+                        themeMode={actualTheme}
+                        toggleTheme={toggleTheme}
+                        themeToggleProps={{ themeMode, actualTheme }}
+                        onOpenMindMap={() => setScreen('mindmap')}
+                    />
+                )
             ) : (
                 <AuthForm
                     onLoginSuccess={handleLoginSuccess}

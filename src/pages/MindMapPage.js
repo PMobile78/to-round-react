@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Box, IconButton, Typography, Button, TextField, CircularProgress } from '@mui/material';
+import { Box, IconButton, Typography, Button, TextField, CircularProgress, useTheme, useMediaQuery } from '@mui/material';
 import { ArrowBack, MenuOpen, AddCircleOutline } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useMindmaps } from '../hooks/useMindmaps';
 import MindMapCanvas from '../components/mindmap/MindMapCanvas';
 import MindMapListDrawer from '../components/mindmap/MindMapListDrawer';
 
-const MindMapPage = ({ onBack, themeMode = 'light', isMobile = false }) => {
+const MindMapPage = ({ onBack, themeMode = 'light' }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const {
         maps, loading, currentMapId, setCurrentMapId,
         createMap, removeMap, updateMap, renameMap, genId, branchColors

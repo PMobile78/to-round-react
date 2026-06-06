@@ -22,7 +22,6 @@ import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import { lsGet, lsSet } from '../utils/storage';
 import MainMenuDrawer from '../components/MainMenuDrawer';
-import MindMapPage from './MindMapPage';
 import AboutDialog from '../components/AboutDialog';
 import FontSettingsDialog from '../components/FontSettingsDialog';
 import LogoutConfirmDialog from '../components/LogoutConfirmDialog';
@@ -207,7 +206,7 @@ function readBubbleViewPlannedTasksFromLS() {
 }
 
 
-const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
+const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMindMap }) => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
@@ -309,7 +308,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [mainView, setMainView] = useState(() => {
         return localStorage.getItem('bubbles-main-view') === 'tasks' ? 'tasks' : 'bubbles';
     }); // Режим главного окна: 'bubbles' (canvas) | 'tasks' (список задач)
-    const [activeScreen, setActiveScreen] = useState('main'); // 'main' | 'mindmap'
 
     // Состояние поиска для Bubbles View
     const [bubblesSearchQuery, setBubblesSearchQuery] = useState('');
@@ -2035,16 +2033,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         return 0;
     }
 
-    if (activeScreen === 'mindmap') {
-        return (
-            <MindMapPage
-                onBack={() => setActiveScreen('main')}
-                themeMode={themeMode}
-                isMobile={isMobile}
-            />
-        );
-    }
-
     return (
         <Box sx={{
             width: (!isMobile && categoriesPanelEnabled && mainView === 'bubbles') ? 'calc(100vw - 320px)' : '100vw',
@@ -2764,7 +2752,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 onToggleCategoriesPanel={handleToggleCategoriesPanel}
                 onOpenCategoriesDialog={() => setCategoriesDialog(true)}
                 onOpenFontSettingsDialog={() => setFontSettingsDialog(true)}
-                onOpenMindMap={() => setActiveScreen('mindmap')}
+                onOpenMindMap={onOpenMindMap}
                 onAbout={() => setAboutOpen(true)}
                 onLogout={handleLogout}
                 onExportJson={handleExportJson}
