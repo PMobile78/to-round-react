@@ -6,6 +6,24 @@ import {
     BRANCH_COLORS
 } from '../services/mindmapService';
 
+// updatedAt may be a Firestore Timestamp (serverTimestamp), an ISO string
+// (legacy / localStorage fallback), a Date, or a number. Normalize to millis
+// so sorting never assumes a string method like localeCompare.
+const toMillis = (value) => {
+    if (!value) return 0;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        const t = Date.parse(value);
+        return Number.isNaN(t) ? 0 : t;
+    }
+    if (typeof value.toMillis === 'function') return value.toMillis();
+    if (value instanceof Date) return value.getTime();
+    if (typeof value.seconds === 'number') {
+        return value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1e6);
+    }
+    return 0;
+};
+
 const genId = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
@@ -83,7 +101,7 @@ export const useMindmaps = () => {
         (async () => {
             const loaded = await loadMindmaps();
             if (cancelled) return;
-            loaded.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+            loaded.sort((a, b) => toMillis(b.updatedAt) - toMillis(a.updatedAt));
             setMaps(loaded);
             setLoading(false);
         })();
