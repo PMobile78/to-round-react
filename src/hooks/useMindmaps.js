@@ -5,6 +5,9 @@ import {
     deleteMindmap,
     BRANCH_COLORS
 } from '../services/mindmapService';
+import { lsGet, lsSet } from '../utils/storage';
+
+const LAST_MAP_KEY = 'mindmap-last-open-id';
 
 // updatedAt may be a Firestore Timestamp (serverTimestamp), an ISO string
 // (legacy / localStorage fallback), a Date, or a number. Normalize to millis
@@ -91,7 +94,7 @@ const createDefaultMap = (title, engine = 'custom') => {
 
 export const useMindmaps = () => {
     const [maps, setMaps] = useState([]);
-    const [currentMapId, setCurrentMapId] = useState(null);
+    const [currentMapId, setCurrentMapId] = useState(() => lsGet(LAST_MAP_KEY));
     const [loading, setLoading] = useState(true);
 
     const saveTimers = useRef(new Map());
@@ -103,6 +106,8 @@ export const useMindmaps = () => {
             if (cancelled) return;
             loaded.sort((a, b) => toMillis(b.updatedAt) - toMillis(a.updatedAt));
             setMaps(loaded);
+            // Drop the remembered id if that map no longer exists.
+            setCurrentMapId((cur) => (cur && loaded.some((m) => m.id === cur) ? cur : null));
             setLoading(false);
         })();
         return () => {
@@ -111,6 +116,11 @@ export const useMindmaps = () => {
             saveTimers.current.clear();
         };
     }, []);
+
+    // Remember the last opened map across reloads.
+    useEffect(() => {
+        if (!loading) lsSet(LAST_MAP_KEY, currentMapId);
+    }, [currentMapId, loading]);
 
     const scheduleSave = useCallback((map) => {
         const timers = saveTimers.current;
