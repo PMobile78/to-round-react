@@ -1,10 +1,13 @@
 {
   "files": {
-    "main.js": "/to-round-react/static/js/main.ef91bd4f.js",
+    "main.css": "/to-round-react/static/css/main.2b60ced1.css",
+    "main.js": "/to-round-react/static/js/main.10d5ada9.js",
     "index.html": "/to-round-react/index.html",
-    "main.ef91bd4f.js.map": "/to-round-react/static/js/main.ef91bd4f.js.map"
+    "main.2b60ced1.css.map": "/to-round-react/static/css/main.2b60ced1.css.map",
+    "main.10d5ada9.js.map": "/to-round-react/static/js/main.10d5ada9.js.map"
   },
   "entrypoints": [
-    "static/js/main.ef91bd4f.js"
+    "static/css/main.2b60ced1.css",
+    "static/js/main.10d5ada9.js"
   ]
 }
