@@ -98,6 +98,16 @@ const formatLocalDateTime = (date) => {
     }
 };
 
+// IANA-зона пользователя (например, "Europe/Kyiv") — сохраняется рядом с dueDate,
+// чтобы Cloud Function (UTC) могла интерпретировать локальную строку времени корректно
+const getUserTimeZone = () => {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+    } catch (_) {
+        return null;
+    }
+};
+
 // Функция для парсинга локального времени из строки
 // Интерпретирует строку как локальное время, а не UTC
 const parseLocalDateTime = (dateString) => {
@@ -136,6 +146,7 @@ const sanitizeBubble = (raw) => {
         strokeStyle: typeof raw.strokeStyle === 'string' ? raw.strokeStyle : '#3B7DED',
         tagId: typeof raw.tagId === 'string' ? raw.tagId : null,
         dueDate: typeof raw.dueDate === 'string' ? raw.dueDate : null,
+        tz: typeof raw.tz === 'string' ? raw.tz : null,
         notifications: Array.isArray(raw.notifications) ? raw.notifications : [],
         recurrence: raw.recurrence && typeof raw.recurrence === 'object' ? raw.recurrence : null,
         overdueSticky: typeof raw.overdueSticky === 'boolean' ? raw.overdueSticky : false,
@@ -190,6 +201,7 @@ const sanitizeBubblesForExport = (bubblesData) => {
         updatedAt: typeof bubble.updatedAt === 'string' ? bubble.updatedAt : toIsoOrNull(bubble.updatedAt) || new Date().toISOString(),
         deletedAt: toIsoOrNull(bubble.deletedAt),
         dueDate: toIsoOrNull(bubble.dueDate),
+        tz: typeof bubble.tz === 'string' ? bubble.tz : null,
         notifications: Array.isArray(bubble.notifications) ? bubble.notifications : [],
         recurrence: bubble.recurrence || null,
         overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
@@ -860,6 +872,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         newBubble.title = title;
         newBubble.description = description;
         newBubble.dueDate = formatLocalDateTime(dueDate);
+        newBubble.tz = getUserTimeZone();
         newBubble.notifications = createNotifications;
         newBubble.recurrence = createRecurrence;
         // persist editor mode per task
@@ -953,6 +966,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             body: newBody, // Используем новое тело
                             updatedAt: new Date().toISOString(),
                             dueDate: newDueDate,
+                            tz: getUserTimeZone(),
                             notifications: editNotifications,
                             recurrence: editRecurrence,
                             // Отключаем пульсацию, если дата изменена на будущую или удалена

@@ -53,6 +53,7 @@ const serializeBubble = (bubble) => ({
     updatedAt: bubble.updatedAt || new Date().toISOString(),
     deletedAt: bubble.deletedAt || null,
     dueDate: bubble.dueDate || null,
+    tz: bubble.tz || null,
     notifications: bubble.notifications || [],
     recurrence: bubble.recurrence || null,
     overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,

@@ -2,6 +2,7 @@
 const admin = require('firebase-admin');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { isAfter, addMinutes, subMinutes, addHours, addDays, addWeeks, addMonths } = require('date-fns');
+const { TZDate } = require('@date-fns/tz');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -124,7 +125,7 @@ async function sendFcmToUser(userId, payload, tokens) {
 function isBubbleOverdue(bubble) {
     if (!bubble || !bubble.dueDate) return false;
     try {
-        const due = parseLocalDateTime(bubble.dueDate) || new Date(bubble.dueDate);
+        const due = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
         return isAfter(new Date(), due);
     } catch (_) {
         return false;
@@ -132,8 +133,9 @@ function isBubbleOverdue(bubble) {
 }
 
 // Функция для парсинга локального времени из строки
-// Интерпретирует строку без часового пояса как локальное время сервера
-function parseLocalDateTime(dateString) {
+// tz — IANA-зона пользователя (bubble.tz). Если задана, строка без часового пояса
+// интерпретируется в этой зоне; иначе — как локальное время сервера (legacy, UTC).
+function parseLocalDateTime(dateString, tz) {
     if (!dateString) return null;
     try {
         // Если это ISO строка с Z или +/-, парсим как обычно
@@ -143,11 +145,16 @@ function parseLocalDateTime(dateString) {
         // Иначе интерпретируем как локальное время (формат "YYYY-MM-DDTHH:mm:ss")
         const [datePart, timePart] = dateString.split('T');
         if (!datePart || !timePart) return new Date(dateString);
-        
+
         const [year, month, day] = datePart.split('-').map(Number);
         const [hours, minutes, seconds = 0] = timePart.split(':').map(Number);
-        
-        // Создаем Date объект в локальном времени сервера
+
+        if (tz) {
+            // TZDate: instant корректен для зоны пользователя; арифметика date-fns
+            // (addDays/addMonths) над TZDate остаётся календарно-корректной в этой зоне
+            return new TZDate(year, month - 1, day, hours, minutes, seconds, tz);
+        }
+        // Legacy: Date объект в локальном времени сервера
         return new Date(year, month - 1, day, hours, minutes, seconds);
     } catch (_) {
         return null;
@@ -155,13 +162,14 @@ function parseLocalDateTime(dateString) {
 }
 
 // Функция для форматирования локального времени без конвертации в UTC
-// Сохраняет время в формате "YYYY-MM-DDTHH:mm:ss"
-function formatLocalDateTime(date) {
+// Сохраняет время в формате "YYYY-MM-DDTHH:mm:ss" в зоне tz (или зоне сервера, если tz нет)
+function formatLocalDateTime(date, tz) {
     if (!date) return null;
     try {
-        const d = date instanceof Date ? date : new Date(date);
+        let d = date instanceof Date ? date : new Date(date);
         if (!Number.isFinite(d.getTime())) return null;
-        
+        if (tz) d = new TZDate(d.getTime(), tz); // компоненты ниже — в зоне пользователя
+
         // Форматируем локальное время без конвертации в UTC
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -169,7 +177,7 @@ function formatLocalDateTime(date) {
         const hours = String(d.getHours()).padStart(2, '0');
         const minutes = String(d.getMinutes()).padStart(2, '0');
         const seconds = String(d.getSeconds()).padStart(2, '0');
-        
+
         return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
     } catch (_) {
         return null;
@@ -180,7 +188,7 @@ function formatLocalDateTime(date) {
 // bubble.notifications: array like [{ minutesBefore: 5 }, { minutesBefore: 60 }]
 function shouldTriggerReminderNow(bubble, now) {
     if (!bubble?.dueDate || !Array.isArray(bubble.notifications)) return null;
-    const due = parseLocalDateTime(bubble.dueDate) || new Date(bubble.dueDate);
+    const due = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
     for (const notif of bubble.notifications) {
         const minutesBefore = computeMinutesBefore(notif);
         if (!Number.isFinite(minutesBefore)) continue;
@@ -326,9 +334,22 @@ function computeNextWeeklyDueDate(currentDue, weekDays, every) {
     }
 }
 
-async function updateBubbleDueDate(userId, bubbleId, nextDue) {
-    // Форматируем время в локальном формате без UTC конвертации
-    const formattedDueDate = formatLocalDateTime(nextDue) || nextDue.toISOString();
+// Ближайшее вхождение строго в БУДУЩЕМ относительно now (пропускает «хвост» просрочки)
+function computeNextFutureDueDate(currentDue, recurrence, now) {
+    let nextDue = computeNextDueDate(currentDue, recurrence);
+    let guard = 0;
+    while (nextDue && nextDue.getTime() <= now.getTime() && guard < 100000) {
+        const advanced = computeNextDueDate(nextDue, recurrence);
+        if (!advanced || advanced.getTime() <= nextDue.getTime()) break; // нет прогресса — выходим
+        nextDue = advanced;
+        guard++;
+    }
+    return nextDue;
+}
+
+async function updateBubbleDueDate(userId, bubbleId, nextDue, tz) {
+    // Форматируем время в локальном формате (в зоне пользователя) без UTC конвертации
+    const formattedDueDate = formatLocalDateTime(nextDue, tz) || nextDue.toISOString();
     const subDoc = db.collection('user-bubbles').doc(userId).collection('bubbles').doc(String(bubbleId));
     const subSnap = await subDoc.get();
     if (subSnap.exists) {
@@ -425,17 +446,10 @@ exports.scheduleDueDateNotifications = onSchedule({
                         // до следующего настоящего срока, и сбрасываем подавление вместе со
                         // сменой даты — это уже новое вхождение.
                         if (bubble.recurrence && bubble.dueDate) {
-                            const currentDue = parseLocalDateTime(bubble.dueDate) || new Date(bubble.dueDate);
-                            let nextDue = computeNextDueDate(currentDue, bubble.recurrence);
-                            let guard = 0;
-                            while (nextDue && nextDue.getTime() <= now.getTime() && guard < 100000) {
-                                const advanced = computeNextDueDate(nextDue, bubble.recurrence);
-                                if (!advanced || advanced.getTime() <= nextDue.getTime()) break; // нет прогресса — выходим
-                                nextDue = advanced;
-                                guard++;
-                            }
+                            const currentDue = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
+                            const nextDue = computeNextFutureDueDate(currentDue, bubble.recurrence, now);
                             if (nextDue) {
-                                await updateBubbleDueDate(userId, bubble.id, nextDue);
+                                await updateBubbleDueDate(userId, bubble.id, nextDue, bubble.tz);
                                 await updateBubbleFields(userId, bubble.id, { overdueSticky: false, overdueAt: null, overduePulseSuppressed: false });
                             }
                         }
@@ -470,10 +484,12 @@ exports.scheduleDueDateNotifications = onSchedule({
                 // Auto-reschedule dueDate if recurrence is configured
                 try {
                     if (bubble.recurrence && bubble.dueDate) {
-                        const currentDue = parseLocalDateTime(bubble.dueDate) || new Date(bubble.dueDate);
-                        const nextDue = computeNextDueDate(currentDue, bubble.recurrence);
+                        const currentDue = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
+                        // Прыгаем сразу на ближайшее БУДУЩЕЕ вхождение: иначе при длинной просрочке
+                        // дата двигалась бы по одному шагу за прогон с уведомлением на каждом
+                        const nextDue = computeNextFutureDueDate(currentDue, bubble.recurrence, now);
                         if (nextDue) {
-                            await updateBubbleDueDate(userId, bubble.id, nextDue);
+                            await updateBubbleDueDate(userId, bubble.id, nextDue, bubble.tz);
                             // keep sticky flag until user stops or dueDate manually changed/deleted - только если overdueSticky еще установлен
                             if (bubble.overdueSticky) {
                                 await updateBubbleFields(userId, bubble.id, { overdueSticky: true });
@@ -492,5 +508,8 @@ exports.scheduleDueDateNotifications = onSchedule({
 
     return null;
 });
+
+// Exposed for local testing only (functions/test-tz.js)
+exports._test = { parseLocalDateTime, formatLocalDateTime, computeNextDueDate, computeNextFutureDueDate, isBubbleOverdue };
 
 
