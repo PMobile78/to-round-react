@@ -10,7 +10,7 @@
 
 ## Часть 1. Безопасность
 
-### S1 [ВЫСОКИЙ] Правила Firestore отсутствуют в репозитории
+### S1 ✅ [ВЫСОКИЙ] Правила Firestore отсутствуют в репозитории
 - `firebase.json` (строки 1–16) описывает только `functions` и `hosting`. Нет ни `firestore.rules`, ни секции `"firestore"` в `firebase.json`.
 - Вся модель доступа клиентская. Если правила в Firebase Console разрешающие (`allow read, write: if true` или истёкший test-mode), **любой пользователь читает и перезаписывает чужие задачи, теги и FCM-токены**.
 - **Исправление:** проверить актуальные правила в Firebase Console; добавить `firestore.rules` с моделью «владелец только своих документов»; добавить секцию `"firestore": { "rules": "firestore.rules" }` в `firebase.json`.
@@ -22,7 +22,7 @@ firestore.rules (минимальный шаблон):
   match /user-fcm-tokens/{uid}/{document=**} { allow r/w: if request.auth.uid == uid; }
 ```
 
-### S2 [СРЕДНИЙ] Stored XSS через `dangerouslySetInnerHTML` без санитизации
+### S2 ✅ [СРЕДНИЙ] Stored XSS через `dangerouslySetInnerHTML` без санитизации
 - `src/components/HtmlRenderer.js:62` рендерит `__html: html` напрямую — DOMPurify в проекте отсутствует.
 - HTML от TipTap сохраняется в Firestore и рендерится обратно. Изолированно это self-XSS, но:
   - В связке со S1 (слабые правила) → полноценный stored XSS.
@@ -30,17 +30,17 @@ firestore.rules (минимальный шаблон):
   - Кнопка вставки картинки через `prompt()` в `RichTextEditor.js` и ссылки без валидации схемы (`javascript:` в href).
 - **Исправление:** добавить `dompurify`; в `HtmlRenderer.js` заменить `{ __html: html }` на `{ __html: DOMPurify.sanitize(html, { ALLOWED_TAGS: [...], ALLOWED_ATTR: [...] }) }`; в TipTap Link/Image extension ограничить схемы URL.
 
-### S3 [НИЗКИЙ / гигиена] `.env.production` и `public/sw.js` закоммичены
+### S3 ✅ [НИЗКИЙ / гигиена] `.env.production` и `public/sw.js` закоммичены
 - `.gitignore` содержит `.env.production.local`, но **не** `.env.production`.
 - `public/sw.js` — сборочный артефакт (`scripts/generate-sw.js`), но отслеживается git.
 - Важно: ключи в `.env.production` (Firebase web-config + VAPID) публичны по природе — реальной утечки нет, ротация не требуется. Задача — гигиена репозитория.
 - **Исправление:** добавить `.env.production` и `public/sw.js` в `.gitignore`; проверить, что в `.env.production` нет приватных значений.
 
-### S4 [НИЗКИЙ] Сырые сообщения об ошибках Firebase в UI
+### S4 ✅ [НИЗКИЙ] Сырые сообщения об ошибках Firebase в UI
 - `src/services/authService.js:25,37,48,59`: `return { success: false, error: error.message }` — внутренние коды Firebase попадают в UI через `AuthForm.js`.
 - **Исправление:** маппить коды ошибок Firebase на локализованные строки (i18next).
 
-### S5 [НИЗКИЙ] Anonymous-фолбэк в localStorage
+### S5 ✅ [НИЗКИЙ] Anonymous-фолбэк в localStorage
 - `src/services/firestoreService.js:102,127,182,209,324,345`: `getCurrentUser()?.uid || 'anonymous'` — данные записываются под ключ `bubbles_anonymous` / `tags_anonymous`.
 - На общем устройстве это смешивает данные разных пользователей; при logout данные не очищаются.
 - **Исправление:** не писать в фолбэк-ключ при отсутствии пользователя; очищать `bubbles_<uid>` / `tags_<uid>` при logout.
@@ -49,7 +49,7 @@ firestore.rules (минимальный шаблон):
 
 ## Часть 2. Баги и риски
 
-### C1 [БАГ] Утечка слушателя в `subscribeToBubblesUpdates`
+### C1 ✅ [БАГ] Утечка слушателя в `subscribeToBubblesUpdates`
 - `src/services/firestoreService.js:352–381`: error-колбэк `onSnapshot` создаёт `unsubLegacy` и делает `return unsubLegacy` — но Firebase SDK **игнорирует** возвращаемое значение из error-колбэка. Внешний вызывающий код получил `unsubscribe`, который уже закрыт; legacy-слушатель живёт вечно.
 
 ```
@@ -70,27 +70,27 @@ firestore.rules (минимальный шаблон):
   return () => currentUnsub?.();
 ```
 
-### C2 [Дублирование / риск потери полей] Тройная сериализация пузыря
+### C2 ✅ [Дублирование / риск потери полей] Тройная сериализация пузыря
 - `src/services/firestoreService.js:63–81`, `104–122`, `128–146`: одинаковый набор полей bubble повторяется три раза (нормализованная запись, legacy-фолбэк, localStorage-фолбэк). Новое поле легко забыть в одной из копий → молчаливая потеря данных.
 - **Исправление:** вынести `serializeBubble(bubble)` в `firestoreService.js`; использовать во всех трёх местах.
 
-### C3 [Мелкий / неэффективность] Лишний `find` в `sendFcmToUser`
+### C3 ✅ [Мелкий / неэффективность] Лишний `find` в `sendFcmToUser`
 - `functions/index.js:99–102`: цикл `for (const { id, token } of tokens)` делает `tokens.find(t => t.token === token)` ради `language`, хотя `language` есть в самом элементе.
 - **Исправление:** `for (const { id, token, language } of tokens)` — убрать `find`.
 
-### C4 [Масштабируемость / стоимость] Cloud Function читает все пузыри каждую минуту
+### C4 ✅ [Масштабируемость / стоимость] Cloud Function читает все пузыри каждую минуту
 - `functions/index.js:17–20,352–356`: `scheduleDueDateNotifications` каждую минуту вызывает `db.collectionGroup('bubbles').get()` — сканирует всю коллекцию. Коллекция `notification-sent` растёт без TTL/очистки.
 - **Исправление:** добавить фильтр `where('dueDate', '>=', ...).where('dueDate', '<=', ...)` при чтении; добавить периодическую очистку `notification-sent` (записи старше N дней).
 
-### C5 [Качество] 68 `console.*` в `src` в продакшене (35 — в BubblesPage)
+### C5 ✅ [Качество] 68 `console.*` в `src` в продакшене (35 — в BubblesPage)
 - Логи включают данные пользователя и ошибки. Попадают в консоль в проде.
 - **Исправление:** лёгкая обёртка `src/utils/logger.js`, отключающая все уровни кроме `error` при `REACT_APP_ENVIRONMENT === 'production'`.
 
-### C6 [Риск] `handleImportJson` без валидации полей + жёсткий reload
+### C6 ✅ [Риск] `handleImportJson` без валидации полей + жёсткий reload
 - `src/pages/BubblesPage.js:2332–2348`: проверяется только `Array.isArray`, поля пузырей не валидируются — вектор для S2. Завершается `window.location.reload()`.
 - **Исправление:** добавить whitelist-валидацию полей (`id`, `title`, `description`, `radius`, `status`, …); заменить `window.location.reload()` на обновление состояния React.
 
-### C7 [Риск стейл-замыканий] 3 подавления `eslint` exhaustive-deps
+### C7 ✅ [Риск стейл-замыканий] 3 подавления `eslint` exhaustive-deps
 - `src/pages/BubblesPage.js:2277,2363,2383` — потенциальные устаревшие замыкания в `useEffect`/`useCallback`.
 - **Исправление:** проверить каждое точечно; добавить зависимости или перенести в `useRef`.
 
@@ -98,7 +98,7 @@ firestore.rules (минимальный шаблон):
 
 ## Часть 3. Рефакторинг
 
-### R1 God-component `BubblesPage.js` (3228 строк)
+### R1 ✅ God-component `BubblesPage.js` (3228 строк)
 Главный технический долг. Компонент держит физику, фильтры, категории, диалоги, drag FAB, deep-link, импорт/экспорт, поиск, синхронизацию. Разбить по хукам:
 
 | Хук | Что забирает |
@@ -109,19 +109,19 @@ firestore.rules (минимальный шаблон):
 
 Диалоги create/edit/notifications — частично уже компоненты; довести до конца.
 
-### R2 `RichTextEditor.js` (896 строк)
+### R2 ✅ `RichTextEditor.js` (896 строк)
 - Вынести тулбар в `RichTextToolbar`.
 - Кастомный drag-resize — в хук `useEditorResize`.
 - Конфиг extension-ов — в константу вне компонента.
 
-### R3 Хелпер persisted-localStorage
+### R3 ✅ Хелпер persisted-localStorage
 - По всему `BubblesPage.js` повторяется `localStorage.getItem/setItem` + `JSON.parse` в try/catch.
 - Ввести `src/utils/storage.js` с `lsGet(key, fallback)` / `lsSet(key, value)`.
 
-### R4 `serializeBubble` в firestoreService
+### R4 ✅ `serializeBubble` в firestoreService
 - Устраняет C2; снижает риск потери новых полей.
 
-### R5 Централизованный логгер
+### R5 ✅ Централизованный логгер
 - `src/utils/logger.js` — реализует C5.
 
 ---

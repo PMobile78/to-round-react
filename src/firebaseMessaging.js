@@ -2,11 +2,12 @@ import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messagi
 import app from './firebase';
 
 // Store FCM token in Firestore under the current user document
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import i18n from './i18n';
 import { config } from './utils/config';
+import logger from './utils/logger';
 
 // VAPID Key from configuration
 const VAPID_KEY = config.firebase.vapidKey;
@@ -15,13 +16,11 @@ export async function initMessagingAndSaveToken() {
     try {
         const supported = await isSupported();
         if (!supported) {
-            console.log('[FCM] Messaging not supported in this browser');
             return null;
         }
 
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-            console.log('[FCM] Notification permission not granted');
             return null;
         }
 
@@ -32,7 +31,6 @@ export async function initMessagingAndSaveToken() {
 
         // Foreground message handler — показываем через Service Worker, чтобы клик открывал URL
         onMessage(messaging, async (payload) => {
-            console.log('[FCM] Message in foreground:', payload);
             try {
                 const registration = await navigator.serviceWorker.ready;
                 const title = payload?.notification?.title || payload?.data?.title || 'Уведомление';
@@ -50,7 +48,7 @@ export async function initMessagingAndSaveToken() {
 
         return token;
     } catch (e) {
-        console.error('[FCM] init error:', e);
+        logger.error('[FCM] init error:', e);
         return null;
     }
 }
@@ -76,14 +74,19 @@ async function saveToken(token) {
 
     // Сохраняем токен как документ в подколлекции: user-fcm-tokens/{uid}/tokens/{token}
     const tokenRef = doc(db, 'user-fcm-tokens', currentUser.uid, 'tokens', token);
-    await setDoc(tokenRef, {
+    const tokenData = {
         userId: currentUser.uid,
         token,
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
         language: (typeof i18n?.language === 'string' && i18n.language) || (typeof navigator !== 'undefined' ? navigator.language : 'unknown'),
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
-    }, { merge: true });
+    };
+    const snap = await getDoc(tokenRef);
+    if (!snap.exists()) {
+        await setDoc(tokenRef, { ...tokenData, createdAt: serverTimestamp() });
+    } else {
+        await updateDoc(tokenRef, tokenData);
+    }
 }
 
 export async function updateMessagingTokenLanguage(language) {

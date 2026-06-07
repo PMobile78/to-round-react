@@ -12,6 +12,7 @@ import {
     Menu,
     ListItemIcon,
     ListItemText,
+    Paper,
 
 } from '@mui/material';
 import {
@@ -19,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
+import { lsGet, lsSet } from '../utils/storage';
 import MainMenuDrawer from '../components/MainMenuDrawer';
 import AboutDialog from '../components/AboutDialog';
 import FontSettingsDialog from '../components/FontSettingsDialog';
@@ -39,6 +41,7 @@ import {
 } from '../services/firestoreService';
 
 import TaskListDrawer from '../components/ListViewDrawer';
+import TaskList from '../components/TaskList';
 import ResponsiveSearch from '../components/ResponsiveSearch';
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
@@ -47,9 +50,13 @@ import EditBubbleDialog from '../components/EditBubbleDialog';
 import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
 import TaskFilterDrawer from '../components/TaskFilterDrawer';
 import CreateBubbleDialog from '../components/CreateBubbleDialog';
+import logger from '../utils/logger';
 import TagEditorDialog from '../components/TagEditorDialog';
 import { useMatterResize } from '../hooks/useMatterResize';
 import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
+import { useMatterEngine } from '../hooks/useMatterEngine';
+import { useDraggableFab } from '../hooks/useDraggableFab';
+import { useBubbleFilters } from '../hooks/useBubbleFilters';
 
 
 // Helpers for JSON export
@@ -65,7 +72,7 @@ const exportJsonFile = (dataObject, filename) => {
         URL.revokeObjectURL(url);
         document.body.removeChild(link);
     } catch (e) {
-        console.error('Export JSON failed', e);
+        logger.error('Export JSON failed', e);
     }
 };
 
@@ -113,6 +120,46 @@ const parseLocalDateTime = (dateString) => {
     }
 };
 
+// Whitelist-validate a single imported bubble — strips unknown/dangerous fields.
+const ALLOWED_BUBBLE_STATUSES = new Set(['active', 'done', 'postpone', 'deleted']);
+const sanitizeBubble = (raw) => {
+    if (!raw || typeof raw !== 'object') return null;
+    const id = raw.id != null ? String(raw.id) : null;
+    if (!id) return null;
+    return {
+        id,
+        title: typeof raw.title === 'string' ? raw.title : '',
+        description: typeof raw.description === 'string' ? raw.description : '',
+        radius: typeof raw.radius === 'number' && raw.radius > 0 ? raw.radius : 50,
+        status: ALLOWED_BUBBLE_STATUSES.has(raw.status) ? raw.status : 'active',
+        fillStyle: typeof raw.fillStyle === 'string' ? raw.fillStyle : 'transparent',
+        strokeStyle: typeof raw.strokeStyle === 'string' ? raw.strokeStyle : '#3B7DED',
+        tagId: typeof raw.tagId === 'string' ? raw.tagId : null,
+        dueDate: typeof raw.dueDate === 'string' ? raw.dueDate : null,
+        notifications: Array.isArray(raw.notifications) ? raw.notifications : [],
+        recurrence: raw.recurrence && typeof raw.recurrence === 'object' ? raw.recurrence : null,
+        overdueSticky: typeof raw.overdueSticky === 'boolean' ? raw.overdueSticky : false,
+        overdueAt: typeof raw.overdueAt === 'string' ? raw.overdueAt : null,
+        overduePulseSuppressed: typeof raw.overduePulseSuppressed === 'boolean' ? raw.overduePulseSuppressed : false,
+        useRichText: typeof raw.useRichText === 'boolean' ? raw.useRichText : false,
+        createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
+        updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
+        deletedAt: typeof raw.deletedAt === 'string' ? raw.deletedAt : null,
+    };
+};
+
+// Whitelist-validate a single imported tag — strips unknown/dangerous fields.
+const sanitizeTag = (raw) => {
+    if (!raw || typeof raw !== 'object') return null;
+    const id = raw.id != null ? String(raw.id) : null;
+    if (!id) return null;
+    return {
+        id,
+        name: typeof raw.name === 'string' ? raw.name : '',
+        color: typeof raw.color === 'string' ? raw.color : '#3B7DED',
+    };
+};
+
 // Подготовка данных пузырей к экспорту (без Matter.js ссылок)
 const sanitizeBubblesForExport = (bubblesData) => {
     const toIsoOrNull = (value) => {
@@ -146,7 +193,8 @@ const sanitizeBubblesForExport = (bubblesData) => {
         notifications: Array.isArray(bubble.notifications) ? bubble.notifications : [],
         recurrence: bubble.recurrence || null,
         overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-        overdueAt: toIsoOrNull(bubble.overdueAt)
+        overdueAt: toIsoOrNull(bubble.overdueAt),
+        overduePulseSuppressed: typeof bubble.overduePulseSuppressed === 'boolean' ? bubble.overduePulseSuppressed : false
     }));
 };
 
@@ -154,16 +202,11 @@ const sanitizeBubblesForExport = (bubblesData) => {
 const BUBBLES_PLANNED_TASKS_VIEW_LS_KEY = 'bubbles-planned-tasks-only';
 
 function readBubbleViewPlannedTasksFromLS() {
-    try {
-        const raw = localStorage.getItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY);
-        return raw != null && JSON.parse(raw) === true;
-    } catch (_) {
-        return false;
-    }
+    return lsGet(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, false) === true;
 }
 
 
-const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
+const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMindMap }) => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
@@ -201,15 +244,23 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [tagColor, setTagColor] = useState('#3B7DED');
     const [editingTag, setEditingTag] = useState(null);
     const [tagMenuAnchor, setTagMenuAnchor] = useState(null);
-    const [filterTags, setFilterTags] = useState(() => {
-        const saved = localStorage.getItem('bubbles-filter-tags');
-        return saved ? JSON.parse(saved) : [];
-    }); // Массив ID выбранных тегов для фильтрации  
-    const [showNoTag, setShowNoTag] = useState(() => {
-        const saved = localStorage.getItem('bubbles-show-no-tag');
-        return saved ? JSON.parse(saved) : true;
-    }); // Показывать ли пузыри без тегов
-    const [bubbleViewPlannedTasksOnly, setBubbleViewPlannedTasksOnly] = useState(readBubbleViewPlannedTasksFromLS);
+
+    // Filter / category state extracted into hook
+    const {
+        filterTags,
+        setFilterTags,
+        showNoTag,
+        setShowNoTag,
+        bubbleViewPlannedTasksOnly,
+        setBubbleViewPlannedTasksOnly,
+        selectedCategory,
+        setSelectedCategory,
+        categoriesPanelEnabled,
+        setCategoriesPanelEnabled,
+        handleCategorySelect,
+        handleToggleCategoriesPanel,
+    } = useBubbleFilters({ tags });
+
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
@@ -217,38 +268,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const [useRichTextCreate, setUseRichTextCreate] = useState(false);
     const [useRichTextEdit, setUseRichTextEdit] = useState(false);
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false); // Состояние панели категорий
-    const [selectedCategory, setSelectedCategory] = useState(() => {
-        if (readBubbleViewPlannedTasksFromLS()) {
-            return 'planned-tasks';
-        }
-        // Восстанавливаем выбранную категорию на основе сохраненных фильтров
-        const savedFilterTags = localStorage.getItem('bubbles-filter-tags');
-        const savedShowNoTag = localStorage.getItem('bubbles-show-no-tag');
-
-        if (savedFilterTags && savedShowNoTag) {
-            const filterTags = JSON.parse(savedFilterTags);
-            const showNoTag = JSON.parse(savedShowNoTag);
-
-            // Если выбраны все теги и включен показ пузырей без тегов - это "all"
-            if (filterTags.length > 0 && showNoTag) {
-                // Проверим, выбраны ли все доступные теги (это будет определено позже, когда загрузятся теги)
-                return 'all';
-            }
-            // Если не выбраны теги, но включен показ пузырей без тегов - это "no-tags"
-            else if (filterTags.length === 0 && showNoTag) {
-                return 'no-tags';
-            }
-            // Если выбран только один тег - это конкретная категория
-            else if (filterTags.length === 1 && !showNoTag) {
-                return filterTags[0];
-            }
-        }
-        return null;
-    }); // Выбранная категория
-    const [categoriesPanelEnabled, setCategoriesPanelEnabled] = useState(() => {
-        const saved = localStorage.getItem('bubbles-categories-panel-enabled');
-        return saved ? JSON.parse(saved) : false;
-    }); // Постоянное отображение панели категорий
     const [categoriesDialog, setCategoriesDialog] = useState(false); // Диалог управления категориями
     const [fontSettingsDialog, setFontSettingsDialog] = useState(false); // Диалог настроек шрифта
     const [fontSize, setFontSize] = useState(() => {
@@ -286,107 +305,23 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         const saved = localStorage.getItem('bubbles-background-enabled');
         return saved === null ? true : saved === 'true';
     }); // Включен ли фон пузырей
+    const [mainView, setMainView] = useState(() => {
+        return localStorage.getItem('bubbles-main-view') === 'tasks' ? 'tasks' : 'bubbles';
+    }); // Режим главного окна: 'bubbles' (canvas) | 'tasks' (список задач)
 
     // Состояние поиска для Bubbles View
     const [bubblesSearchQuery, setBubblesSearchQuery] = useState('');
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
     // Позиция FAB (перетаскиваемая), сохраняется в localStorage
-    const fabRef = useRef(null);
-    const [fabPosition, setFabPosition] = useState(() => {
-        try {
-            const saved = localStorage.getItem('bubbles-fab-position');
-            return saved ? JSON.parse(saved) : null;
-        } catch (_) {
-            return null;
-        }
-    });
-    const [isDraggingFab, setIsDraggingFab] = useState(false);
-    const dragOffsetRef = useRef({ x: 0, y: 0 });
-    const dragStartRef = useRef({ x: 0, y: 0 });
-    const dragMovedRef = useRef(false);
-    const suppressNextClickRef = useRef(false);
-
-    const DEFAULT_FAB_SIZE = 56; // Примерный размер FAB
-    const getDefaultFabPosition = () => {
-        // Соответсвует прежнему стилю: bottom: 100, right: 20
-        const x = Math.max(10, (typeof window !== 'undefined' ? window.innerWidth : 0) - 20 - DEFAULT_FAB_SIZE);
-        const y = Math.max(10, (typeof window !== 'undefined' ? window.innerHeight : 0) - 100 - DEFAULT_FAB_SIZE);
-        return { x, y };
-    };
-
-    useEffect(() => {
-        // Если позиция не сохранена — выставляем позицию по умолчанию после первого рендера
-        if (!isMobile) return;
-        if (fabPosition) return;
-        const raf = requestAnimationFrame(() => {
-            const node = fabRef.current;
-            const width = node?.offsetWidth || DEFAULT_FAB_SIZE;
-            const height = node?.offsetHeight || DEFAULT_FAB_SIZE;
-            const x = Math.max(10, window.innerWidth - 20 - width);
-            const y = Math.max(10, window.innerHeight - 100 - height);
-            setFabPosition({ x, y });
-        });
-        return () => cancelAnimationFrame(raf);
-    }, [isMobile, fabPosition]);
-
-    useEffect(() => {
-        if (!fabPosition) return;
-        try {
-            localStorage.setItem('bubbles-fab-position', JSON.stringify(fabPosition));
-        } catch (_) {
-            // ignore
-        }
-    }, [fabPosition]);
-
-    const onFabPointerMove = (event) => {
-        const pointerX = event.clientX;
-        const pointerY = event.clientY;
-        const node = fabRef.current;
-        const width = node?.offsetWidth || DEFAULT_FAB_SIZE;
-        const height = node?.offsetHeight || DEFAULT_FAB_SIZE;
-        let newX = pointerX - dragOffsetRef.current.x;
-        let newY = pointerY - dragOffsetRef.current.y;
-        // Ограничиваем область перемещения рамками окна
-        newX = Math.min(Math.max(0, newX), (typeof window !== 'undefined' ? window.innerWidth : 0) - width);
-        newY = Math.min(Math.max(0, newY), (typeof window !== 'undefined' ? window.innerHeight : 0) - height);
-        setFabPosition({ x: newX, y: newY });
-
-        // Детектим, был ли реальный drag (а не клик)
-        const dx = Math.abs(pointerX - dragStartRef.current.x);
-        const dy = Math.abs(pointerY - dragStartRef.current.y);
-        if (dx > 3 || dy > 3) {
-            dragMovedRef.current = true;
-        }
-    };
-
-    const onFabPointerUp = () => {
-        setIsDraggingFab(false);
-        window.removeEventListener('pointermove', onFabPointerMove);
-        window.removeEventListener('pointerup', onFabPointerUp);
-        if (dragMovedRef.current) {
-            suppressNextClickRef.current = true;
-        }
-        dragMovedRef.current = false;
-    };
-
-    const onFabPointerDown = (event) => {
-        // Только левая кнопка мыши (если есть info), для тач/перо поля отсутствуют
-        if (typeof event.button === 'number' && event.button !== 0) return;
-        const node = fabRef.current;
-        const rect = node?.getBoundingClientRect();
-        const currentX = (fabPosition?.x ?? rect?.left ?? 0);
-        const currentY = (fabPosition?.y ?? rect?.top ?? 0);
-        dragOffsetRef.current = {
-            x: event.clientX - currentX,
-            y: event.clientY - currentY,
-        };
-        dragStartRef.current = { x: event.clientX, y: event.clientY };
-        dragMovedRef.current = false;
-        setIsDraggingFab(true);
-        window.addEventListener('pointermove', onFabPointerMove);
-        window.addEventListener('pointerup', onFabPointerUp);
-    };
+    const {
+        fabRef,
+        fabPosition,
+        isDraggingFab,
+        suppressNextClickRef,
+        getDefaultFabPosition,
+        onFabPointerDown,
+    } = useDraggableFab({ isMobile });
 
     // Константа скорости падения пузырей (максимальная скорость)
     const dropSpeed = 1.0;
@@ -462,256 +397,45 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
 
 
-    // Используем утилиту createWorldBounds
+    // Refs for overdue/sticky pulse tracking — declared here so useMatterEngine can use them
+    const stickyPulseRef = useRef(new Set()); // keep pulsing after repeat-every reschedule
+    const lastDueRef = useRef(new Map());
+    const manuallyStoppedPulsingRef = useRef(new Set()); // задачи, которые пользователь остановил вручную
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const { Engine, Render, Runner, Bodies, World, Mouse, MouseConstraint, Events, Query } = Matter;
+    // Edit dialog notification/recurrence state — declared here so useMatterEngine can use them
+    const [editNotifications, setEditNotifications] = useState([]); // для редактирования
+    const [editRecurrence, setEditRecurrence] = useState(null);
 
-        // Creating a Physics Engine
-        const engine = Engine.create();
-        engineRef.current = engine;
-
-        // Disable default gravity to customize yours
-        engine.world.gravity.y = dropSpeed;
-
-        // Getting adaptive canvas sizes
-        const canvasSize = getCanvasSize();
-        setCanvasSize(canvasSize);
-
-        // Create renderer
-        const bubbleViewBackground = themeMode === 'light'
-            ? '#ffffff'
-            : 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)';
-
-        const render = Render.create({
-            element: canvas,
-            engine,
-            options: {
-                width: canvasSize.width,
-                height: canvasSize.height,
-                wireframes: false,
-                background: bubbleViewBackground,
-                showAngleIndicator: false,
-                showVelocity: false,
-            }
-        });
-        renderRef.current = render;
-
-        // Create world boundaries
-        const walls = createWorldBounds(canvasSize.width, canvasSize.height);
-        wallsRef.current = walls;
-
-        // Add walls to the world
-        World.add(engine.world, walls);
-
-        // Load bubbles from Firestore
-        const loadInitialBubbles = async () => {
-            try {
-                const storedBubbles = await loadBubblesFromFirestore();
-                const initialBubbles = [];
-
-                if (storedBubbles.length > 0) {
-                    // Auto-cleanup old deleted bubbles
-                    const cleanedBubbles = await cleanupOldDeletedBubbles(storedBubbles);
-
-                    // Restore bubbles from Firestore with random positions
-                    const margin = isMobile ? 50 : 100;
-                    cleanedBubbles.forEach(storedBubble => {
-                        // Create bubbles with random coordinates
-                        const x = Math.random() * (canvasSize.width - margin * 2) + margin;
-                        const y = Math.random() * (canvasSize.height - margin * 2) + margin;
-
-                        // Определяем цвет тега для правильного fillStyle
-                        let tagColor = null;
-                        if (storedBubble.tagId) {
-                            const tag = tags.find(t => t.id === storedBubble.tagId);
-                            if (tag) {
-                                tagColor = tag.color;
-                            }
-                        }
-
-                        const bubble = {
-                            id: storedBubble.id,
-                            body: Matter.Bodies.circle(x, y, storedBubble.radius, {
-                                restitution: 0.8,
-                                frictionAir: 0.01,
-                                render: {
-                                    fillStyle: getBubbleFillStyle(tagColor),
-                                    strokeStyle: storedBubble.strokeStyle || '#3B7DED',
-                                    lineWidth: 3
-                                }
-                            }),
-                            radius: storedBubble.radius,
-                            title: storedBubble.title || '',
-                            description: storedBubble.description || '',
-                            tagId: storedBubble.tagId || null,
-                            status: storedBubble.status || BUBBLE_STATUS.ACTIVE,
-                            createdAt: storedBubble.createdAt || new Date().toISOString(),
-                            updatedAt: storedBubble.updatedAt || new Date().toISOString(),
-                            deletedAt: storedBubble.deletedAt || null,
-                            dueDate: storedBubble.dueDate || null,
-                            notifications: storedBubble.notifications || [],
-                            recurrence: storedBubble.recurrence || null,
-                            overdueSticky: storedBubble.overdueSticky || false,
-                            overdueAt: storedBubble.overdueAt || null
-                        };
-
-                        // Инициализируем stickyPulseRef для задач с overdueSticky
-                        if (bubble.overdueSticky) {
-                            stickyPulseRef.current.add(bubble.id);
-                            console.log('📥 Initial load: Added to stickyPulseRef:', bubble.id, 'overdueSticky:', bubble.overdueSticky);
-                        }
-                        initialBubbles.push(bubble);
-                    });
-                    // Убираем добавление всех пузырей в физический мир - они будут добавлены после фильтрации
-                }
-
-                setBubbles(initialBubbles);
-                // Не добавляем пузыри в физический мир сразу - они будут добавлены после применения фильтров
-            } catch (error) {
-                console.error('Error loading initial bubbles:', error);
-                setBubbles([]);
-            }
-        };
-
-        loadInitialBubbles();
-        // Subscribe to live bubbles updates (dueDate changes from server)
-        const unsubscribeBubbles = subscribeToBubblesUpdates((serverBubbles) => {
-            setBubbles(prev => {
-                const map = new Map(prev.map(b => [b.id, b]));
-                const merged = serverBubbles.map(sb => {
-                    const ex = map.get(sb.id);
-                    return ex ? { ...ex, ...sb, body: ex.body } : sb;
-                });
-
-                // detect server state and make sticky by server flag (persists across reloads)
-                try {
-                    merged.forEach(sb => {
-                        const id = sb.id;
-                        const newDue = sb?.dueDate ? (parseLocalDateTime(sb.dueDate)?.getTime() ?? null) : null;
-                        const prevDue = lastDueRef.current.get(id) ?? null;
-
-                        // Игнорируем серверные обновления для задач с overdueSticky - управляем только вручную
-                        if (sb?.overdueSticky) {
-                            console.log('🔄 Server sync: Ignoring overdueSticky updates for bubble:', id, 'overdueSticky:', sb.overdueSticky);
-                            return; // Пропускаем эту задачу
-                        }
-
-                        // Обрабатываем только случаи, когда overdueSticky = false
-                        if (!sb?.overdueSticky) {
-                            stickyPulseRef.current.delete(id);
-                            manuallyStoppedPulsingRef.current.delete(id); // очищаем флаг ручной остановки
-                            console.log('🔄 Server sync: Removed from stickyPulseRef:', id, 'overdueSticky:', sb.overdueSticky);
-                        }
-
-                        if (newDue && Number.isFinite(newDue)) lastDueRef.current.set(id, newDue);
-                    });
-                } catch (_) { }
-
-                // If edit dialog is open for a selected bubble, reflect live updates
-                if (editDialog && selectedBubble && selectedBubble.id) {
-                    const updated = merged.find(b => String(b.id) === String(selectedBubble.id));
-                    if (updated) {
-                        // Update selected bubble fields but keep the Matter.js body instance
-                        setSelectedBubble(prevSel => (prevSel ? { ...prevSel, ...updated, body: prevSel.body } : updated));
-                        // Update edit form states for dueDate/notifications/recurrence
-                        if (updated.dueDate) {
-                            try { const d = parseLocalDateTime(updated.dueDate); if (d && !isNaN(d.getTime())) setEditDueDate(d); else setEditDueDate(null); } catch (_) { setEditDueDate(null); }
-                        } else {
-                            setEditDueDate(null);
-                        }
-                        if (Array.isArray(updated.notifications)) {
-                            setEditNotifications(updated.notifications);
-                        }
-                        setEditRecurrence(updated.recurrence || null);
-                        // keep sticky pulsing even if editor opened (until user presses Stop)
-                    }
-                }
-
-                return merged;
-            });
-        });
-
-        // Create mouse and constraints for drag and drop
-        const mouse = Mouse.create(render.canvas);
-        const mouseConstraint = MouseConstraint.create(engine, {
-            mouse,
-            constraint: {
-                stiffness: 0.2,
-                render: {
-                    visible: false
-                }
-            }
-        });
-
-        World.add(engine.world, mouseConstraint);
-
-        // Click / tap handler for bubbles (robust against short drags)
-        let clickStartTime = 0;
-        let clickStartPos = { x: 0, y: 0 };
-        let downBodyId = null;
-
-        Events.on(mouseConstraint, 'mousedown', (event) => {
-            clickStartTime = Date.now();
-            clickStartPos = { ...event.mouse.position };
-            const bodies = engine.world.bodies.filter(b => b.label === 'Circle Body');
-            const hits = Query.point(bodies, clickStartPos);
-            downBodyId = hits && hits.length > 0 ? hits[0].id : null;
-        });
-
-        Events.on(mouseConstraint, 'mouseup', (event) => {
-            const clickDuration = Date.now() - clickStartTime;
-            const mousePosition = event.mouse.position;
-
-            const dx = mousePosition.x - clickStartPos.x;
-            const dy = mousePosition.y - clickStartPos.y;
-            const moveDistSq = dx * dx + dy * dy;
-
-            const durationThresholdMs = 450;
-            const moveThresholdSq = 100; // ~10px
-
-            if (clickDuration <= durationThresholdMs && moveDistSq <= moveThresholdSq) {
-                const bodies = engine.world.bodies.filter(b => b.label === 'Circle Body');
-                const upHits = Query.point(bodies, mousePosition);
-                const upBody = upHits && upHits.length > 0 ? upHits[0] : null;
-
-                const targetBodyId = upBody ? upBody.id : null;
-                if (targetBodyId && (!downBodyId || downBodyId === targetBodyId)) {
-                    setBubbles(currentBubblesState => {
-                        const clickedBubble = currentBubblesState.find(b => b.body.id === targetBodyId);
-                        if (clickedBubble) {
-                            setSelectedBubble(clickedBubble);
-                            setTitle(clickedBubble.title || '');
-                            setDescription(clickedBubble.description || '');
-                            setSelectedTagId(clickedBubble.tagId || '');
-                            setEditBubbleSize(clickedBubble.radius);
-                            setEditDialog(true);
-                        }
-                        return currentBubblesState;
-                    });
-                }
-            }
-            downBodyId = null;
-        });
-
-        // Start render and engine
-        Render.run(render);
-        const runner = Runner.create();
-        Runner.run(runner, engine);
-
-        // Resize sync is handled by useMatterResize hook
-
-        return () => {
-            // cleanup handled below; resize listeners removed by hook
-            Render.stop(render);
-            World.clear(engine.world);
-            Engine.clear(engine);
-            render.canvas.remove();
-            render.textures = {};
-            if (typeof unsubscribeBubbles === 'function') unsubscribeBubbles();
-        };
-    }, []); // Убираем themeMode из зависимостей
+    // Physics engine — initialised once on mount via hook
+    useMatterEngine({
+        canvasRef,
+        engineRef,
+        renderRef,
+        wallsRef,
+        stickyPulseRef,
+        lastDueRef,
+        manuallyStoppedPulsingRef,
+        editDialog,
+        selectedBubble,
+        setBubbles,
+        setCanvasSize,
+        setSelectedBubble,
+        setTitle,
+        setDescription,
+        setSelectedTagId,
+        setEditBubbleSize,
+        setEditDialog,
+        setEditDueDate,
+        setEditNotifications,
+        setEditRecurrence,
+        isMobile,
+        themeMode,
+        tags,
+        dropSpeed,
+        getBubbleFillStyle,
+        getCanvasSize,
+        parseLocalDateTime,
+    });
 
     // Перестраиваем размеры канваса и границы мира при ресайзе окна
     // и при переключении панели категорий — без перезагрузки страницы
@@ -756,7 +480,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 }
             });
         }
-    }, [themeMode, bubbles, tags]);
+    }, [themeMode, tags]);
 
     // Force TextOverlay re-render on theme change to update text opacity
     const [textOverlayKey, setTextOverlayKey] = useState(0);
@@ -817,27 +541,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         return () => unsubscribe();
     }, [user]);
 
-    // Синхронизация selectedCategory с фильтрами после загрузки тегов
+    // Инициализация настроек фильтра списка задач после загрузки тегов
     useEffect(() => {
         if (tags.length > 0) {
-            // Если на устройстве нет сохраненных настроек фильтра, выбираем все теги и показываем без тега
-            let savedFilterTags = localStorage.getItem('bubbles-filter-tags');
-            let savedShowNoTag = localStorage.getItem('bubbles-show-no-tag');
-
-            if (savedFilterTags === null && savedShowNoTag === null) {
-                const allTagIds = tags.map(tag => tag.id);
-                setFilterTags(allTagIds);
-                setShowNoTag(true);
-                setSelectedCategory('all');
-                localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-                localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-                savedFilterTags = JSON.stringify(allTagIds);
-                savedShowNoTag = JSON.stringify(true);
-            }
-
             // Тоже самое для настроек фильтра в списке задач
-            let savedListFilterTags = localStorage.getItem('bubbles-list-filter-tags');
-            let savedListShowNoTag = localStorage.getItem('bubbles-list-show-no-tag');
+            const savedListFilterTags = localStorage.getItem('bubbles-list-filter-tags');
+            const savedListShowNoTag = localStorage.getItem('bubbles-list-show-no-tag');
             if (savedListFilterTags === null && savedListShowNoTag === null) {
                 const allTagIds = tags.map(tag => tag.id);
                 setListFilterTags(allTagIds);
@@ -845,69 +554,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(allTagIds));
                 localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(true));
             }
-
-            if (bubbleViewPlannedTasksOnly) {
-                const allTagIds = tags.map((tag) => tag.id);
-                setFilterTags(allTagIds);
-                setShowNoTag(true);
-                setSelectedCategory('planned-tasks');
-                localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-                localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-            } else if (savedFilterTags && savedShowNoTag) {
-                const filterTags = JSON.parse(savedFilterTags);
-                const showNoTag = JSON.parse(savedShowNoTag);
-
-                // Если выбраны все теги и включен показ пузырей без тегов - это "all"
-                if (filterTags.length === tags.length && showNoTag) {
-                    setSelectedCategory('all');
-                }
-                // Если не выбраны теги, но включен показ пузырей без тегов - это "no-tags"
-                else if (filterTags.length === 0 && showNoTag) {
-                    setSelectedCategory('no-tags');
-                }
-                // Если выбран только один тег - это конкретная категория
-                else if (filterTags.length === 1 && !showNoTag) {
-                    setSelectedCategory(filterTags[0]);
-                }
-                // Если выбрано несколько тегов (но не все) — не выделяем категорию
-                else if (filterTags.length > 1) {
-                    setSelectedCategory(null);
-                }
-                // Если выбрано несколько тегов или другие комбинации - сбрасываем выбранную категорию
-                else {
-                    setSelectedCategory(null);
-                }
-            }
         }
-    }, [tags, bubbleViewPlannedTasksOnly]);
-
-    // Синхронизация selectedCategory при изменении фильтров
-    useEffect(() => {
-        if (tags.length > 0) {
-            // Если выбраны все теги и включен показ пузырей без тегов - это "all" или «Запланированные»
-            if (filterTags.length === tags.length && showNoTag) {
-                setSelectedCategory(bubbleViewPlannedTasksOnly ? 'planned-tasks' : 'all');
-            }
-            // Если не выбраны теги, но включен показ пузырей без тегов - это "no-tags"
-            else if (filterTags.length === 0 && showNoTag) {
-                setSelectedCategory('no-tags');
-            }
-            // Если выбран только один тег - это конкретная категория
-            else if (filterTags.length === 1 && !showNoTag) {
-                setSelectedCategory(filterTags[0]);
-            }
-            // Если выбрано несколько тегов (но не все) — не выделяем категорию
-            else if (filterTags.length > 1) {
-                setSelectedCategory(null);
-            }
-            // Если выбрано несколько тегов или другие комбинации - сбрасываем выбранную категорию
-            else {
-                setSelectedCategory(null);
-            }
-        }
-    }, [filterTags, showNoTag, tags, bubbleViewPlannedTasksOnly]);
-
-
+    }, [tags]);
 
     // При включении панели категорий оставляем текущие фильтры и выбранную категорию как есть
     // Выбор в панели определяется текущими filterTags/showNoTag
@@ -1289,10 +937,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         // Отключаем пульсацию при удалении даты
                         const shouldDisablePulsingOnDelete = !newDueDate && bubble.dueDate;
 
-                        // Очищаем флаг ручной остановки при изменении даты
-                        if (shouldDisablePulsing || shouldDisablePulsingOnDelete) {
+                        // Дата изменилась на будущую или удалена — начинаем новый цикл:
+                        // сбрасываем и in-memory флаг, и персистентный overduePulseSuppressed.
+                        const dateChanged = shouldDisablePulsing || shouldDisablePulsingOnDelete;
+                        if (dateChanged) {
                             manuallyStoppedPulsingRef.current.delete(bubble.id);
-                            console.log('📅 Date changed: Cleared manual stop flag for bubble:', bubble.id);
                         }
 
                         return {
@@ -1307,8 +956,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             notifications: editNotifications,
                             recurrence: editRecurrence,
                             // Отключаем пульсацию, если дата изменена на будущую или удалена
-                            overdueSticky: (shouldDisablePulsing || shouldDisablePulsingOnDelete) ? false : bubble.overdueSticky,
-                            overdueAt: (shouldDisablePulsing || shouldDisablePulsingOnDelete) ? null : bubble.overdueAt
+                            overdueSticky: dateChanged ? false : bubble.overdueSticky,
+                            overdueAt: dateChanged ? null : bubble.overdueAt,
+                            overduePulseSuppressed: dateChanged ? false : bubble.overduePulseSuppressed
                         };
                     }
                     return bubble;
@@ -1337,7 +987,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 const updatedBubbles = await markBubbleAsDeleted(selectedBubble.id, bubbles);
                 setBubbles(updatedBubbles);
             } catch (error) {
-                console.error('Error deleting bubble:', error);
+                logger.error('Error deleting bubble:', error);
             }
         }
         setEditDialog(false);
@@ -1442,7 +1092,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     setBubbles(updatedBubbles);
                 }
             } catch (error) {
-                console.error('Error marking bubble as done:', error);
+                logger.error('Error marking bubble as done:', error);
             }
         }
         setEditDialog(false);
@@ -1841,52 +1491,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         return parsed ? parsed < new Date() : false;
     };
 
-    const handleCategorySelect = (categoryId) => {
-        setSelectedCategory(categoryId);
-        // Панель не закрывается при выборе категории, если она постоянно включена
-
-        if (categoryId === 'all') {
-            setBubbleViewPlannedTasksOnly(false);
-            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
-            // Показываем все пузыри - устанавливаем все теги
-            const allTagIds = tags.map(tag => tag.id);
-            setFilterTags(allTagIds);
-            setShowNoTag(true);
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-        } else if (categoryId === 'planned-tasks') {
-            const allTagIds = tags.map(tag => tag.id);
-            setBubbleViewPlannedTasksOnly(true);
-            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(true));
-            setFilterTags(allTagIds);
-            setShowNoTag(true);
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-        } else if (categoryId === 'no-tags') {
-            setBubbleViewPlannedTasksOnly(false);
-            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
-            // Показываем только пузыри без тегов
-            setFilterTags([]);
-            setShowNoTag(true);
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify([]));
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-        } else {
-            setBubbleViewPlannedTasksOnly(false);
-            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
-            // Устанавливаем фильтр только на выбранную категорию
-            setFilterTags([categoryId]);
-            setShowNoTag(false); // Отключаем показ пузырей без тегов
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify([categoryId]));
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(false));
-        }
-    };
-
-    const handleToggleCategoriesPanel = () => {
-        const newValue = !categoriesPanelEnabled;
-        setCategoriesPanelEnabled(newValue);
-        localStorage.setItem('bubbles-categories-panel-enabled', JSON.stringify(newValue));
-    };
-
     // Функция выхода
     const handleLogout = () => {
         setLogoutDialog(true);
@@ -1911,6 +1515,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     const handleCloseInstructions = () => {
         setShowInstructions(false);
         localStorage.setItem('bubbles-show-instructions', 'false');
+    };
+
+    const handleToggleMainView = () => {
+        const next = mainView === 'tasks' ? 'bubbles' : 'tasks';
+        setMainView(next);
+        localStorage.setItem('bubbles-main-view', next);
     };
 
     const handleToggleBubbleBackground = () => {
@@ -1959,7 +1569,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         radius: bubble.radius,
                         title: bubble.title
                     }));
-                setPositions(newPositions);
+                setPositions(prev => {
+                    if (prev.length === newPositions.length && newPositions.every((p, i) =>
+                        prev[i] && Math.round(prev[i].x) === Math.round(p.x) && Math.round(prev[i].y) === Math.round(p.y)
+                    )) return prev;
+                    return newPositions;
+                });
             };
 
             // Увеличиваем интервал до 33мс (~30fps) для лучшей производительности
@@ -2052,12 +1667,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         );
     }, [getFilteredBubbles, bubbles, isMobile, fontSize, themeMode, foundBubblesIds, debouncedBubblesSearchQuery]);
 
-    // В начале компонента:
     const notifiedBubblesRef = useRef(new Set());
     const notifiedBubbleNotificationsRef = useRef(new Set()); // bubbleId:idx
-    const stickyPulseRef = useRef(new Set()); // keep pulsing after repeat-every reschedule
-    const lastDueRef = useRef(new Map());
-    const manuallyStoppedPulsingRef = useRef(new Set()); // задачи, которые пользователь остановил вручную
 
     // Keep pulsing even if editor opened; stop only by explicit Stop button
 
@@ -2142,6 +1753,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                 // Если открыт редактор этой бульбашки и включён Repeat — не мерцать
                 if (editDialog && selectedBubble && selectedBubble.id === bubble.id && bubble.recurrence) {
+                    if (Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
+                        const scale = bubble.radius / bubble.body.circleRadius;
+                        Matter.Body.scale(bubble.body, scale, scale);
+                    }
+                    const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
+                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    return;
+                }
+                // 0. Пользователь остановил пульсацию вручную — не мерцать,
+                // пока не изменится/не перенесётся dueDate (флаг сбрасывается отдельно).
+                if (bubble.overduePulseSuppressed || manuallyStoppedPulsingRef.current.has(bubble.id)) {
                     if (Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
                         const scale = bubble.radius / bubble.body.circleRadius;
                         Matter.Body.scale(bubble.body, scale, scale);
@@ -2274,8 +1896,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             setEditRecurrence(selectedBubble.recurrence || null);
             setUseRichTextEdit(!!selectedBubble.useRichText);
         }
-        // eslint-disable-next-line
-    }, [editDialog, selectedBubble?.id]);
+    }, [editDialog, selectedBubble]);
 
     const handleToggleEditUseRichText = (enabled) => {
         setUseRichTextEdit(!!enabled);
@@ -2301,9 +1922,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     // Внутри компонента:
     const [createNotifications, setCreateNotifications] = useState([]); // для создания
-    const [editNotifications, setEditNotifications] = useState([]); // для редактирования
     const [createRecurrence, setCreateRecurrence] = useState(null); // { every, unit }
-    const [editRecurrence, setEditRecurrence] = useState(null);
 
     // Stable callbacks for recurrence setters
     const handleSetCreateRecurrence = useCallback((value) => {
@@ -2331,8 +1950,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
     // Import data from JSON (replace existing)
     const handleImportJson = useCallback(async (data) => {
         try {
-            const importedTags = Array.isArray(data?.tags) ? data.tags : [];
-            const importedBubbles = Array.isArray(data?.bubbles) ? data.bubbles : [];
+            const importedTags = Array.isArray(data?.tags)
+                ? data.tags.map(sanitizeTag).filter(Boolean)
+                : [];
+            const importedBubbles = Array.isArray(data?.bubbles)
+                ? data.bubbles.map(sanitizeBubble).filter(Boolean)
+                : [];
 
             setTags(importedTags);
             await saveTagsToFirestore(importedTags);
@@ -2340,10 +1963,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             setBubbles(importedBubbles);
             await saveBubblesToFirestore(importedBubbles);
 
-            // Перезагружаем страницу после успешного импорта
+            // TODO: replace with proper React state + Matter.js reinit to avoid full page reload.
+            // Imported bubbles are plain objects without Matter.js .body references; the physics
+            // engine initialisation useEffect runs only once on mount, so a reload is required
+            // to reattach physics bodies to the freshly imported bubbles.
             window.location.reload();
         } catch (e) {
-            console.error('Import JSON failed', e);
+            logger.error('Import JSON failed', e);
         }
     }, []);
 
@@ -2361,6 +1987,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
         window.addEventListener('open-bubble', handleOpenBubble);
         return () => window.removeEventListener('open-bubble', handleOpenBubble);
         // eslint-disable-next-line
+        // Intentional: setSelectedBubble/setEditDialog are stable useState setters and do not
+        // need to be listed. bubbles is in the array so the handler always sees the latest list.
     }, [bubbles]);
 
     // Авто-открытие по URL-параметру (?bubbleId=...) даже если событие было пропущено
@@ -2381,6 +2009,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             // ignore
         }
         // eslint-disable-next-line
+        // Intentional: setSelectedBubble/setEditDialog are stable useState setters; deepLinkHandledRef
+        // is a ref — neither needs to be listed. bubbles is listed so the effect retries until loaded.
     }, [bubbles]);
 
     // Вспомогательная функция для вычисления offset в миллисекундах
@@ -2405,16 +2035,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
     return (
         <Box sx={{
-            width: (!isMobile && categoriesPanelEnabled) ? 'calc(100vw - 320px)' : '100vw',
+            width: (!isMobile && categoriesPanelEnabled && mainView === 'bubbles') ? 'calc(100vw - 320px)' : '100vw',
             height: '100vh',
             overflow: 'hidden',
             position: 'relative',
             background: theme.palette.background.bubbleView,
-            marginLeft: (!isMobile && categoriesPanelEnabled) ? '320px' : '0px',
+            marginLeft: (!isMobile && categoriesPanelEnabled && mainView === 'bubbles') ? '320px' : '0px',
             transition: 'margin-left 0.3s ease, width 0.3s ease'
         }}>
             {/* Заголовок и кнопки - адаптивный */}
-            {!isMobile ? (
+            {mainView === 'bubbles' && (!isMobile ? (
                 <>
                     <Box sx={{
                         position: 'absolute',
@@ -2522,12 +2152,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         </IconButton>
                     </Tooltip>
                 </Box>
-            )}
+            ))}
 
 
 
             {/* Мобильный селектор категорий */}
-            {isMobile && categoriesPanelEnabled && (
+            {mainView === 'bubbles' && isMobile && categoriesPanelEnabled && (
                 <Box sx={{
                     position: 'absolute',
                     top: 70,
@@ -2549,7 +2179,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             )}
 
             {/* Плавающие кнопки для мобильных устройств */}
-            {isMobile && (
+            {mainView === 'bubbles' && isMobile && (
                 <>
                     <Box
                         ref={fabRef}
@@ -2610,7 +2240,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             )}
 
             {/* Селектор языка и инструкции */}
-            {!isMobile ? (
+            {mainView === 'bubbles' && (!isMobile ? (
                 <Box sx={{
                     position: 'absolute',
                     top: 20,
@@ -2832,7 +2462,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         </Box>
                     )}
                 </>
-            )}
+            ))}
 
             {/* Canvas for physics */}
             <div ref={canvasRef} style={{
@@ -2845,6 +2475,81 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             }} />
             {/* Текст поверх пузырей */}
             <TextOverlay key={textOverlayKey} />
+
+            {/* Полноэкранный режим списка задач (canvas остаётся смонтированным под панелью) */}
+            {mainView === 'tasks' && (
+                <Paper elevation={16} square sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 1200,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                }}>
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        padding: '12px 16px',
+                        backgroundColor: 'primary.main',
+                        color: 'white',
+                        flexShrink: 0
+                    }}>
+                        <IconButton onClick={() => setMenuDrawerOpen(true)} sx={{ color: 'white' }}>
+                            <MenuIcon />
+                        </IconButton>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
+                            {t('bubbles.listView')}
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            onClick={openCreateDialog}
+                            startIcon={<Add />}
+                            sx={{
+                                background: 'rgba(255,255,255,0.2)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255,255,255,0.3)',
+                                color: 'white',
+                                '&:hover': { background: 'rgba(255,255,255,0.3)' }
+                            }}
+                        >
+                            {t('bubbles.addBubble')}
+                        </Button>
+                    </Box>
+                    <Box sx={{ flex: 1, overflow: 'auto' }}>
+                        <TaskList
+                            bubbles={bubbles}
+                            setBubbles={setBubbles}
+                            tags={tags}
+                            listFilter={listFilter}
+                            setListFilter={setListFilter}
+                            listSortBy={listSortBy}
+                            setListSortBy={setListSortBy}
+                            listSortOrder={listSortOrder}
+                            setListSortOrder={setListSortOrder}
+                            listFilterTags={listFilterTags}
+                            setListFilterTags={setListFilterTags}
+                            listShowNoTag={listShowNoTag}
+                            setListShowNoTag={setListShowNoTag}
+                            listSearchQuery={listSearchQuery}
+                            setListSearchQuery={setListSearchQuery}
+                            setSelectedBubble={setSelectedBubble}
+                            setTitle={setTitle}
+                            setDescription={setDescription}
+                            setSelectedTagId={setSelectedTagId}
+                            setEditDialog={setEditDialog}
+                            handleListTagFilterChange={handleListTagFilterChange}
+                            handleListNoTagFilterChange={handleListNoTagFilterChange}
+                            clearAllListFilters={clearAllListFilters}
+                            selectAllListFilters={selectAllListFilters}
+                            getBubbleCountByTagForListView={getBubbleCountByTagForListView}
+                            themeMode={themeMode}
+                            isAllListFiltersSelected={isAllListFiltersSelected()}
+                            onOpenFilterMenu={() => setFilterDrawerOpen(true)}
+                        />
+                    </Box>
+                </Paper>
+            )}
 
             {/* Диалог редактирования */}
             <EditBubbleDialog
@@ -2881,10 +2586,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                     try {
                         if (!selectedBubble) return;
 
-                        console.log('🛑 Stop pulsing clicked for bubble:', selectedBubble.id);
-                        console.log('Before stop - overdueSticky:', selectedBubble.overdueSticky);
-                        console.log('Before stop - stickyPulseRef has:', stickyPulseRef.current.has(selectedBubble.id));
-
                         // Очищаем локальные ссылки на пульсацию
                         stickyPulseRef.current.delete(selectedBubble.id);
                         notifiedBubblesRef.current.delete(selectedBubble.id);
@@ -2903,16 +2604,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                             notifiedBubbleNotificationsRef.current.delete(key);
                         });
 
-                        // Принудительно обновляем данные в Firebase, чтобы перезаписать overdueSticky
+                        // Персистим намерение «остановлено вручную» + сбрасываем серверный sticky-флаг
                         const updatedBubble = {
                             ...selectedBubble,
+                            overduePulseSuppressed: true,
                             overdueSticky: false,
                             overdueAt: null,
                             updatedAt: new Date().toISOString()
                         };
-
-                        console.log('After stop - updatedBubble.overdueSticky:', updatedBubble.overdueSticky);
-                        console.log('After stop - manuallyStoppedPulsingRef has:', manuallyStoppedPulsingRef.current.has(selectedBubble.id));
 
                         setBubbles(prev => {
                             const updated = prev.map(b => b.id === selectedBubble.id ? updatedBubble : b);
@@ -2924,7 +2623,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                         setEditDialog(false);
                         setSelectedBubble(null);
                     } catch (e) {
-                        console.error('Error stopping pulsing:', e);
+                        logger.error('Error stopping pulsing:', e);
                     }
                 }}
                 showStopPulsing={(() => {
@@ -2971,10 +2670,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
 
                         // Показываем кнопку Stop для задач с overdueSticky или в stickyPulseRef
                         if (selectedBubble.overdueSticky || stickyPulseRef.current.has(selectedBubble.id)) {
-                            console.log('🔘 Show stop button for bubble:', selectedBubble.id, {
-                                overdueSticky: selectedBubble.overdueSticky,
-                                inStickyPulseRef: stickyPulseRef.current.has(selectedBubble.id)
-                            });
                             return true;
                         }
 
@@ -3051,10 +2746,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
                 toggleTheme={toggleTheme}
                 bubbleBackgroundEnabled={bubbleBackgroundEnabled}
                 onToggleBubbleBackground={handleToggleBubbleBackground}
+                mainView={mainView}
+                onToggleMainView={handleToggleMainView}
                 categoriesPanelEnabled={categoriesPanelEnabled}
                 onToggleCategoriesPanel={handleToggleCategoriesPanel}
                 onOpenCategoriesDialog={() => setCategoriesDialog(true)}
                 onOpenFontSettingsDialog={() => setFontSettingsDialog(true)}
+                onOpenMindMap={onOpenMindMap}
                 onAbout={() => setAboutOpen(true)}
                 onLogout={handleLogout}
                 onExportJson={handleExportJson}
@@ -3202,7 +2900,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps }) => {
             />
 
             {/* Панель категорий - только для десктопа */}
-            {!isMobile && (
+            {mainView === 'bubbles' && !isMobile && (
                 <TasksCategoriesPanel
                     open={categoriesPanelEnabled}
                     onClose={() => setCategoriesPanelEnabled(false)}

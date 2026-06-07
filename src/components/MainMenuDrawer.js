@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import logger from '../utils/logger';
 import { Drawer, Box, Typography, List, ListItem, ListItemIcon, ListItemText, Divider, Switch } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,7 +12,9 @@ import {
     Logout,
     Sell,
     FileDownload,
-    FileUpload
+    FileUpload,
+    ViewListOutlined,
+    AccountTreeOutlined
 } from '@mui/icons-material';
 import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
@@ -25,10 +28,13 @@ const MainMenuDrawer = ({
     toggleTheme,
     bubbleBackgroundEnabled,
     onToggleBubbleBackground,
+    mainView,
+    onToggleMainView,
     categoriesPanelEnabled,
     onToggleCategoriesPanel,
     onOpenCategoriesDialog,
     onOpenFontSettingsDialog,
+    onOpenMindMap,
     onAbout,
     onLogout,
     onExportJson,
@@ -56,13 +62,13 @@ const MainMenuDrawer = ({
                     onClose();
                     onImportJson && onImportJson(parsed);
                 } catch (e) {
-                    console.error('Invalid JSON file', e);
+                    logger.error('Invalid JSON file', e);
                     // optionally, show UI feedback in future
                 }
             };
             reader.readAsText(file);
         } catch (e) {
-            console.error('Failed to import JSON', e);
+            logger.error('Failed to import JSON', e);
         }
     };
 
@@ -97,6 +103,25 @@ const MainMenuDrawer = ({
                 </Box>
 
                 <List sx={{ padding: 0 }}>
+                    <ListItem
+                        button
+                        onClick={() => {
+                            onClose();
+                            onOpenMindMap && onOpenMindMap();
+                        }}
+                        sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <AccountTreeOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={t('mindmap.title')}
+                            primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
+                        />
+                    </ListItem>
+
+                    <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
+
                     <ListItem
                         button
                         onClick={() => {
@@ -205,7 +230,32 @@ const MainMenuDrawer = ({
                         />
                     </ListItem>
 
+                    <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
+
                     <ListItem sx={{ padding: '16px 24px' }}>
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <ViewListOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        </ListItemIcon>
+                        <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500, marginBottom: 0.5 }}>
+                                {t('bubbles.mainViewTasks')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ display: 'block', color: themeMode === 'light' ? '#7F8C8D' : '#aaaaaa', marginBottom: 1, lineHeight: 1.3 }}>
+                                {t('bubbles.mainViewTasksDesc')}
+                            </Typography>
+                            <Switch
+                                checked={mainView === 'tasks'}
+                                onChange={onToggleMainView}
+                                size="small"
+                                sx={{
+                                    '& .MuiSwitch-switchBase.Mui-checked': { color: themeMode === 'light' ? '#3B7DED' : '#90CAF9' },
+                                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: themeMode === 'light' ? '#3B7DED' : '#90CAF9' }
+                                }}
+                            />
+                        </Box>
+                    </ListItem>
+
+                    <ListItem sx={{ padding: '16px 24px', opacity: mainView === 'tasks' ? 0.5 : 1 }}>
                         <ListItemIcon sx={{ minWidth: 40 }}>
                             <FormatColorFillOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                         </ListItemIcon>
@@ -216,6 +266,7 @@ const MainMenuDrawer = ({
                             <Switch
                                 checked={bubbleBackgroundEnabled}
                                 onChange={onToggleBubbleBackground}
+                                disabled={mainView === 'tasks'}
                                 size="small"
                                 sx={{
                                     '& .MuiSwitch-switchBase.Mui-checked': { color: themeMode === 'light' ? '#3B7DED' : '#90CAF9' },
@@ -225,7 +276,7 @@ const MainMenuDrawer = ({
                         </Box>
                     </ListItem>
 
-                    <ListItem sx={{ padding: '16px 24px' }}>
+                    <ListItem sx={{ padding: '16px 24px', opacity: mainView === 'tasks' ? 0.5 : 1 }}>
                         <ListItemIcon sx={{ minWidth: 40 }}>
                             <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                         </ListItemIcon>
@@ -236,6 +287,7 @@ const MainMenuDrawer = ({
                             <Switch
                                 checked={categoriesPanelEnabled}
                                 onChange={onToggleCategoriesPanel}
+                                disabled={mainView === 'tasks'}
                                 size="small"
                                 sx={{
                                     '& .MuiSwitch-switchBase.Mui-checked': { color: themeMode === 'light' ? '#3B7DED' : '#90CAF9' },

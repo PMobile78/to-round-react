@@ -20,38 +20,20 @@ import Blockquote from '@tiptap/extension-blockquote';
 import HorizontalRule from '@tiptap/extension-horizontal-rule';
 import {
     Box,
-    IconButton,
-    Tooltip,
-    Divider,
-    useTheme,
-    useMediaQuery,
     Switch,
     FormControlLabel,
     Typography
 } from '@mui/material';
 import {
-    FormatBold,
-    FormatItalic,
-    FormatUnderlined,
-    FormatStrikethrough,
-    FormatListBulleted,
-    FormatListNumbered,
-    FormatAlignLeft,
-    FormatAlignCenter,
-    FormatAlignRight,
-    FormatAlignJustify,
-    Highlight as HighlightIcon,
-    Palette,
     TextFields,
-    Code,
-    CheckBox,
-    Link as LinkIcon,
-    Image as ImageIcon,
-    TableChart,
-    DataObject as CodeBlockIcon,
-    FormatQuote,
-    HorizontalRule as HorizontalRuleIcon
+    Code
 } from '@mui/icons-material';
+import RichTextToolbar from './RichTextToolbar';
+import { useEditorResize } from '../hooks/useEditorResize';
+
+// ---------------------------------------------------------------------------
+// Utility helpers
+// ---------------------------------------------------------------------------
 
 function htmlToPlainText(html) {
     if (!html || typeof html !== 'string') return '';
@@ -60,7 +42,7 @@ function htmlToPlainText(html) {
     try {
         if (typeof window !== 'undefined' && typeof DOMParser !== 'undefined') {
             const doc = new DOMParser().parseFromString(html, 'text/html');
-            const text = (doc.body?.textContent || '').replace(/\u00a0/g, ' ').trim();
+            const text = (doc.body?.textContent || '').replace(/ /g, ' ').trim();
             return text;
         }
     } catch (_) { /* ignore */ }
@@ -84,6 +66,56 @@ function plainToRichHtml(value) {
     return `<p>${escapeHtmlPlain(t).replace(/\r\n/g, '\n').replace(/\n/g, '<br>')}</p>`;
 }
 
+// ---------------------------------------------------------------------------
+// TipTap extension configuration
+// ---------------------------------------------------------------------------
+
+function createExtensions(placeholder) {
+    return [
+        StarterKit,
+        Placeholder.configure({
+            placeholder,
+        }),
+        TextAlign.configure({
+            types: ['heading', 'paragraph'],
+        }),
+        Underline,
+        TextStyle,
+        Color,
+        Highlight.configure({
+            multicolor: true,
+        }),
+        TaskList,
+        TaskItem.configure({
+            nested: true,
+        }),
+        Link.configure({
+            openOnClick: false,
+            HTMLAttributes: {
+                class: 'rich-text-link',
+            },
+        }),
+        Image.configure({
+            HTMLAttributes: {
+                class: 'rich-text-image',
+            },
+        }),
+        Table.configure({
+            resizable: true,
+        }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        CodeBlock,
+        Blockquote,
+        HorizontalRule,
+    ];
+}
+
+// ---------------------------------------------------------------------------
+// TipTapRichEditor — inner editor component
+// ---------------------------------------------------------------------------
+
 function TipTapRichEditor({
     value = '',
     onChange,
@@ -92,96 +124,13 @@ function TipTapRichEditor({
     themeMode = 'light',
     t
 }) {
-    const theme = useTheme();
-    const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
-
-    // Custom resize (especially for mobile): height in px
-    const [editorHeight, setEditorHeight] = React.useState(300);
-    const dragInfoRef = React.useRef({ startY: 0, startHeight: 300, active: false });
-
-    const stopGlobalDragListeners = React.useCallback(() => {
-        window.removeEventListener('mousemove', handleDragMove);
-        window.removeEventListener('mouseup', handleDragEnd);
-        window.removeEventListener('touchmove', handleDragMove, { passive: false });
-        window.removeEventListener('touchend', handleDragEnd);
-    }, []);
-
-    const handleDragEnd = React.useCallback(() => {
-        dragInfoRef.current.active = false;
-        stopGlobalDragListeners();
-    }, [stopGlobalDragListeners]);
-
-    const handleDragMove = React.useCallback((e) => {
-        if (!dragInfoRef.current.active) return;
-        const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
-        if (typeof clientY !== 'number') return;
-        if (e.cancelable) {
-            e.preventDefault();
-        }
-        const delta = clientY - dragInfoRef.current.startY;
-        const next = Math.max(180, Math.min(900, dragInfoRef.current.startHeight + delta));
-        setEditorHeight(next);
-    }, []);
-
-    const handleDragStart = React.useCallback((e) => {
-        const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
-        if (typeof clientY !== 'number') return;
-        dragInfoRef.current.startY = clientY;
-        dragInfoRef.current.startHeight = editorHeight;
-        dragInfoRef.current.active = true;
-        window.addEventListener('mousemove', handleDragMove);
-        window.addEventListener('mouseup', handleDragEnd);
-        window.addEventListener('touchmove', handleDragMove, { passive: false });
-        window.addEventListener('touchend', handleDragEnd);
-    }, [editorHeight, handleDragEnd, handleDragMove]);
-
-    React.useEffect(() => {
-        return () => stopGlobalDragListeners();
-    }, [stopGlobalDragListeners]);
+    const { editorHeight, handleDragStart } = useEditorResize(300);
 
     const onChangeRef = React.useRef(onChange);
     onChangeRef.current = onChange;
 
     const editor = useEditor({
-        extensions: [
-            StarterKit,
-            Placeholder.configure({
-                placeholder,
-            }),
-            TextAlign.configure({
-                types: ['heading', 'paragraph'],
-            }),
-            Underline,
-            TextStyle,
-            Color,
-            Highlight.configure({
-                multicolor: true,
-            }),
-            TaskList,
-            TaskItem.configure({
-                nested: true,
-            }),
-            Link.configure({
-                openOnClick: false,
-                HTMLAttributes: {
-                    class: 'rich-text-link',
-                },
-            }),
-            Image.configure({
-                HTMLAttributes: {
-                    class: 'rich-text-image',
-                },
-            }),
-            Table.configure({
-                resizable: true,
-            }),
-            TableRow,
-            TableHeader,
-            TableCell,
-            CodeBlock,
-            Blockquote,
-            HorizontalRule,
-        ],
+        extensions: createExtensions(placeholder),
         content: '',
         onUpdate: ({ editor }) => {
             onChangeRef.current(editor.getHTML());
@@ -253,23 +202,23 @@ function TipTapRichEditor({
             .ProseMirror br {
                 caret-color: ${caretColor} !important;
             }
-            
+
             /* Убираем отступы между элементами */
             .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            
+
             .ProseMirror ul, .ProseMirror ol {
                 margin: 0 !important;
                 padding-left: 1.5em !important;
             }
-            
+
             .ProseMirror li {
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            
+
             /* Стили для TaskList */
             .ProseMirror ul[data-type="taskList"] {
                 list-style: none;
@@ -298,7 +247,7 @@ function TipTapRichEditor({
                 margin: 0;
                 vertical-align: middle;
             }
-            
+
             /* Стили для ссылок */
             .ProseMirror .rich-text-link {
                 color: #1976d2;
@@ -308,7 +257,7 @@ function TipTapRichEditor({
             .ProseMirror .rich-text-link:hover {
                 text-decoration: none;
             }
-            
+
             /* Стили для изображений */
             .ProseMirror .rich-text-image {
                 max-width: 100%;
@@ -316,7 +265,7 @@ function TipTapRichEditor({
                 display: block;
                 margin: 1rem 0;
             }
-            
+
             /* Стили для таблиц */
             .ProseMirror table {
                 border-collapse: collapse;
@@ -338,7 +287,7 @@ function TipTapRichEditor({
                 text-align: left;
                 background-color: #f1f3f4;
             }
-            
+
             /* Стили для блока кода */
             .ProseMirror pre {
                 background: #0d1117;
@@ -355,7 +304,7 @@ function TipTapRichEditor({
                 background: none;
                 font-size: 0.8rem;
             }
-            
+
             /* Стили для цитат */
             .ProseMirror blockquote {
                 padding-left: 1rem;
@@ -364,7 +313,7 @@ function TipTapRichEditor({
                 margin-right: 0;
                 font-style: italic;
             }
-            
+
             /* Стили для горизонтальной линии */
             .ProseMirror hr {
                 border: none;
@@ -387,299 +336,6 @@ function TipTapRichEditor({
         return null;
     }
 
-    const MenuBar = () => {
-        const buttonSize = isSmallScreen ? 'small' : 'medium';
-        const iconSize = isSmallScreen ? 18 : 20;
-
-        return (
-            <Box sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 0.5,
-                padding: 1,
-                borderBottom: `1px solid ${themeMode === 'light' ? '#e0e0e0' : '#444'}`,
-                backgroundColor: themeMode === 'light' ? '#f5f5f5' : '#2a2a2a',
-                borderRadius: '4px 4px 0 0'
-            }}>
-                {/* Text Formatting */}
-                <Tooltip title={t?.('categories.richTextEditor.bold') || 'Bold'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().toggleBold().run()}
-                        disabled={!editor.can().chain().focus().toggleBold().run()}
-                        sx={{
-                            color: editor.isActive('bold') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatBold sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.italic') || 'Italic'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().toggleItalic().run()}
-                        disabled={!editor.can().chain().focus().toggleItalic().run()}
-                        sx={{
-                            color: editor.isActive('italic') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatItalic sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.underline') || 'Underline'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().toggleUnderline().run()}
-                        sx={{
-                            color: editor.isActive('underline') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatUnderlined sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.strikethrough') || 'Strikethrough'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().toggleStrike().run()}
-                        sx={{
-                            color: editor.isActive('strike') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatStrikethrough sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-
-                {/* Lists */}
-                <Tooltip title={t?.('categories.richTextEditor.bulletList') || 'Bullet List'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().toggleBulletList().run()}
-                        sx={{
-                            color: editor.isActive('bulletList') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatListBulleted sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.numberedList') || 'Numbered List'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                        sx={{
-                            color: editor.isActive('orderedList') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatListNumbered sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.taskList') || 'Task List'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().toggleTaskList().run()}
-                        sx={{
-                            color: editor.isActive('taskList') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <CheckBox sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-
-                {/* Text Alignment */}
-                <Tooltip title={t?.('categories.richTextEditor.alignLeft') || 'Align Left'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                        sx={{
-                            color: editor.isActive({ textAlign: 'left' }) ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatAlignLeft sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.alignCenter') || 'Align Center'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                        sx={{
-                            color: editor.isActive({ textAlign: 'center' }) ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatAlignCenter sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.alignRight') || 'Align Right'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().setTextAlign('right').run()}
-                        sx={{
-                            color: editor.isActive({ textAlign: 'right' }) ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatAlignRight sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.alignJustify') || 'Align Justify'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-                        sx={{
-                            color: editor.isActive({ textAlign: 'justify' }) ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatAlignJustify sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-
-                {/* Highlight */}
-                <Tooltip title={t?.('categories.richTextEditor.highlight') || 'Highlight'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().toggleHighlight().run()}
-                        sx={{
-                            color: editor.isActive('highlight') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <HighlightIcon sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.textColor') || 'Text Color'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => {
-                            const color = prompt(t?.('categories.richTextEditor.enterColor') || 'Enter color (e.g.: #ff0000 or red):', '#000000');
-                            if (color) {
-                                editor.chain().focus().setColor(color).run();
-                            }
-                        }}
-                        sx={{
-                            color: editor.isActive('textStyle') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <Palette sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-
-                {/* Additional Tools */}
-                <Tooltip title={t?.('categories.richTextEditor.link') || 'Link'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => {
-                            const url = prompt(t?.('categories.richTextEditor.enterUrl') || 'Enter URL:', 'https://');
-                            if (url) {
-                                editor.chain().focus().setLink({ href: url }).run();
-                            }
-                        }}
-                        sx={{
-                            color: editor.isActive('link') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <LinkIcon sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.image') || 'Image'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => {
-                            const url = prompt(t?.('categories.richTextEditor.enterImageUrl') || 'Enter image URL:', 'https://');
-                            if (url) {
-                                editor.chain().focus().setImage({ src: url }).run();
-                            }
-                        }}
-                        sx={{
-                            color: editor.isActive('image') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <ImageIcon sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.table') || 'Table'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-                        sx={{
-                            color: editor.isActive('table') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <TableChart sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.codeBlock') || 'Code Block'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-                        sx={{
-                            color: editor.isActive('codeBlock') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <CodeBlockIcon sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.blockquote') || 'Quote'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-                        sx={{
-                            color: editor.isActive('blockquote') ? 'primary.main' : 'inherit',
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <FormatQuote sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip title={t?.('categories.richTextEditor.horizontalRule') || 'Horizontal Line'}>
-                    <IconButton
-                        size={buttonSize}
-                        onClick={() => editor.chain().focus().setHorizontalRule().run()}
-                        sx={{
-                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
-                        }}
-                    >
-                        <HorizontalRuleIcon sx={{ fontSize: iconSize }} />
-                    </IconButton>
-                </Tooltip>
-            </Box>
-        );
-    };
-
     return (
         <Box sx={{
             border: `1px solid ${themeMode === 'light' ? '#ccc' : '#555'}`,
@@ -692,7 +348,7 @@ function TipTapRichEditor({
             display: 'flex',
             flexDirection: 'column'
         }}>
-            <MenuBar />
+            <RichTextToolbar editor={editor} t={t} themeMode={themeMode} />
                 <Box sx={{
                     flex: 1,
                     minHeight: 0,
@@ -786,7 +442,11 @@ function TipTapRichEditor({
                 )}
             </Box>
     );
-};
+}
+
+// ---------------------------------------------------------------------------
+// RichTextEditor — outer component with plain/rich toggle
+// ---------------------------------------------------------------------------
 
 /** Переключение обычного текста и Rich (TipTap). */
 export default function RichTextEditor({
@@ -893,4 +553,3 @@ export default function RichTextEditor({
         </Box>
     );
 }
-

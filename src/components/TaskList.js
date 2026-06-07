@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback, useEffect } from 'react';
+import logger from '../utils/logger';
 import {
     Box,
     Typography,
@@ -282,7 +283,7 @@ const TaskList = ({
             const updatedBubbles = await restoreBubble(bubbleId, bubbles);
             setBubbles(updatedBubbles);
         } catch (error) {
-            console.error('Error restoring bubble:', error);
+            logger.error('Error restoring bubble:', error);
         }
     }, [bubbles, setBubbles]);
 
@@ -292,7 +293,7 @@ const TaskList = ({
             const updatedBubbles = await markBubbleAsDone(taskId, bubbles);
             setBubbles(updatedBubbles);
         } catch (error) {
-            console.error('Error marking task as done:', error);
+            logger.error('Error marking task as done:', error);
         }
     }, [bubbles, setBubbles]);
 
@@ -302,7 +303,7 @@ const TaskList = ({
             const updatedBubbles = await markBubbleAsDeleted(taskId, bubbles);
             setBubbles(updatedBubbles);
         } catch (error) {
-            console.error('Error deleting task:', error);
+            logger.error('Error deleting task:', error);
         }
     }, [bubbles, setBubbles]);
 
@@ -313,7 +314,7 @@ const TaskList = ({
             setBubbles(updatedBubbles);
             saveBubblesToFirestore(updatedBubbles);
         } catch (error) {
-            console.error('Error permanently deleting task:', error);
+            logger.error('Error permanently deleting task:', error);
         }
     }, [bubbles, setBubbles]);
 

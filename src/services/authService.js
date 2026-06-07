@@ -7,6 +7,22 @@ import {
     updateProfile
 } from 'firebase/auth';
 import { auth } from '../firebase';
+import logger from '../utils/logger';
+
+const firebaseErrorMessages = {
+    'auth/user-not-found': 'User not found.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/email-already-in-use': 'Email is already registered.',
+    'auth/weak-password': 'Password is too weak.',
+    'auth/invalid-email': 'Invalid email address.',
+    'auth/too-many-requests': 'Too many attempts. Please try again later.',
+    'auth/network-request-failed': 'Network error. Please check your connection.',
+    'auth/popup-closed-by-user': 'Sign-in popup was closed.',
+};
+
+const mapFirebaseError = (error) => {
+    return firebaseErrorMessages[error.code] || 'An unexpected error occurred.';
+};
 
 // Create new user
 export const createUser = async (email, password, displayName = '') => {
@@ -21,8 +37,8 @@ export const createUser = async (email, password, displayName = '') => {
 
         return { success: true, user };
     } catch (error) {
-        console.error('Error creating user:', error);
-        return { success: false, error: error.message };
+        logger.error('Error creating user:', error);
+        return { success: false, error: mapFirebaseError(error) };
     }
 };
 
@@ -33,19 +49,25 @@ export const loginUser = async (email, password) => {
         const user = userCredential.user;
         return { success: true, user };
     } catch (error) {
-        console.error('Error logging in:', error);
-        return { success: false, error: error.message };
+        logger.error('Error logging in:', error);
+        return { success: false, error: mapFirebaseError(error) };
     }
 };
 
 // User logout
 export const logoutUser = async () => {
     try {
+        const uid = auth.currentUser?.uid;
         await signOut(auth);
+        // Clear user-specific localStorage data after sign-out
+        if (uid) {
+            localStorage.removeItem(`bubbles_${uid}`);
+            localStorage.removeItem(`tags_${uid}`);
+        }
         return { success: true };
     } catch (error) {
-        console.error('Error logging out:', error);
-        return { success: false, error: error.message };
+        logger.error('Error logging out:', error);
+        return { success: false, error: mapFirebaseError(error) };
     }
 };
 
@@ -55,8 +77,8 @@ export const resetPassword = async (email) => {
         await sendPasswordResetEmail(auth, email);
         return { success: true };
     } catch (error) {
-        console.error('Error sending password reset email:', error);
-        return { success: false, error: error.message };
+        logger.error('Error sending password reset email:', error);
+        return { success: false, error: mapFirebaseError(error) };
     }
 };
 

@@ -17,7 +17,7 @@ const uk = require('./locales/notifications.uk.json');
 async function fetchAllUserBubbles() {
     // Try normalized schema via collectionGroup first
     const grouped = new Map(); // userId -> bubbles[]
-    const cg = await db.collectionGroup('bubbles').get();
+    const cg = await db.collectionGroup('bubbles').where('status', '==', 'active').get();
     cg.forEach((d) => {
         const parentUserDoc = d.ref.parent.parent; // user-bubbles/{uid}
         const userId = parentUserDoc?.id;
@@ -86,8 +86,7 @@ function buildTextsPerLang(tokenLanguage, type, minutesBefore, bubbleTitle) {
     };
 }
 
-async function sendFcmToUser(userId, payload) {
-    const tokens = await getUserFcmTokens(userId);
+async function sendFcmToUser(userId, payload, tokens) {
     if (!tokens.length) return { skipped: true, reason: 'no-token' };
 
     const url = payload?.data?.url;
@@ -96,10 +95,9 @@ async function sendFcmToUser(userId, payload) {
     const bubbleTitle = payload?.data?.bubbleTitle || '';
 
     const results = [];
-    for (const { id, token } of tokens) {
+    for (const { id, token, language } of tokens) {
         try {
-            const tokenObj = tokens.find(t => t.token === token);
-            const { title, body } = buildTextsPerLang(tokenObj?.language, type, minutesBefore, bubbleTitle);
+            const { title, body } = buildTextsPerLang(language, type, minutesBefore, bubbleTitle);
             await admin.messaging().send({
                 token,
                 data: Object.assign({}, payload.data || {}, { title, body }),
@@ -242,6 +240,24 @@ async function markNotificationSent(key) {
     await ref.set({ sentAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 }
 
+// Clean up notification-sent entries older than 7 days to prevent unbounded collection growth
+async function cleanupOldNotificationSent() {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const old = await db.collection('notification-sent')
+        .where('sentAt', '<=', cutoff)
+        .get();
+    if (old.empty) return;
+    const BATCH_SIZE = 500;
+    const docsToDelete = old.docs;
+    for (let i = 0; i < docsToDelete.length; i += BATCH_SIZE) {
+        const chunk = docsToDelete.slice(i, i + BATCH_SIZE);
+        const batch = db.batch();
+        chunk.forEach((doc) => batch.delete(doc.ref));
+        await batch.commit();
+    }
+    console.log(`Cleaned up ${old.size} old notification-sent entries`);
+}
+
 function buildReminderKey(userId, bubble, minutesBefore) {
     return `reminder:${userId}:${String(bubble.id)}:${String(minutesBefore)}:${String(bubble.dueDate)}`;
 }
@@ -355,9 +371,22 @@ exports.scheduleDueDateNotifications = onSchedule({
     region: 'europe-west1'
 }, async (event) => {
     const now = new Date();
+
+    // Run cleanup once per hour (on the 0-minute of each hour)
+    if (now.getMinutes() === 0) {
+        try {
+            await cleanupOldNotificationSent();
+        } catch (e) {
+            console.error('cleanupOldNotificationSent error', e);
+        }
+    }
+
     const users = await fetchAllUserBubbles();
 
-    for (const { userId, bubbles } of users) {
+    await Promise.all(users.map(async ({ userId, bubbles }) => {
+        try {
+        const tokens = await getUserFcmTokens(userId);
+
         for (const bubble of bubbles) {
             if (!bubble || bubble.status !== 'active') continue;
 
@@ -376,7 +405,7 @@ exports.scheduleDueDateNotifications = onSchedule({
                                 url,
                                 bubbleTitle: String(bubble.title || '')
                             }
-                        });
+                        }, tokens);
                         await markNotificationSent(key);
                     }
                 } catch (e) {
@@ -387,6 +416,35 @@ exports.scheduleDueDateNotifications = onSchedule({
 
             // 2) Overdue notification
             if (isBubbleOverdue(bubble)) {
+                // Пользователь вручную остановил пульсацию для текущего dueDate.
+                // Не шлём overdue-уведомление и не возвращаем overdueSticky обратно.
+                if (bubble.overduePulseSuppressed) {
+                    try {
+                        // Повторяющуюся задачу продвигаем сразу на ближайшее БУДУЩЕЕ вхождение
+                        // (пропуская весь «хвост» просрочки), чтобы остановка реально молчала
+                        // до следующего настоящего срока, и сбрасываем подавление вместе со
+                        // сменой даты — это уже новое вхождение.
+                        if (bubble.recurrence && bubble.dueDate) {
+                            const currentDue = parseLocalDateTime(bubble.dueDate) || new Date(bubble.dueDate);
+                            let nextDue = computeNextDueDate(currentDue, bubble.recurrence);
+                            let guard = 0;
+                            while (nextDue && nextDue.getTime() <= now.getTime() && guard < 100000) {
+                                const advanced = computeNextDueDate(nextDue, bubble.recurrence);
+                                if (!advanced || advanced.getTime() <= nextDue.getTime()) break; // нет прогресса — выходим
+                                nextDue = advanced;
+                                guard++;
+                            }
+                            if (nextDue) {
+                                await updateBubbleDueDate(userId, bubble.id, nextDue);
+                                await updateBubbleFields(userId, bubble.id, { overdueSticky: false, overdueAt: null, overduePulseSuppressed: false });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Suppressed reschedule error', userId, bubble.id, e);
+                    }
+                    continue;
+                }
+
                 const key = buildOverdueKey(userId, bubble);
                 try {
                     if (!(await wasNotificationSent(key))) {
@@ -398,7 +456,7 @@ exports.scheduleDueDateNotifications = onSchedule({
                                 url,
                                 bubbleTitle: String(bubble.title || '')
                             }
-                        });
+                        }, tokens);
                         await markNotificationSent(key);
                     }
                     // mark overdue in Firestore (sticky pulse across devices) - только если overdueSticky еще не установлен
@@ -427,7 +485,10 @@ exports.scheduleDueDateNotifications = onSchedule({
                 }
             }
         }
-    }
+        } catch (e) {
+            console.error('Error processing user', userId, e);
+        }
+    }));
 
     return null;
 });
