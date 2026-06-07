@@ -13,17 +13,48 @@ const genId = () => {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
-const createDefaultMap = (title) => {
-    const rootId = genId();
-    return {
+const createDefaultMap = (title, engine = 'custom') => {
+    const now = new Date().toISOString();
+    const rootTopic = title || 'Central idea';
+    const base = {
         id: genId(),
         title: title || 'Untitled',
+        engine,
+        createdAt: now,
+        updatedAt: now
+    };
+
+    if (engine === 'reactflow') {
+        const flow = {
+            nodes: [
+                {
+                    id: genId(),
+                    type: 'mindNode',
+                    position: { x: 0, y: 0 },
+                    data: { label: rootTopic, color: '#2C3E50', shape: 'rounded' }
+                }
+            ],
+            edges: []
+        };
+        return { ...base, engineData: JSON.stringify(flow) };
+    }
+
+    if (engine === 'mindelixir') {
+        // Matches the shape produced by MindElixir.new(topic).
+        const data = { nodeData: { id: genId(), topic: rootTopic, children: [] } };
+        return { ...base, engineData: JSON.stringify(data) };
+    }
+
+    // custom
+    const rootId = genId();
+    return {
+        ...base,
         rootId,
         nodes: [
             {
                 id: rootId,
                 parentId: null,
-                text: title || 'Central idea',
+                text: rootTopic,
                 x: 0,
                 y: 0,
                 color: '#2C3E50',
@@ -36,9 +67,7 @@ const createDefaultMap = (title) => {
                 lineWidth: 8,
                 collapsed: false
             }
-        ],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        ]
     };
 };
 
@@ -83,8 +112,8 @@ export const useMindmaps = () => {
         return saveMindmap(map);
     }, []);
 
-    const createMap = useCallback((title) => {
-        const map = createDefaultMap(title);
+    const createMap = useCallback((title, engine = 'custom') => {
+        const map = createDefaultMap(title, engine);
         setMaps((prev) => [map, ...prev]);
         setCurrentMapId(map.id);
         persistNow(map);

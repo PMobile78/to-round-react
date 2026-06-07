@@ -55,14 +55,30 @@ const sanitizeNode = (node) => ({
     collapsed: !!node.collapsed
 });
 
-const sanitizeMap = (map) => ({
-    id: String(map.id),
-    title: typeof map.title === 'string' ? map.title : '',
-    rootId: map.rootId != null ? String(map.rootId) : null,
-    nodes: Array.isArray(map.nodes) ? map.nodes.map(sanitizeNode) : [],
-    createdAt: map.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-});
+export const MINDMAP_ENGINES = ['custom', 'reactflow', 'mindelixir'];
+
+const sanitizeMap = (map) => {
+    const engine = MINDMAP_ENGINES.includes(map.engine) ? map.engine : 'custom';
+    const base = {
+        id: String(map.id),
+        title: typeof map.title === 'string' ? map.title : '',
+        engine,
+        createdAt: map.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    if (engine === 'custom') {
+        return {
+            ...base,
+            rootId: map.rootId != null ? String(map.rootId) : null,
+            nodes: Array.isArray(map.nodes) ? map.nodes.map(sanitizeNode) : []
+        };
+    }
+    // reactflow / mindelixir: opaque engine-native data stored as a JSON string.
+    return {
+        ...base,
+        engineData: typeof map.engineData === 'string' ? map.engineData : ''
+    };
+};
 
 const lsKey = (uid) => `mindmaps_${uid}`;
 

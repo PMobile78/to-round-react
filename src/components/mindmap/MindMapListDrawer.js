@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
 import {
     Drawer, Box, Typography, List, ListItemButton, ListItemText, IconButton,
-    Button, TextField, Divider
+    Button, TextField, Divider, ToggleButton, ToggleButtonGroup, Chip
 } from '@mui/material';
 import { Add, DeleteOutline, AccountTree } from '@mui/icons-material';
+
+const ENGINE_LABELS = {
+    custom: 'engineCustom',
+    reactflow: 'engineReactFlow',
+    mindelixir: 'engineMindElixir'
+};
 
 const MindMapListDrawer = ({
     open, onClose, isMobile, themeMode, maps, currentMapId, onSelect, onCreate, onDelete, t
 }) => {
     const [newTitle, setNewTitle] = useState('');
+    const [engine, setEngine] = useState('custom');
 
     const handleCreate = () => {
         const title = newTitle.trim() || t('mindmap.untitled');
-        onCreate(title);
+        onCreate(title, engine);
         setNewTitle('');
     };
 
@@ -49,6 +56,22 @@ const MindMapListDrawer = ({
                         {t('mindmap.create')}
                     </Button>
                 </Box>
+                <Box sx={{ mt: 1.5 }}>
+                    <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: 'text.secondary' }}>
+                        {t('mindmap.engine')}
+                    </Typography>
+                    <ToggleButtonGroup
+                        size="small"
+                        exclusive
+                        value={engine}
+                        onChange={(e, v) => v && setEngine(v)}
+                        fullWidth
+                    >
+                        <ToggleButton value="custom">{t('mindmap.engineCustom')}</ToggleButton>
+                        <ToggleButton value="reactflow">{t('mindmap.engineReactFlow')}</ToggleButton>
+                        <ToggleButton value="mindelixir">{t('mindmap.engineMindElixir')}</ToggleButton>
+                    </ToggleButtonGroup>
+                </Box>
             </Box>
 
             <Divider />
@@ -74,7 +97,15 @@ const MindMapListDrawer = ({
                                 fontWeight: m.id === currentMapId ? 600 : 400,
                                 noWrap: true
                             }}
-                            secondary={`${(m.nodes || []).length} ${t('mindmap.nodes')}`}
+                            secondary={
+                                <Chip
+                                    label={t(`mindmap.${ENGINE_LABELS[m.engine] || 'engineCustom'}`)}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ height: 18, fontSize: 11, mt: 0.5 }}
+                                />
+                            }
+                            secondaryTypographyProps={{ component: 'div' }}
                         />
                         <IconButton
                             edge="end"

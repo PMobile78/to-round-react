@@ -4,6 +4,8 @@ import { ArrowBack, MenuOpen, AddCircleOutline } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useMindmaps } from '../hooks/useMindmaps';
 import MindMapCanvas from '../components/mindmap/MindMapCanvas';
+import ReactFlowEngine from '../components/mindmap/engines/ReactFlowEngine';
+import MindElixirEngine from '../components/mindmap/engines/MindElixirEngine';
 import MindMapListDrawer from '../components/mindmap/MindMapListDrawer';
 
 const MindMapPage = ({ onBack, themeMode = 'light' }) => {
@@ -37,6 +39,46 @@ const MindMapPage = ({ onBack, themeMode = 'light' }) => {
     const handleNodesChange = (nodes) => {
         if (!currentMap) return;
         updateMap(currentMap.id, (m) => ({ ...m, nodes }));
+    };
+
+    const handleEngineDataChange = (engineData) => {
+        if (!currentMap) return;
+        updateMap(currentMap.id, (m) => ({ ...m, engineData }));
+    };
+
+    const renderEngine = () => {
+        if (!currentMap) return null;
+        switch (currentMap.engine) {
+            case 'reactflow':
+                return (
+                    <ReactFlowEngine
+                        key={currentMap.id}
+                        map={currentMap}
+                        onChange={handleEngineDataChange}
+                        t={t}
+                    />
+                );
+            case 'mindelixir':
+                return (
+                    <MindElixirEngine
+                        key={currentMap.id}
+                        map={currentMap}
+                        onChange={handleEngineDataChange}
+                        t={t}
+                    />
+                );
+            default:
+                return (
+                    <MindMapCanvas
+                        key={currentMap.id}
+                        map={currentMap}
+                        branchColors={branchColors}
+                        genId={genId}
+                        onNodesChange={handleNodesChange}
+                        t={t}
+                    />
+                );
+        }
     };
 
     const headerBg = themeMode === 'light' ? '#FFFFFF' : '#1e1e1e';
@@ -92,20 +134,13 @@ const MindMapPage = ({ onBack, themeMode = 'light' }) => {
                         <CircularProgress />
                     </Box>
                 ) : currentMap ? (
-                    <MindMapCanvas
-                        key={currentMap.id}
-                        map={currentMap}
-                        branchColors={branchColors}
-                        genId={genId}
-                        onNodesChange={handleNodesChange}
-                        t={t}
-                    />
+                    renderEngine()
                 ) : (
                     <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                         <Typography variant="body1" color="text.secondary">
                             {t('mindmap.noMapSelected')}
                         </Typography>
-                        <Button variant="contained" startIcon={<AddCircleOutline />} onClick={() => { createMap(t('mindmap.untitled')); }}>
+                        <Button variant="contained" startIcon={<AddCircleOutline />} onClick={() => setListOpen(true)}>
                             {t('mindmap.createMap')}
                         </Button>
                     </Box>
@@ -120,7 +155,7 @@ const MindMapPage = ({ onBack, themeMode = 'light' }) => {
                 maps={maps}
                 currentMapId={currentMapId}
                 onSelect={(id) => { setCurrentMapId(id); setListOpen(false); }}
-                onCreate={(title) => { createMap(title); setListOpen(false); }}
+                onCreate={(title, engine) => { createMap(title, engine); setListOpen(false); }}
                 onDelete={(id) => removeMap(id)}
                 t={t}
             />
