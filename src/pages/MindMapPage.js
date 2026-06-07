@@ -157,6 +157,7 @@ const MindMapPage = ({ onBack, themeMode = 'light' }) => {
                 onSelect={(id) => { setCurrentMapId(id); setListOpen(false); }}
                 onCreate={(title, engine) => { createMap(title, engine); setListOpen(false); }}
                 onDelete={(id) => removeMap(id)}
+                onRename={(id, title) => renameMap(id, title)}
                 t={t}
             />
         </Box>

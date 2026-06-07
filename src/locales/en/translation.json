@@ -185,7 +185,8 @@
         "zoomIn": "Zoom in",
         "zoomOut": "Zoom out",
         "fit": "Fit to screen",
-        "autoLayout": "Auto layout"
+        "autoLayout": "Auto layout",
+        "renameMap": "Rename"
     },
     "auth": {
         "welcome": "Welcome",

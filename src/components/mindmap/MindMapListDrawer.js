@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import {
     Drawer, Box, Typography, List, ListItemButton, ListItemText, IconButton,
-    Button, TextField, Divider, ToggleButton, ToggleButtonGroup, Chip
+    Button, TextField, Divider, ToggleButton, ToggleButtonGroup, Chip, Tooltip
 } from '@mui/material';
-import { Add, DeleteOutline, AccountTree } from '@mui/icons-material';
+import { Add, DeleteOutline, AccountTree, DriveFileRenameOutline, Check, Close } from '@mui/icons-material';
 
 const ENGINE_LABELS = {
     custom: 'engineCustom',
@@ -12,10 +12,30 @@ const ENGINE_LABELS = {
 };
 
 const MindMapListDrawer = ({
-    open, onClose, isMobile, themeMode, maps, currentMapId, onSelect, onCreate, onDelete, t
+    open, onClose, isMobile, themeMode, maps, currentMapId, onSelect, onCreate, onDelete, onRename, t
 }) => {
     const [newTitle, setNewTitle] = useState('');
     const [engine, setEngine] = useState('custom');
+    const [editingId, setEditingId] = useState(null);
+    const [editingTitle, setEditingTitle] = useState('');
+
+    const startEditing = (e, map) => {
+        e.stopPropagation();
+        setEditingId(map.id);
+        setEditingTitle(map.title || '');
+    };
+
+    const commitEdit = () => {
+        if (editingId) {
+            onRename(editingId, editingTitle.trim() || t('mindmap.untitled'));
+        }
+        setEditingId(null);
+    };
+
+    const cancelEdit = (e) => {
+        e?.stopPropagation();
+        setEditingId(null);
+    };
 
     const handleCreate = () => {
         const title = newTitle.trim() || t('mindmap.untitled');
@@ -88,36 +108,73 @@ const MindMapListDrawer = ({
                     <ListItemButton
                         key={m.id}
                         selected={m.id === currentMapId}
-                        onClick={() => onSelect(m.id)}
+                        onClick={() => { if (editingId !== m.id) onSelect(m.id); }}
                     >
-                        <ListItemText
-                            primary={m.title || t('mindmap.untitled')}
-                            primaryTypographyProps={{
-                                color: themeMode === 'light' ? '#2C3E50' : '#fff',
-                                fontWeight: m.id === currentMapId ? 600 : 400,
-                                noWrap: true
-                            }}
-                            secondary={
-                                <Chip
-                                    label={t(`mindmap.${ENGINE_LABELS[m.engine] || 'engineCustom'}`)}
+                        {editingId === m.id ? (
+                            <TextField
+                                size="small"
+                                fullWidth
+                                autoFocus
+                                value={editingTitle}
+                                onChange={(e) => setEditingTitle(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') { e.stopPropagation(); commitEdit(); }
+                                    if (e.key === 'Escape') cancelEdit(e);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                sx={{ mr: 1 }}
+                            />
+                        ) : (
+                            <ListItemText
+                                primary={m.title || t('mindmap.untitled')}
+                                primaryTypographyProps={{
+                                    color: themeMode === 'light' ? '#2C3E50' : '#fff',
+                                    fontWeight: m.id === currentMapId ? 600 : 400,
+                                    noWrap: true
+                                }}
+                                secondary={
+                                    <Chip
+                                        label={t(`mindmap.${ENGINE_LABELS[m.engine] || 'engineCustom'}`)}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{ height: 18, fontSize: 11, mt: 0.5 }}
+                                    />
+                                }
+                                secondaryTypographyProps={{ component: 'div' }}
+                            />
+                        )}
+                        {editingId === m.id ? (
+                            <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); commitEdit(); }} sx={{ color: 'success.main' }}>
+                                    <Check fontSize="small" />
+                                </IconButton>
+                                <IconButton size="small" onClick={cancelEdit} sx={{ color: 'text.secondary' }}>
+                                    <Close fontSize="small" />
+                                </IconButton>
+                            </Box>
+                        ) : (
+                            <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                <Tooltip title={t('mindmap.renameMap')}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => startEditing(e, m)}
+                                        sx={{ color: 'text.secondary' }}
+                                    >
+                                        <DriveFileRenameOutline fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <IconButton
                                     size="small"
-                                    variant="outlined"
-                                    sx={{ height: 18, fontSize: 11, mt: 0.5 }}
-                                />
-                            }
-                            secondaryTypographyProps={{ component: 'div' }}
-                        />
-                        <IconButton
-                            edge="end"
-                            size="small"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (window.confirm(t('mindmap.confirmDeleteMap'))) onDelete(m.id);
-                            }}
-                            sx={{ color: '#E5484D' }}
-                        >
-                            <DeleteOutline fontSize="small" />
-                        </IconButton>
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (window.confirm(t('mindmap.confirmDeleteMap'))) onDelete(m.id);
+                                    }}
+                                    sx={{ color: '#E5484D' }}
+                                >
+                                    <DeleteOutline fontSize="small" />
+                                </IconButton>
+                            </Box>
+                        )}
                     </ListItemButton>
                 ))}
             </List>
