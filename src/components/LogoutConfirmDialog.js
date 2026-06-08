@@ -14,9 +14,9 @@ const LogoutConfirmDialog = ({ open, onClose, isMobile, getDialogPaperStyles, on
             fullWidth
             PaperProps={{ sx: { borderRadius: 3, ...getDialogPaperStyles(), margin: isMobile ? 1 : 3 } }}
         >
-            <DialogTitle sx={{ backgroundColor: 'primary.main', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <DialogTitle sx={{ color: 'text.primary', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {t('auth.logoutConfirm')}
-                <IconButton onClick={onClose} sx={{ color: 'white' }}>
+                <IconButton onClick={onClose} sx={{ color: 'text.primary' }}>
                     <CloseOutlined />
                 </IconButton>
             </DialogTitle>

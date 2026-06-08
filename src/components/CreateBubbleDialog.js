@@ -81,14 +81,13 @@ export default function CreateBubbleDialog(props) {
             }}
         >
             <DialogTitle sx={{
-                backgroundColor: 'primary.main',
-                color: 'white',
+                color: 'text.primary',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
             }}>
                 {t('bubbles.createNewBubble')}
-                <IconButton onClick={onClose} sx={{ color: 'white' }}>
+                <IconButton onClick={onClose} sx={{ color: 'text.primary' }}>
                     <CloseOutlined />
                 </IconButton>
             </DialogTitle>

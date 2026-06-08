@@ -100,3 +100,4 @@ Refactor history is tracked in `docs/superpowers/`. Key standing conventions:
 - `BubblesPage.js` is a ~3000-line god-component — new behaviour extracts to `hooks/` and `components/`
 - `HtmlRenderer.js` uses DOMPurify — any HTML rendering must go through it
 - `firestore.rules` is now in the repo and must be kept in sync with `firebase.json` (`"firestore": { "rules": "firestore.rules" }`)
+- Window/panel/header backgrounds come from the MUI theme (`hooks/useThemeMode.js`), never hardcoded hex/rgba. Wrap a standalone panel in `<Paper>` with no explicit `backgroundColor` (e.g. `TasksCategoriesPanel`, list-as-main-screen `Paper elevation={16}`); a window header (`DialogTitle` / header `Box`) must **not** set its own `backgroundColor` — it inherits the window's Paper background. Header text uses `text.primary`, not `'white'`. Dialog body bg comes from `getDialogPaperStyles()` (`rgba(...,0.95)`).

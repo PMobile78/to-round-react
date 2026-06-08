@@ -54,8 +54,7 @@ const TaskListDrawer = ({
             }}
         >
             <Box sx={{
-                backgroundColor: 'primary.main',
-                color: 'white',
+                color: 'text.primary',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -65,7 +64,7 @@ const TaskListDrawer = ({
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                     {t('bubbles.listView')}
                 </Typography>
-                <IconButton onClick={onClose} sx={{ color: 'white' }}>
+                <IconButton onClick={onClose} sx={{ color: 'text.primary' }}>
                     <CloseOutlined />
                 </IconButton>
             </Box>

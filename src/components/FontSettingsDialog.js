@@ -25,9 +25,9 @@ const FontSettingsDialog = ({
             fullScreen={isSmallScreen}
             PaperProps={{ sx: { borderRadius: isSmallScreen ? 0 : 3, ...getDialogPaperStyles(), margin: isMobile ? 1 : 3 } }}
         >
-            <DialogTitle sx={{ backgroundColor: 'primary.main', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <DialogTitle sx={{ color: 'text.primary', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {t('bubbles.fontSettings')}
-                <IconButton onClick={onClose} sx={{ color: 'white' }}>
+                <IconButton onClick={onClose} sx={{ color: 'text.primary' }}>
                     <CloseOutlined />
                 </IconButton>
             </DialogTitle>

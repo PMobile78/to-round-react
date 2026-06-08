@@ -2506,11 +2506,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                         alignItems: 'center',
                         gap: 1,
                         padding: '12px 16px',
-                        backgroundColor: 'primary.main',
-                        color: 'white',
+                        color: 'text.primary',
                         flexShrink: 0
                     }}>
-                        <IconButton onClick={() => setMenuDrawerOpen(true)} sx={{ color: 'white' }}>
+                        <IconButton onClick={() => setMenuDrawerOpen(true)} sx={{ color: 'text.primary' }}>
                             <MenuIcon />
                         </IconButton>
                         <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
@@ -2520,13 +2519,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             variant="contained"
                             onClick={openCreateDialog}
                             startIcon={<Add />}
-                            sx={{
-                                background: 'rgba(255,255,255,0.2)',
-                                backdropFilter: 'blur(10px)',
-                                border: '1px solid rgba(255,255,255,0.3)',
-                                color: 'white',
-                                '&:hover': { background: 'rgba(255,255,255,0.3)' }
-                            }}
                         >
                             {t('bubbles.addBubble')}
                         </Button>
