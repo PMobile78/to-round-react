@@ -6,6 +6,7 @@ import {
     ListItemText,
     Typography,
     Box,
+    Paper,
     IconButton,
     Divider,
 } from '@mui/material';
@@ -68,16 +69,16 @@ const TasksCategoriesPanel = ({
     };
 
     return (
-        <Box
+        <Paper
+            elevation={16}
+            square
             sx={{
                 position: 'fixed',
                 left: 0,
                 top: 0,
                 height: '100vh',
                 width: 320,
-                backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)',
                 color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                backdropFilter: 'blur(10px)',
                 borderRight: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#333333'}`,
                 zIndex: 1200,
                 display: open ? 'block' : 'none',
@@ -122,15 +123,15 @@ const TasksCategoriesPanel = ({
                         cursor: 'pointer',
                         borderLeft: selectedCategory === 'all' ? '4px solid #3B7DED' : '4px solid transparent',
                         backgroundColor: selectedCategory === 'all'
-                            ? (themeMode === 'light' ? '#E3F2FD' : '#1A237E')
+                            ? (themeMode === 'light' ? '#F8F9FA' : '#333333')
                             : 'transparent',
                         '&:hover': {
                             backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                         },
                         '&.Mui-selected': {
-                            backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E',
+                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333',
                             '&:hover': {
-                                backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E'
+                                backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                             }
                         }
                     }}
@@ -142,10 +143,8 @@ const TasksCategoriesPanel = ({
                     <ListItemText
                         primary={t('categories.allCategories')}
                         primaryTypographyProps={{
-                            color: selectedCategory === 'all'
-                                ? '#3B7DED'
-                                : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
-                            fontWeight: selectedCategory === 'all' ? 700 : 500,
+                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            fontWeight: 500,
                             noWrap: true
                         }}
                     />
@@ -173,15 +172,15 @@ const TasksCategoriesPanel = ({
                         cursor: 'pointer',
                         borderLeft: selectedCategory === 'no-tags' ? '4px solid #3B7DED' : '4px solid transparent',
                         backgroundColor: selectedCategory === 'no-tags'
-                            ? (themeMode === 'light' ? '#E3F2FD' : '#1A237E')
+                            ? (themeMode === 'light' ? '#F8F9FA' : '#333333')
                             : 'transparent',
                         '&:hover': {
                             backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                         },
                         '&.Mui-selected': {
-                            backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E',
+                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333',
                             '&:hover': {
-                                backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E'
+                                backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                             }
                         }
                     }}
@@ -193,10 +192,8 @@ const TasksCategoriesPanel = ({
                     <ListItemText
                         primary={t('bubbles.noTags')}
                         primaryTypographyProps={{
-                            color: selectedCategory === 'no-tags'
-                                ? '#3B7DED'
-                                : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
-                            fontWeight: selectedCategory === 'no-tags' ? 700 : 500,
+                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            fontWeight: 500,
                             noWrap: true
                         }}
                     />
@@ -224,15 +221,15 @@ const TasksCategoriesPanel = ({
                         cursor: 'pointer',
                         borderLeft: selectedCategory === 'planned-tasks' ? '4px solid #3B7DED' : '4px solid transparent',
                         backgroundColor: selectedCategory === 'planned-tasks'
-                            ? (themeMode === 'light' ? '#E3F2FD' : '#1A237E')
+                            ? (themeMode === 'light' ? '#F8F9FA' : '#333333')
                             : 'transparent',
                         '&:hover': {
                             backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                         },
                         '&.Mui-selected': {
-                            backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E',
+                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333',
                             '&:hover': {
-                                backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E'
+                                backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                             }
                         }
                     }}
@@ -244,10 +241,8 @@ const TasksCategoriesPanel = ({
                     <ListItemText
                         primary={t('bubbles.postponedTasks')}
                         primaryTypographyProps={{
-                            color: selectedCategory === 'planned-tasks'
-                                ? '#3B7DED'
-                                : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
-                            fontWeight: selectedCategory === 'planned-tasks' ? 700 : 500,
+                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            fontWeight: 500,
                             noWrap: true
                         }}
                     />
@@ -305,15 +300,15 @@ const TasksCategoriesPanel = ({
                                 cursor: 'pointer',
                                 borderLeft: selectedCategory === category.id ? '4px solid #3B7DED' : '4px solid transparent',
                                 backgroundColor: selectedCategory === category.id
-                                    ? (themeMode === 'light' ? '#E3F2FD' : '#1A237E')
+                                    ? (themeMode === 'light' ? '#F8F9FA' : '#333333')
                                     : 'transparent',
                                 '&:hover': {
                                     backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                                 },
                                 '&.Mui-selected': {
-                                    backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E',
+                                    backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333',
                                     '&:hover': {
-                                        backgroundColor: themeMode === 'light' ? '#E3F2FD' : '#1A237E'
+                                        backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
                                     }
                                 },
                                 '& .drag-handle': {
@@ -338,10 +333,8 @@ const TasksCategoriesPanel = ({
                             <ListItemText
                                 primary={category.name}
                                 primaryTypographyProps={{
-                                    color: selectedCategory === category.id
-                                        ? '#3B7DED'
-                                        : (themeMode === 'light' ? '#2C3E50' : '#ffffff'),
-                                    fontWeight: selectedCategory === category.id ? 700 : 500,
+                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                    fontWeight: 500,
                                     noWrap: true
                                 }}
                             />
@@ -405,7 +398,7 @@ const TasksCategoriesPanel = ({
                     />
                 </ListItem>
             </List> */}
-        </Box>
+        </Paper>
     );
 };
 
