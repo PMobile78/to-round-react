@@ -3,7 +3,7 @@
 - **Дата:** 2026-06-08
 - **Статус:** на ревью
 - **Затрагивает:** `functions/index.js`, `firestore.indexes.json`, разовый backfill-скрипт
-- **Связано:** [cron-тайминг](../../cron-schedule-timing.md)
+- **Связано:** [cron-тайминг](../../notifications.md#тайминг-расписания-every-n-vs-n)
 
 ## Проблема
 

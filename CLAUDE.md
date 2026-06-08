@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Human-facing documentation lives in [`docs/`](docs/README.md) (setup, Firebase, notifications, deployment, i18n).
+
 ## Commands
 
 ```bash
@@ -21,7 +23,7 @@ npm run version:major
 
 ## Architecture
 
-**Stack:** React (CRA/react-scripts), Firebase (Auth + Firestore client + Cloud Functions Gen2 + FCM), Matter.js, MUI v5, TipTap (rich text), i18next.  
+**Stack:** React (CRA/react-scripts), Firebase (Auth + Firestore client + Cloud Functions Gen2 + FCM), Matter.js, MUI v5, TipTap (rich text), i18next, @xyflow/react + mind-elixir (mind maps), date-fns, DOMPurify.  
 **Hosting:** GitHub Pages. Deployed via `.github/workflows/deploy.yml` on push to `main`/`master`.
 
 ### Frontend structure
@@ -32,10 +34,13 @@ src/
   firebase.js                # Firebase SDK init
   firebaseMessaging.js       # FCM setup / token registration
   i18n.js                    # i18next init (en + uk)
-  pages/BubblesPage.js       # main god-component (active refactor target — see hooks/)
+  pages/
+    BubblesPage.js           # main screen / god-component (active refactor target — see hooks/)
+    MindMapPage.js           # mind map screen
   services/
     authService.js           # Firebase Auth wrapper
     firestoreService.js      # Firestore CRUD: bubbles, tags, FCM tokens
+    mindmapService.js        # Firestore CRUD: mind maps
   hooks/                     # extracted from BubblesPage
     useMatterEngine.js       # Matter.js physics world lifecycle
     useDraggableFab.js       # draggable FAB position
@@ -44,14 +49,16 @@ src/
     useMatterResize.js       # canvas resize handler
     useSearch.js             # search state
     useThemeMode.js          # MUI theme / dark-light toggle
+    useMindmaps.js           # mind map state / persistence
   components/                # UI dialogs, drawers, editors, selectors
   locales/en/ uk/            # i18next translation JSON files
-  utils/storage.js           # localStorage helpers
+  utils/                     # config, logger, storage, physicsUtils, reorderArray
 scripts/
   generate-sw.js             # writes public/sw.js injecting Firebase config env vars
   version-bump.js            # patches package.json version field
 functions/
-  index.js                   # Cloud Functions v2 — scheduled notification trigger
+  index.js                   # Cloud Functions Gen2: scheduled notifier + nextNotifyAt trigger
+  test-next-notify.js        # unit tests for pure scheduler functions
   locales/                   # notification text: notifications.en.json, notifications.uk.json
 ```
 
@@ -60,20 +67,22 @@ functions/
 | Collection | Access |
 |---|---|
 | `user-bubbles/{uid}/bubbles/{bubbleId}` | owner (`uid`) only — **current schema** |
-| `user-bubbles/{uid}` (field `bubbles[]`) | owner only — **legacy array schema**, still read by Cloud Function |
+| `user-bubbles/{uid}` (field `bubbles[]`) | owner only — **legacy array schema**, no longer read by server logic |
 | `user-tags/{uid}` | owner only |
+| `user-mindmaps/{uid}/{document=**}` | owner only |
 | `user-fcm-tokens/{uid}/tokens/{tokenId}` | owner only |
 | `notification-sent/{key}` | Cloud Functions admin SDK only (`allow read, write: if false` in rules) |
 
-The Cloud Function (`fetchAllUserBubbles`) reads **both** schemas: subcollection via `collectionGroup('bubbles')` first, then legacy documents as fallback.
+The scheduled Cloud Function reads tasks **only** from the subcollection via an indexed `collectionGroup('bubbles')` query on `nextNotifyAt`; the legacy `bubbles[]` array is not read by server logic. See [docs/notifications.md](docs/notifications.md).
 
 ### Cloud Functions
 
-`functions/index.js` exports one scheduled function (runs every minute via `onSchedule`):
-- Reads all active bubbles from both schemas
-- Sends FCM **reminder** notifications (based on `bubble.notifications[].minutesBefore`) and **overdue** notifications
-- Deduplicates via `notification-sent` collection (TTL cleanup: entries older than 7 days are deleted)
-- Supports `en` and `uk` locales; `ru` → `en` fallback
+`functions/index.js` exports **two** functions (region `europe-west1`):
+- `scheduleDueDateNotifications` — `onSchedule` every minute; queries only **due** bubbles via the `nextNotifyAt` index, sends FCM **reminder** / **overdue** notifications, dedups via `notification-sent` (hourly cleanup of entries older than 7 days)
+- `maintainNextNotifyAt` — `onDocumentWritten` trigger keeping each task's `nextNotifyAt` field current
+- Locales `en` and `uk`; `ru` → `en` fallback
+
+Full design and operations: [docs/notifications.md](docs/notifications.md).
 
 ### Environment variables
 
@@ -83,11 +92,11 @@ The service worker (`public/sw.js`) is generated from env vars by `scripts/gener
 
 ### CI / Version management
 
-`.github/workflows/deploy.yml` auto-runs `npm run version:patch` on every push to `main`, commits the bump with `[skip ci]`, builds, and deploys to GitHub Pages. The current version in `package.json` is the source of truth.
+`.github/workflows/deploy.yml` auto-runs `npm run version:patch` on every push to `main`, commits the bump with `[skip ci]`, builds, and deploys to GitHub Pages. The current version in `package.json` is the source of truth. See [docs/deployment.md](docs/deployment.md).
 
 ## Active refactor context
 
-Branch `audit/security-bugs-refactor` is working through `AUDIT_PLAN.md`. Key ongoing work:
+Refactor history is tracked in `AUDIT_PLAN.md` and `docs/superpowers/`. Key standing conventions:
 - `BubblesPage.js` is a ~3000-line god-component — new behaviour extracts to `hooks/` and `components/`
 - `HtmlRenderer.js` uses DOMPurify — any HTML rendering must go through it
 - `firestore.rules` is now in the repo and must be kept in sync with `firebase.json` (`"firestore": { "rules": "firestore.rules" }`)
