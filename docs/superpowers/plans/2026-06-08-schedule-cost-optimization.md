@@ -546,10 +546,11 @@ git commit -m "chore(firestore): add composite index status + nextNotifyAt"
 // Разовый backfill. Запуск:
 //   GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json TZ=UTC node functions/backfill-next-notify.js
 const admin = require('firebase-admin');
-admin.initializeApp();
-const db = admin.firestore();
+// require('./index.js') initializes the Firebase admin app (it calls admin.initializeApp()).
+// Do NOT call admin.initializeApp() here too — that throws "default app already exists".
 const { _test } = require('./index.js');
 const { computeNextNotifyAt } = _test;
+const db = admin.firestore();
 
 (async () => {
     const now = new Date();
