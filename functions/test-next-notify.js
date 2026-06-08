@@ -40,4 +40,14 @@ check('нет dueDate → null',
 check('нет notifications → overdue moment (due)',
     iso(computeNextNotifyAt(mk({ notifications: [] }), new Date('2026-06-07T10:00:00Z'))), '2026-06-07T12:00:00.000Z');
 
+const { pickReminderToSend } = _test;
+const pick = (b, now) => pickReminderToSend(b, now);
+
+check('reminder: оба прошли → самый свежий (за 10)',
+    pick(mk(), new Date('2026-06-07T11:50:30Z')).minutesBefore, 10);
+check('reminder: прошёл только первый (за 60)',
+    pick(mk(), new Date('2026-06-07T11:00:30Z')).minutesBefore, 60);
+check('reminder: ни один не наступил → null',
+    pick(mk(), new Date('2026-06-07T10:00:00Z')), null);
+
 process.exit(failed ? 1 : 0);

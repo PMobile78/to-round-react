@@ -368,6 +368,22 @@ function computeNextWeeklyDueDate(currentDue, weekDays, every) {
     }
 }
 
+// Самый свежий reminder, чьё время наступило (reminderTime <= now) — или null.
+function pickReminderToSend(bubble, now) {
+    if (!bubble?.dueDate || !Array.isArray(bubble.notifications)) return null;
+    const due = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
+    let best = null;
+    for (const notif of bubble.notifications) {
+        const mb = computeMinutesBefore(notif);
+        if (!Number.isFinite(mb)) continue;
+        const rt = subMinutes(due, mb);
+        if (!isAfter(rt, now) && (!best || isAfter(rt, best.time))) {
+            best = { time: rt, minutesBefore: mb };
+        }
+    }
+    return best;
+}
+
 // Ближайшее вхождение строго в БУДУЩЕМ относительно now (пропускает «хвост» просрочки)
 function computeNextFutureDueDate(currentDue, recurrence, now) {
     let nextDue = computeNextDueDate(currentDue, recurrence);
@@ -544,6 +560,6 @@ exports.scheduleDueDateNotifications = onSchedule({
 });
 
 // Exposed for local testing only (functions/test-tz.js)
-exports._test = { parseLocalDateTime, formatLocalDateTime, computeNextDueDate, computeNextFutureDueDate, isBubbleOverdue, computeNextNotifyAt };
+exports._test = { parseLocalDateTime, formatLocalDateTime, computeNextDueDate, computeNextFutureDueDate, isBubbleOverdue, computeNextNotifyAt, pickReminderToSend };
 
 
