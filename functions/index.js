@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 const admin = require('firebase-admin');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { isAfter, addMinutes, subMinutes, addHours, addDays, addWeeks, addMonths } = require('date-fns');
 const { TZDate } = require('@date-fns/tz');
 
@@ -384,6 +385,16 @@ function pickReminderToSend(bubble, now) {
     return best;
 }
 
+const SIGNIFICANT_FIELDS = ['dueDate', 'notifications', 'status', 'recurrence'];
+
+// Менялись ли поля, влияющие на nextNotifyAt (гард от рекурсии триггера).
+function significantChanged(before, after) {
+    for (const f of SIGNIFICANT_FIELDS) {
+        if (JSON.stringify(before?.[f]) !== JSON.stringify(after?.[f])) return true;
+    }
+    return false;
+}
+
 // Ближайшее вхождение строго в БУДУЩЕМ относительно now (пропускает «хвост» просрочки)
 function computeNextFutureDueDate(currentDue, recurrence, now) {
     let nextDue = computeNextDueDate(currentDue, recurrence);
@@ -435,6 +446,29 @@ async function updateBubbleFields(userId, bubbleId, fields) {
     const updated = list.map(b => (b.id === bubbleId ? { ...b, ...payload } : b));
     await docRef.set({ ...data, bubbles: updated, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 }
+
+// Поддерживает nextNotifyAt при создании/редактировании задачи пользователем.
+exports.maintainNextNotifyAt = onDocumentWritten({
+    document: 'user-bubbles/{uid}/bubbles/{bubbleId}',
+    region: 'europe-west1',
+    maxInstances: 10
+}, async (event) => {
+    const after = event.data?.after;
+    if (!after || !after.exists) return null; // удаление
+    const afterData = after.data() || {};
+    const before = event.data?.before?.exists ? event.data.before.data() : null;
+
+    // Реагируем только на изменение значимых полей: наша же запись nextNotifyAt не зациклит триггер.
+    if (before && !significantChanged(before, afterData)) return null;
+
+    const next = computeNextNotifyAt(afterData, new Date());
+    await after.ref.set({
+        nextNotifyAt: next
+            ? admin.firestore.Timestamp.fromDate(next)
+            : admin.firestore.FieldValue.delete()
+    }, { merge: true });
+    return null;
+});
 
 // Runs every minute to check reminders and overdue tasks (Gen 2)
 exports.scheduleDueDateNotifications = onSchedule({
@@ -560,6 +594,6 @@ exports.scheduleDueDateNotifications = onSchedule({
 });
 
 // Exposed for local testing only (functions/test-tz.js)
-exports._test = { parseLocalDateTime, formatLocalDateTime, computeNextDueDate, computeNextFutureDueDate, isBubbleOverdue, computeNextNotifyAt, pickReminderToSend };
+exports._test = { parseLocalDateTime, formatLocalDateTime, computeNextDueDate, computeNextFutureDueDate, isBubbleOverdue, computeNextNotifyAt, pickReminderToSend, significantChanged };
 
 

@@ -50,4 +50,16 @@ check('reminder: прошёл только первый (за 60)',
 check('reminder: ни один не наступил → null',
     pick(mk(), new Date('2026-06-07T10:00:00Z')), null);
 
+const { significantChanged } = _test;
+const base = { dueDate: '2026-06-07T15:00:00', notifications: [{ minutesBefore: 10 }], status: 'active', recurrence: null };
+
+check('значимые поля не менялись → false',
+    significantChanged(base, { ...base }), false);
+check('изменился dueDate → true',
+    significantChanged(base, { ...base, dueDate: '2026-06-08T15:00:00' }), true);
+check('изменился только updatedAt → false',
+    significantChanged({ ...base, updatedAt: 1 }, { ...base, updatedAt: 2 }), false);
+check('изменился nextNotifyAt → false (не значимое)',
+    significantChanged({ ...base, nextNotifyAt: 1 }, { ...base, nextNotifyAt: 2 }), false);
+
 process.exit(failed ? 1 : 0);
