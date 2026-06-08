@@ -202,6 +202,40 @@ function shouldTriggerReminderNow(bubble, now) {
     return null;
 }
 
+// Абсолютный момент (Date) ближайшего необработанного события задачи, строго после fromTime.
+// Если будущих событий нет: для активной просроченной (overdue ещё не слался) или
+// повторяющейся задачи — вернуть fromTime (немедленная обработка); иначе null.
+function computeNextNotifyAt(bubble, fromTime) {
+    if (!bubble || bubble.status !== 'active' || !bubble.dueDate) return null;
+    const due = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
+    if (!due || !Number.isFinite(due.getTime())) return null;
+
+    const fromMs = fromTime.getTime();
+    const moments = [];
+    // Collect all reminder moments; if no notifications array, only the overdue moment applies
+    if (Array.isArray(bubble.notifications)) {
+        for (const notif of bubble.notifications) {
+            const mb = computeMinutesBefore(notif);
+            if (Number.isFinite(mb)) {
+                const m = subMinutes(due, mb);
+                moments.push(new Date(m.getTime())); // normalize to plain Date
+            }
+        }
+    }
+    moments.push(new Date(due.getTime())); // overdue, normalized
+
+    let next = null;
+    for (const m of moments) {
+        if (m.getTime() > fromMs && (next === null || m.getTime() < next.getTime())) next = m;
+    }
+    if (next) return next;
+
+    // overdue and not yet marked sticky (overdue notification not sent yet)
+    const overdueUnsent = isAfter(fromTime, due) && !bubble.overdueSticky;
+    if (!bubble.overduePulseSuppressed && (overdueUnsent || bubble.recurrence)) return fromTime;
+    return null;
+}
+
 // Compute minutesBefore from different client schemas: string presets, custom object, or numeric field
 function computeMinutesBefore(notif) {
     if (notif == null) return NaN;
@@ -510,6 +544,6 @@ exports.scheduleDueDateNotifications = onSchedule({
 });
 
 // Exposed for local testing only (functions/test-tz.js)
-exports._test = { parseLocalDateTime, formatLocalDateTime, computeNextDueDate, computeNextFutureDueDate, isBubbleOverdue };
+exports._test = { parseLocalDateTime, formatLocalDateTime, computeNextDueDate, computeNextFutureDueDate, isBubbleOverdue, computeNextNotifyAt };
 
 
