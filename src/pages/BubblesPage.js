@@ -1589,11 +1589,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                     )) return prev;
                     return newPositions;
                 });
+                rafId = requestAnimationFrame(updatePositions);
             };
 
-            // Увеличиваем интервал до 33мс (~30fps) для лучшей производительности
-            const intervalId = setInterval(updatePositions, 33);
-            return () => clearInterval(intervalId);
+            // rAF синхронизирован с отрисовкой и сам приостанавливается на скрытой вкладке
+            let rafId = requestAnimationFrame(updatePositions);
+            return () => cancelAnimationFrame(rafId);
         }, []);
 
         // Мемоизируем рендер функцию для каждого пузыря
