@@ -5,6 +5,7 @@
 // Emulator (for testing):
 //   FIRESTORE_EMULATOR_HOST=localhost:8080 GOOGLE_CLOUD_PROJECT=demo TZ=UTC node functions/backfill-next-notify.js
 const admin = require('firebase-admin');
+const { Timestamp, FieldValue } = require('firebase-admin/firestore');
 // require('./index.js') initializes the Firebase admin app (it calls admin.initializeApp()).
 // Reuse computeNextNotifyAt from its _test export so the calculation stays single-sourced.
 const { _test } = require('./index.js');
@@ -20,8 +21,8 @@ const db = admin.firestore();
         const next = computeNextNotifyAt(bubble, now);
         await d.ref.set({
             nextNotifyAt: next
-                ? admin.firestore.Timestamp.fromDate(next)
-                : admin.firestore.FieldValue.delete()
+                ? Timestamp.fromDate(next)
+                : FieldValue.delete()
         }, { merge: true });
         updated++;
     }

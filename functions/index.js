@@ -2,6 +2,7 @@
 const admin = require('firebase-admin');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { Timestamp, FieldValue } = require('firebase-admin/firestore');
 const { isAfter, addMinutes, subMinutes, addHours, addDays, addWeeks, addMonths } = require('date-fns');
 const { TZDate } = require('@date-fns/tz');
 
@@ -21,7 +22,7 @@ async function fetchDueBubbles(now) {
     const grouped = new Map();
     const snap = await db.collectionGroup('bubbles')
         .where('status', '==', 'active')
-        .where('nextNotifyAt', '<=', admin.firestore.Timestamp.fromDate(now))
+        .where('nextNotifyAt', '<=', Timestamp.fromDate(now))
         .orderBy('nextNotifyAt')
         .get();
     snap.forEach((d) => {
@@ -426,8 +427,8 @@ async function updateNextNotifyAt(userId, bubbleId, bubble, now) {
     const subDoc = db.collection('user-bubbles').doc(userId).collection('bubbles').doc(String(bubbleId));
     await subDoc.set({
         nextNotifyAt: next
-            ? admin.firestore.Timestamp.fromDate(next)
-            : admin.firestore.FieldValue.delete()
+            ? Timestamp.fromDate(next)
+            : FieldValue.delete()
     }, { merge: true });
 }
 
@@ -508,8 +509,8 @@ exports.maintainNextNotifyAt = onDocumentWritten({
     const next = computeNextNotifyAt(afterData, new Date());
     await after.ref.set({
         nextNotifyAt: next
-            ? admin.firestore.Timestamp.fromDate(next)
-            : admin.firestore.FieldValue.delete()
+            ? Timestamp.fromDate(next)
+            : FieldValue.delete()
     }, { merge: true });
     return null;
 });
