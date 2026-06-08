@@ -96,7 +96,7 @@ The service worker (`public/sw.js`) is generated from env vars by `scripts/gener
 
 ## Active refactor context
 
-Refactor history is tracked in `AUDIT_PLAN.md` and `docs/superpowers/`. Key standing conventions:
+Refactor history is tracked in `docs/superpowers/`. Key standing conventions:
 - `BubblesPage.js` is a ~3000-line god-component — new behaviour extracts to `hooks/` and `components/`
 - `HtmlRenderer.js` uses DOMPurify — any HTML rendering must go through it
 - `firestore.rules` is now in the repo and must be kept in sync with `firebase.json` (`"firestore": { "rules": "firestore.rules" }`)
