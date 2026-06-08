@@ -16,31 +16,22 @@ const uk = require('./locales/notifications.uk.json');
 // - LEGACY: Previously, user bubbles were stored in `user-bubbles/{uid}` with array field `bubbles`
 // - FCM token stored in doc `user-fcm-tokens/{uid}` with field `token`
 
-async function fetchAllUserBubbles() {
-    // Try normalized schema via collectionGroup first
-    const grouped = new Map(); // userId -> bubbles[]
-    const cg = await db.collectionGroup('bubbles').where('status', '==', 'active').get();
-    cg.forEach((d) => {
-        const parentUserDoc = d.ref.parent.parent; // user-bubbles/{uid}
-        const userId = parentUserDoc?.id;
+// Только задачи, которым уже пора (nextNotifyAt <= now), сгруппированные по пользователю.
+async function fetchDueBubbles(now) {
+    const grouped = new Map();
+    const snap = await db.collectionGroup('bubbles')
+        .where('status', '==', 'active')
+        .where('nextNotifyAt', '<=', admin.firestore.Timestamp.fromDate(now))
+        .orderBy('nextNotifyAt')
+        .get();
+    snap.forEach((d) => {
+        const userId = d.ref.parent.parent?.id;
         if (!userId) return;
         const list = grouped.get(userId) || [];
-        const bubbleData = d.data() || {};
-        list.push(Object.assign({ id: d.id }, bubbleData));
+        list.push(Object.assign({ id: d.id }, d.data() || {}));
         grouped.set(userId, list);
     });
-    if (grouped.size > 0) {
-        return Array.from(grouped.entries()).map(([userId, bubbles]) => ({ userId, bubbles }));
-    }
-
-    // Fallback to legacy array-based storage
-    const snapshot = await db.collection('user-bubbles').get();
-    const results = [];
-    snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        results.push({ userId: docSnap.id, bubbles: data?.bubbles || [] });
-    });
-    return results;
+    return Array.from(grouped.entries()).map(([userId, bubbles]) => ({ userId, bubbles }));
 }
 
 async function getUserFcmTokens(userId) {
@@ -183,24 +174,6 @@ function formatLocalDateTime(date, tz) {
     } catch (_) {
         return null;
     }
-}
-
-// Helper: upcoming reminders based on bubble.notifications
-// bubble.notifications: array like [{ minutesBefore: 5 }, { minutesBefore: 60 }]
-function shouldTriggerReminderNow(bubble, now) {
-    if (!bubble?.dueDate || !Array.isArray(bubble.notifications)) return null;
-    const due = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
-    for (const notif of bubble.notifications) {
-        const minutesBefore = computeMinutesBefore(notif);
-        if (!Number.isFinite(minutesBefore)) continue;
-        const scheduled = subMinutes(due, minutesBefore);
-        // Trigger if now is within 1 minute window after scheduled
-        const windowEnd = addMinutes(scheduled, 1);
-        if (isAfter(now, scheduled) && !isAfter(now, windowEnd)) {
-            return { minutesBefore };
-        }
-    }
-    return null;
 }
 
 // Абсолютный момент (Date) ближайшего необработанного события задачи, строго после fromTime.
@@ -447,6 +420,77 @@ async function updateBubbleFields(userId, bubbleId, fields) {
     await docRef.set({ ...data, bubbles: updated, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 }
 
+// Пересчитать и записать nextNotifyAt от актуального (локально обновлённого) состояния задачи.
+async function updateNextNotifyAt(userId, bubbleId, bubble, now) {
+    const next = computeNextNotifyAt(bubble, now);
+    const subDoc = db.collection('user-bubbles').doc(userId).collection('bubbles').doc(String(bubbleId));
+    await subDoc.set({
+        nextNotifyAt: next
+            ? admin.firestore.Timestamp.fromDate(next)
+            : admin.firestore.FieldValue.delete()
+    }, { merge: true });
+}
+
+async function handleReminder(userId, bubble, tokens, now) {
+    const rem = pickReminderToSend(bubble, now);
+    if (!rem) return;
+    const key = buildReminderKey(userId, bubble, rem.minutesBefore);
+    if (await wasNotificationSent(key)) return;
+    const url = `${HOMEPAGE_URL}/?bubbleId=${encodeURIComponent(String(bubble.id || ''))}`;
+    await sendFcmToUser(userId, {
+        data: {
+            bubbleId: String(bubble.id || ''),
+            type: 'reminder',
+            minutesBefore: String(rem.minutesBefore),
+            url,
+            bubbleTitle: String(bubble.title || '')
+        }
+    }, tokens);
+    await markNotificationSent(key);
+}
+
+async function handleOverdue(userId, bubble, tokens, now) {
+    // Пользователь остановил пульсацию: повторяющуюся задачу продвигаем на ближайшее будущее и молчим.
+    if (bubble.overduePulseSuppressed) {
+        if (bubble.recurrence && bubble.dueDate) {
+            const currentDue = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
+            const nextDue = computeNextFutureDueDate(currentDue, bubble.recurrence, now);
+            if (nextDue) {
+                await updateBubbleDueDate(userId, bubble.id, nextDue, bubble.tz);
+                await updateBubbleFields(userId, bubble.id, { overdueSticky: false, overdueAt: null, overduePulseSuppressed: false });
+                bubble.dueDate = formatLocalDateTime(nextDue, bubble.tz) || bubble.dueDate;
+                bubble.overdueSticky = false;
+                bubble.overdueAt = null;
+                bubble.overduePulseSuppressed = false;
+            }
+        }
+        return;
+    }
+
+    const key = buildOverdueKey(userId, bubble);
+    if (!(await wasNotificationSent(key))) {
+        const url = `${HOMEPAGE_URL}/?bubbleId=${encodeURIComponent(String(bubble.id || ''))}`;
+        await sendFcmToUser(userId, {
+            data: { bubbleId: String(bubble.id || ''), type: 'overdue', url, bubbleTitle: String(bubble.title || '') }
+        }, tokens);
+        await markNotificationSent(key);
+    }
+    if (!bubble.overdueSticky) {
+        await updateBubbleFields(userId, bubble.id, { overdueSticky: true, overdueAt: new Date().toISOString() });
+        bubble.overdueSticky = true;
+    }
+
+    // Auto-reschedule повторяющейся задачи на ближайшее будущее вхождение.
+    if (bubble.recurrence && bubble.dueDate) {
+        const currentDue = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
+        const nextDue = computeNextFutureDueDate(currentDue, bubble.recurrence, now);
+        if (nextDue) {
+            await updateBubbleDueDate(userId, bubble.id, nextDue, bubble.tz);
+            bubble.dueDate = formatLocalDateTime(nextDue, bubble.tz) || bubble.dueDate;
+        }
+    }
+}
+
 // Поддерживает nextNotifyAt при создании/редактировании задачи пользователем.
 exports.maintainNextNotifyAt = onDocumentWritten({
     document: 'user-bubbles/{uid}/bubbles/{bubbleId}',
@@ -470,121 +514,38 @@ exports.maintainNextNotifyAt = onDocumentWritten({
     return null;
 });
 
-// Runs every minute to check reminders and overdue tasks (Gen 2)
 exports.scheduleDueDateNotifications = onSchedule({
     schedule: 'every 1 minutes',
-    region: 'europe-west1'
-}, async (event) => {
+    region: 'europe-west1',
+    maxInstances: 10
+}, async () => {
     const now = new Date();
 
-    // Run cleanup once per hour (on the 0-minute of each hour)
     if (now.getMinutes() === 0) {
-        try {
-            await cleanupOldNotificationSent();
-        } catch (e) {
-            console.error('cleanupOldNotificationSent error', e);
-        }
+        try { await cleanupOldNotificationSent(); }
+        catch (e) { console.error('cleanupOldNotificationSent error', e); }
     }
 
-    const users = await fetchAllUserBubbles();
+    const users = await fetchDueBubbles(now);
 
     await Promise.all(users.map(async ({ userId, bubbles }) => {
         try {
-        const tokens = await getUserFcmTokens(userId);
-
-        for (const bubble of bubbles) {
-            if (!bubble || bubble.status !== 'active') continue;
-
-            // 1) Reminder notifications
-            const reminder = shouldTriggerReminderNow(bubble, now);
-            if (reminder) {
-                const key = buildReminderKey(userId, bubble, reminder.minutesBefore);
+            const tokens = await getUserFcmTokens(userId);
+            for (const bubble of bubbles) {
+                if (!bubble || bubble.status !== 'active') continue;
                 try {
-                    if (!(await wasNotificationSent(key))) {
-                        const url = `${HOMEPAGE_URL}/?bubbleId=${encodeURIComponent(String(bubble.id || ''))}`;
-                        await sendFcmToUser(userId, {
-                            data: {
-                                bubbleId: String(bubble.id || ''),
-                                type: 'reminder',
-                                minutesBefore: String(reminder.minutesBefore),
-                                url,
-                                bubbleTitle: String(bubble.title || '')
-                            }
-                        }, tokens);
-                        await markNotificationSent(key);
+                    if (isBubbleOverdue(bubble)) {
+                        await handleOverdue(userId, bubble, tokens, now);
+                    } else {
+                        await handleReminder(userId, bubble, tokens, now);
                     }
                 } catch (e) {
-                    console.error('FCM reminder error', userId, bubble.id, e);
-                }
-                continue;
-            }
-
-            // 2) Overdue notification
-            if (isBubbleOverdue(bubble)) {
-                // Пользователь вручную остановил пульсацию для текущего dueDate.
-                // Не шлём overdue-уведомление и не возвращаем overdueSticky обратно.
-                if (bubble.overduePulseSuppressed) {
-                    try {
-                        // Повторяющуюся задачу продвигаем сразу на ближайшее БУДУЩЕЕ вхождение
-                        // (пропуская весь «хвост» просрочки), чтобы остановка реально молчала
-                        // до следующего настоящего срока, и сбрасываем подавление вместе со
-                        // сменой даты — это уже новое вхождение.
-                        if (bubble.recurrence && bubble.dueDate) {
-                            const currentDue = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
-                            const nextDue = computeNextFutureDueDate(currentDue, bubble.recurrence, now);
-                            if (nextDue) {
-                                await updateBubbleDueDate(userId, bubble.id, nextDue, bubble.tz);
-                                await updateBubbleFields(userId, bubble.id, { overdueSticky: false, overdueAt: null, overduePulseSuppressed: false });
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Suppressed reschedule error', userId, bubble.id, e);
-                    }
-                    continue;
-                }
-
-                const key = buildOverdueKey(userId, bubble);
-                try {
-                    if (!(await wasNotificationSent(key))) {
-                        const url = `${HOMEPAGE_URL}/?bubbleId=${encodeURIComponent(String(bubble.id || ''))}`;
-                        await sendFcmToUser(userId, {
-                            data: {
-                                bubbleId: String(bubble.id || ''),
-                                type: 'overdue',
-                                url,
-                                bubbleTitle: String(bubble.title || '')
-                            }
-                        }, tokens);
-                        await markNotificationSent(key);
-                    }
-                    // mark overdue in Firestore (sticky pulse across devices) - только если overdueSticky еще не установлен
-                    if (!bubble.overdueSticky) {
-                        await updateBubbleFields(userId, bubble.id, { overdueSticky: true, overdueAt: new Date().toISOString() });
-                    }
-                } catch (e) {
-                    console.error('FCM overdue error', userId, bubble.id, e);
-                }
-
-                // Auto-reschedule dueDate if recurrence is configured
-                try {
-                    if (bubble.recurrence && bubble.dueDate) {
-                        const currentDue = parseLocalDateTime(bubble.dueDate, bubble.tz) || new Date(bubble.dueDate);
-                        // Прыгаем сразу на ближайшее БУДУЩЕЕ вхождение: иначе при длинной просрочке
-                        // дата двигалась бы по одному шагу за прогон с уведомлением на каждом
-                        const nextDue = computeNextFutureDueDate(currentDue, bubble.recurrence, now);
-                        if (nextDue) {
-                            await updateBubbleDueDate(userId, bubble.id, nextDue, bubble.tz);
-                            // keep sticky flag until user stops or dueDate manually changed/deleted - только если overdueSticky еще установлен
-                            if (bubble.overdueSticky) {
-                                await updateBubbleFields(userId, bubble.id, { overdueSticky: true });
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error('Reschedule error', userId, bubble.id, e);
+                    console.error('Error processing bubble', userId, bubble.id, e);
+                } finally {
+                    // Сдвигаем nextNotifyAt всегда — иначе задача читалась бы каждую минуту.
+                    await updateNextNotifyAt(userId, bubble.id, bubble, now);
                 }
             }
-        }
         } catch (e) {
             console.error('Error processing user', userId, e);
         }
