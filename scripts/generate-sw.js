@@ -1,8 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-// Загружаем переменные окружения
+// Загружаем переменные окружения: локально — .env; в CI существует только
+// .env.production (создаётся workflow'ом). dotenv не перезаписывает уже
+// заданные значения, поэтому .env имеет приоритет, а отсутствующий файл
+// молча пропускается.
 require('dotenv').config();
+require('dotenv').config({ path: '.env.production' });
 
 // Читаем шаблон Service Worker
 const swTemplate = `// Firebase Messaging (background notifications)
