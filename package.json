@@ -3,12 +3,12 @@
   "version": "0.0.55",
   "description": "Interactive Bubbles component with internationalization support",
   "homepage": "https://pmobile78.github.io/to-round-react",
-  "main": "src/pages/BubblesPage.js",
+  "main": "src/pages/BubblesPage.jsx",
   "scripts": {
-    "start": "npm run generate-sw && react-scripts start",
-    "build": "npm run generate-sw && react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
+    "start": "npm run generate-sw && vite",
+    "build": "npm run generate-sw && vite build",
+    "preview": "vite preview",
+    "test": "vitest run --passWithNoTests",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
     "generate-sw": "node scripts/generate-sw.js",
@@ -67,8 +67,7 @@
     "mind-elixir": "^5.12.2",
     "react": ">=16.8.0",
     "react-dom": ">=16.8.0",
-    "react-i18next": "latest",
-    "react-scripts": "^5.0.1"
+    "react-i18next": "latest"
   },
   "peerDependencies": {
     "react": ">=16.8.0",
@@ -87,7 +86,10 @@
     ]
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.2",
     "dotenv": "^16.6.1",
-    "gh-pages": "^6.3.0"
+    "gh-pages": "^6.3.0",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   }
 }

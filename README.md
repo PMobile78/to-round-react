@@ -19,13 +19,13 @@
 
 ## Стек
 
-React (CRA / react-scripts) · Firebase (Auth, Firestore, Cloud Functions Gen2, FCM) ·
+React (Vite 8) · Firebase (Auth, Firestore, Cloud Functions Gen2, FCM) ·
 Matter.js · MUI v5 · TipTap · i18next · date-fns · DOMPurify ·
 @xyflow/react + mind-elixir + dagre (mind maps).
 
 ## Быстрый старт
 
-Требуется Node 18+ (CI собирает на Node 18; Cloud Functions — на Node 22).
+Требуется Node 22+ (CI собирает на Node 22; Cloud Functions — на Node 22).
 
 ```bash
 npm ci --legacy-peer-deps      # из-за peer-конфликтов всегда с этим флагом
@@ -77,7 +77,7 @@ public/                  # index.html, сгенерированный sw.js, и�
 ## Тесты
 
 ```bash
-npm test                          # тесты фронтенда (react-scripts)
+npm test                          # тесты фронтенда (vitest)
 node functions/test-next-notify.js  # unit-тесты чистых функций планировщика
 ```
 

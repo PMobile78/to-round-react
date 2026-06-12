@@ -3,7 +3,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, 
 import packageJson from '../../package.json';
 
 /** Сборка подставляет REACT_APP_VERSION; без неё — версия из package.json (локальный dev без устаревшего .env). */
-const APP_VERSION = process.env.REACT_APP_VERSION || packageJson.version || 'dev';
+const APP_VERSION = import.meta.env.REACT_APP_VERSION || packageJson.version || 'dev';
 
 export default function AboutDialog({ open, onClose, t }) {
     const memoryInfo = useMemo(() => {
@@ -27,8 +27,8 @@ export default function AboutDialog({ open, onClose, t }) {
             <DialogContent>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Typography variant="body2">Version: {APP_VERSION}</Typography>
-                    <Typography variant="body2">Build time: {process.env.REACT_APP_BUILD_TIME || '-'}</Typography>
-                    <Typography variant="body2">Commit: {process.env.REACT_APP_GIT_SHA || '-'}</Typography>
+                    <Typography variant="body2">Build time: {import.meta.env.REACT_APP_BUILD_TIME || '-'}</Typography>
+                    <Typography variant="body2">Commit: {import.meta.env.REACT_APP_GIT_SHA || '-'}</Typography>
                     {memoryInfo && (
                         <Box sx={{ mt: 1 }}>
                             <Typography variant="body2">
