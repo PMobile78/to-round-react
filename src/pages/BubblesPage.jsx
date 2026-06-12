@@ -15,6 +15,7 @@ import {
     Paper,
 
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
     CloseOutlined, DeleteOutlined, Add, FilterList, Menu as MenuIcon, ViewList, Refresh,
 } from '@mui/icons-material';
@@ -350,31 +351,33 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     // Function to get button styles based on theme
     const getButtonStyles = () => {
+        const isLight = themeMode === 'light';
         return {
-            backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)',
-            color: themeMode === 'light' ? '#2f6bdb' : 'white',
+            backgroundColor: alpha(theme.palette.primary.main, isLight ? 0.12 : 0.18),
+            color: isLight ? theme.palette.primary.main : theme.palette.text.primary,
             '&:hover': {
-                backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)'
+                backgroundColor: alpha(theme.palette.primary.main, isLight ? 0.2 : 0.28)
             }
         };
     };
 
     const getOutlinedButtonStyles = () => {
+        const isLight = themeMode === 'light';
         return {
-            color: themeMode === 'light' ? '#2f6bdb' : 'white',
-            borderColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.5)' : 'rgba(255, 255, 255, 0.5)',
-            backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent',
+            color: isLight ? theme.palette.primary.main : theme.palette.text.primary,
+            borderColor: alpha(theme.palette.primary.main, isLight ? 0.5 : 0.6),
+            backgroundColor: isLight ? alpha(theme.palette.primary.main, 0.06) : 'transparent',
             '&:hover': {
-                borderColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.1)'
+                borderColor: theme.palette.primary.main,
+                backgroundColor: alpha(theme.palette.primary.main, isLight ? 0.12 : 0.1)
             }
         };
     };
 
     const getDialogPaperStyles = () => {
         return {
-            backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)',
-            color: themeMode === 'light' ? '#000000' : '#ffffff'
+            backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(22, 29, 42, 0.95)',
+            color: themeMode === 'light' ? '#1c2330' : '#e8ecf4'
         };
     };
 
@@ -1624,11 +1627,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
             // Определяем стили в зависимости от поиска
             const textOpacity = hasSearchQuery ? (isFound ? 1 : 0.4) : 1;
-            const textColor = themeMode === 'light' ? '#2C3E50' : 'white';   // Обычный цвет для всех
+            const textColor = theme.palette.text.primary;
 
             const textShadow = themeMode === 'light'
-                ? '1px 1px 2px rgba(255,255,255,0.8)'
-                : '1px 1px 2px rgba(0,0,0,0.8)';
+                ? '0 1px 2px rgba(255, 255, 255, 0.65)'
+                : '0 1px 3px rgba(0, 0, 0, 0.5)';
 
             return bubble.title ? (
                 <Box
@@ -1653,7 +1656,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                                 isMobile ? fontSize * 0.75 : fontSize,
                                 Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? fontSize * 1.2 : fontSize * 1.3)
                             ),
-                            fontWeight: 'bold',
+                            fontWeight: 600,
                             lineHeight: 1.1,
                             wordBreak: 'break-word'
                         }}
@@ -2055,6 +2058,21 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             marginLeft: (!isMobile && categoriesPanelEnabled && mainView === 'bubbles') ? '320px' : '0px',
             transition: 'margin-left 0.3s ease, width 0.3s ease'
         }}>
+            {/* Полоса хедера за плавающими контролами */}
+            {mainView === 'bubbles' && (
+                <Box sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: isMobile ? 56 : 72,
+                    zIndex: 999,
+                    backgroundColor: alpha(theme.palette.background.paper, themeMode === 'light' ? 0.75 : 0.65),
+                    backdropFilter: 'blur(10px)',
+                    borderBottom: `1px solid ${theme.palette.divider}`,
+                    pointerEvents: 'none'
+                }} />
+            )}
             {/* Заголовок и кнопки - адаптивный */}
             {mainView === 'bubbles' && (!isMobile ? (
                 <>
@@ -2102,22 +2120,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             variant="contained"
                             onClick={openCreateDialog}
                             startIcon={<Add />}
-                            sx={{
-                                background: themeMode === 'light'
-                                    ? 'rgba(59, 125, 237, 0.9)'
-                                    : 'rgba(255,255,255,0.2)',
-                                backdropFilter: 'blur(10px)',
-                                border: themeMode === 'light'
-                                    ? '1px solid rgba(59, 125, 237, 0.5)'
-                                    : '1px solid rgba(255,255,255,0.3)',
-                                color: themeMode === 'light' ? 'white' : 'white',
-                                height: 36,
-                                '&:hover': {
-                                    background: themeMode === 'light'
-                                        ? 'rgba(59, 125, 237, 1)'
-                                        : 'rgba(255,255,255,0.3)'
-                                }
-                            }}
+                            sx={{ height: 36 }}
                         >
                             {t('bubbles.addBubble')}
                         </Button>
@@ -2217,12 +2220,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                                     }
                                     openCreateDialog();
                                 }}
-                                sx={{
-                                    backgroundColor: 'rgba(59, 125, 237, 0.9)',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(59, 125, 237, 1)'
-                                    }
-                                }}
                             >
                                 <Add />
                             </Fab>
@@ -2316,13 +2313,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                                         sx={{
                                             ...getOutlinedButtonStyles(),
                                             height: 36,
-                                            backgroundColor: !isAllSelected()
-                                                ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)')
-                                                : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent'),
+                                            backgroundColor: alpha(
+                                                theme.palette.primary.main,
+                                                !isAllSelected()
+                                                    ? (themeMode === 'light' ? 0.15 : 0.2)
+                                                    : (themeMode === 'light' ? 0.08 : 0)
+                                            ),
                                             opacity: categoriesPanelEnabled ? 0.5 : 1,
                                             '&:disabled': {
-                                                backgroundColor: themeMode === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)',
-                                                color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)'
+                                                backgroundColor: theme.palette.action.disabledBackground,
+                                                color: theme.palette.action.disabled
                                             }
                                         }}
                                     >
@@ -2420,13 +2420,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                                     disabled={categoriesPanelEnabled}
                                     sx={{
                                         ...getButtonStyles(),
-                                        backgroundColor: !isAllSelected()
-                                            ? (themeMode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)')
-                                            : (themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)'),
+                                        backgroundColor: alpha(
+                                            theme.palette.primary.main,
+                                            !isAllSelected()
+                                                ? (themeMode === 'light' ? 0.22 : 0.3)
+                                                : (themeMode === 'light' ? 0.12 : 0.18)
+                                        ),
                                         opacity: categoriesPanelEnabled ? 0.5 : 1,
                                         '&:disabled': {
-                                            backgroundColor: themeMode === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)',
-                                            color: themeMode === 'light' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)'
+                                            backgroundColor: theme.palette.action.disabledBackground,
+                                            color: theme.palette.action.disabled
                                         }
                                     }}
                                 >
@@ -2447,9 +2450,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             left: 10,
                             right: 10,
                             zIndex: 1000,
-                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                            backgroundColor: 'rgba(15, 18, 25, 0.55)',
+                            backdropFilter: 'blur(8px)',
                             padding: 1.5,
-                            borderRadius: 2,
+                            borderRadius: 3,
                             textAlign: 'center'
                         }}>
                             <IconButton

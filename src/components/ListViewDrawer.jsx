@@ -48,8 +48,7 @@ const TaskListDrawer = ({
             PaperProps={{
                 sx: {
                     width: isMobile ? '100%' : '60%',
-                    maxWidth: isMobile ? '100%' : '800px',
-                    backgroundColor: themeMode === 'light' ? '#FFFFFF' : '#1e1e1e'
+                    maxWidth: isMobile ? '100%' : '800px'
                 }
             }}
         >
