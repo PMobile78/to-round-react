@@ -3,7 +3,7 @@
   "version": "0.0.55",
   "description": "Interactive Bubbles component with internationalization support",
   "homepage": "https://pmobile78.github.io/to-round-react",
-  "main": "src/pages/BubblesPage.js",
+  "main": "src/pages/BubblesPage.jsx",
   "scripts": {
     "start": "npm run generate-sw && react-scripts start",
     "build": "npm run generate-sw && react-scripts build",
