@@ -14,7 +14,7 @@ import {
     useTheme,
     useMediaQuery
 } from '@mui/material';
-import { Visibility, VisibilityOff, Bubble } from '@mui/icons-material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { createUser, loginUser, resetPassword } from '../services/authService';
 import LanguageSelector from './LanguageSelector';
