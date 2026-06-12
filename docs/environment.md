@@ -21,7 +21,7 @@ npm start
 
 ## Переменные
 
-Все переменные фронтенда должны иметь префикс `REACT_APP_` — иначе CRA их не пробросит.
+Все переменные фронтенда должны иметь префикс `REACT_APP_` — иначе Vite их не пробросит (префикс настроен в `vite.config.js`).
 
 ### Firebase
 
@@ -73,7 +73,7 @@ config.app.name          // 'To-Round' по умолчанию
 ## Service worker
 
 `public/sw.js` **генерируется** из переменных окружения скриптом
-`scripts/generate-sw.js`. Он встроен в `npm start` и `npm run build`, отдельно его
+`scripts/generate-sw.js`. Он встроен в `npm start` и `npm run build` через `vite.config.js`, отдельно его
 можно прогнать через `npm run generate-sw`. Не редактируйте `public/sw.js` вручную —
 изменения перезапишутся при следующей сборке.
 

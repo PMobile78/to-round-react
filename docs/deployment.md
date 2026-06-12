@@ -38,7 +38,7 @@ Workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml).
 При каждом пуше/PR в `main`/`master` запускается job `build-and-deploy` (`ubuntu-latest`):
 
 1. **Checkout** репозитория.
-2. **Setup Node.js 18** с кешем npm.
+2. **Setup Node.js 22** с кешем npm.
 3. **Install** — `npm ci --legacy-peer-deps --prefer-offline --no-audit`.
 4. **Bump version** — `npm run version:patch`, новая версия пишется в output шага.
 5. **Commit version bump** — коммит `package.json` с `[skip ci]` и push *(только для `main`/`master`)*.

@@ -9,7 +9,8 @@ Human-facing documentation lives in [`docs/`](docs/README.md) (setup, Firebase, 
 ```bash
 npm start              # dev server (also generates service worker)
 npm run build          # production build (also generates service worker)
-npm test               # run tests (react-scripts test)
+npm test               # run tests (vitest)
+npm run preview        # serve production build locally
 npm run generate-sw    # generate public/sw.js from env vars only
 npm run deploy         # build + push to gh-pages branch
 
@@ -23,20 +24,23 @@ npm run version:major
 
 ## Architecture
 
-**Stack:** React (CRA/react-scripts), Firebase (Auth + Firestore client + Cloud Functions Gen2 + FCM), Matter.js, MUI v5, TipTap (rich text), i18next, @xyflow/react + mind-elixir (mind maps), date-fns, DOMPurify.  
+**Stack:** React (Vite 8), Firebase (Auth + Firestore client + Cloud Functions Gen2 + FCM), Matter.js, MUI v5, TipTap (rich text), i18next, @xyflow/react + mind-elixir (mind maps), date-fns, DOMPurify.  
 **Hosting:** GitHub Pages. Deployed via `.github/workflows/deploy.yml` on push to `main`/`master`.
 
 ### Frontend structure
 
 ```
+index.html                 # entry point (Vite)
+vite.config.js             # Vite configuration (base: '/to-round-react/', outDir: 'build')
 src/
-  App.js                     # root: Firebase Auth listener → AuthForm | BubblesPage
+  App.jsx                    # root: Firebase Auth listener → AuthForm | BubblesPage
+  index.jsx                  # React DOM root
   firebase.js                # Firebase SDK init
   firebaseMessaging.js       # FCM setup / token registration
   i18n.js                    # i18next init (en + uk)
   pages/
-    BubblesPage.js           # main screen / god-component (active refactor target — see hooks/)
-    MindMapPage.js           # mind map screen
+    BubblesPage.jsx          # main screen / god-component (active refactor target — see hooks/)
+    MindMapPage.jsx          # mind map screen
   services/
     authService.js           # Firebase Auth wrapper
     firestoreService.js      # Firestore CRUD: bubbles, tags, FCM tokens
@@ -97,7 +101,7 @@ The service worker (`public/sw.js`) is generated from env vars by `scripts/gener
 ## Active refactor context
 
 Refactor history is tracked in `docs/superpowers/`. Key standing conventions:
-- `BubblesPage.js` is a ~3000-line god-component — new behaviour extracts to `hooks/` and `components/`
-- `HtmlRenderer.js` uses DOMPurify — any HTML rendering must go through it
+- `BubblesPage.jsx` is a ~3000-line god-component — new behaviour extracts to `hooks/` and `components/`
+- `HtmlRenderer.jsx` uses DOMPurify — any HTML rendering must go through it
 - `firestore.rules` is now in the repo and must be kept in sync with `firebase.json` (`"firestore": { "rules": "firestore.rules" }`)
 - Window/panel/header backgrounds come from the MUI theme (`hooks/useThemeMode.js`), never hardcoded hex/rgba. Wrap a standalone panel in `<Paper>` with no explicit `backgroundColor` (e.g. `TasksCategoriesPanel`, list-as-main-screen `Paper elevation={16}`); a window header (`DialogTitle` / header `Box`) must **not** set its own `backgroundColor` — it inherits the window's Paper background. Header text uses `text.primary`, not `'white'`. Dialog body bg comes from `getDialogPaperStyles()` (`rgba(...,0.95)`).
