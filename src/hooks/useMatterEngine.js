@@ -122,8 +122,8 @@ export function useMatterEngine({
                                 frictionAir: 0.01,
                                 render: {
                                     fillStyle: getBubbleFillStyle(tagColor),
-                                    strokeStyle: storedBubble.strokeStyle || '#3B7DED',
-                                    lineWidth: 3
+                                    strokeStyle: storedBubble.strokeStyle || '#2f6bdb',
+                                    lineWidth: 1.5
                                 }
                             }),
                             radius: storedBubble.radius,

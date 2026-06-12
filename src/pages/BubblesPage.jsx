@@ -57,6 +57,7 @@ import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
 import { useMatterEngine } from '../hooks/useMatterEngine';
 import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
+import { withAlpha } from '../utils/colorUtils';
 
 
 // Helpers for JSON export
@@ -143,7 +144,7 @@ const sanitizeBubble = (raw) => {
         radius: typeof raw.radius === 'number' && raw.radius > 0 ? raw.radius : 50,
         status: ALLOWED_BUBBLE_STATUSES.has(raw.status) ? raw.status : 'active',
         fillStyle: typeof raw.fillStyle === 'string' ? raw.fillStyle : 'transparent',
-        strokeStyle: typeof raw.strokeStyle === 'string' ? raw.strokeStyle : '#3B7DED',
+        strokeStyle: typeof raw.strokeStyle === 'string' ? raw.strokeStyle : '#2f6bdb',
         tagId: typeof raw.tagId === 'string' ? raw.tagId : null,
         dueDate: typeof raw.dueDate === 'string' ? raw.dueDate : null,
         tz: typeof raw.tz === 'string' ? raw.tz : null,
@@ -167,7 +168,7 @@ const sanitizeTag = (raw) => {
     return {
         id,
         name: typeof raw.name === 'string' ? raw.name : '',
-        color: typeof raw.color === 'string' ? raw.color : '#3B7DED',
+        color: typeof raw.color === 'string' ? raw.color : '#2f6bdb',
     };
 };
 
@@ -194,7 +195,7 @@ const sanitizeBubblesForExport = (bubblesData) => {
         title: bubble.title || '',
         description: bubble.description || '',
         fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
-        strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
+        strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#2f6bdb',
         tagId: bubble.tagId || null,
         status: bubble.status || BUBBLE_STATUS.ACTIVE,
         createdAt: typeof bubble.createdAt === 'string' ? bubble.createdAt : toIsoOrNull(bubble.createdAt) || new Date().toISOString(),
@@ -253,7 +254,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [selectedTagId, setSelectedTagId] = useState('');
     const [tagDialog, setTagDialog] = useState(false);
     const [tagName, setTagName] = useState('');
-    const [tagColor, setTagColor] = useState('#3B7DED');
+    const [tagColor, setTagColor] = useState('#2f6bdb');
     const [editingTag, setEditingTag] = useState(null);
     const [tagMenuAnchor, setTagMenuAnchor] = useState(null);
 
@@ -351,7 +352,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const getButtonStyles = () => {
         return {
             backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.15)' : 'rgba(255, 255, 255, 0.2)',
-            color: themeMode === 'light' ? '#3B7DED' : 'white',
+            color: themeMode === 'light' ? '#2f6bdb' : 'white',
             '&:hover': {
                 backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.25)' : 'rgba(255, 255, 255, 0.3)'
             }
@@ -360,7 +361,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     const getOutlinedButtonStyles = () => {
         return {
-            color: themeMode === 'light' ? '#3B7DED' : 'white',
+            color: themeMode === 'light' ? '#2f6bdb' : 'white',
             borderColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.5)' : 'rgba(255, 255, 255, 0.5)',
             backgroundColor: themeMode === 'light' ? 'rgba(59, 125, 237, 0.08)' : 'transparent',
             '&:hover': {
@@ -387,19 +388,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         }
 
         if (themeMode === 'light') {
-            // В светлой теме добавляем легкий фон
             if (tagColor) {
-                // Используем цвет тега с низкой прозрачностью
-                return tagColor + '15'; // добавляем 15 для 8% прозрачности
+                return withAlpha(tagColor, 0.10);
             }
-            return 'rgba(59, 125, 237, 0.08)'; // легкий синий фон по умолчанию
+            return withAlpha('#2f6bdb', 0.08);
         } else {
-            // В темной теме также добавляем фон
             if (tagColor) {
-                // Используем цвет тега с низкой прозрачностью
-                return tagColor + '20'; // добавляем 20 для 12% прозрачности в темной теме
+                return withAlpha(tagColor, 0.14);
             }
-            return 'rgba(255, 255, 255, 0.05)'; // легкий белый фон по умолчанию для темной темы
+            return 'rgba(255, 255, 255, 0.06)';
         }
     };
 
@@ -696,7 +693,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             }
                         }
                         bubble.body.render.strokeStyle = highlightColor;
-                        bubble.body.render.lineWidth = 4;
+                        bubble.body.render.lineWidth = 2.5;
                         // Добавляем свечение цветом тега
                         bubble.body.render.shadowColor = highlightColor;
                         bubble.body.render.shadowBlur = 15;
@@ -712,7 +709,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             }
                         }
                         bubble.body.render.strokeStyle = originalStrokeColor;
-                        bubble.body.render.lineWidth = 3;
+                        bubble.body.render.lineWidth = 1.5;
                         // Убираем свечение
                         bubble.body.render.shadowColor = 'transparent';
                         bubble.body.render.shadowBlur = 0;
@@ -740,7 +737,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             }
                         }
                         bubble.body.render.strokeStyle = highlightColor;
-                        bubble.body.render.lineWidth = 4;
+                        bubble.body.render.lineWidth = 2.5;
                         // Добавляем свечение цветом тега
                         bubble.body.render.shadowColor = highlightColor;
                         bubble.body.render.shadowBlur = 15;
@@ -756,7 +753,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             }
                         }
                         bubble.body.render.strokeStyle = originalStrokeColor;
-                        bubble.body.render.lineWidth = 3;
+                        bubble.body.render.lineWidth = 1.5;
                         // Убираем свечение
                         bubble.body.render.shadowColor = 'transparent';
                         bubble.body.render.shadowBlur = 0;
@@ -787,7 +784,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             render: {
                 fillStyle: getBubbleFillStyle(tagColor),
                 strokeStyle: strokeColor,
-                lineWidth: 3
+                lineWidth: 1.5
             }
         });
 
@@ -923,7 +920,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                     render: {
                         fillStyle: fillStyle,
                         strokeStyle: strokeColor,
-                        lineWidth: 3
+                        lineWidth: 1.5
                     }
                 }
             );
@@ -1152,7 +1149,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             }
             setEditingTag(null);
             setTagName('');
-            setTagColor(getNextAvailableColor() || '#3B7DED');
+            setTagColor(getNextAvailableColor() || '#2f6bdb');
         }
         setTagDialog(true);
     };
@@ -1203,7 +1200,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setTagDialog(false);
         setEditingTag(null);
         setTagName('');
-        setTagColor(getNextAvailableColor() || '#3B7DED');
+        setTagColor(getNextAvailableColor() || '#2f6bdb');
 
         // Открываем обратно диалог категорий (и для создания, и для редактирования)
         setTimeout(() => {
@@ -1258,7 +1255,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setTagDialog(false);
         setEditingTag(null);
         setTagName('');
-        setTagColor(getNextAvailableColor() || '#3B7DED');
+        setTagColor(getNextAvailableColor() || '#2f6bdb');
 
         // Открываем обратно диалог категорий при отмене
         setTimeout(() => {
