@@ -24,7 +24,7 @@ i18n
     .init({
         resources,
         fallbackLng: 'en', // Default language if detection fails
-        debug: process.env.NODE_ENV === 'development',
+        debug: import.meta.env.DEV,
 
         interpolation: {
             escapeValue: false // React already does escaping

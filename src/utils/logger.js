@@ -1,4 +1,4 @@
-const isProd = process.env.REACT_APP_ENVIRONMENT === 'production';
+const isProd = import.meta.env.REACT_APP_ENVIRONMENT === 'production';
 
 const logger = {
   log: isProd ? () => {} : console.log.bind(console),

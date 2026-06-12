@@ -5,21 +5,21 @@ import logger from './logger';
 export const config = {
     // Firebase Configuration
     firebase: {
-        apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-        authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.REACT_APP_FIREBASE_APP_ID,
-        measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
-        vapidKey: process.env.REACT_APP_FIREBASE_VAPID_KEY
+        apiKey: import.meta.env.REACT_APP_FIREBASE_API_KEY,
+        authDomain: import.meta.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+        projectId: import.meta.env.REACT_APP_FIREBASE_PROJECT_ID,
+        storageBucket: import.meta.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: import.meta.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+        appId: import.meta.env.REACT_APP_FIREBASE_APP_ID,
+        measurementId: import.meta.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
+        vapidKey: import.meta.env.REACT_APP_FIREBASE_VAPID_KEY
     },
 
     // App Configuration
     app: {
-        name: process.env.REACT_APP_NAME || 'To-Round',
-        version: process.env.REACT_APP_VERSION || packageJson.version || '0.0.2',
-        environment: process.env.REACT_APP_ENVIRONMENT || 'development'
+        name: import.meta.env.REACT_APP_NAME || 'To-Round',
+        version: import.meta.env.REACT_APP_VERSION || packageJson.version || '0.0.2',
+        environment: import.meta.env.REACT_APP_ENVIRONMENT || 'development'
     }
 };
 
