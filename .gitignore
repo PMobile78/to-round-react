@@ -111,3 +111,4 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+.superpowers/
