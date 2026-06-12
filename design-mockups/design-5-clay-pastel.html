@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToRound — Clay Pastel concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3eefb;
+    --card: #fdfcff;
+    --text: #4a4458;
+    --text-dim: #9b93ad;
+    --lav: #b9a6f2;
+    --mint: #9fe6c8;
+    --peach: #ffc6a8;
+    --rose: #ffb3c7;
+    --sky: #a8d8ff;
+    --clay-out: 0 12px 24px rgba(122, 102, 170, .18), inset 0 -8px 12px rgba(122, 102, 170, .14), inset 0 8px 12px rgba(255,255,255,.85);
+    --clay-card: 0 10px 24px rgba(122, 102, 170, .12), inset 0 -5px 10px rgba(122, 102, 170, .07), inset 0 5px 10px rgba(255,255,255,.9);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg); color: var(--text);
+    height: 100vh; overflow: hidden;
+    display: grid; grid-template-rows: 84px 1fr; grid-template-columns: 300px 1fr;
+  }
+
+  /* ---- header ---- */
+  header {
+    grid-column: 1 / 3;
+    display: flex; align-items: center; gap: 18px;
+    padding: 0 28px;
+  }
+  .logo { font-weight: 900; font-size: 24px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px; }
+  .logo .blob {
+    width: 38px; height: 38px; border-radius: 46% 54% 55% 45% / 52% 44% 56% 48%;
+    background: linear-gradient(135deg, var(--lav), var(--rose));
+    box-shadow: var(--clay-out);
+  }
+  .search {
+    flex: 0 1 400px; display: flex; align-items: center; gap: 10px;
+    background: var(--card); border-radius: 22px; padding: 13px 20px;
+    font-size: 14.5px; font-weight: 700; color: var(--text-dim);
+    box-shadow: var(--clay-card); border: 0;
+  }
+  .spacer { flex: 1; }
+  .pill-toggle { display: flex; background: var(--card); border-radius: 22px; padding: 5px; box-shadow: var(--clay-card); }
+  .pill-toggle button {
+    border: 0; background: transparent; color: var(--text-dim); cursor: pointer;
+    font: inherit; font-weight: 800; font-size: 13.5px; padding: 9px 20px; border-radius: 18px;
+  }
+  .pill-toggle button.active {
+    background: linear-gradient(135deg, var(--lav), #a18ae6); color: #fff;
+    box-shadow: 0 6px 14px rgba(161,138,230,.45), inset 0 2px 4px rgba(255,255,255,.4);
+  }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--peach), var(--rose));
+    display: grid; place-items: center; font-weight: 900; font-size: 14px; color: #7c4a2d;
+    box-shadow: var(--clay-out);
+  }
+
+  /* ---- sidebar ---- */
+  aside { padding: 10px 22px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  aside h2 { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); margin: 8px 6px 2px; }
+  .cat {
+    display: flex; align-items: center; gap: 13px;
+    background: var(--card); border-radius: 20px; padding: 14px 16px;
+    font-size: 14.5px; font-weight: 800; cursor: pointer;
+    box-shadow: var(--clay-card);
+    transition: transform .15s;
+  }
+  .cat:hover { transform: translateY(-2px); }
+  .cat.active { outline: 3px solid var(--lav); outline-offset: -3px; }
+  .cat .blob { width: 22px; height: 22px; border-radius: 46% 54% 55% 45% / 52% 44% 56% 48%; flex-shrink: 0; box-shadow: inset 0 -3px 5px rgba(122,102,170,.25), inset 0 3px 5px rgba(255,255,255,.7); }
+  .cat .count { margin-left: auto; font-size: 12px; font-weight: 900; color: var(--text-dim); background: var(--bg); border-radius: 12px; padding: 3px 11px; box-shadow: inset 0 2px 4px rgba(122,102,170,.15); }
+  .add-cat {
+    border: 0; background: transparent; font: inherit; font-weight: 800; font-size: 13.5px;
+    color: var(--text-dim); padding: 12px; cursor: pointer; border-radius: 20px;
+    border: 2.5px dashed #cfc4e8;
+  }
+  .add-cat:hover { color: var(--lav); border-color: var(--lav); }
+
+  .progress-card {
+    margin-top: auto; background: var(--card); border-radius: 24px; padding: 18px;
+    box-shadow: var(--clay-card); text-align: center;
+  }
+  .progress-card .big { font-size: 30px; font-weight: 900; color: var(--lav); }
+  .progress-card .sub { font-size: 12.5px; font-weight: 700; color: var(--text-dim); margin-top: 2px; }
+  .bar { height: 14px; border-radius: 10px; background: var(--bg); margin-top: 12px; box-shadow: inset 0 3px 6px rgba(122,102,170,.18); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 70%; border-radius: 10px; background: linear-gradient(90deg, var(--mint), #6fd4a8); box-shadow: inset 0 2px 3px rgba(255,255,255,.6); }
+
+  /* ---- canvas ---- */
+  main { position: relative; margin: 0 24px 24px 4px; border-radius: 32px; background: var(--card); box-shadow: var(--clay-card); overflow: hidden; }
+  .bubble {
+    position: absolute;
+    display: grid; place-items: center; text-align: center;
+    font-weight: 800; line-height: 1.3; padding: 20px;
+    cursor: grab; color: #fff;
+    border-radius: 46% 54% 55% 45% / 52% 44% 56% 48%;
+    animation: squish 7s ease-in-out infinite alternate;
+    transition: transform .2s;
+  }
+  .bubble:hover { transform: scale(1.06); }
+  .bubble small { display: block; font-size: 11px; font-weight: 700; opacity: .85; margin-top: 5px; }
+  .bubble:nth-child(odd) { animation-duration: 9s; animation-direction: alternate-reverse; }
+  @keyframes squish {
+    0%   { border-radius: 46% 54% 55% 45% / 52% 44% 56% 48%; translate: 0 0; }
+    100% { border-radius: 54% 46% 45% 55% / 44% 56% 48% 52%; translate: 8px -14px; }
+  }
+  .bub-lav   { background: linear-gradient(135deg, #c8b8f7, #a18ae6); color: #fff;    box-shadow: 0 16px 28px rgba(161,138,230,.4), inset 0 -10px 16px rgba(94,72,160,.35), inset 0 10px 16px rgba(255,255,255,.45); }
+  .bub-mint  { background: linear-gradient(135deg, #b5f0d6, #7fd9b2); color: #2c6b50; box-shadow: 0 16px 28px rgba(127,217,178,.4), inset 0 -10px 16px rgba(58,140,104,.3), inset 0 10px 16px rgba(255,255,255,.5); }
+  .bub-peach { background: linear-gradient(135deg, #ffd7bf, #ffae85); color: #8a4a22; box-shadow: 0 16px 28px rgba(255,174,133,.4), inset 0 -10px 16px rgba(190,105,55,.3), inset 0 10px 16px rgba(255,255,255,.5); }
+  .bub-rose  { background: linear-gradient(135deg, #ffc9d8, #ff96b4); color: #8d3a55; box-shadow: 0 16px 28px rgba(255,150,180,.4), inset 0 -10px 16px rgba(190,80,115,.3), inset 0 10px 16px rgba(255,255,255,.5); }
+  .bub-sky   { background: linear-gradient(135deg, #c2e3ff, #8ec7f7); color: #2f5e87; box-shadow: 0 16px 28px rgba(142,199,247,.4), inset 0 -10px 16px rgba(60,120,175,.3), inset 0 10px 16px rgba(255,255,255,.5); }
+
+  .due-tag {
+    position: absolute; top: -8px; right: 2px;
+    background: var(--card); color: #e2638a;
+    font-size: 10.5px; font-weight: 900; padding: 5px 12px; border-radius: 14px;
+    box-shadow: 0 6px 12px rgba(122,102,170,.25), inset 0 2px 3px rgba(255,255,255,.9);
+  }
+
+  .hint {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--bg); border-radius: 18px; padding: 10px 22px;
+    font-size: 12.5px; font-weight: 800; color: var(--text-dim); white-space: nowrap;
+    box-shadow: inset 0 3px 6px rgba(122,102,170,.15);
+  }
+
+  .fab {
+    position: fixed; right: 46px; bottom: 46px;
+    width: 70px; height: 70px; border: 0; cursor: pointer;
+    border-radius: 46% 54% 55% 45% / 52% 44% 56% 48%;
+    background: linear-gradient(135deg, var(--lav), #9d7fe8);
+    color: #fff; font-size: 32px; font-weight: 900;
+    box-shadow: 0 16px 30px rgba(157,127,232,.5), inset 0 -8px 14px rgba(94,72,160,.4), inset 0 8px 14px rgba(255,255,255,.45);
+    transition: transform .2s cubic-bezier(.34,1.56,.64,1);
+  }
+  .fab:hover { transform: scale(1.12) rotate(-6deg); }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo"><span class="blob"></span>ToRound</div>
+    <div class="search">⌕&nbsp; Search tasks…</div>
+    <div class="spacer"></div>
+    <div class="pill-toggle">
+      <button class="active">Bubbles</button>
+      <button>List</button>
+      <button>Mind map</button>
+    </div>
+    <div class="avatar">DT</div>
+  </header>
+
+  <aside>
+    <h2>Categories</h2>
+    <div class="cat active"><span class="blob" style="background:var(--lav)"></span>Work<span class="count">8</span></div>
+    <div class="cat"><span class="blob" style="background:var(--mint)"></span>Home<span class="count">4</span></div>
+    <div class="cat"><span class="blob" style="background:var(--rose)"></span>Health<span class="count">3</span></div>
+    <div class="cat"><span class="blob" style="background:var(--peach)"></span>Ideas<span class="count">6</span></div>
+    <button class="add-cat">+ New category</button>
+
+    <div class="progress-card">
+      <div class="big">12 / 17</div>
+      <div class="sub">tasks done this week — nice!</div>
+      <div class="bar"><i></i></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="bubble bub-lav" style="width:195px;height:185px;top:13%;left:9%">
+      Ship release 0.0.56
+      <small>Work · today</small>
+      <span class="due-tag">⏰ 18:00</span>
+    </div>
+    <div class="bubble bub-mint" style="width:150px;height:145px;top:55%;left:22%">
+      Water the plants
+      <small>Home</small>
+    </div>
+    <div class="bubble bub-rose" style="width:170px;height:162px;top:20%;left:44%">
+      Morning run 5 km
+      <small>Health · daily</small>
+    </div>
+    <div class="bubble bub-peach" style="width:135px;height:130px;top:58%;left:54%">
+      Mind-map for Q3
+      <small>Ideas</small>
+    </div>
+    <div class="bubble bub-lav" style="width:120px;height:116px;top:12%;left:72%">
+      Code review
+      <small>Work</small>
+    </div>
+    <div class="bubble bub-sky" style="width:110px;height:106px;top:46%;left:78%">
+      Buy groceries
+      <small>Home</small>
+    </div>
+    <div class="hint">🫧 Squish, drag and pop your tasks!</div>
+  </main>
+
+  <button class="fab" title="Add bubble">+</button>
+</body>
+</html>

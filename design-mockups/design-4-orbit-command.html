@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToRound — Orbit Command concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #131a23;
+    --border: #232d3a;
+    --text: #dce3ec;
+    --text-dim: #6b7888;
+    --lime: #b8ff3d;
+    --cyan: #41e0d2;
+    --rose: #ff5d8f;
+    --amber: #ffc24b;
+    --violet: #9d7bff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg); color: var(--text);
+    height: 100vh; overflow: hidden;
+    display: grid; grid-template-rows: 58px 1fr 34px; grid-template-columns: 300px 1fr;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ---- header ---- */
+  header {
+    grid-column: 1 / 3;
+    display: flex; align-items: center; gap: 18px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .logo { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 16px; letter-spacing: 1px; }
+  .logo .accent { color: var(--lime); }
+  .search {
+    flex: 0 1 380px; display: flex; align-items: center; gap: 10px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text-dim);
+  }
+  .search kbd { margin-left: auto; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 10.5px; }
+  .spacer { flex: 1; }
+  .mode { display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
+  .mode button {
+    border: 0; background: transparent; color: var(--text-dim); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 500;
+    padding: 6px 14px; border-radius: 6px; text-transform: uppercase; letter-spacing: .5px;
+  }
+  .mode button.active { background: var(--lime); color: #0d1117; font-weight: 700; }
+  .avatar { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--cyan), var(--violet)); display: grid; place-items: center; font-size: 12px; font-weight: 600; color: #0d1117; }
+
+  /* ---- left panel ---- */
+  aside { border-right: 1px solid var(--border); background: var(--panel); padding: 18px 14px; overflow-y: auto; display: flex; flex-direction: column; }
+  .panel-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin: 4px 8px 10px; }
+  .cat {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: 8px; font-size: 13.5px; font-weight: 500;
+    cursor: pointer; border-left: 2px solid transparent;
+  }
+  .cat:hover { background: rgba(255,255,255,.03); }
+  .cat.active { background: rgba(184,255,61,.07); border-left-color: var(--lime); }
+  .cat .sw { width: 9px; height: 9px; border-radius: 2px; }
+  .cat .n { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
+
+  .queue { margin-top: 22px; }
+  .q-item {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 11px 12px; margin: 0 2px 8px; cursor: pointer;
+  }
+  .q-item:hover { border-color: #3a4a5e; }
+  .q-title { font-size: 13px; font-weight: 500; }
+  .q-meta { display: flex; gap: 8px; margin-top: 5px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-dim); }
+  .q-meta .urgent { color: var(--rose); }
+  .q-meta .tag { color: var(--cyan); }
+
+  /* ---- orbit view ---- */
+  main { position: relative; overflow: hidden; background:
+    radial-gradient(circle at 50% 54%, rgba(184,255,61,.05), transparent 30%),
+    var(--bg); }
+  .orbits { position: absolute; inset: 0; }
+  .ring {
+    position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%);
+    border: 1px dashed #28323f; border-radius: 50%;
+  }
+  .ring-label {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-dim);
+    background: var(--bg); padding: 0 10px;
+  }
+  .core {
+    position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%);
+    width: 86px; height: 86px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #2a3razz, #1a222d);
+    background: #161e28;
+    border: 1px solid var(--border);
+    display: grid; place-items: center; text-align: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim);
+    line-height: 1.5; letter-spacing: 1px;
+  }
+  .core b { color: var(--lime); font-size: 20px; }
+
+  .task-node {
+    position: absolute; border-radius: 50%;
+    display: grid; place-items: center; text-align: center;
+    font-size: 12px; font-weight: 600; line-height: 1.3; padding: 12px;
+    cursor: grab; color: #0d1117;
+    animation: pulse 4s ease-in-out infinite alternate;
+    transition: transform .2s;
+  }
+  .task-node:hover { transform: scale(1.08); z-index: 3; }
+  .task-node small { display: block; font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 9px; margin-top: 4px; opacity: .7; text-transform: uppercase; letter-spacing: .5px; }
+  @keyframes pulse { to { box-shadow: 0 0 0 10px rgba(255,255,255,0); } }
+  .n-lime   { background: var(--lime);   box-shadow: 0 0 26px rgba(184,255,61,.4); }
+  .n-cyan   { background: var(--cyan);   box-shadow: 0 0 26px rgba(65,224,210,.4); }
+  .n-rose   { background: var(--rose);   box-shadow: 0 0 26px rgba(255,93,143,.45); }
+  .n-amber  { background: var(--amber);  box-shadow: 0 0 26px rgba(255,194,75,.4); }
+  .n-violet { background: var(--violet); box-shadow: 0 0 26px rgba(157,123,255,.4); }
+  .n-dim    { background: #2a3543; color: var(--text); box-shadow: none; border: 1px solid var(--border); }
+
+  .legend {
+    position: absolute; top: 18px; right: 20px;
+    display: flex; flex-direction: column; gap: 7px;
+    background: rgba(19,26,35,.85); border: 1px solid var(--border); border-radius: 10px;
+    padding: 13px 16px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-dim);
+  }
+  .legend b { color: var(--text); font-weight: 500; }
+  .legend .row { display: flex; align-items: center; gap: 9px; }
+  .legend .sw { width: 8px; height: 8px; border-radius: 50%; }
+
+  .fab {
+    position: absolute; right: 24px; bottom: 24px;
+    height: 46px; padding: 0 20px; border-radius: 10px; border: 0; cursor: pointer;
+    background: var(--lime); color: #0d1117;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+    box-shadow: 0 0 30px rgba(184,255,61,.35);
+  }
+  .fab:hover { filter: brightness(1.1); }
+
+  /* ---- status bar ---- */
+  footer {
+    grid-column: 1 / 3;
+    display: flex; align-items: center; gap: 22px;
+    background: var(--panel); border-top: 1px solid var(--border);
+    padding: 0 18px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-dim);
+  }
+  footer .ok { color: var(--lime); }
+  footer .warn { color: var(--rose); }
+  footer .right { margin-left: auto; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo">TO<span class="accent">ROUND</span>_</div>
+    <div class="search">⌕ search or run a command… <kbd>⌘K</kbd></div>
+    <div class="spacer"></div>
+    <div class="mode">
+      <button class="active">Orbit</button>
+      <button>List</button>
+      <button>Map</button>
+    </div>
+    <div class="avatar">DT</div>
+  </header>
+
+  <aside>
+    <div class="panel-label">// categories</div>
+    <div class="cat active"><span class="sw" style="background:var(--lime)"></span>Work<span class="n">08</span></div>
+    <div class="cat"><span class="sw" style="background:var(--cyan)"></span>Home<span class="n">04</span></div>
+    <div class="cat"><span class="sw" style="background:var(--rose)"></span>Health<span class="n">03</span></div>
+    <div class="cat"><span class="sw" style="background:var(--amber)"></span>Ideas<span class="n">06</span></div>
+
+    <div class="queue">
+      <div class="panel-label">// up next</div>
+      <div class="q-item">
+        <div class="q-title">Ship release 0.0.56</div>
+        <div class="q-meta"><span class="urgent">T-02:14</span><span class="tag">#work</span></div>
+      </div>
+      <div class="q-item">
+        <div class="q-title">Code review for notifications PR</div>
+        <div class="q-meta"><span>14:30</span><span class="tag">#work</span></div>
+      </div>
+      <div class="q-item">
+        <div class="q-title">Morning run 5 km</div>
+        <div class="q-meta"><span>daily 07:00</span><span class="tag">#health</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="orbits">
+      <div class="ring" style="width:340px;height:340px"><span class="ring-label" style="top:-8px">today</span></div>
+      <div class="ring" style="width:620px;height:620px"><span class="ring-label" style="top:-8px">this week</span></div>
+      <div class="ring" style="width:900px;height:900px"><span class="ring-label" style="top:-8px">later</span></div>
+    </div>
+
+    <div class="core">FOCUS<br><b>5</b><br>due today</div>
+
+    <!-- today ring -->
+    <div class="task-node n-lime" style="width:130px;height:130px;left:calc(50% + 60px);top:calc(54% - 190px)">
+      Ship release 0.0.56<small>due 18:00</small>
+    </div>
+    <div class="task-node n-rose" style="width:110px;height:110px;left:calc(50% - 250px);top:calc(54% - 40px)">
+      Morning run 5 km<small>07:00 · daily</small>
+    </div>
+    <div class="task-node n-lime" style="width:100px;height:100px;left:calc(50% + 90px);top:calc(54% + 80px)">
+      Code review<small>14:30</small>
+    </div>
+
+    <!-- this week ring -->
+    <div class="task-node n-cyan" style="width:95px;height:95px;left:calc(50% - 390px);top:calc(54% - 230px)">
+      Water the plants<small>home</small>
+    </div>
+    <div class="task-node n-amber" style="width:105px;height:105px;left:calc(50% + 250px);top:calc(54% + 170px)">
+      Mind-map for Q3<small>ideas</small>
+    </div>
+    <div class="task-node n-cyan" style="width:85px;height:85px;left:calc(50% + 290px);top:calc(54% - 270px)">
+      Buy groceries<small>home</small>
+    </div>
+
+    <!-- later ring -->
+    <div class="task-node n-dim" style="width:90px;height:90px;left:calc(50% - 520px);top:calc(54% + 150px)">
+      Plan vacation<small>someday</small>
+    </div>
+    <div class="task-node n-violet" style="width:80px;height:80px;left:calc(50% + 430px);top:calc(54% - 60px)">
+      Read ML paper<small>ideas</small>
+    </div>
+
+    <div class="legend">
+      <b>ORBIT = URGENCY</b>
+      <div class="row"><span class="sw" style="background:var(--lime)"></span>work</div>
+      <div class="row"><span class="sw" style="background:var(--cyan)"></span>home</div>
+      <div class="row"><span class="sw" style="background:var(--rose)"></span>health</div>
+      <div class="row"><span class="sw" style="background:var(--amber)"></span>ideas</div>
+      <div class="row"><span class="sw" style="background:#2a3543"></span>no due date</div>
+    </div>
+
+    <button class="fab">+ NEW TASK</button>
+  </main>
+
+  <footer>
+    <span class="ok">● synced</span>
+    <span>21 tasks</span>
+    <span class="warn">2 overdue</span>
+    <span>next reminder in 02:14:09</span>
+    <span class="right">v0.0.56 · europe-west1</span>
+  </footer>
+</body>
+</html>
