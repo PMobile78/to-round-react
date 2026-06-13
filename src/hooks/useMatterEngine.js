@@ -72,9 +72,8 @@ export function useMatterEngine({
         const canvasSize = getCanvasSize();
         setCanvasSize(canvasSize);
 
-        // Create renderer
-        const bubbleViewBackground = theme?.custom?.canvasBackground || theme?.palette?.background?.default || '#fafbfc';
-
+        // Create renderer with transparent background
+        // (background color is now on the container; canvas is transparent to show DesignBackdrop)
         const render = Render.create({
             element: canvas,
             engine,
@@ -82,7 +81,7 @@ export function useMatterEngine({
                 width: canvasSize.width,
                 height: canvasSize.height,
                 wireframes: false,
-                background: bubbleViewBackground,
+                background: 'transparent',
                 showAngleIndicator: false,
                 showVelocity: false,
             }

@@ -446,10 +446,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     useEffect(() => {
         if (renderRef.current && renderRef.current.canvas) {
             const canvas = renderRef.current.canvas;
-            const canvasBackground = theme.custom?.canvasBackground;
 
-            renderRef.current.options.background = canvasBackground;
-            canvas.style.background = canvasBackground;
+            // Canvas is now transparent; background is on the container (updated via sx)
+            renderRef.current.options.background = 'transparent';
+            canvas.style.background = 'transparent';
         }
 
         // Update existing bubbles fill style and stroke width based on theme
@@ -2032,7 +2032,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             height: '100vh',
             overflow: 'hidden',
             position: 'relative',
-            background: theme.palette.background.bubbleView,
+            background: theme.custom?.canvasBackground || theme.palette.background.bubbleView,
             marginLeft: (!isMobile && categoriesPanelEnabled && mainView === 'bubbles') ? '320px' : '0px',
             transition: 'margin-left 0.3s ease, width 0.3s ease'
         }}>
@@ -2462,14 +2462,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             {/* Decorative backdrop layer (behind canvas) */}
             <DesignBackdrop />
 
-            {/* Canvas for physics */}
+            {/* Canvas for physics - transparent so backdrop shows through */}
             <div ref={canvasRef} style={{
                 width: '100vw',
                 height: '100vh',
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                zIndex: 1
+                zIndex: 2
             }} />
             {/* Текст поверх пузырей */}
             <TextOverlay key={textOverlayKey} />
