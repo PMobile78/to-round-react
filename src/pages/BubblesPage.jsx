@@ -467,13 +467,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             const canvas = renderRef.current.canvas;
 
             if (themeMode === 'light') {
-                // Для светлой темы - белый фон
-                renderRef.current.options.background = '#ffffff';
-                canvas.style.background = '#ffffff';
+                // Для светлой темы - светлый фон
+                renderRef.current.options.background = '#fafbfc';
+                canvas.style.background = '#fafbfc';
             } else {
-                // Для темной темы - градиент фон
-                renderRef.current.options.background = '#2c3e50';
-                canvas.style.background = 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)';
+                // Для темной темы - сине-графитовый градиент
+                renderRef.current.options.background = '#151c28';
+                canvas.style.background = 'linear-gradient(160deg, #151c28 0%, #1b2433 100%)';
             }
         }
 

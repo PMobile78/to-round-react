@@ -65,8 +65,8 @@ export function useMatterEngine({
 
         // Create renderer
         const bubbleViewBackground = themeMode === 'light'
-            ? '#ffffff'
-            : 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)';
+            ? '#fafbfc'
+            : 'linear-gradient(160deg, #151c28 0%, #1b2433 100%)';
 
         const render = Render.create({
             element: canvas,
