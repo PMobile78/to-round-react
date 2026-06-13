@@ -3,7 +3,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box, CircularProgress } from '@mui/material';
 import BubblesPage from './pages/BubblesPage';
-import MindMapPage from './pages/MindMapPage';
+const MindMapPage = React.lazy(() => import('./pages/MindMapPage'));
 import AuthForm from './components/AuthForm';
 import { onAuthStateChange } from './services/authService';
 import { useThemeMode } from './hooks/useThemeMode';
@@ -65,10 +65,16 @@ function App() {
             <CssBaseline />
             {user ? (
                 screen === 'mindmap' ? (
-                    <MindMapPage
-                        onBack={() => navigate('main')}
-                        themeMode={actualTheme}
-                    />
+                    <React.Suspense fallback={
+                        <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: theme.palette.background.bubbleView }}>
+                            <CircularProgress size={60} sx={{ color: 'white' }} />
+                        </Box>
+                    }>
+                        <MindMapPage
+                            onBack={() => navigate('main')}
+                            themeMode={actualTheme}
+                        />
+                    </React.Suspense>
                 ) : (
                     <BubblesPage
                         user={user}
