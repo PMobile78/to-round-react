@@ -244,6 +244,33 @@
         "brutalist": "Brutalist",
         "clay": "Clay"
     },
+    "changePassword": {
+        "menuLabel": "Change Password",
+        "title": "Change Password",
+        "currentPassword": "Current password",
+        "newPassword": "New password",
+        "confirmPassword": "Repeat new password",
+        "strength": {
+            "weak": "Weak",
+            "medium": "Medium",
+            "strong": "Strong"
+        },
+        "errors": {
+            "tooShort": "At least 6 characters",
+            "sameAsCurrent": "New password matches the current one",
+            "mismatch": "Passwords do not match",
+            "wrongPassword": "Incorrect current password",
+            "requiresRecentLogin": "Please sign in again and retry",
+            "generic": "Something went wrong. Please try again."
+        },
+        "success": {
+            "title": "Password changed",
+            "message": "Use the new password the next time you sign in."
+        },
+        "cancel": "Cancel",
+        "save": "Save",
+        "done": "Done"
+    },
     "categories": {
         "title": "Categories",
         "today": "Today",
