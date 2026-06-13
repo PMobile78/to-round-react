@@ -24,7 +24,7 @@ npm run version:major
 
 ## Architecture
 
-**Stack:** React (Vite 8), Firebase (Auth + Firestore client + Cloud Functions Gen2 + FCM), Matter.js, MUI v5, TipTap (rich text), i18next, @xyflow/react + mind-elixir (mind maps), date-fns, DOMPurify.  
+**Stack:** React (Vite 8), Firebase (Auth + Firestore client + Cloud Functions Gen2 + FCM), Matter.js, MUI v7, TipTap (rich text), i18next, @xyflow/react + mind-elixir (mind maps), date-fns, DOMPurify.  
 **Hosting:** GitHub Pages. Deployed via `.github/workflows/deploy.yml` on push to `main`/`master`.
 
 ### Frontend structure

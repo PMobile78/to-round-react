@@ -28,6 +28,7 @@ import FontSettingsDialog from '../components/FontSettingsDialog';
 import AppearanceDialog from '../components/AppearanceDialog';
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
 import LogoutConfirmDialog from '../components/LogoutConfirmDialog';
+import TextOverlay from '../components/TextOverlay';
 import { logoutUser } from '../services/authService';
 import {
     saveBubblesToFirestore,
@@ -37,10 +38,13 @@ import {
     subscribeToTagsUpdates,
     subscribeToBubblesUpdates,
     BUBBLE_STATUS,
-    markBubbleAsDone,
     markBubbleAsDeleted,
     getBubblesByStatus,
-    cleanupOldDeletedBubbles
+    cleanupOldDeletedBubbles,
+    upsertBubble,
+    updateBubbleFields,
+    deleteBubbleDoc,
+    buildStatusFields
 } from '../services/firestoreService';
 
 import TaskListDrawer from '../components/ListViewDrawer';
@@ -62,6 +66,8 @@ import { useMatterEngine } from '../hooks/useMatterEngine';
 import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
 import { withAlpha } from '../utils/colorUtils';
+import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime, getOffsetMs } from '../utils/dateTime';
+import { stripHtml } from '../utils/stripHtml';
 
 
 // Helpers for JSON export
@@ -78,60 +84,6 @@ const exportJsonFile = (dataObject, filename) => {
         document.body.removeChild(link);
     } catch (e) {
         logger.error('Export JSON failed', e);
-    }
-};
-
-// Функция для сохранения локального времени без конвертации в UTC
-// Сохраняет время в формате "YYYY-MM-DDTHH:mm:ss", который интерпретируется как локальное время
-const formatLocalDateTime = (date) => {
-    if (!date) return null;
-    try {
-        const d = date instanceof Date ? date : new Date(date);
-        if (!Number.isFinite(d.getTime())) return null;
-
-        // Форматируем локальное время без конвертации в UTC
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const hours = String(d.getHours()).padStart(2, '0');
-        const minutes = String(d.getMinutes()).padStart(2, '0');
-        const seconds = String(d.getSeconds()).padStart(2, '0');
-
-        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-    } catch (_) {
-        return null;
-    }
-};
-
-// IANA-зона пользователя (например, "Europe/Kyiv") — сохраняется рядом с dueDate,
-// чтобы Cloud Function (UTC) могла интерпретировать локальную строку времени корректно
-const getUserTimeZone = () => {
-    try {
-        return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-    } catch (_) {
-        return null;
-    }
-};
-
-// Функция для парсинга локального времени из строки
-// Интерпретирует строку как локальное время, а не UTC
-const parseLocalDateTime = (dateString) => {
-    if (!dateString) return null;
-    try {
-        // Если это ISO строка с Z или +/-, парсим как обычно
-        if (dateString.includes('Z') || dateString.includes('+') || dateString.includes('-', 10)) {
-            return new Date(dateString);
-        }
-        // Иначе интерпретируем как локальное время (формат "YYYY-MM-DDTHH:mm:ss")
-        const [datePart, timePart] = dateString.split('T');
-        if (!datePart || !timePart) return new Date(dateString);
-
-        const [year, month, day] = datePart.split('-').map(Number);
-        const [hours, minutes, seconds = 0] = timePart.split(':').map(Number);
-
-        return new Date(year, month - 1, day, hours, minutes, seconds);
-    } catch (_) {
-        return null;
     }
 };
 
@@ -251,10 +203,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [bubbles, setBubbles] = useState([]);
     const [selectedBubble, setSelectedBubble] = useState(null);
     const [editDialog, setEditDialog] = useState(false);
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
+    // Live mirror of edit-dialog state for the Matter mount-effect subscription
+    // (its closure captures editDialog/selectedBubble once and stays stale).
+    const liveEditRef = useRef({ editDialog: false, selectedBubbleId: null });
+    useEffect(() => {
+        liveEditRef.current = { editDialog, selectedBubbleId: selectedBubble?.id ?? null };
+    }, [editDialog, selectedBubble]);
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
     const [tags, setTags] = useState([]);
+    const tagsRef = useRef(tags);
+    useEffect(() => { tagsRef.current = tags; }, [tags]);
     const [selectedTagId, setSelectedTagId] = useState('');
     const [tagDialog, setTagDialog] = useState(false);
     const [tagName, setTagName] = useState('');
@@ -411,11 +369,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         manuallyStoppedPulsingRef,
         editDialog,
         selectedBubble,
+        liveEditRef,
         setBubbles,
         setCanvasSize,
         setSelectedBubble,
-        setTitle,
-        setDescription,
         setSelectedTagId,
         setEditBubbleSize,
         setEditDialog,
@@ -471,13 +428,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             });
         }
     }, [theme, bubbles, tags]);
-
-    // Force TextOverlay re-render on theme change to update text opacity
-    const [textOverlayKey, setTextOverlayKey] = useState(0);
-    useEffect(() => {
-        // Force TextOverlay re-render when theme changes
-        setTextOverlayKey(prev => prev + 1);
-    }, [themeMode]);
 
     // Real-time tags synchronization (wait for auth user)
     useEffect(() => {
@@ -814,8 +764,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     // Function for opening create bubble dialog
     const openCreateDialog = () => {
-        setTitle('');
-        setDescription('');
         const categoryReserved = new Set(['all', 'no-tags', 'planned-tasks']);
         const tagFromPanel =
             selectedCategory &&
@@ -832,7 +780,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     };
 
     // Function for creating a new bubble
-    const createNewBubble = () => {
+    const createNewBubble = ({ title, description }) => {
         if (!engineRef.current || !renderRef.current || !title.trim()) {
             return;
         }
@@ -857,22 +805,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         newBubble.useRichText = !!useRichTextCreate;
 
         Matter.World.add(engineRef.current.world, newBubble.body);
-        setBubbles(prev => {
-            const updatedBubbles = [...prev, newBubble];
-            saveBubblesToFirestore(updatedBubbles);
-            return updatedBubbles;
-        });
+        setBubbles(prev => [...prev, newBubble]);
+        upsertBubble(newBubble).catch(e => logger.error('Error saving new bubble:', e));
 
         // Close dialog and reset form
         setCreateDialog(false);
-        setTitle('');
-        setDescription('');
         setSelectedTagId('');
         setDueDate(null);
     };
 
     // Save bubble changes
-    const handleSaveBubble = () => {
+    const handleSaveBubble = ({ title, description }) => {
         if (!title.trim()) return;
         if (selectedBubble && engineRef.current) {
             // Сначала обновляем физическое тело
@@ -916,54 +859,45 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             Matter.World.add(engineRef.current.world, newBody);
 
             // Теперь обновляем состояние
-            setBubbles(prev => {
-                const updatedBubbles = prev.map(bubble => {
-                    if (bubble.id === selectedBubble.id) {
-                        const newDueDate = formatLocalDateTime(editDueDate);
+            const newDueDate = formatLocalDateTime(editDueDate);
 
-                        // Проверяем, изменилась ли дата на будущую и нужно ли отключить пульсацию
-                        const shouldDisablePulsing = newDueDate &&
-                            parseLocalDateTime(newDueDate) > new Date();
+            // Проверяем, изменилась ли дата на будущую и нужно ли отключить пульсацию
+            const shouldDisablePulsing = newDueDate &&
+                parseLocalDateTime(newDueDate) > new Date();
 
-                        // Отключаем пульсацию при удалении даты
-                        const shouldDisablePulsingOnDelete = !newDueDate && bubble.dueDate;
+            // Отключаем пульсацию при удалении даты
+            const shouldDisablePulsingOnDelete = !newDueDate && selectedBubble.dueDate;
 
-                        // Дата изменилась на будущую или удалена — начинаем новый цикл:
-                        // сбрасываем и in-memory флаг, и персистентный overduePulseSuppressed.
-                        const dateChanged = shouldDisablePulsing || shouldDisablePulsingOnDelete;
-                        if (dateChanged) {
-                            manuallyStoppedPulsingRef.current.delete(bubble.id);
-                        }
+            // Дата изменилась на будущую или удалена — начинаем новый цикл:
+            // сбрасываем и in-memory флаг, и персистентный overduePulseSuppressed.
+            const dateChanged = shouldDisablePulsing || shouldDisablePulsingOnDelete;
+            if (dateChanged) {
+                manuallyStoppedPulsingRef.current.delete(selectedBubble.id);
+            }
 
-                        return {
-                            ...bubble,
-                            title,
-                            description,
-                            tagId: selectedTagId || null,
-                            radius: editBubbleSize,
-                            body: newBody, // Используем новое тело
-                            updatedAt: new Date().toISOString(),
-                            dueDate: newDueDate,
-                            tz: getUserTimeZone(),
-                            notifications: editNotifications,
-                            recurrence: editRecurrence,
-                            // Отключаем пульсацию, если дата изменена на будущую или удалена
-                            overdueSticky: dateChanged ? false : bubble.overdueSticky,
-                            overdueAt: dateChanged ? null : bubble.overdueAt,
-                            overduePulseSuppressed: dateChanged ? false : bubble.overduePulseSuppressed
-                        };
-                    }
-                    return bubble;
-                });
-                saveBubblesToFirestore(updatedBubbles);
-                return updatedBubbles;
-            });
+            const updatedBubble = {
+                ...selectedBubble,
+                title,
+                description,
+                tagId: selectedTagId || null,
+                radius: editBubbleSize,
+                body: newBody,
+                updatedAt: new Date().toISOString(),
+                dueDate: newDueDate,
+                tz: getUserTimeZone(),
+                notifications: editNotifications,
+                recurrence: editRecurrence,
+                overdueSticky: dateChanged ? false : selectedBubble.overdueSticky,
+                overdueAt: dateChanged ? null : selectedBubble.overdueAt,
+                overduePulseSuppressed: dateChanged ? false : selectedBubble.overduePulseSuppressed
+            };
+
+            setBubbles(prev => prev.map(b => (b.id === selectedBubble.id ? updatedBubble : b)));
+            upsertBubble(updatedBubble).catch(e => logger.error('Error saving bubble edit:', e));
         }
 
         setEditDialog(false);
         setSelectedBubble(null);
-        setTitle('');
-        setDescription('');
         setEditDueDate(null);
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
@@ -984,8 +918,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         }
         setEditDialog(false);
         setSelectedBubble(null);
-        setTitle('');
-        setDescription('');
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
@@ -998,7 +930,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 const body = bubble.body;
                 // Воспроизвести звук лопанья
                 try {
-                    const popAudio = new window.Audio('/to-round-react/pop.mp3');
+                    const popAudio = new window.Audio(`${import.meta.env.BASE_URL}pop.mp3`);
                     popAudio.currentTime = 0;
                     popAudio.play();
                 } catch (e) { /* ignore */ }
@@ -1071,17 +1003,21 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             Matter.World.remove(engineRef.current.world, body);
                             Matter.World.remove(engineRef.current.world, splashParticles);
                             // Обновляем статус в Firestore
-                            markBubbleAsDone(selectedBubble.id, bubbles).then(updatedBubbles => {
-                                setBubbles(updatedBubbles);
-                            });
+                            const fields = buildStatusFields(selectedBubble, BUBBLE_STATUS.DONE);
+                            updateBubbleFields(selectedBubble.id, fields)
+                                .then(() => {
+                                    setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? { ...b, ...fields } : b));
+                                })
+                                .catch(e => logger.error('Error marking bubble as done:', e));
                         }
                     };
                     animatePop();
                 } else {
                     // Если нет тела, просто удаляем
                     Matter.World.remove(engineRef.current.world, selectedBubble.body);
-                    const updatedBubbles = await markBubbleAsDone(selectedBubble.id, bubbles);
-                    setBubbles(updatedBubbles);
+                    const fields = buildStatusFields(selectedBubble, BUBBLE_STATUS.DONE);
+                    await updateBubbleFields(selectedBubble.id, fields);
+                    setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? { ...b, ...fields } : b));
                 }
             } catch (error) {
                 logger.error('Error marking bubble as done:', error);
@@ -1089,8 +1025,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         }
         setEditDialog(false);
         setSelectedBubble(null);
-        setTitle('');
-        setDescription('');
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
@@ -1098,8 +1032,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const handleCloseDialog = () => {
         setEditDialog(false);
         setSelectedBubble(null);
-        setTitle('');
-        setDescription('');
         setSelectedTagId('');
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
@@ -1201,24 +1133,25 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 return newSet;
             });
 
-            const updatedTags = tags.filter(tag => tag.id !== tagId);
+            const updatedTags = tagsRef.current.filter(tag => tag.id !== tagId);
             setTags(updatedTags);
             saveTagsToFirestore(updatedTags);
 
             // Удаляем ссылки на этот тег из пузырей
-            setBubbles(prev => {
-                const updatedBubbles = prev.map(bubble => {
-                    if (bubble.tagId === tagId) {
-                        // Сбрасываем цвет пузыря на светло-серый и обновляем fillStyle
-                        bubble.body.render.strokeStyle = '#B0B0B0';
-                        bubble.body.render.fillStyle = getBubbleFillStyle(null);
-                        return { ...bubble, tagId: null };
-                    }
-                    return bubble;
-                });
-                saveBubblesToFirestore(updatedBubbles);
-                return updatedBubbles;
-            });
+            const affectedIds = new Set();
+            setBubbles(prev => prev.map(bubble => {
+                if (bubble.tagId === tagId) {
+                    affectedIds.add(bubble.id);
+                    // Сбрасываем цвет пузыря на светло-серый и обновляем fillStyle
+                    bubble.body.render.strokeStyle = '#B0B0B0';
+                    bubble.body.render.fillStyle = getBubbleFillStyle(null);
+                    return { ...bubble, tagId: null };
+                }
+                return bubble;
+            }));
+            affectedIds.forEach(id =>
+                updateBubbleFields(id, { tagId: null }).catch(e => logger.error('Error clearing tag from bubble:', e))
+            );
 
             // Удаляем таймер из Map
             setDeleteTimers(prev => {
@@ -1402,7 +1335,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             const titleMatch = (task.title || '').toLowerCase().includes(query);
 
             // Search in description
-            const descriptionMatch = (task.description || '').toLowerCase().includes(query);
+            const descriptionMatch = stripHtml(task.description || '').toLowerCase().includes(query);
 
             // Search in tag name
             const tag = task.tagId ? tags.find(t => t.id === task.tagId) : null;
@@ -1532,135 +1465,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     };
 
     // Optimized component for displaying text over bubbles
-    const TextOverlay = useCallback(() => {
-        const [positions, setPositions] = useState([]);
-        const bubblesRef = useRef(bubbles);
-        const filteredBubblesRef = useRef([]);
-
-        // Обновляем ref при изменении bubbles - мемоизируем
-        const updateRefs = useCallback(() => {
-            bubblesRef.current = bubbles;
-            filteredBubblesRef.current = getFilteredBubbles;
-        }, [bubbles, getFilteredBubbles]);
-
-        useEffect(() => {
-            updateRefs();
-        }, [updateRefs]);
-
-        useEffect(() => {
-            if (!engineRef.current) return undefined;
-
-            const updatePositions = () => {
-                const filteredBubbles = filteredBubblesRef.current || [];
-                const newPositions = filteredBubbles
-                    .filter(bubble => bubble && bubble.body && bubble.body.position)
-                    .map(bubble => ({
-                        id: bubble.id,
-                        x: bubble.body.position.x,
-                        y: bubble.body.position.y,
-                        radius: bubble.radius,
-                        title: bubble.title
-                    }));
-                setPositions(prev => {
-                    if (prev.length === newPositions.length && newPositions.every((p, i) =>
-                        prev[i] && Math.round(prev[i].x) === Math.round(p.x) && Math.round(prev[i].y) === Math.round(p.y)
-                    )) return prev;
-                    return newPositions;
-                });
-                rafId = requestAnimationFrame(updatePositions);
-            };
-
-            // rAF синхронизирован с отрисовкой и сам приостанавливается на скрытой вкладке
-            let rafId = requestAnimationFrame(updatePositions);
-            return () => cancelAnimationFrame(rafId);
-        }, []);
-
-        // Мемоизируем рендер функцию для каждого пузыря
-        const renderBubbleText = useCallback((bubble) => {
-            // Функция для ограничения длины текста в зависимости от размера пузыря и шрифта
-            const getMaxTitleLength = (radius, currentFontSize) => {
-                // Базовые значения для шрифта 12px
-                let baseLength;
-                if (radius < 30) baseLength = 8;   // очень маленький пузырь
-                else if (radius < 40) baseLength = 12;  // маленький пузырь
-                else if (radius < 50) baseLength = 16;  // средний пузырь
-                else baseLength = 20;                   // большой пузырь
-
-                // Корректируем количество символов в зависимости от размера шрифта
-                // Чем меньше шрифт, тем больше символов помещается (квадратичная зависимость)
-                const fontSizeRatio = Math.pow(12 / currentFontSize, 1.5); // Более агрессивное увеличение
-                return Math.round(baseLength * fontSizeRatio);
-            };
-
-            // Проверяем, найден ли пузырь в поиске
-            const isFound = foundBubblesIds.has(bubble.id);
-            const hasSearchQuery = debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim();
-
-            // Вычисляем текущий размер шрифта с учетом мобильности
-            const currentFontSize = isMobile ? fontSize * 0.75 : fontSize;
-            const maxLength = getMaxTitleLength(bubble.radius, currentFontSize);
-            const truncatedTitle = bubble.title && bubble.title.length > maxLength
-                ? bubble.title.substring(0, maxLength) + '...'
-                : bubble.title;
-
-            // Определяем стили в зависимости от поиска
-            const textOpacity = hasSearchQuery ? (isFound ? 1 : 0.4) : 1;
-            const textColor = theme.custom?.bubble?.label?.color ?? theme.palette.text.primary;
-
-            const textShadow = theme.custom?.bubble?.label?.shadow
-                ? (themeMode === 'light'
-                    ? '0 1px 2px rgba(255, 255, 255, 0.65)'
-                    : '0 1px 3px rgba(0, 0, 0, 0.5)')
-                : 'none';
-
-            return bubble.title ? (
-                <Box
-                    key={bubble.id}
-                    sx={{
-                        position: 'absolute',
-                        left: bubble.x,
-                        top: bubble.y,
-                        transform: 'translate(-50%, -50%)',
-                        textAlign: 'center',
-                        color: textColor,
-                        textShadow: textShadow,
-                        maxWidth: Math.max(bubble.radius * 1.6, 50),
-                        overflow: 'hidden',
-                        opacity: textOpacity,
-                        transition: 'opacity 0.3s ease'
-                    }}
-                >
-                    <Typography
-                        sx={{
-                            fontSize: Math.max(
-                                isMobile ? fontSize * 0.75 : fontSize,
-                                Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? fontSize * 1.2 : fontSize * 1.3)
-                            ),
-                            fontWeight: theme.custom?.bubble?.label?.weight ?? 600,
-                            lineHeight: 1.1,
-                            wordBreak: 'break-word'
-                        }}
-                    >
-                        {truncatedTitle}
-                    </Typography>
-                </Box>
-            ) : null;
-        }, [isMobile, fontSize, themeMode, foundBubblesIds, debouncedBubblesSearchQuery]);
-
-        return (
-            <Box sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-                zIndex: 10
-            }}>
-                {positions.map(renderBubbleText)}
-            </Box>
-        );
-    }, [getFilteredBubbles, bubbles, isMobile, fontSize, themeMode, foundBubblesIds, debouncedBubblesSearchQuery]);
 
     const notifiedBubblesRef = useRef(new Set());
     const notifiedBubbleNotificationsRef = useRef(new Set()); // bubbleId:idx
@@ -1882,8 +1686,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 setEditDueDate(null);
             }
             // basic fields for Save button logic
-            setTitle(selectedBubble.title || '');
-            setDescription(selectedBubble.description || '');
             setSelectedTagId(selectedBubble.tagId || '');
             if (typeof selectedBubble.radius === 'number') {
                 setEditBubbleSize(selectedBubble.radius);
@@ -1898,11 +1700,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         if (!selectedBubble) return;
         // Обновляем выбранный пузырь и сохраняем в БД
         setSelectedBubble(prev => prev ? { ...prev, useRichText: !!enabled } : prev);
-        setBubbles(prev => {
-            const updated = prev.map(b => b.id === selectedBubble.id ? { ...b, useRichText: !!enabled, updatedAt: new Date().toISOString() } : b);
-            saveBubblesToFirestore(updated);
-            return updated;
-        });
+        const fields = { useRichText: !!enabled, updatedAt: new Date().toISOString() };
+        setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? { ...b, ...fields } : b));
+        updateBubbleFields(selectedBubble.id, fields).catch(e => logger.error('Error toggling rich text:', e));
     };
 
     // Сброс уведомлений при смене языка
@@ -2008,26 +1808,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         // is a ref — neither needs to be listed. bubbles is listed so the effect retries until loaded.
     }, [bubbles]);
 
-    // Вспомогательная функция для вычисления offset в миллисекундах
-    function getOffsetMs(notification) {
-        if (typeof notification === 'string') {
-            if (notification.endsWith('m')) return parseInt(notification) * 60 * 1000;
-            if (notification.endsWith('h')) return parseInt(notification) * 60 * 60 * 1000;
-            if (notification.endsWith('d')) return parseInt(notification) * 24 * 60 * 60 * 1000;
-        }
-        if (notification.type === 'custom') {
-            const v = Number(notification.value);
-            switch (notification.unit) {
-                case 'minutes': return v * 60 * 1000;
-                case 'hours': return v * 60 * 60 * 1000;
-                case 'days': return v * 24 * 60 * 60 * 1000;
-                case 'weeks': return v * 7 * 24 * 60 * 60 * 1000;
-                default: return 0;
-            }
-        }
-        return 0;
-    }
-
     return (
         <Box sx={{
             width: (!isMobile && categoriesPanelEnabled && mainView === 'bubbles') ? 'calc(100vw - 320px)' : '100vw',
@@ -2082,7 +1862,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             gap: 1
                         }}>
                             <img
-                                src="/to-round-react/bubbles.png"
+                                src={`${import.meta.env.BASE_URL}bubbles.png`}
                                 alt="Bubbles"
                                 style={{
                                     width: '32px',
@@ -2474,7 +2254,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 zIndex: 2
             }} />
             {/* Текст поверх пузырей */}
-            <TextOverlay key={textOverlayKey} />
+            <TextOverlay
+              bubbles={bubbles}
+              getFilteredBubbles={getFilteredBubbles}
+              engineRef={engineRef}
+              foundBubblesIds={foundBubblesIds}
+              debouncedBubblesSearchQuery={debouncedBubblesSearchQuery}
+              isMobile={isMobile}
+              fontSize={fontSize}
+              themeMode={themeMode}
+            />
 
             {/* Полноэкранный режим списка задач (canvas остаётся смонтированным под панелью) */}
             {mainView === 'tasks' && (
@@ -2526,8 +2315,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             listSearchQuery={listSearchQuery}
                             setListSearchQuery={setListSearchQuery}
                             setSelectedBubble={setSelectedBubble}
-                            setTitle={setTitle}
-                            setDescription={setDescription}
                             setSelectedTagId={setSelectedTagId}
                             setEditDialog={setEditDialog}
                             handleListTagFilterChange={handleListTagFilterChange}
@@ -2552,10 +2339,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 isMobile={isMobile}
                 themeMode={themeMode}
                 getDialogPaperStyles={getDialogPaperStyles}
-                title={title}
-                setTitle={setTitle}
-                description={description}
-                setDescription={setDescription}
+                initialTitle={selectedBubble?.title || ''}
+                initialDescription={selectedBubble?.description || ''}
                 editDueDate={editDueDate}
                 setEditDueDate={setEditDueDate}
                 isOverdue={isOverdue}
@@ -2605,11 +2390,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             updatedAt: new Date().toISOString()
                         };
 
-                        setBubbles(prev => {
-                            const updated = prev.map(b => b.id === selectedBubble.id ? updatedBubble : b);
-                            saveBubblesToFirestore(updated);
-                            return updated;
-                        });
+                        setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? updatedBubble : b));
+                        updateBubbleFields(selectedBubble.id, {
+                            overduePulseSuppressed: true, overdueSticky: false, overdueAt: null, updatedAt: updatedBubble.updatedAt
+                        }).catch(e => logger.error('Error stopping pulsing:', e));
 
                         // Close edit dialog after stop pulsing
                         setEditDialog(false);
@@ -2781,10 +2565,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 isMobile={isMobile}
                 themeMode={themeMode}
                 getDialogPaperStyles={getDialogPaperStyles}
-                title={title}
-                setTitle={setTitle}
-                description={description}
-                setDescription={setDescription}
                 dueDate={dueDate}
                 setDueDate={setDueDate}
                 isOverdue={isOverdue}
@@ -2903,8 +2683,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 listSearchQuery={listSearchQuery}
                 setListSearchQuery={setListSearchQuery}
                 setSelectedBubble={setSelectedBubble}
-                setTitle={setTitle}
-                setDescription={setDescription}
                 setSelectedTagId={setSelectedTagId}
                 setEditDialog={setEditDialog}
                 handleListTagFilterChange={handleListTagFilterChange}

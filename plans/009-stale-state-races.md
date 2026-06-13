@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/pages/BubblesPage.js src/services/firestoreService.js`
+> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/pages/BubblesPage.jsx src/services/firestoreService.js`
 > Этот план писался ДО выполнения plans/008 — его шаги предполагают, что 008
 > уже выполнен. Если `grep -n 'upsertBubble' src/services/firestoreService.js`
 > пуст — выполни сначала plans/008.
@@ -19,6 +19,8 @@
 - **Depends on**: 008
 - **Category**: bug
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/25
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
@@ -29,7 +31,7 @@
 
 ## Current state
 
-- `src/pages/BubblesPage.js:1015` — `const handleMarkAsDone = async () => {`; внутри колбэка анимации (строки 1092-1098):
+- `src/pages/BubblesPage.jsx:1015` — `const handleMarkAsDone = async () => {`; внутри колбэка анимации (строки 1092-1098):
   ```js
   Matter.World.remove(engineRef.current.world, body);
   Matter.World.remove(engineRef.current.world, splashParticles);
@@ -40,7 +42,7 @@
   ```
   и синхронная ветка без анимации (строки 1104-1106) с тем же паттерном.
 - `src/services/firestoreService.js:188-225` — `updateBubbleStatus(bubbleId, newStatus, bubblesData)`: строит объект `fields` (status, updatedAt, deletedAt-логика; для DONE дополнительно `dueDate:null, notifications:[], recurrence:null, overdueSticky:false, overdueAt:null, overduePulseSuppressed:false`), пишет `updateDoc`, возвращает `bubblesData.map(...)` — то есть РЕЗУЛЬТАТ зависит от переданного (возможно устаревшего) массива.
-- `BubblesPage.js:1219-1251` — таймер удаления тега:
+- `BubblesPage.jsx:1219-1251` — таймер удаления тега:
   ```js
   const timer = setTimeout(() => {
       ...
@@ -61,7 +63,7 @@
 
 ## Scope
 
-**In scope**: `src/pages/BubblesPage.js` (обработчики `handleMarkAsDone`, `handleDeleteTag`), `src/services/firestoreService.js` (рефакторинг `updateBubbleStatus` на две части).
+**In scope**: `src/pages/BubblesPage.jsx` (обработчики `handleMarkAsDone`, `handleDeleteTag`), `src/services/firestoreService.js` (рефакторинг `updateBubbleStatus` на две части).
 
 **Out of scope**:
 - Аналогичный live-sync в `useMatterEngine.js` — это `plans/015`.
@@ -126,7 +128,7 @@ useEffect(() => { tagsRef.current = tags; }, [tags]);
 
 В колбэке таймера заменить `tags.filter(...)` на `tagsRef.current.filter(...)`. Обновление пузырей в том же таймере оставить как сделано в plans/008 (функциональный `setBubbles` + точечные `updateBubbleFields`).
 
-**Verify**: build зелёный; `grep -n 'tagsRef' src/pages/BubblesPage.js` → объявление + использование в таймере.
+**Verify**: build зелёный; `grep -n 'tagsRef' src/pages/BubblesPage.jsx` → объявление + использование в таймере.
 
 ### Step 4: Тест на buildStatusFields и коммит
 
@@ -146,7 +148,7 @@ useEffect(() => { tagsRef.current = tags; }, [tags]);
 
 ## Done criteria
 
-- [ ] `grep -n 'markBubbleAsDone' src/pages/BubblesPage.js` → пусто (заменён точечным путём)
+- [ ] `grep -n 'markBubbleAsDone' src/pages/BubblesPage.jsx` → пусто (заменён точечным путём)
 - [ ] В таймере deleteTag нет обращения к замкнутому `tags` (только `tagsRef.current`)
 - [ ] Новые тесты `buildStatusFields` проходят
 - [ ] `CI=true npm run build` → exit 0

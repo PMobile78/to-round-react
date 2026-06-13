@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/hooks/useMatterEngine.js src/pages/BubblesPage.js`
+> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/hooks/useMatterEngine.js src/pages/BubblesPage.jsx`
 > При несовпадении выдержек «Current state» с живым кодом — STOP. Если
 > выполнен plans/010, форма диалога локальная — учитывай его Maintenance notes.
 
@@ -18,6 +18,8 @@
 - **Depends on**: 010 (желательно; меняет способ доставки обновлений в форму)
 - **Category**: bug
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/31
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
@@ -53,7 +55,7 @@
   });
   ```
 - Конец эффекта: `}, []); // Убираем themeMode из зависимостей` (строка 312) — менять deps НЕЛЬЗЯ (пересоздаст мир).
-- Тела добавляются в мир эффектами `BubblesPage.js:626-643` и `:664-...` (оба итерируют только текущие `bubbles` — удалённые тела никто не убирает).
+- Тела добавляются в мир эффектами `BubblesPage.jsx:626-643` и `:664-...` (оба итерируют только текущие `bubbles` — удалённые тела никто не убирает).
 - `useMatterEngine` получает из `BubblesPage` параметры (см. сигнатуру хука в начале файла — `editDialog`, `selectedBubble`, сеттеры и пр.; выпиши фактическую сигнатуру).
 
 ## Commands you will need
@@ -65,7 +67,7 @@
 
 ## Scope
 
-**In scope**: `src/hooks/useMatterEngine.js`, `src/pages/BubblesPage.js` (прокладка refs/колбэка).
+**In scope**: `src/hooks/useMatterEngine.js`, `src/pages/BubblesPage.jsx` (прокладка refs/колбэка).
 
 **Out of scope**:
 - Любые изменения физики/рендера Matter, deps mount-эффекта (`[]` остаётся).
@@ -98,7 +100,7 @@ prev.forEach(b => {
 
 Минимально-инвазивный путь: `BubblesPage` передаёт в хук ref с актуальными значениями.
 
-В `BubblesPage.js`:
+В `BubblesPage.jsx`:
 ```js
 const liveEditRef = useRef({ editDialog: false, selectedBubbleId: null });
 useEffect(() => {

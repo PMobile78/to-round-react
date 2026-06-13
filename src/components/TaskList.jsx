@@ -32,13 +32,14 @@ import { FilterMenu } from './FilterMenu';
 import SearchField from './SearchField';
 import useSearch from '../hooks/useSearch';
 import HtmlRenderer from './HtmlRenderer';
+import { stripHtml } from '../utils/stripHtml';
 import {
     BUBBLE_STATUS,
     markBubbleAsDone,
     markBubbleAsDeleted,
     restoreBubble,
     getBubblesByStatus,
-    saveBubblesToFirestore
+    deleteBubbleDoc
 } from '../services/firestoreService';
 
 // Auto-cleanup period for deleted tasks (30 days)
@@ -61,8 +62,6 @@ const TaskList = ({
     listSearchQuery,
     setListSearchQuery,
     setSelectedBubble,
-    setTitle,
-    setDescription,
     setSelectedTagId,
     setEditDialog,
     handleListTagFilterChange,
@@ -246,7 +245,7 @@ const TaskList = ({
         const query = debouncedSearchQuery.toLowerCase().trim();
         const searchFilteredBubbles = statusFilteredBubbles.filter(bubble => {
             const titleMatch = (bubble.title || '').toLowerCase().includes(query);
-            const descriptionMatch = (bubble.description || '').toLowerCase().includes(query);
+            const descriptionMatch = stripHtml(bubble.description || '').toLowerCase().includes(query);
             const tag = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
             const tagMatch = tag ? tag.name.toLowerCase().includes(query) : false;
             return titleMatch || descriptionMatch || tagMatch;
@@ -309,23 +308,17 @@ const TaskList = ({
 
     // Permanently delete task from list view
     const handlePermanentDeleteTask = useCallback(async (taskId) => {
-        try {
-            const updatedBubbles = bubbles.filter(bubble => bubble.id !== taskId);
-            setBubbles(updatedBubbles);
-            saveBubblesToFirestore(updatedBubbles);
-        } catch (error) {
-            logger.error('Error permanently deleting task:', error);
-        }
+        const updatedBubbles = bubbles.filter(bubble => bubble.id !== taskId);
+        setBubbles(updatedBubbles);
+        deleteBubbleDoc(taskId).catch(e => logger.error('Error permanently deleting task:', e));
     }, [bubbles, setBubbles]);
 
     // Edit task from list view
     const handleEditTask = useCallback((task) => {
         setSelectedBubble(task);
-        setTitle(task.title || '');
-        setDescription(task.description || '');
         setSelectedTagId(task.tagId || '');
         setEditDialog(true);
-    }, [setSelectedBubble, setTitle, setDescription, setSelectedTagId, setEditDialog]);
+    }, [setSelectedBubble, setSelectedTagId, setEditDialog]);
 
     const tasks = sortedAndFilteredTasks;
     const isEmpty = tasks.length === 0;

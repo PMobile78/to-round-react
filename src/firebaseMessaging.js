@@ -1,8 +1,8 @@
-import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage, isSupported, deleteToken } from 'firebase/messaging';
 import app from './firebase';
 
 // Store FCM token in Firestore under the current user document
-import { doc, setDoc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import i18n from './i18n';
@@ -11,6 +11,27 @@ import logger from './utils/logger';
 
 // VAPID Key from configuration
 const VAPID_KEY = config.firebase.vapidKey;
+
+// Remove this device's FCM token (Firestore doc + invalidate token) on logout
+export async function removeCurrentToken() {
+    try {
+        const supported = await isSupported();
+        if (!supported) return;
+        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+
+        const currentUser = getAuth().currentUser;
+        if (!currentUser) return;
+
+        const messaging = getMessaging(app);
+        const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: await navigator.serviceWorker.ready });
+        if (token) {
+            await deleteDoc(doc(db, 'user-fcm-tokens', currentUser.uid, 'tokens', token));
+        }
+        await deleteToken(messaging);
+    } catch (e) {
+        logger.error('[FCM] remove token on logout error:', e);
+    }
+}
 
 export async function initMessagingAndSaveToken() {
     try {

@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase';
 import logger from '../utils/logger';
+import { removeCurrentToken } from '../firebaseMessaging';
 
 const firebaseErrorMessages = {
     'auth/user-not-found': 'User not found.',
@@ -62,6 +63,9 @@ export const loginUser = async (email, password) => {
 export const logoutUser = async () => {
     try {
         const uid = auth.currentUser?.uid;
+        // Remove this device's FCM token before sign-out (owner-only rules block it afterwards).
+        // Must not block logout, so swallow its errors.
+        try { await removeCurrentToken(); } catch (e) { /* logout proceeds regardless */ }
         await signOut(auth);
         // Clear user-specific localStorage data after sign-out
         if (uid) {

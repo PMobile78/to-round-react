@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/components/HtmlRenderer.js package.json src/pages/BubblesPage.js`
+> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/components/HtmlRenderer.jsx package.json src/pages/BubblesPage.jsx`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -19,6 +19,8 @@
 - **Depends on**: none
 - **Category**: bug
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/17
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
@@ -26,7 +28,7 @@
 
 ## Current state
 
-- `src/components/HtmlRenderer.js` — единственное место с `dangerouslySetInnerHTML`; рендерит описание задачи через DOMPurify. Файл — 81 строка, экспорт `React.memo(HtmlRenderer)`.
+- `src/components/HtmlRenderer.jsx` — единственное место с `dangerouslySetInnerHTML`; рендерит описание задачи через DOMPurify. Файл — 81 строка, экспорт `React.memo(HtmlRenderer)`.
 
 Строки 11–26 сегодня (early return ДО хука):
 
@@ -50,7 +52,7 @@ const HtmlRenderer = ({
 ```
 
 - `package.json` — нет ключа `eslintConfig` (проверено).
-- **Известный второй нарушитель Rules of Hooks**: `src/pages/BubblesPage.js:1557` — `const TextOverlay = useCallback(() => { const [positions, setPositions] = useState([]); ... })` — компонент, создаваемый внутри `useCallback`, с хуками внутри колбэка. Его чинит отдельный план (`plans/013-textoverlay-component.md`); в этом плане его только глушим точечным disable, чтобы включение ESLint не сломало CI-сборку (GitHub Actions выставляет `CI=true`, а CRA при `CI=true` превращает ESLint-ошибки в ошибки сборки).
+- **Известный второй нарушитель Rules of Hooks**: `src/pages/BubblesPage.jsx:1557` — `const TextOverlay = useCallback(() => { const [positions, setPositions] = useState([]); ... })` — компонент, создаваемый внутри `useCallback`, с хуками внутри колбэка. Его чинит отдельный план (`plans/013-textoverlay-component.md`); в этом плане его только глушим точечным disable, чтобы включение ESLint не сломало CI-сборку (GitHub Actions выставляет `CI=true`, а CRA при `CI=true` превращает ESLint-ошибки в ошибки сборки).
 
 ## Commands you will need
 
@@ -63,9 +65,9 @@ const HtmlRenderer = ({
 ## Scope
 
 **In scope** (the only files you should modify):
-- `src/components/HtmlRenderer.js`
+- `src/components/HtmlRenderer.jsx`
 - `package.json` (только добавление ключа `eslintConfig`)
-- `src/pages/BubblesPage.js` (только inline eslint-disable у строки 1557 и, при необходимости, у других **error**-уровневых нарушений — см. шаг 3)
+- `src/pages/BubblesPage.jsx` (только inline eslint-disable у строки 1557 и, при необходимости, у других **error**-уровневых нарушений — см. шаг 3)
 
 **Out of scope**:
 - Исправление любых ESLint-**warning'ов** по всему проекту — не трогать, их сотни не нужно чинить сейчас.
@@ -82,7 +84,7 @@ const HtmlRenderer = ({
 
 ### Step 1: Перенести early return после useMemo
 
-В `src/components/HtmlRenderer.js` перенести блок
+В `src/components/HtmlRenderer.jsx` перенести блок
 
 ```js
     if (!html || html.trim() === '') {
@@ -92,7 +94,7 @@ const HtmlRenderer = ({
 
 так, чтобы он стоял **после** объявления `const sanitized = useMemo(...)` (т.е. между `useMemo` и `return (<Box ...>)`). Сам `useMemo` менять не нужно: `DOMPurify.sanitize('')` на пустой строке безопасен.
 
-**Verify**: `node -e "const s=require('fs').readFileSync('src/components/HtmlRenderer.js','utf8'); const i=s.indexOf('useMemo'); const j=s.indexOf('return null'); if(i<0||j<0||j<i) {console.error('FAIL: return null must come after useMemo');process.exit(1)} console.log('OK')"` → `OK`
+**Verify**: `node -e "const s=require('fs').readFileSync('src/components/HtmlRenderer.jsx','utf8'); const i=s.indexOf('useMemo'); const j=s.indexOf('return null'); if(i<0||j<0||j<i) {console.error('FAIL: return null must come after useMemo');process.exit(1)} console.log('OK')"` → `OK`
 
 ### Step 2: Включить ESLint через eslintConfig
 
@@ -106,13 +108,13 @@ const HtmlRenderer = ({
 
 Конфиг `react-app` поставляется с `react-scripts` — ничего устанавливать не нужно.
 
-**Verify**: `npx eslint --no-eslintrc -c <(node -p "JSON.stringify(require('./package.json').eslintConfig)") src/components/HtmlRenderer.js` — если команда не работает в вашей оболочке, достаточно шага 3 (сборка прогоняет ESLint).
+**Verify**: `npx eslint --no-eslintrc -c <(node -p "JSON.stringify(require('./package.json').eslintConfig)") src/components/HtmlRenderer.jsx` — если команда не работает в вашей оболочке, достаточно шага 3 (сборка прогоняет ESLint).
 
 ### Step 3: Прогнать CI-сборку и заглушить только pre-existing error-нарушения
 
-Запустить `CI=true npm run build`. CRA упадёт, если где-то есть ESLint-ошибки уровня error (в первую очередь `react-hooks/rules-of-hooks` у `BubblesPage.js:1557`). Для **каждой** такой ошибки (ожидается: `TextOverlay`, возможно 1–2 ещё):
+Запустить `CI=true npm run build`. CRA упадёт, если где-то есть ESLint-ошибки уровня error (в первую очередь `react-hooks/rules-of-hooks` у `BubblesPage.jsx:1557`). Для **каждой** такой ошибки (ожидается: `TextOverlay`, возможно 1–2 ещё):
 
-- если это `react-hooks/rules-of-hooks` в `BubblesPage.js:1557-1558` — добавить над строками с хуками внутри `TextOverlay` комментарий:
+- если это `react-hooks/rules-of-hooks` в `BubblesPage.jsx:1557-1558` — добавить над строками с хуками внутри `TextOverlay` комментарий:
   `// eslint-disable-next-line react-hooks/rules-of-hooks -- pre-existing, fixed in plans/013`
 - если это другая ошибка в другом файле — добавить аналогичный точечный disable с пометкой `-- pre-existing, see plans/README.md` и перечислить все такие места в финальном отчёте.
 
@@ -122,7 +124,7 @@ Warnings не трогать.
 
 ### Step 4: Закоммитить
 
-`git add src/components/HtmlRenderer.js package.json src/pages/BubblesPage.js && git commit -m "Fix Rules of Hooks in HtmlRenderer and enable ESLint"`
+`git add src/components/HtmlRenderer.jsx package.json src/pages/BubblesPage.jsx && git commit -m "Fix Rules of Hooks in HtmlRenderer and enable ESLint"`
 
 **Verify**: `git status --short` → пусто (кроме незатронутых untracked-файлов docs/, plans/).
 
@@ -134,7 +136,7 @@ Warnings не трогать.
 
 ## Done criteria
 
-- [ ] В `HtmlRenderer.js` `return null` стоит после `useMemo` (команда из шага 1 печатает `OK`)
+- [ ] В `HtmlRenderer.jsx` `return null` стоит после `useMemo` (команда из шага 1 печатает `OK`)
 - [ ] `package.json` содержит `eslintConfig` с `react-app`
 - [ ] `CI=true npm run build` → exit 0
 - [ ] Все добавленные eslint-disable имеют пометку `pre-existing`
@@ -142,7 +144,7 @@ Warnings не трогать.
 
 ## STOP conditions
 
-- Код в `HtmlRenderer.js:11-26` не совпадает с выдержкой выше.
+- Код в `HtmlRenderer.jsx:11-26` не совпадает с выдержкой выше.
 - После шага 3 `CI=true npm run build` падает по причинам, не связанным с ESLint (например, OOM или ошибка зависимостей).
 - ESLint-ошибок уровня error оказалось больше 6 — это сигнал, что нужно решение человека (глушить массово нельзя).
 

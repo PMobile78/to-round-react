@@ -17,6 +17,8 @@
 - **Depends on**: none
 - **Category**: direction
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/35
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
@@ -27,8 +29,8 @@ Mind map-экран полностью построен (MindMapPage, canvas, н
 - `docs/superpowers/specs/2026-06-07-mindmap-screen-design.md` — раздел Out of scope первой стадии (там перечислена линковка task↔node, экспорт карт, коллаборация).
 - `docs/superpowers/specs/2026-06-07-mindmap-multi-engine-design.md` — почему два движка; линковка обязана работать в обоих.
 - `src/services/mindmapService.js` (199 строк) — CRUD карт; модель хранения: `user-mindmaps/{uid}/...` — выяснить точную структуру документа карты (формат mind-elixir `engineData`? отдельные ноды или один блоб?). **Это ключевой вопрос дизайна**: если карта — один блоб engineData, ссылки «узел → задача» живут внутри блоба, и серверная навигация «задача → узел» требует индексации.
-- Модель задачи: `src/services/firestoreService.js:43-63` (`serializeBubble`) — полный список полей; добавление `mindMapRef` потребует синхронизации с `sanitizeBubble` (whitelist импорта, `BubblesPage.js:~133`) и НЕ должно задеть Cloud Functions (`functions/index.js` читает только поля уведомлений).
-- UI-точки: `src/components/EditBubbleDialog.js` (кнопка «открыть в карте»), `src/components/mindmap/MindMapToolbar.js` / `MindMapNode.js` (контекстное действие «создать задачу»), `src/App.js:63-89` (навигация экранов `screen === 'mindmap'` — переход с параметрами mapId/nodeId сейчас не поддерживается — выяснить, как `navigate` устроен).
+- Модель задачи: `src/services/firestoreService.js:43-63` (`serializeBubble`) — полный список полей; добавление `mindMapRef` потребует синхронизации с `sanitizeBubble` (whitelist импорта, `BubblesPage.jsx:~133`) и НЕ должно задеть Cloud Functions (`functions/index.js` читает только поля уведомлений).
+- UI-точки: `src/components/EditBubbleDialog.jsx` (кнопка «открыть в карте»), `src/components/mindmap/MindMapToolbar.jsx` / `MindMapNode.jsx` (контекстное действие «создать задачу»), `src/App.jsx:63-89` (навигация экранов `screen === 'mindmap'` — переход с параметрами mapId/nodeId сейчас не поддерживается — выяснить, как `navigate` устроен).
 
 ## Scope
 
@@ -40,7 +42,7 @@ Mind map-экран полностью построен (MindMapPage, canvas, н
 
 ### Step 1: Зафиксировать фактическую модель данных карт
 
-Прочитать `mindmapService.js` + `useMindmaps.js` + `MindMapCanvas.js`; описать в документе, как хранится карта и узлы, и какие ограничения это накладывает на ссылки (особенно для mind-elixir engineData-блоба).
+Прочитать `mindmapService.js` + `useMindmaps.js` + `MindMapCanvas.jsx`; описать в документе, как хранится карта и узлы, и какие ограничения это накладывает на ссылки (особенно для mind-elixir engineData-блоба).
 
 ### Step 2: Спроектировать модель связей
 

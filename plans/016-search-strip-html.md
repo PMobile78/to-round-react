@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/hooks/useSearch.js src/components/TaskList.js src/utils/`
+> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/hooks/useSearch.js src/components/TaskList.jsx src/utils/`
 > При несовпадении выдержек «Current state» с живым кодом — STOP.
 
 ## Status
@@ -17,6 +17,8 @@
 - **Depends on**: 002 (тесты как gate)
 - **Category**: bug (UX)
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/32
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
@@ -28,13 +30,13 @@
   ```js
   const descriptionMatch = (item.description || '').toLowerCase().includes(lowerQuery);
   ```
-- `src/components/TaskList.js:249` — дублированная логика подсчёта:
+- `src/components/TaskList.jsx:249` — дублированная логика подсчёта:
   ```js
   const descriptionMatch = (bubble.title || '') ... // строка 248: title
   const descriptionMatch = (bubble.description || '').toLowerCase().includes(query);
   ```
   (точная форма — в файле, район 243-255; есть и основная фильтрация списка где-то выше — найди грепом `descriptionMatch` все вхождения в файле).
-- Конвенция проекта: весь HTML-рендеринг через DOMPurify (`HtmlRenderer.js`); для извлечения текста рендерить ничего не нужно — достаточно DOM-парсинга без вставки в документ.
+- Конвенция проекта: весь HTML-рендеринг через DOMPurify (`HtmlRenderer.jsx`); для извлечения текста рендерить ничего не нужно — достаточно DOM-парсинга без вставки в документ.
 
 ## Commands you will need
 
@@ -45,7 +47,7 @@
 
 ## Scope
 
-**In scope**: `src/utils/stripHtml.js` (создать) + тест, `src/hooks/useSearch.js`, `src/components/TaskList.js`.
+**In scope**: `src/utils/stripHtml.js` (создать) + тест, `src/hooks/useSearch.js`, `src/components/TaskList.jsx`.
 
 **Out of scope**: подсветка совпадений, поиск по mind maps, изменение поиска по title/tag.
 
@@ -91,9 +93,9 @@ export const stripHtml = (html) => {
 ### Step 3: Применить в обоих местах поиска
 
 - `useSearch.js:36` → `const descriptionMatch = stripHtml(item.description || '').toLowerCase().includes(lowerQuery);`
-- `TaskList.js` — `grep -n 'description || ' src/components/TaskList.js`, заменить КАЖДОЕ вхождение паттерна includes-по-description на `stripHtml(...)`-вариант (их минимум одно на строке ~249; вероятно, есть второе в основной фильтрации списка).
+- `TaskList.jsx` — `grep -n 'description || ' src/components/TaskList.jsx`, заменить КАЖДОЕ вхождение паттерна includes-по-description на `stripHtml(...)`-вариант (их минимум одно на строке ~249; вероятно, есть второе в основной фильтрации списка).
 
-**Verify**: `grep -n "description || '').toLowerCase().includes" src/hooks/useSearch.js src/components/TaskList.js` → пусто; build → exit 0.
+**Verify**: `grep -n "description || '').toLowerCase().includes" src/hooks/useSearch.js src/components/TaskList.jsx` → пусто; build → exit 0.
 
 ### Step 4: Ручная проверка и коммит
 
@@ -112,7 +114,7 @@ export const stripHtml = (html) => {
 
 ## STOP conditions
 
-- В `TaskList.js` поиск по description встречается >3 раз или сплетён с другой логикой — перечисли вхождения и STOP.
+- В `TaskList.jsx` поиск по description встречается >3 раз или сплетён с другой логикой — перечисли вхождения и STOP.
 - Поиск стал заметно лагать на вводе (кэш не помогает) — STOP с измерением.
 
 ## Maintenance notes

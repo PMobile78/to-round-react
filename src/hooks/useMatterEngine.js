@@ -24,15 +24,15 @@ export function useMatterEngine({
     stickyPulseRef,
     lastDueRef,
     manuallyStoppedPulsingRef,
-    // State values captured at mount time (stale closure — matches original)
+    // editDialog/selectedBubble are captured once at mount and stay stale inside the
+    // subscription callback; live edit-dialog state is delivered via liveEditRef instead.
     editDialog,
     selectedBubble,
+    liveEditRef,
     // State setters
     setBubbles,
     setCanvasSize,
     setSelectedBubble,
-    setTitle,
-    setDescription,
     setSelectedTagId,
     setEditBubbleSize,
     setEditDialog,
@@ -206,9 +206,12 @@ export function useMatterEngine({
                     });
                 } catch (_) { }
 
-                // If edit dialog is open for a selected bubble, reflect live updates
-                if (editDialog && selectedBubble && selectedBubble.id) {
-                    const updated = merged.find(b => String(b.id) === String(selectedBubble.id));
+                // If edit dialog is open for a selected bubble, reflect live updates.
+                // Read live values via ref — editDialog/selectedBubble captured in this
+                // mount-effect closure are stale (always false/null).
+                const { editDialog: liveOpen, selectedBubbleId } = liveEditRef.current;
+                if (liveOpen && selectedBubbleId != null) {
+                    const updated = merged.find(b => String(b.id) === String(selectedBubbleId));
                     if (updated) {
                         // Update selected bubble fields but keep the Matter.js body instance
                         setSelectedBubble(prevSel => (prevSel ? { ...prevSel, ...updated, body: prevSel.body } : updated));
@@ -225,6 +228,15 @@ export function useMatterEngine({
                         // keep sticky pulsing even if editor opened (until user presses Stop)
                     }
                 }
+
+                // Remove ghost Matter bodies: a task deleted on another device disappears
+                // from the server list but its body lingers in the world until reload.
+                const mergedIds = new Set(merged.map(b => String(b.id)));
+                prev.forEach(b => {
+                    if (b.body && !mergedIds.has(String(b.id))) {
+                        try { World.remove(engine.world, b.body); } catch (_) { }
+                    }
+                });
 
                 return merged;
             });
@@ -281,8 +293,6 @@ export function useMatterEngine({
                         const clickedBubble = currentBubblesState.find(b => b.body.id === targetBodyId);
                         if (clickedBubble) {
                             setSelectedBubble(clickedBubble);
-                            setTitle(clickedBubble.title || '');
-                            setDescription(clickedBubble.description || '');
                             setSelectedTagId(clickedBubble.tagId || '');
                             setEditBubbleSize(clickedBubble.radius);
                             setEditDialog(true);

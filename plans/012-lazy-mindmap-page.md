@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/App.js`
+> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/App.jsx`
 > При несовпадении выдержек «Current state» с живым кодом — STOP.
 
 ## Status
@@ -17,6 +17,8 @@
 - **Depends on**: none
 - **Category**: perf
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/28
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
@@ -24,7 +26,7 @@
 
 ## Current state
 
-`src/App.js`:
+`src/App.jsx`:
 - строка 6: `import MindMapPage from './pages/MindMapPage';`
 - строки 66-80 — единственное место рендера:
   ```jsx
@@ -39,8 +41,8 @@
       )
   ) : ( <AuthForm ... /> )}
   ```
-- В App.js уже есть загрузочный экран с `<CircularProgress size={60} sx={{ color: 'white' }} />` (строки ~50-58) — используем такой же fallback.
-- mind-map зависимости тянутся только из `src/pages/MindMapPage.js` и `src/components/mindmap/**` — проверить: `grep -rln "mind-elixir\|@xyflow" src/ | grep -v mindmap | grep -v MindMapPage` → должно быть пусто (если нет — STOP).
+- В App.jsx уже есть загрузочный экран с `<CircularProgress size={60} sx={{ color: 'white' }} />` (строки ~50-58) — используем такой же fallback.
+- mind-map зависимости тянутся только из `src/pages/MindMapPage.jsx` и `src/components/mindmap/**` — проверить: `grep -rln "mind-elixir\|@xyflow" src/ | grep -v mindmap | grep -v MindMapPage` → должно быть пусто (если нет — STOP).
 
 ## Commands you will need
 
@@ -51,9 +53,9 @@
 
 ## Scope
 
-**In scope**: `src/App.js`.
+**In scope**: `src/App.jsx`.
 
-**Out of scope**: lazy для TipTap/Matter.js (нужны на главном экране — бессмысленно), `MindMapPage.js` и его компоненты, роутинг.
+**Out of scope**: lazy для TipTap/Matter.js (нужны на главном экране — бессмысленно), `MindMapPage.jsx` и его компоненты, роутинг.
 
 ## Git workflow
 
@@ -67,7 +69,7 @@
 
 ### Step 2: React.lazy + Suspense
 
-В `App.js`:
+В `App.jsx`:
 
 ```js
 const MindMapPage = React.lazy(() => import('./pages/MindMapPage'));
@@ -87,7 +89,7 @@ screen === 'mindmap' ? (
 ) : ( ... )
 ```
 
-(Box/CircularProgress уже импортированы в App.js для loading-экрана — проверить и переиспользовать его стиль с `background: theme.palette.background.bubbleView`, как в строках 50-58, чтобы не мигало белым.)
+(Box/CircularProgress уже импортированы в App.jsx для loading-экрана — проверить и переиспользовать его стиль с `background: theme.palette.background.bubbleView`, как в строках 50-58, чтобы не мигало белым.)
 
 **Verify**: `npm run build` → exit 0.
 
@@ -107,13 +109,13 @@ screen === 'mindmap' ? (
 
 ## Done criteria
 
-- [ ] `grep -n "React.lazy" src/App.js` → 1 совпадение
+- [ ] `grep -n "React.lazy" src/App.jsx` → 1 совпадение
 - [ ] `npm run build` → exit 0; main-чанк меньше, чем в шаге 1; mind-elixir не в main-чанке
 - [ ] `plans/README.md`: строка плана 012 → DONE
 
 ## STOP conditions
 
-- mind-map зависимости импортируются откуда-то ещё кроме `src/pages/MindMapPage.js` / `src/components/mindmap/**` (грep из Current state непуст).
+- mind-map зависимости импортируются откуда-то ещё кроме `src/pages/MindMapPage.jsx` / `src/components/mindmap/**` (грep из Current state непуст).
 - После lazy build падает с ошибкой про default export (`MindMapPage` должен быть default-экспортом — проверь).
 
 ## Maintenance notes

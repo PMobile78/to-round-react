@@ -245,16 +245,18 @@ function computeMinutesBefore(notif) {
     return NaN;
 }
 
-// De-dup: ensure we don't send the same notification twice for the same dueDate
-async function wasNotificationSent(key) {
+// De-dup: atomically claim a notification key. create() throws if the doc already
+// exists, so overlapping scheduler runs can't both claim it.
+// true → claimed by this run (safe to send); false → already sent/sending.
+async function claimNotificationKey(key) {
     const ref = db.collection('notification-sent').doc(key);
-    const snap = await ref.get();
-    return snap.exists;
-}
-
-async function markNotificationSent(key) {
-    const ref = db.collection('notification-sent').doc(key);
-    await ref.set({ sentAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    try {
+        await ref.create({ sentAt: admin.firestore.FieldValue.serverTimestamp() });
+        return true;
+    } catch (e) {
+        if (e && (e.code === 6 || String(e.code).toUpperCase().includes('ALREADY_EXISTS'))) return false;
+        throw e;
+    }
 }
 
 // Clean up notification-sent entries older than 7 days to prevent unbounded collection growth
@@ -436,7 +438,7 @@ async function handleReminder(userId, bubble, tokens, now) {
     const rem = pickReminderToSend(bubble, now);
     if (!rem) return;
     const key = buildReminderKey(userId, bubble, rem.minutesBefore);
-    if (await wasNotificationSent(key)) return;
+    if (!(await claimNotificationKey(key))) return;
     const url = `${HOMEPAGE_URL}/?bubbleId=${encodeURIComponent(String(bubble.id || ''))}`;
     await sendFcmToUser(userId, {
         data: {
@@ -447,7 +449,6 @@ async function handleReminder(userId, bubble, tokens, now) {
             bubbleTitle: String(bubble.title || '')
         }
     }, tokens);
-    await markNotificationSent(key);
 }
 
 async function handleOverdue(userId, bubble, tokens, now) {
@@ -469,12 +470,11 @@ async function handleOverdue(userId, bubble, tokens, now) {
     }
 
     const key = buildOverdueKey(userId, bubble);
-    if (!(await wasNotificationSent(key))) {
+    if (await claimNotificationKey(key)) {
         const url = `${HOMEPAGE_URL}/?bubbleId=${encodeURIComponent(String(bubble.id || ''))}`;
         await sendFcmToUser(userId, {
             data: { bubbleId: String(bubble.id || ''), type: 'overdue', url, bubbleTitle: String(bubble.title || '') }
         }, tokens);
-        await markNotificationSent(key);
     }
     if (!bubble.overdueSticky) {
         await updateBubbleFields(userId, bubble.id, { overdueSticky: true, overdueAt: new Date().toISOString() });
@@ -516,7 +516,7 @@ exports.maintainNextNotifyAt = onDocumentWritten({
 });
 
 exports.scheduleDueDateNotifications = onSchedule({
-    schedule: 'every 1 minutes',
+    schedule: '* * * * *',
     region: 'europe-west1',
     maxInstances: 10
 }, async () => {

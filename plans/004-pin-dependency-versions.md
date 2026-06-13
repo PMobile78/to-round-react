@@ -17,6 +17,8 @@
 - **Depends on**: 002 (нужен зелёный `npm run test:ci` как gate; если 002 ещё не выполнен — используй `npm run build` как единственный gate)
 - **Category**: migration
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/20
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 

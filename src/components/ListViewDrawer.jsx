@@ -26,8 +26,6 @@ const TaskListDrawer = ({
     listSearchQuery,
     setListSearchQuery,
     setSelectedBubble,
-    setTitle,
-    setDescription,
     setSelectedTagId,
     setEditDialog,
     handleListTagFilterChange,
@@ -85,8 +83,6 @@ const TaskListDrawer = ({
                     listSearchQuery={listSearchQuery}
                     setListSearchQuery={setListSearchQuery}
                     setSelectedBubble={setSelectedBubble}
-                    setTitle={setTitle}
-                    setDescription={setDescription}
                     setSelectedTagId={setSelectedTagId}
                     setEditDialog={setEditDialog}
                     handleListTagFilterChange={handleListTagFilterChange}
