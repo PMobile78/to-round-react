@@ -51,9 +51,9 @@
 | 014 | [#30](https://github.com/PMobile78/to-round-react/issues/30) | Общие date/time-утилиты + фикс пресета 'Nw' | P3 | M | 002 | TODO |
 | 015 | [#31](https://github.com/PMobile78/to-round-react/issues/31) | Live-sync открытого диалога + призрачные тела | P3 | M | 010* | TODO |
 | 016 | [#32](https://github.com/PMobile78/to-round-react/issues/32) | Поиск по тексту описания, а не по сырому HTML | P3 | S | 002 | TODO |
-| 017 | [#33](https://github.com/PMobile78/to-round-react/issues/33) | SPIKE: переполнение пузырями на мобиле (по спеке) | P2 | M | — | TODO |
+| 017 | [#33](https://github.com/PMobile78/to-round-react/issues/33) | SPIKE: переполнение пузырями на мобиле (по спеке) | P2 | M | — | DEFERRED (по запросу владельца — обдумать) |
 | 018 | [#34](https://github.com/PMobile78/to-round-react/issues/34) | Offline-персистентность Firestore (PWA) | P2 | S | — | TODO |
-| 019 | [#35](https://github.com/PMobile78/to-round-react/issues/35) | DESIGN: связка mind map ↔ задачи | P3 | M | — | TODO |
+| 019 | [#35](https://github.com/PMobile78/to-round-react/issues/35) | DESIGN: связка mind map ↔ задачи | P3 | M | — | DEFERRED (по запросу владельца — обдумать) |
 
 `*` — мягкая зависимость: можно выполнять и без неё, но порядок из таблицы
 уменьшает конфликты (планы правят одни и те же строки `BubblesPage.jsx`).
