@@ -1,10 +1,20 @@
-name: Deploy to GitHub Pages
+name: CI & Deploy
 
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump level'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
 
 permissions:
   contents: write
@@ -16,44 +26,73 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  test:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '22'
         cache: 'npm'
-        
+
     - name: Clear npm cache
       run: npm cache clean --force
-      
+
     - name: Install dependencies
       run: |
         npm ci --legacy-peer-deps --prefer-offline --no-audit
-        
+
+    - name: Install functions dependencies
+      run: cd functions && npm ci
+
+    - name: Run tests
+      run: |
+        npm test
+        npm run test:functions
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: Clear npm cache
+      run: npm cache clean --force
+
+    - name: Install dependencies
+      run: |
+        npm ci --legacy-peer-deps --prefer-offline --no-audit
+
     - name: Bump version
       id: version
       run: |
-        npm run version:patch
+        npm run version:${{ github.event.inputs.version_bump }}
         echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-        
+
     - name: Commit version bump
-      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add package.json
         git commit -m "Bump version to ${{ steps.version.outputs.version }} [skip ci]" || exit 0
         git push
-      
+
     - name: Create .env.production
       run: |
         cat > .env.production << EOF
@@ -66,30 +105,25 @@ jobs:
         REACT_APP_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}
         REACT_APP_FIREBASE_MEASUREMENT_ID=${{ secrets.FIREBASE_MEASUREMENT_ID }}
         REACT_APP_FIREBASE_VAPID_KEY=${{ secrets.FIREBASE_VAPID_KEY }}
-        
+
         # App Configuration
         REACT_APP_NAME=To-Round
         REACT_APP_VERSION=${{ steps.version.outputs.version }}
         REACT_APP_ENVIRONMENT=production
         EOF
-        
-    - name: Generate Service Worker
-      run: |
-        npm run generate-sw --legacy-peer-deps
-      
+
     - name: Build
       run: |
         npm run build --legacy-peer-deps
-      
+
     - name: Setup Pages
       uses: actions/configure-pages@v4
-      
+
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
         path: './build'
-        
+
     - name: Deploy to GitHub Pages
-      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       id: deployment
       uses: actions/deploy-pages@v4
