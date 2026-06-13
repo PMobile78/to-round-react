@@ -66,6 +66,7 @@ import { useMatterEngine } from '../hooks/useMatterEngine';
 import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
 import { withAlpha } from '../utils/colorUtils';
+import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime, getOffsetMs } from '../utils/dateTime';
 
 
 // Helpers for JSON export
@@ -82,60 +83,6 @@ const exportJsonFile = (dataObject, filename) => {
         document.body.removeChild(link);
     } catch (e) {
         logger.error('Export JSON failed', e);
-    }
-};
-
-// Функция для сохранения локального времени без конвертации в UTC
-// Сохраняет время в формате "YYYY-MM-DDTHH:mm:ss", который интерпретируется как локальное время
-const formatLocalDateTime = (date) => {
-    if (!date) return null;
-    try {
-        const d = date instanceof Date ? date : new Date(date);
-        if (!Number.isFinite(d.getTime())) return null;
-
-        // Форматируем локальное время без конвертации в UTC
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const hours = String(d.getHours()).padStart(2, '0');
-        const minutes = String(d.getMinutes()).padStart(2, '0');
-        const seconds = String(d.getSeconds()).padStart(2, '0');
-
-        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-    } catch (_) {
-        return null;
-    }
-};
-
-// IANA-зона пользователя (например, "Europe/Kyiv") — сохраняется рядом с dueDate,
-// чтобы Cloud Function (UTC) могла интерпретировать локальную строку времени корректно
-const getUserTimeZone = () => {
-    try {
-        return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-    } catch (_) {
-        return null;
-    }
-};
-
-// Функция для парсинга локального времени из строки
-// Интерпретирует строку как локальное время, а не UTC
-const parseLocalDateTime = (dateString) => {
-    if (!dateString) return null;
-    try {
-        // Если это ISO строка с Z или +/-, парсим как обычно
-        if (dateString.includes('Z') || dateString.includes('+') || dateString.includes('-', 10)) {
-            return new Date(dateString);
-        }
-        // Иначе интерпретируем как локальное время (формат "YYYY-MM-DDTHH:mm:ss")
-        const [datePart, timePart] = dateString.split('T');
-        if (!datePart || !timePart) return new Date(dateString);
-
-        const [year, month, day] = datePart.split('-').map(Number);
-        const [hours, minutes, seconds = 0] = timePart.split(':').map(Number);
-
-        return new Date(year, month - 1, day, hours, minutes, seconds);
-    } catch (_) {
-        return null;
     }
 };
 
@@ -1852,26 +1799,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         // Intentional: setSelectedBubble/setEditDialog are stable useState setters; deepLinkHandledRef
         // is a ref — neither needs to be listed. bubbles is listed so the effect retries until loaded.
     }, [bubbles]);
-
-    // Вспомогательная функция для вычисления offset в миллисекундах
-    function getOffsetMs(notification) {
-        if (typeof notification === 'string') {
-            if (notification.endsWith('m')) return parseInt(notification) * 60 * 1000;
-            if (notification.endsWith('h')) return parseInt(notification) * 60 * 60 * 1000;
-            if (notification.endsWith('d')) return parseInt(notification) * 24 * 60 * 60 * 1000;
-        }
-        if (notification.type === 'custom') {
-            const v = Number(notification.value);
-            switch (notification.unit) {
-                case 'minutes': return v * 60 * 1000;
-                case 'hours': return v * 60 * 60 * 1000;
-                case 'days': return v * 24 * 60 * 60 * 1000;
-                case 'weeks': return v * 7 * 24 * 60 * 60 * 1000;
-                default: return 0;
-            }
-        }
-        return 0;
-    }
 
     return (
         <Box sx={{

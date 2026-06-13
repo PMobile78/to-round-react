@@ -20,6 +20,7 @@ import {
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
+import { getOffsetMs } from '../utils/dateTime';
 
 const PRESETS = [
     { value: '5m', label: '5 minutes before' },
@@ -82,26 +83,6 @@ export default function AddNotification({
         { value: 'days', label: t('bubbles.days') },
         { value: 'weeks', label: t('bubbles.weeks') }
     ];
-
-    // Вспомогательная функция для вычисления offset в миллисекундах
-    function getOffsetMs(notification) {
-        if (typeof notification === 'string') {
-            if (notification.endsWith('m')) return parseInt(notification) * 60 * 1000;
-            if (notification.endsWith('h')) return parseInt(notification) * 60 * 60 * 1000;
-            if (notification.endsWith('d')) return parseInt(notification) * 24 * 60 * 60 * 1000;
-        }
-        if (notification.type === 'custom') {
-            const v = Number(notification.value);
-            switch (notification.unit) {
-                case 'minutes': return v * 60 * 1000;
-                case 'hours': return v * 60 * 60 * 1000;
-                case 'days': return v * 24 * 60 * 60 * 1000;
-                case 'weeks': return v * 7 * 24 * 60 * 60 * 1000;
-                default: return 0;
-            }
-        }
-        return 0;
-    }
 
     // Сортировка уведомлений по времени до события (offset)
     const sortedNotifications = [...notifications].sort((a, b) => getOffsetMs(a) - getOffsetMs(b));
