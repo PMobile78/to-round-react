@@ -1,8 +1,12 @@
 # Modern Minimal Redesign — Design Spec
 
 **Date:** 2026-06-13
-**Status:** Approved
-**Branch:** `redesign/modern-minimal`
+**Status:** ✅ Implemented & shipped (2026-06-13)
+**Branch:** `redesign/modern-minimal` (смержена fast-forward в `main`, запушена/задеплоена; ветка удалена)
+
+> ✅ Редизайн реализован: тема Inter / `#2f6bdb` / мягкие радиусы и тени / пастельные пузыри с тонкими цветными обводками — внедрён на BubblesPage и через MUI-оверрайды. Коммиты редизайна: `9997111`, `3a92690`, `ce36a0b`, `0791533`, `b1a3e6e`.
+>
+> Впоследствии этот облик стал скином **«Modern»** в фиче ось тема×скин (см. [`../plans/2026-06-13-theme-skin-axis.md`](../plans/2026-06-13-theme-skin-axis.md), `src/theme/designs/modern.js`) — один из 5 скинов. Поведение/физика/данные не менялись.
 
 ## Goal
 
