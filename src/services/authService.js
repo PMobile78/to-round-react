@@ -4,7 +4,10 @@ import {
     signOut,
     onAuthStateChanged,
     sendPasswordResetEmail,
-    updateProfile
+    updateProfile,
+    EmailAuthProvider,
+    reauthenticateWithCredential,
+    updatePassword
 } from 'firebase/auth';
 import { auth } from '../firebase';
 import logger from '../utils/logger';
@@ -18,6 +21,7 @@ const firebaseErrorMessages = {
     'auth/too-many-requests': 'Too many attempts. Please try again later.',
     'auth/network-request-failed': 'Network error. Please check your connection.',
     'auth/popup-closed-by-user': 'Sign-in popup was closed.',
+    'auth/requires-recent-login': 'Please sign in again and retry.',
 };
 
 const mapFirebaseError = (error) => {
@@ -79,6 +83,21 @@ export const resetPassword = async (email) => {
     } catch (error) {
         logger.error('Error sending password reset email:', error);
         return { success: false, error: mapFirebaseError(error) };
+    }
+};
+
+// Change password for the currently signed-in email/password user.
+// Requires reauthentication because Firebase rejects updatePassword on stale sessions.
+export const changePassword = async (currentPassword, newPassword) => {
+    try {
+        const user = auth.currentUser;
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, newPassword);
+        return { success: true };
+    } catch (error) {
+        logger.error('Error changing password:', error);
+        return { success: false, error: mapFirebaseError(error), code: error.code };
     }
 };
 

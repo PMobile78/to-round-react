@@ -14,7 +14,8 @@ import {
     FileDownload,
     FileUpload,
     ViewListOutlined,
-    AccountTreeOutlined
+    AccountTreeOutlined,
+    LockOutlined
 } from '@mui/icons-material';
 import LanguageSelector from './LanguageSelector';
 
@@ -34,6 +35,7 @@ const MainMenuDrawer = ({
     onOpenCategoriesDialog,
     onOpenFontSettingsDialog,
     onOpenAppearanceDialog,
+    onOpenChangePasswordDialog,
     onOpenMindMap,
     onAbout,
     onLogout,
@@ -225,6 +227,23 @@ const MainMenuDrawer = ({
                         </ListItemIcon>
                         <ListItemText
                             primary={t('appearance.menuLabel')}
+                            primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
+                        />
+                    </ListItem>
+
+                    <ListItem
+                        button
+                        onClick={() => {
+                            onClose();
+                            onOpenChangePasswordDialog && onOpenChangePasswordDialog();
+                        }}
+                        sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <LockOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={t('changePassword.menuLabel')}
                             primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
                         />
                     </ListItem>

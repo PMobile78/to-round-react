@@ -26,6 +26,7 @@ import MainMenuDrawer from '../components/MainMenuDrawer';
 import AboutDialog from '../components/AboutDialog';
 import FontSettingsDialog from '../components/FontSettingsDialog';
 import AppearanceDialog from '../components/AppearanceDialog';
+import ChangePasswordDialog from '../components/ChangePasswordDialog';
 import LogoutConfirmDialog from '../components/LogoutConfirmDialog';
 import { logoutUser } from '../services/authService';
 import {
@@ -287,6 +288,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [categoriesDialog, setCategoriesDialog] = useState(false); // Диалог управления категориями
     const [fontSettingsDialog, setFontSettingsDialog] = useState(false); // Диалог настроек шрифта
     const [appearanceDialogOpen, setAppearanceDialogOpen] = useState(false); // Диалог оформления
+    const [changePasswordOpen, setChangePasswordOpen] = useState(false); // Диалог смены пароля
     const [fontSize, setFontSize] = useState(() => {
         const savedFontSize = localStorage.getItem('bubbles-font-size');
         return savedFontSize ? parseInt(savedFontSize) : 12;
@@ -2743,6 +2745,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 onOpenCategoriesDialog={() => setCategoriesDialog(true)}
                 onOpenFontSettingsDialog={() => setFontSettingsDialog(true)}
                 onOpenAppearanceDialog={() => setAppearanceDialogOpen(true)}
+                onOpenChangePasswordDialog={() => setChangePasswordOpen(true)}
                 onOpenMindMap={onOpenMindMap}
                 onAbout={() => setAboutOpen(true)}
                 onLogout={handleLogout}
@@ -2857,6 +2860,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 design={design}
                 setDesign={setDesign}
                 designs={designs}
+                getDialogPaperStyles={getDialogPaperStyles}
+            />
+
+            {/* Диалог смены пароля */}
+            <ChangePasswordDialog
+                open={changePasswordOpen}
+                onClose={() => setChangePasswordOpen(false)}
+                isSmallScreen={isSmallScreen}
+                isMobile={isMobile}
                 getDialogPaperStyles={getDialogPaperStyles}
             />
 
