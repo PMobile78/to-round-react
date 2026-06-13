@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Matter from 'matter-js';
 import { createWorldBounds } from '../utils/physicsUtils';
 import {
@@ -49,6 +49,14 @@ export function useMatterEngine({
     parseLocalDateTime,
     theme,
 }) {
+    // Keep theme reference current for afterRender handler (avoid stale closure)
+    const themeRef = useRef(theme);
+
+    // Keep themeRef.current in sync with theme prop
+    useEffect(() => {
+        themeRef.current = theme;
+    }, [theme]);
+
     useEffect(() => {
         const canvas = canvasRef.current;
         const { Engine, Render, Runner, Bodies, World, Mouse, MouseConstraint, Events, Query } = Matter;
@@ -296,16 +304,17 @@ export function useMatterEngine({
 
         // Register afterRender hook for bubble effects
         const afterRenderHandler = () => {
-            const effectType = theme?.custom?.bubble?.effect || 'none';
+            const effectType = themeRef.current?.custom?.bubble?.effect || 'none';
+            const effectParams = themeRef.current?.custom?.bubble?.effectParams;
             switch (effectType) {
                 case 'glow':
-                    // TODO (Task 5): Implement glow effect drawing
+                    // TODO (Task 5): Implement glow effect drawing with effectParams
                     break;
                 case 'hardShadow':
-                    // TODO (Task 7): Implement hard shadow effect drawing
+                    // TODO (Task 7): Implement hard shadow effect drawing with effectParams
                     break;
                 case 'clay':
-                    // TODO (Task 7): Implement clay effect drawing
+                    // TODO (Task 7): Implement clay effect drawing with effectParams
                     break;
                 case 'none':
                 default:
