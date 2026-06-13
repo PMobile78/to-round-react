@@ -1,4 +1,4 @@
-import { alpha, createTheme } from '@mui/material/styles';
+import { alpha } from '@mui/material/styles';
 
 /**
  * Classic design skin (pre-redesign look from commit 24123f1^)
