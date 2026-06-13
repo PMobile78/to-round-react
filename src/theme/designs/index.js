@@ -2,6 +2,7 @@ import { modern } from './modern';
 import { classic } from './classic';
 import { aurora } from './aurora';
 import { brutalist } from './brutalist';
+import { clay } from './clay';
 
 /**
  * Design skins registry
@@ -54,11 +55,11 @@ export const DESIGNS = {
     id: 'clay',
     labelKey: 'design.clay',
     previewColors: {
-      primary: '#d4a373',
-      secondary: '#c17a5a',
+      primary: '#a084a0',
+      secondary: '#d4a373',
       background: '#fdf8f5',
     },
-    module: null, // Implemented in Task 4
+    module: clay,
   },
 };
 

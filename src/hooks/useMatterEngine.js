@@ -401,7 +401,88 @@ export function useMatterEngine({
                     }
                     break;
                 case 'clay':
-                    // TODO (Task 7): Implement clay effect drawing with effectParams
+                    // Two-pass draw: soft shadows first, then bubbles with highlights
+                    if (effectParams && renderRef.current) {
+                        const ctx = renderRef.current.context;
+                        const shadowColor = effectParams.shadowColor || 'rgba(0, 0, 0, 0.1)';
+                        const blurRadius = effectParams.blurRadius || 12;
+                        const dx = effectParams.dx || 3;
+                        const dy = effectParams.dy || 3;
+                        const highlightColor = effectParams.highlightColor || 'rgba(255, 255, 255, 0.5)';
+                        const highlightAlpha = effectParams.highlightAlpha || 0.4;
+
+                        const bodies = engine.world.bodies;
+                        ctx.save();
+
+                        // Pass 1: Draw soft shadows behind all bubbles
+                        bodies.forEach((body) => {
+                            if (body.label === 'Circle Body' && body.circleRadius) {
+                                const radius = body.circleRadius;
+                                const x = body.position.x;
+                                const y = body.position.y;
+
+                                // Draw a filled disc that will cast a soft blur shadow
+                                ctx.shadowBlur = blurRadius;
+                                ctx.shadowColor = shadowColor;
+                                ctx.shadowOffsetX = dx;
+                                ctx.shadowOffsetY = dy;
+
+                                // Opaque fill so the shadow blur is visible
+                                ctx.fillStyle = shadowColor.replace(')', ', 0.8)').replace('rgba(', 'rgba(');
+                                ctx.beginPath();
+                                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        });
+
+                        // Reset shadow properties for pass 2
+                        ctx.shadowBlur = 0;
+                        ctx.shadowColor = 'transparent';
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 0;
+
+                        // Pass 2: Redraw bubbles on top with subtle highlight
+                        bodies.forEach((body) => {
+                            if (body.label === 'Circle Body' && body.circleRadius) {
+                                const radius = body.circleRadius;
+                                const x = body.position.x;
+                                const y = body.position.y;
+
+                                // Redraw circle with the body's own render props
+                                ctx.beginPath();
+                                ctx.arc(x, y, radius, 0, Math.PI * 2);
+
+                                // Apply fill if present
+                                if (body.render.fillStyle) {
+                                    ctx.fillStyle = body.render.fillStyle;
+                                    ctx.fill();
+                                }
+
+                                // Apply stroke if present
+                                if (body.render.strokeStyle && body.render.lineWidth) {
+                                    ctx.strokeStyle = body.render.strokeStyle;
+                                    ctx.lineWidth = body.render.lineWidth;
+                                    ctx.stroke();
+                                }
+
+                                // Add subtle radial highlight for 3D clay effect
+                                // Gradient goes from highlight at top-left to transparent at edges
+                                const highlightGradient = ctx.createRadialGradient(
+                                    x - radius * 0.4, y - radius * 0.4, 0,
+                                    x, y, radius
+                                );
+                                highlightGradient.addColorStop(0, highlightColor.replace(')', `, ${highlightAlpha})`).replace('rgba(', 'rgba('));
+                                highlightGradient.addColorStop(0.7, highlightColor.replace(')', ', 0)').replace('rgba(', 'rgba('));
+
+                                ctx.fillStyle = highlightGradient;
+                                ctx.beginPath();
+                                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        });
+
+                        ctx.restore();
+                    }
                     break;
                 case 'none':
                 default:
