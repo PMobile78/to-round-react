@@ -232,6 +232,19 @@
     "language": {
         "title": "Мова"
     },
+    "appearance": {
+        "title": "Оформлення",
+        "menuLabel": "Оформлення",
+        "themeMode": "Режим теми",
+        "design": "Дизайн"
+    },
+    "design": {
+        "modern": "Сучасний",
+        "classic": "Класичний",
+        "aurora": "Аврора",
+        "brutalist": "Брутализм",
+        "clay": "Глина"
+    },
     "categories": {
         "title": "Категорії",
         "today": "Сьогодні",

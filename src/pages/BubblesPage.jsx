@@ -25,6 +25,7 @@ import { lsGet, lsSet } from '../utils/storage';
 import MainMenuDrawer from '../components/MainMenuDrawer';
 import AboutDialog from '../components/AboutDialog';
 import FontSettingsDialog from '../components/FontSettingsDialog';
+import AppearanceDialog from '../components/AppearanceDialog';
 import LogoutConfirmDialog from '../components/LogoutConfirmDialog';
 import { logoutUser } from '../services/authService';
 import {
@@ -220,7 +221,7 @@ function readBubbleViewPlannedTasksFromLS() {
 }
 
 
-const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMindMap }) => {
+const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMindMap, themeModeState, setThemeMode, design, setDesign, designs }) => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
@@ -284,6 +285,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false); // Состояние панели категорий
     const [categoriesDialog, setCategoriesDialog] = useState(false); // Диалог управления категориями
     const [fontSettingsDialog, setFontSettingsDialog] = useState(false); // Диалог настроек шрифта
+    const [appearanceDialogOpen, setAppearanceDialogOpen] = useState(false); // Диалог оформления
     const [fontSize, setFontSize] = useState(() => {
         const savedFontSize = localStorage.getItem('bubbles-font-size');
         return savedFontSize ? parseInt(savedFontSize) : 12;
@@ -2736,6 +2738,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 onToggleCategoriesPanel={handleToggleCategoriesPanel}
                 onOpenCategoriesDialog={() => setCategoriesDialog(true)}
                 onOpenFontSettingsDialog={() => setFontSettingsDialog(true)}
+                onOpenAppearanceDialog={() => setAppearanceDialogOpen(true)}
                 onOpenMindMap={onOpenMindMap}
                 onAbout={() => setAboutOpen(true)}
                 onLogout={handleLogout}
@@ -2837,6 +2840,20 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 fontSize={fontSize}
                 onFontSizeChange={handleFontSizeChange}
                 onReset={() => handleFontSizeChange(12)}
+            />
+
+            {/* Диалог оформления */}
+            <AppearanceDialog
+                open={appearanceDialogOpen}
+                onClose={() => setAppearanceDialogOpen(false)}
+                isSmallScreen={isSmallScreen}
+                isMobile={isMobile}
+                themeMode={themeModeState}
+                setThemeMode={setThemeMode}
+                design={design}
+                setDesign={setDesign}
+                designs={designs}
+                getDialogPaperStyles={getDialogPaperStyles}
             />
 
             {/* Диалог подтверждения выхода */}

@@ -4,7 +4,7 @@ import { Drawer, Box, Typography, List, ListItem, ListItemIcon, ListItemText, Di
 import { useTranslation } from 'react-i18next';
 import {
     LanguageOutlined,
-    PaletteOutlined,
+    Palette,
     FormatColorFillOutlined,
     FormatSizeOutlined,
     LabelOutlined,
@@ -17,7 +17,6 @@ import {
     AccountTreeOutlined
 } from '@mui/icons-material';
 import LanguageSelector from './LanguageSelector';
-import ThemeToggle from './ThemeToggle';
 
 const MainMenuDrawer = ({
     open,
@@ -34,6 +33,7 @@ const MainMenuDrawer = ({
     onToggleCategoriesPanel,
     onOpenCategoriesDialog,
     onOpenFontSettingsDialog,
+    onOpenAppearanceDialog,
     onOpenMindMap,
     onAbout,
     onLogout,
@@ -178,24 +178,6 @@ const MainMenuDrawer = ({
 
                     <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
 
-                    <ListItem sx={{ padding: '16px 24px' }}>
-                        <ListItemIcon sx={{ minWidth: 40 }}>
-                            <PaletteOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-                        </ListItemIcon>
-                        <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" sx={{
-                                color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                fontWeight: 500,
-                                marginBottom: 1
-                            }}>
-                                {t('theme.title')}
-                            </Typography>
-                            <ThemeToggle {...themeToggleProps} toggleTheme={toggleTheme} size="small" />
-                        </Box>
-                    </ListItem>
-
-                    <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
-
                     <ListItem
                         button
                         onClick={() => {
@@ -226,6 +208,23 @@ const MainMenuDrawer = ({
                         </ListItemIcon>
                         <ListItemText
                             primary={t('bubbles.fontSettings')}
+                            primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
+                        />
+                    </ListItem>
+
+                    <ListItem
+                        button
+                        onClick={() => {
+                            onClose();
+                            onOpenAppearanceDialog && onOpenAppearanceDialog();
+                        }}
+                        sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <Palette sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={t('appearance.menuLabel')}
                             primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
                         />
                     </ListItem>

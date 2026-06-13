@@ -15,7 +15,7 @@ function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [screen, setScreen] = useState(getScreenFromHash); // 'main' | 'mindmap'
-    const { themeMode, actualTheme, toggleTheme, theme } = useThemeMode();
+    const { themeMode, actualTheme, toggleTheme, theme, design, setDesign, designs, setThemeMode } = useThemeMode();
 
     useEffect(() => {
         const onHashChange = () => setScreen(getScreenFromHash());
@@ -76,6 +76,11 @@ function App() {
                         toggleTheme={toggleTheme}
                         themeToggleProps={{ themeMode, actualTheme }}
                         onOpenMindMap={() => navigate('mindmap')}
+                        themeModeState={themeMode}
+                        setThemeMode={setThemeMode}
+                        design={design}
+                        setDesign={setDesign}
+                        designs={designs}
                     />
                 )
             ) : (

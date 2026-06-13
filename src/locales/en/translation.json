@@ -231,6 +231,19 @@
     "language": {
         "title": "Language"
     },
+    "appearance": {
+        "title": "Appearance",
+        "menuLabel": "Appearance",
+        "themeMode": "Theme Mode",
+        "design": "Design"
+    },
+    "design": {
+        "modern": "Modern",
+        "classic": "Classic",
+        "aurora": "Aurora",
+        "brutalist": "Brutalist",
+        "clay": "Clay"
+    },
     "categories": {
         "title": "Categories",
         "today": "Today",
