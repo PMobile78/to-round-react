@@ -38,7 +38,15 @@ jobs:
     - name: Install dependencies
       run: |
         npm ci --legacy-peer-deps --prefer-offline --no-audit
-        
+
+    - name: Install functions dependencies
+      run: cd functions && npm ci
+
+    - name: Run tests
+      run: |
+        npm test
+        npm run test:functions
+
     - name: Bump version
       id: version
       run: |

@@ -9,6 +9,7 @@
     "build": "npm run generate-sw && vite build",
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
+    "test:functions": "cd functions && node test-next-notify.js",
     "lint": "eslint src",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
