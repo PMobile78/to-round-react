@@ -28,6 +28,7 @@ import FontSettingsDialog from '../components/FontSettingsDialog';
 import AppearanceDialog from '../components/AppearanceDialog';
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
 import LogoutConfirmDialog from '../components/LogoutConfirmDialog';
+import TextOverlay from '../components/TextOverlay';
 import { logoutUser } from '../services/authService';
 import {
     saveBubblesToFirestore,
@@ -472,13 +473,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             });
         }
     }, [theme, bubbles, tags]);
-
-    // Force TextOverlay re-render on theme change to update text opacity
-    const [textOverlayKey, setTextOverlayKey] = useState(0);
-    useEffect(() => {
-        // Force TextOverlay re-render when theme changes
-        setTextOverlayKey(prev => prev + 1);
-    }, [themeMode]);
 
     // Real-time tags synchronization (wait for auth user)
     useEffect(() => {
@@ -1516,137 +1510,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     };
 
     // Optimized component for displaying text over bubbles
-    /* eslint-disable react-hooks/rules-of-hooks -- pre-existing, fixed in plans/013 */
-    const TextOverlay = useCallback(() => {
-        const [positions, setPositions] = useState([]);
-        const bubblesRef = useRef(bubbles);
-        const filteredBubblesRef = useRef([]);
-
-        // Обновляем ref при изменении bubbles - мемоизируем
-        const updateRefs = useCallback(() => {
-            bubblesRef.current = bubbles;
-            filteredBubblesRef.current = getFilteredBubbles;
-        }, [bubbles, getFilteredBubbles]);
-
-        useEffect(() => {
-            updateRefs();
-        }, [updateRefs]);
-
-        useEffect(() => {
-            if (!engineRef.current) return undefined;
-
-            const updatePositions = () => {
-                const filteredBubbles = filteredBubblesRef.current || [];
-                const newPositions = filteredBubbles
-                    .filter(bubble => bubble && bubble.body && bubble.body.position)
-                    .map(bubble => ({
-                        id: bubble.id,
-                        x: bubble.body.position.x,
-                        y: bubble.body.position.y,
-                        radius: bubble.radius,
-                        title: bubble.title
-                    }));
-                setPositions(prev => {
-                    if (prev.length === newPositions.length && newPositions.every((p, i) =>
-                        prev[i] && Math.round(prev[i].x) === Math.round(p.x) && Math.round(prev[i].y) === Math.round(p.y)
-                    )) return prev;
-                    return newPositions;
-                });
-                rafId = requestAnimationFrame(updatePositions);
-            };
-
-            // rAF синхронизирован с отрисовкой и сам приостанавливается на скрытой вкладке
-            let rafId = requestAnimationFrame(updatePositions);
-            return () => cancelAnimationFrame(rafId);
-        }, []);
-
-        // Мемоизируем рендер функцию для каждого пузыря
-        const renderBubbleText = useCallback((bubble) => {
-            // Функция для ограничения длины текста в зависимости от размера пузыря и шрифта
-            const getMaxTitleLength = (radius, currentFontSize) => {
-                // Базовые значения для шрифта 12px
-                let baseLength;
-                if (radius < 30) baseLength = 8;   // очень маленький пузырь
-                else if (radius < 40) baseLength = 12;  // маленький пузырь
-                else if (radius < 50) baseLength = 16;  // средний пузырь
-                else baseLength = 20;                   // большой пузырь
-
-                // Корректируем количество символов в зависимости от размера шрифта
-                // Чем меньше шрифт, тем больше символов помещается (квадратичная зависимость)
-                const fontSizeRatio = Math.pow(12 / currentFontSize, 1.5); // Более агрессивное увеличение
-                return Math.round(baseLength * fontSizeRatio);
-            };
-
-            // Проверяем, найден ли пузырь в поиске
-            const isFound = foundBubblesIds.has(bubble.id);
-            const hasSearchQuery = debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim();
-
-            // Вычисляем текущий размер шрифта с учетом мобильности
-            const currentFontSize = isMobile ? fontSize * 0.75 : fontSize;
-            const maxLength = getMaxTitleLength(bubble.radius, currentFontSize);
-            const truncatedTitle = bubble.title && bubble.title.length > maxLength
-                ? bubble.title.substring(0, maxLength) + '...'
-                : bubble.title;
-
-            // Определяем стили в зависимости от поиска
-            const textOpacity = hasSearchQuery ? (isFound ? 1 : 0.4) : 1;
-            const textColor = theme.custom?.bubble?.label?.color ?? theme.palette.text.primary;
-
-            const textShadow = theme.custom?.bubble?.label?.shadow
-                ? (themeMode === 'light'
-                    ? '0 1px 2px rgba(255, 255, 255, 0.65)'
-                    : '0 1px 3px rgba(0, 0, 0, 0.5)')
-                : 'none';
-
-            return bubble.title ? (
-                <Box
-                    key={bubble.id}
-                    sx={{
-                        position: 'absolute',
-                        left: bubble.x,
-                        top: bubble.y,
-                        transform: 'translate(-50%, -50%)',
-                        textAlign: 'center',
-                        color: textColor,
-                        textShadow: textShadow,
-                        maxWidth: Math.max(bubble.radius * 1.6, 50),
-                        overflow: 'hidden',
-                        opacity: textOpacity,
-                        transition: 'opacity 0.3s ease'
-                    }}
-                >
-                    <Typography
-                        sx={{
-                            fontSize: Math.max(
-                                isMobile ? fontSize * 0.75 : fontSize,
-                                Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? fontSize * 1.2 : fontSize * 1.3)
-                            ),
-                            fontWeight: theme.custom?.bubble?.label?.weight ?? 600,
-                            lineHeight: 1.1,
-                            wordBreak: 'break-word'
-                        }}
-                    >
-                        {truncatedTitle}
-                    </Typography>
-                </Box>
-            ) : null;
-        }, [isMobile, fontSize, themeMode, foundBubblesIds, debouncedBubblesSearchQuery]);
-
-        return (
-            <Box sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-                zIndex: 10
-            }}>
-                {positions.map(renderBubbleText)}
-            </Box>
-        );
-    }, [getFilteredBubbles, bubbles, isMobile, fontSize, themeMode, foundBubblesIds, debouncedBubblesSearchQuery]);
-    /* eslint-enable react-hooks/rules-of-hooks */
 
     const notifiedBubblesRef = useRef(new Set());
     const notifiedBubbleNotificationsRef = useRef(new Set()); // bubbleId:idx
@@ -2456,7 +2319,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 zIndex: 2
             }} />
             {/* Текст поверх пузырей */}
-            <TextOverlay key={textOverlayKey} />
+            <TextOverlay
+              bubbles={bubbles}
+              getFilteredBubbles={getFilteredBubbles}
+              engineRef={engineRef}
+              foundBubblesIds={foundBubblesIds}
+              debouncedBubblesSearchQuery={debouncedBubblesSearchQuery}
+              isMobile={isMobile}
+              fontSize={fontSize}
+              themeMode={themeMode}
+            />
 
             {/* Полноэкранный режим списка задач (canvas остаётся смонтированным под панелью) */}
             {mainView === 'tasks' && (
