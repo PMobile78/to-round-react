@@ -38,7 +38,7 @@ import {
     markBubbleAsDeleted,
     restoreBubble,
     getBubblesByStatus,
-    saveBubblesToFirestore
+    deleteBubbleDoc
 } from '../services/firestoreService';
 
 // Auto-cleanup period for deleted tasks (30 days)
@@ -309,13 +309,9 @@ const TaskList = ({
 
     // Permanently delete task from list view
     const handlePermanentDeleteTask = useCallback(async (taskId) => {
-        try {
-            const updatedBubbles = bubbles.filter(bubble => bubble.id !== taskId);
-            setBubbles(updatedBubbles);
-            saveBubblesToFirestore(updatedBubbles);
-        } catch (error) {
-            logger.error('Error permanently deleting task:', error);
-        }
+        const updatedBubbles = bubbles.filter(bubble => bubble.id !== taskId);
+        setBubbles(updatedBubbles);
+        deleteBubbleDoc(taskId).catch(e => logger.error('Error permanently deleting task:', e));
     }, [bubbles, setBubbles]);
 
     // Edit task from list view

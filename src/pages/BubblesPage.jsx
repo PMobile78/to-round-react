@@ -40,7 +40,10 @@ import {
     markBubbleAsDone,
     markBubbleAsDeleted,
     getBubblesByStatus,
-    cleanupOldDeletedBubbles
+    cleanupOldDeletedBubbles,
+    upsertBubble,
+    updateBubbleFields,
+    deleteBubbleDoc
 } from '../services/firestoreService';
 
 import TaskListDrawer from '../components/ListViewDrawer';
@@ -857,11 +860,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         newBubble.useRichText = !!useRichTextCreate;
 
         Matter.World.add(engineRef.current.world, newBubble.body);
-        setBubbles(prev => {
-            const updatedBubbles = [...prev, newBubble];
-            saveBubblesToFirestore(updatedBubbles);
-            return updatedBubbles;
-        });
+        setBubbles(prev => [...prev, newBubble]);
+        upsertBubble(newBubble).catch(e => logger.error('Error saving new bubble:', e));
 
         // Close dialog and reset form
         setCreateDialog(false);
@@ -916,48 +916,41 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             Matter.World.add(engineRef.current.world, newBody);
 
             // Теперь обновляем состояние
-            setBubbles(prev => {
-                const updatedBubbles = prev.map(bubble => {
-                    if (bubble.id === selectedBubble.id) {
-                        const newDueDate = formatLocalDateTime(editDueDate);
+            const newDueDate = formatLocalDateTime(editDueDate);
 
-                        // Проверяем, изменилась ли дата на будущую и нужно ли отключить пульсацию
-                        const shouldDisablePulsing = newDueDate &&
-                            parseLocalDateTime(newDueDate) > new Date();
+            // Проверяем, изменилась ли дата на будущую и нужно ли отключить пульсацию
+            const shouldDisablePulsing = newDueDate &&
+                parseLocalDateTime(newDueDate) > new Date();
 
-                        // Отключаем пульсацию при удалении даты
-                        const shouldDisablePulsingOnDelete = !newDueDate && bubble.dueDate;
+            // Отключаем пульсацию при удалении даты
+            const shouldDisablePulsingOnDelete = !newDueDate && selectedBubble.dueDate;
 
-                        // Дата изменилась на будущую или удалена — начинаем новый цикл:
-                        // сбрасываем и in-memory флаг, и персистентный overduePulseSuppressed.
-                        const dateChanged = shouldDisablePulsing || shouldDisablePulsingOnDelete;
-                        if (dateChanged) {
-                            manuallyStoppedPulsingRef.current.delete(bubble.id);
-                        }
+            // Дата изменилась на будущую или удалена — начинаем новый цикл:
+            // сбрасываем и in-memory флаг, и персистентный overduePulseSuppressed.
+            const dateChanged = shouldDisablePulsing || shouldDisablePulsingOnDelete;
+            if (dateChanged) {
+                manuallyStoppedPulsingRef.current.delete(selectedBubble.id);
+            }
 
-                        return {
-                            ...bubble,
-                            title,
-                            description,
-                            tagId: selectedTagId || null,
-                            radius: editBubbleSize,
-                            body: newBody, // Используем новое тело
-                            updatedAt: new Date().toISOString(),
-                            dueDate: newDueDate,
-                            tz: getUserTimeZone(),
-                            notifications: editNotifications,
-                            recurrence: editRecurrence,
-                            // Отключаем пульсацию, если дата изменена на будущую или удалена
-                            overdueSticky: dateChanged ? false : bubble.overdueSticky,
-                            overdueAt: dateChanged ? null : bubble.overdueAt,
-                            overduePulseSuppressed: dateChanged ? false : bubble.overduePulseSuppressed
-                        };
-                    }
-                    return bubble;
-                });
-                saveBubblesToFirestore(updatedBubbles);
-                return updatedBubbles;
-            });
+            const updatedBubble = {
+                ...selectedBubble,
+                title,
+                description,
+                tagId: selectedTagId || null,
+                radius: editBubbleSize,
+                body: newBody,
+                updatedAt: new Date().toISOString(),
+                dueDate: newDueDate,
+                tz: getUserTimeZone(),
+                notifications: editNotifications,
+                recurrence: editRecurrence,
+                overdueSticky: dateChanged ? false : selectedBubble.overdueSticky,
+                overdueAt: dateChanged ? null : selectedBubble.overdueAt,
+                overduePulseSuppressed: dateChanged ? false : selectedBubble.overduePulseSuppressed
+            };
+
+            setBubbles(prev => prev.map(b => (b.id === selectedBubble.id ? updatedBubble : b)));
+            upsertBubble(updatedBubble).catch(e => logger.error('Error saving bubble edit:', e));
         }
 
         setEditDialog(false);
@@ -1206,19 +1199,20 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             saveTagsToFirestore(updatedTags);
 
             // Удаляем ссылки на этот тег из пузырей
-            setBubbles(prev => {
-                const updatedBubbles = prev.map(bubble => {
-                    if (bubble.tagId === tagId) {
-                        // Сбрасываем цвет пузыря на светло-серый и обновляем fillStyle
-                        bubble.body.render.strokeStyle = '#B0B0B0';
-                        bubble.body.render.fillStyle = getBubbleFillStyle(null);
-                        return { ...bubble, tagId: null };
-                    }
-                    return bubble;
-                });
-                saveBubblesToFirestore(updatedBubbles);
-                return updatedBubbles;
-            });
+            const affectedIds = new Set();
+            setBubbles(prev => prev.map(bubble => {
+                if (bubble.tagId === tagId) {
+                    affectedIds.add(bubble.id);
+                    // Сбрасываем цвет пузыря на светло-серый и обновляем fillStyle
+                    bubble.body.render.strokeStyle = '#B0B0B0';
+                    bubble.body.render.fillStyle = getBubbleFillStyle(null);
+                    return { ...bubble, tagId: null };
+                }
+                return bubble;
+            }));
+            affectedIds.forEach(id =>
+                updateBubbleFields(id, { tagId: null }).catch(e => logger.error('Error clearing tag from bubble:', e))
+            );
 
             // Удаляем таймер из Map
             setDeleteTimers(prev => {
@@ -1900,11 +1894,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         if (!selectedBubble) return;
         // Обновляем выбранный пузырь и сохраняем в БД
         setSelectedBubble(prev => prev ? { ...prev, useRichText: !!enabled } : prev);
-        setBubbles(prev => {
-            const updated = prev.map(b => b.id === selectedBubble.id ? { ...b, useRichText: !!enabled, updatedAt: new Date().toISOString() } : b);
-            saveBubblesToFirestore(updated);
-            return updated;
-        });
+        const fields = { useRichText: !!enabled, updatedAt: new Date().toISOString() };
+        setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? { ...b, ...fields } : b));
+        updateBubbleFields(selectedBubble.id, fields).catch(e => logger.error('Error toggling rich text:', e));
     };
 
     // Сброс уведомлений при смене языка
@@ -2607,11 +2599,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             updatedAt: new Date().toISOString()
                         };
 
-                        setBubbles(prev => {
-                            const updated = prev.map(b => b.id === selectedBubble.id ? updatedBubble : b);
-                            saveBubblesToFirestore(updated);
-                            return updated;
-                        });
+                        setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? updatedBubble : b));
+                        updateBubbleFields(selectedBubble.id, {
+                            overduePulseSuppressed: true, overdueSticky: false, overdueAt: null, updatedAt: updatedBubble.updatedAt
+                        }).catch(e => logger.error('Error stopping pulsing:', e));
 
                         // Close edit dialog after stop pulsing
                         setEditDialog(false);
