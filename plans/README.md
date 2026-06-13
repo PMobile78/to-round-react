@@ -42,7 +42,7 @@
 | 005 | [#21](https://github.com/PMobile78/to-round-react/issues/21) | PUBLIC_URL вместо захардкоженного /to-round-react/ | P2 | S | — | DONE |
 | 006 | [#22](https://github.com/PMobile78/to-round-react/issues/22) | Удаление FCM-токена при logout | P1 | S | — | DONE |
 | 007 | [#23](https://github.com/PMobile78/to-round-react/issues/23) | Атомарный дедуп уведомлений + точный cron (functions) | P2 | S | — | DONE |
-| 008 | [#24](https://github.com/PMobile78/to-round-react/issues/24) | Точечные записи Firestore вместо полной перезаписи | P1 | L | 001, 002 | TODO |
+| 008 | [#24](https://github.com/PMobile78/to-round-react/issues/24) | Точечные записи Firestore вместо полной перезаписи | P1 | L | 001, 002 | DONE |
 | 009 | [#25](https://github.com/PMobile78/to-round-react/issues/25) | Гонки со stale-состоянием (markAsDone, deleteTag) | P2 | M | 008 | TODO |
 | 010 | [#26](https://github.com/PMobile78/to-round-react/issues/26) | Локальный state title/description в диалогах | P2 | M | 008* | TODO |
 | 011 | [#27](https://github.com/PMobile78/to-round-react/issues/27) | Общая форма Create/EditBubbleDialog | P3 | L | 010 | TODO |
