@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToRound — Calm Minimal concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --border: #ececea;
+    --text: #1c1c1a;
+    --text-2: #6f6f6a;
+    --text-3: #a3a39c;
+    --accent: #4f6ef7;
+    --green: #3ba974;
+    --rose: #e26d8c;
+    --amber: #d9930d;
+    --violet: #8b6fd6;
+    --shadow-soft: 0 1px 2px rgba(28,28,26,.05), 0 8px 24px rgba(28,28,26,.06);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg); color: var(--text);
+    height: 100vh; overflow: hidden;
+    display: grid; grid-template-columns: 264px 1fr 360px; grid-template-rows: 64px 1fr;
+    font-feature-settings: 'cv11';
+  }
+
+  /* ---- header ---- */
+  header {
+    grid-column: 1 / 4;
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo { font-weight: 700; font-size: 17px; letter-spacing: -0.3px; display: flex; align-items: center; gap: 9px; }
+  .logo .mark { width: 22px; height: 22px; border-radius: 50%; border: 6px solid var(--accent); }
+  .crumb { color: var(--text-3); font-size: 14px; }
+  .crumb b { color: var(--text); font-weight: 600; }
+  .spacer { flex: 1; }
+  .search {
+    width: 320px; display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; font-size: 13.5px; color: var(--text-3);
+  }
+  .search kbd {
+    margin-left: auto; font-family: inherit; font-size: 11px; color: var(--text-3);
+    border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; background: var(--surface);
+  }
+  .icon-btn {
+    width: 34px; height: 34px; display: grid; place-items: center;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+    cursor: pointer; font-size: 15px; color: var(--text-2);
+  }
+  .icon-btn:hover { background: var(--bg); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--violet)); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+
+  /* ---- sidebar ---- */
+  aside { padding: 20px 14px; border-right: 1px solid var(--border); overflow-y: auto; }
+  .nav-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--text-2);
+    cursor: pointer;
+  }
+  .nav-item:hover { background: rgba(28,28,26,.04); }
+  .nav-item.active { background: rgba(79,110,247,.08); color: var(--accent); font-weight: 600; }
+  .nav-item .n { margin-left: auto; font-size: 12px; color: var(--text-3); }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .9px; color: var(--text-3); margin: 22px 12px 8px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+
+  /* ---- main: task list ---- */
+  main { padding: 28px 36px; overflow-y: auto; }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
+  .page-sub { color: var(--text-3); font-size: 13.5px; margin-top: 4px; }
+  .group-label { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--text-3); margin: 28px 0 10px; }
+  .group-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .task {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 8px;
+    transition: box-shadow .15s, transform .15s;
+    cursor: pointer;
+  }
+  .task:hover { box-shadow: var(--shadow-soft); transform: translateY(-1px); }
+  .check { width: 20px; height: 20px; border: 1.5px solid #cfcfc9; border-radius: 50%; flex-shrink: 0; transition: border-color .15s; }
+  .task:hover .check { border-color: var(--accent); }
+  .task.done .check { background: var(--green); border-color: var(--green); position: relative; }
+  .task.done .check::after { content: '✓'; color: #fff; font-size: 12px; position: absolute; inset: 0; display: grid; place-items: center; }
+  .task.done .t-title { text-decoration: line-through; color: var(--text-3); }
+  .t-body { flex: 1; min-width: 0; }
+  .t-title { font-size: 14.5px; font-weight: 500; }
+  .t-meta { display: flex; gap: 10px; margin-top: 3px; font-size: 12px; color: var(--text-3); align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 500; border-radius: 99px; padding: 2px 9px; }
+  .pill .dot { width: 6px; height: 6px; }
+  .p-work { background: rgba(79,110,247,.08); color: var(--accent); }
+  .p-home { background: rgba(59,169,116,.1); color: var(--green); }
+  .p-health { background: rgba(226,109,140,.1); color: var(--rose); }
+  .p-ideas { background: rgba(217,147,13,.1); color: var(--amber); }
+  .due { font-weight: 500; }
+  .due.urgent { color: var(--rose); }
+  .repeat-ico { font-size: 11px; }
+
+  /* ---- right rail: bubbles preview ---- */
+  .rail { border-left: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+  .rail h3 { font-size: 13px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; justify-content: space-between; }
+  .rail h3 a { font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 500; }
+  .canvas-card {
+    position: relative; flex: 1; min-height: 280px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: var(--shadow-soft); overflow: hidden;
+  }
+  .mini-bubble {
+    position: absolute; border-radius: 50%;
+    display: grid; place-items: center; text-align: center;
+    font-size: 11px; font-weight: 600; color: #fff; padding: 8px; line-height: 1.25;
+    animation: bob 6s ease-in-out infinite alternate;
+  }
+  .mini-bubble:nth-child(even) { animation-duration: 8s; animation-direction: alternate-reverse; }
+  @keyframes bob { to { translate: 6px -10px; } }
+  .stat-row { display: flex; gap: 12px; }
+  .stat {
+    flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px;
+  }
+  .stat .v { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .stat .l { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+
+  /* ---- FAB ---- */
+  .fab {
+    position: fixed; right: 392px; bottom: 32px;
+    height: 44px; padding: 0 18px 0 14px; border-radius: 10px; border: 0;
+    background: var(--text); color: var(--bg);
+    font: inherit; font-size: 13.5px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(28,28,26,.25);
+    transition: transform .15s;
+  }
+  .fab:hover { transform: translateY(-2px); }
+  .fab span { font-size: 18px; font-weight: 400; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo"><span class="mark"></span>ToRound</div>
+    <div class="crumb">/ &nbsp;<b>Today</b></div>
+    <div class="spacer"></div>
+    <div class="search">⌕ Search… <kbd>⌘K</kbd></div>
+    <button class="icon-btn" title="Theme">◐</button>
+    <button class="icon-btn" title="Notifications">🔔</button>
+    <div class="avatar">DT</div>
+  </header>
+
+  <aside>
+    <div class="nav-item active">☀️ Today <span class="n">5</span></div>
+    <div class="nav-item">📋 Active <span class="n">17</span></div>
+    <div class="nav-item">📅 Planned <span class="n">6</span></div>
+    <div class="nav-item">✅ Completed</div>
+    <div class="nav-item">🗑 Deleted</div>
+    <div class="section-label">Categories</div>
+    <div class="nav-item"><span class="dot" style="background:var(--accent)"></span>Work <span class="n">8</span></div>
+    <div class="nav-item"><span class="dot" style="background:var(--green)"></span>Home <span class="n">4</span></div>
+    <div class="nav-item"><span class="dot" style="background:var(--rose)"></span>Health <span class="n">3</span></div>
+    <div class="nav-item"><span class="dot" style="background:var(--amber)"></span>Ideas <span class="n">6</span></div>
+    <div class="section-label">Tools</div>
+    <div class="nav-item">🫧 Bubbles canvas</div>
+    <div class="nav-item">🧠 Mind maps</div>
+  </aside>
+
+  <main>
+    <div class="page-title">Today</div>
+    <div class="page-sub">Friday, June 13 · 5 tasks, 2 with reminders</div>
+
+    <div class="group-label">Morning</div>
+    <div class="task">
+      <div class="check"></div>
+      <div class="t-body">
+        <div class="t-title">Morning run 5 km</div>
+        <div class="t-meta"><span class="pill p-health"><span class="dot"></span>Health</span><span class="repeat-ico">🔁 daily</span><span class="due">07:00</span></div>
+      </div>
+    </div>
+    <div class="task done">
+      <div class="check"></div>
+      <div class="t-body">
+        <div class="t-title">Water the plants</div>
+        <div class="t-meta"><span class="pill p-home"><span class="dot"></span>Home</span></div>
+      </div>
+    </div>
+
+    <div class="group-label">Afternoon</div>
+    <div class="task">
+      <div class="check"></div>
+      <div class="t-body">
+        <div class="t-title">Code review for notifications PR</div>
+        <div class="t-meta"><span class="pill p-work"><span class="dot"></span>Work</span><span class="due">14:30</span></div>
+      </div>
+    </div>
+    <div class="task">
+      <div class="check"></div>
+      <div class="t-body">
+        <div class="t-title">Ship release 0.0.56</div>
+        <div class="t-meta"><span class="pill p-work"><span class="dot"></span>Work</span><span class="due urgent">⏰ due 18:00</span></div>
+      </div>
+    </div>
+
+    <div class="group-label">Anytime</div>
+    <div class="task">
+      <div class="check"></div>
+      <div class="t-body">
+        <div class="t-title">Sketch a mind-map for Q3 goals</div>
+        <div class="t-meta"><span class="pill p-ideas"><span class="dot"></span>Ideas</span></div>
+      </div>
+    </div>
+  </main>
+
+  <div class="rail">
+    <h3>Bubbles canvas <a href="#">Open ↗</a></h3>
+    <div class="canvas-card">
+      <div class="mini-bubble" style="width:92px;height:92px;top:12%;left:10%;background:var(--accent)">Ship 0.0.56</div>
+      <div class="mini-bubble" style="width:70px;height:70px;top:50%;left:14%;background:var(--green)">Plants</div>
+      <div class="mini-bubble" style="width:80px;height:80px;top:24%;left:52%;background:var(--rose)">Run 5 km</div>
+      <div class="mini-bubble" style="width:62px;height:62px;top:60%;left:55%;background:var(--amber)">Q3 map</div>
+      <div class="mini-bubble" style="width:56px;height:56px;top:8%;left:74%;background:var(--violet)">Review</div>
+    </div>
+    <h3>This week</h3>
+    <div class="stat-row">
+      <div class="stat"><div class="v">12</div><div class="l">completed</div></div>
+      <div class="stat"><div class="v">5</div><div class="l">due today</div></div>
+      <div class="stat"><div class="v">2</div><div class="l">overdue</div></div>
+    </div>
+  </div>
+
+  <button class="fab"><span>+</span> New task</button>
+</body>
+</html>
