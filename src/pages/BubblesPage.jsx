@@ -202,6 +202,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [bubbles, setBubbles] = useState([]);
     const [selectedBubble, setSelectedBubble] = useState(null);
     const [editDialog, setEditDialog] = useState(false);
+    // Live mirror of edit-dialog state for the Matter mount-effect subscription
+    // (its closure captures editDialog/selectedBubble once and stays stale).
+    const liveEditRef = useRef({ editDialog: false, selectedBubbleId: null });
+    useEffect(() => {
+        liveEditRef.current = { editDialog, selectedBubbleId: selectedBubble?.id ?? null };
+    }, [editDialog, selectedBubble]);
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
     const [tags, setTags] = useState([]);
     const tagsRef = useRef(tags);
@@ -362,6 +368,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         manuallyStoppedPulsingRef,
         editDialog,
         selectedBubble,
+        liveEditRef,
         setBubbles,
         setCanvasSize,
         setSelectedBubble,
