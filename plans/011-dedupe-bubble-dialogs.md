@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/components/CreateBubbleDialog.js src/components/EditBubbleDialog.js`
+> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/components/CreateBubbleDialog.jsx src/components/EditBubbleDialog.jsx`
 > План предполагает выполненный plans/010 (title/description уже локальные).
 > Если нет — выполни сначала 010.
 
@@ -18,15 +18,17 @@
 - **Depends on**: 010
 - **Category**: tech-debt
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/27
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
-`CreateBubbleDialog.js` (~279 строк) и `EditBubbleDialog.js` (~336 строк) — близнецы: одинаковые импорты (включая один и тот же список MUI-компонентов и date-fns-локалей), одинаковая структура Dialog → Title/Description → DateTimePicker → уведомления (AddNotification) → RepeatSettings → выбор тега → слайдер размера. Разница: edit добавляет кнопки Delete/Done/Stop pulsing и префиксы пропсов (`dueDate` vs `editDueDate`). Каждый багфикс формы (локаль пикера, валидация уведомлений) приходится делать дважды, и версии уже расходятся.
+`CreateBubbleDialog.jsx` (~279 строк) и `EditBubbleDialog.jsx` (~336 строк) — близнецы: одинаковые импорты (включая один и тот же список MUI-компонентов и date-fns-локалей), одинаковая структура Dialog → Title/Description → DateTimePicker → уведомления (AddNotification) → RepeatSettings → выбор тега → слайдер размера. Разница: edit добавляет кнопки Delete/Done/Stop pulsing и префиксы пропсов (`dueDate` vs `editDueDate`). Каждый багфикс формы (локаль пикера, валидация уведомлений) приходится делать дважды, и версии уже расходятся.
 
 ## Current state
 
-- `CreateBubbleDialog.js:32-55+` — props: `open, onClose, t, isSmallScreen, isMobile, themeMode, getDialogPaperStyles, dueDate, setDueDate, isOverdue, notifDialogOpen, setNotifDialogOpen, notifValue, setNotifValue, createNotifications, setCreateNotifications, handleDeleteCreateNotification, tags, ...` (открой файл и выпиши полный список — он длиннее выдержки).
-- `EditBubbleDialog.js:32-60+` — те же по смыслу props с префиксом edit: `editDueDate, setEditDueDate, editNotifications, setEditNotifications, handleDeleteNotification, selectedTagId, setSelectedTagId, editBubbleSize, setEditBubbleSize, handleDeleteBubble, ...`.
+- `CreateBubbleDialog.jsx:32-55+` — props: `open, onClose, t, isSmallScreen, isMobile, themeMode, getDialogPaperStyles, dueDate, setDueDate, isOverdue, notifDialogOpen, setNotifDialogOpen, notifValue, setNotifValue, createNotifications, setCreateNotifications, handleDeleteCreateNotification, tags, ...` (открой файл и выпиши полный список — он длиннее выдержки).
+- `EditBubbleDialog.jsx:32-60+` — те же по смыслу props с префиксом edit: `editDueDate, setEditDueDate, editNotifications, setEditNotifications, handleDeleteNotification, selectedTagId, setSelectedTagId, editBubbleSize, setEditBubbleSize, handleDeleteBubble, ...`.
 - Оба импортируют `ru` из date-fns-локалей (строка 24), хотя локаль `ru` из приложения удалена (`functions/index.js:52`: «requested: remove Russian») — при объединении ru-ветку выбора локали удалить, ru-импорт убрать.
 - Конвенции: стили диалогов через `getDialogPaperStyles()` из пропсов; фон заголовков НЕ задавать (наследуется от Paper) — см. CLAUDE.md.
 
@@ -41,13 +43,13 @@
 
 **In scope**:
 - `src/components/BubbleDialogForm.js` (создать)
-- `src/components/CreateBubbleDialog.js`, `src/components/EditBubbleDialog.js` (переписать поверх формы)
-- `src/pages/BubblesPage.js` — только если потребуется переименовать передаваемые пропсы (минимально!)
+- `src/components/CreateBubbleDialog.jsx`, `src/components/EditBubbleDialog.jsx` (переписать поверх формы)
+- `src/pages/BubblesPage.jsx` — только если потребуется переименовать передаваемые пропсы (минимально!)
 
 **Out of scope**:
 - Изменение видимого UI/UX (диалоги должны выглядеть и вести себя как раньше).
 - Перенос остальных полей в локальный state (отметить как follow-up, если будет мешать).
-- `AddNotification.js`, `RepeatSettings.js`, `RichTextEditor.js`.
+- `AddNotification.jsx`, `RepeatSettings.jsx`, `RichTextEditor.jsx`.
 
 ## Git workflow
 
@@ -67,7 +69,7 @@
 
 ### Step 3: Переключить EditBubbleDialog на форму
 
-Edit-обёртка: Dialog + заголовок + `<BubbleDialogForm {...} />` + DialogActions с Delete/Done/Stop pulsing/Save. Маппинг префиксованных пропсов (`editDueDate` → `dueDate`) делать в обёртке, чтобы `BubblesPage.js` не менять.
+Edit-обёртка: Dialog + заголовок + `<BubbleDialogForm {...} />` + DialogActions с Delete/Done/Stop pulsing/Save. Маппинг префиксованных пропсов (`editDueDate` → `dueDate`) делать в обёртке, чтобы `BubblesPage.jsx` не менять.
 
 **Verify**: build зелёный; ручная проверка edit-диалога (все поля, все кнопки).
 
@@ -98,7 +100,7 @@ Edit-обёртка: Dialog + заголовок + `<BubbleDialogForm {...} />` 
 ## STOP conditions
 
 - Шаг 1 выявил расхождения по существу (разная бизнес-логика, а не разные кнопки).
-- Для объединения требуется менять `BubblesPage.js` больше, чем на переименование пары пропсов.
+- Для объединения требуется менять `BubblesPage.jsx` больше, чем на переименование пары пропсов.
 - plans/010 не выполнен.
 
 ## Maintenance notes

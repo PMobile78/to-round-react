@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/pages/BubblesPage.js src/components/CreateBubbleDialog.js src/components/EditBubbleDialog.js`
+> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/pages/BubblesPage.jsx src/components/CreateBubbleDialog.jsx src/components/EditBubbleDialog.jsx`
 > При несовпадении выдержек «Current state» с живым кодом — STOP. Если
 > plans/008 уже выполнен, call-site'ы сохранения выглядят иначе, чем в
 > выдержках, — ориентируйся на живой код, цель шага не меняется.
@@ -19,23 +19,25 @@
 - **Depends on**: 008 (желательно — меньше конфликтов в тех же строках; формально можно и без него)
 - **Category**: perf
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/26
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
-`title` и `description` редактируемой задачи живут в state 2900-строчного `BubblesPage` (`src/pages/BubblesPage.js:249-250`). **Каждое нажатие клавиши** в поле заголовка или rich-text-редакторе ре-рендерит всю страницу: списки, панели категорий, инлайн-вычисления вроде `showStopPulsing` (IIFE в JSX, `BubblesPage.js:2636-2644`) и подсчёты категорий. Это главный источник тормозов при вводе. Лечение: поля формы становятся локальным state диалогов; родитель получает значения один раз — при сохранении.
+`title` и `description` редактируемой задачи живут в state 2900-строчного `BubblesPage` (`src/pages/BubblesPage.jsx:249-250`). **Каждое нажатие клавиши** в поле заголовка или rich-text-редакторе ре-рендерит всю страницу: списки, панели категорий, инлайн-вычисления вроде `showStopPulsing` (IIFE в JSX, `BubblesPage.jsx:2636-2644`) и подсчёты категорий. Это главный источник тормозов при вводе. Лечение: поля формы становятся локальным state диалогов; родитель получает значения один раз — при сохранении.
 
 ## Current state
 
-- `BubblesPage.js:249-250`:
+- `BubblesPage.jsx:249-250`:
   ```js
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   ```
 - Оба диалога — управляемые пропсами «глупые» компоненты:
-  - `src/components/CreateBubbleDialog.js:32-55` — props включают `title, setTitle, description, setDescription, ...`
-  - `src/components/EditBubbleDialog.js:32-60` — те же `title, setTitle, description, setDescription`, плюс edit-поля.
-- Заполнение формы при открытии edit-диалога: эффект `BubblesPage.js:~1900-1914` (по `editDialog, selectedBubble` ставит `setEditBubbleSize`, `setEditRecurrence`, `setUseRichTextEdit`; title/description ставятся в клик-хендлере `useMatterEngine.js:277-282` через `setTitle(clickedBubble.title)`).
-- Сохранение: обработчики читают `title`/`description` из state страницы (создание — район `BubblesPage.js:860-890`; правка — `BubblesPage.js:941-982`, поля `title, description` в объекте задачи на строках 962-963).
+  - `src/components/CreateBubbleDialog.jsx:32-55` — props включают `title, setTitle, description, setDescription, ...`
+  - `src/components/EditBubbleDialog.jsx:32-60` — те же `title, setTitle, description, setDescription`, плюс edit-поля.
+- Заполнение формы при открытии edit-диалога: эффект `BubblesPage.jsx:~1900-1914` (по `editDialog, selectedBubble` ставит `setEditBubbleSize`, `setEditRecurrence`, `setUseRichTextEdit`; title/description ставятся в клик-хендлере `useMatterEngine.js:277-282` через `setTitle(clickedBubble.title)`).
+- Сохранение: обработчики читают `title`/`description` из state страницы (создание — район `BubblesPage.jsx:860-890`; правка — `BubblesPage.jsx:941-982`, поля `title, description` в объекте задачи на строках 962-963).
 - Сбросы: после сохранения/закрытия — `setTitle(''); setDescription('');` (несколько мест, например 987-988, 1113-1114).
 
 ## Commands you will need
@@ -47,11 +49,11 @@
 
 ## Scope
 
-**In scope**: `src/pages/BubblesPage.js`, `src/components/CreateBubbleDialog.js`, `src/components/EditBubbleDialog.js`.
+**In scope**: `src/pages/BubblesPage.jsx`, `src/components/CreateBubbleDialog.jsx`, `src/components/EditBubbleDialog.jsx`.
 
 **Out of scope**:
 - Остальные поля формы (dueDate, notifications, recurrence, размер, тег) — переносятся ТОЛЬКО title/description (горячий путь клавиатуры). Перенос остальных — возможный follow-up.
-- `RichTextEditor.js` внутренности.
+- `RichTextEditor.jsx` внутренности.
 - Объединение двух диалогов — это `plans/011`.
 
 ## Git workflow
@@ -62,7 +64,7 @@
 
 ### Step 1: EditBubbleDialog — локальный state с инициализацией при открытии
 
-В `EditBubbleDialog.js`: убрать из props `title, setTitle, description, setDescription`; добавить props `initialTitle`, `initialDescription`, и расширить колбэк сохранения. Внутри:
+В `EditBubbleDialog.jsx`: убрать из props `title, setTitle, description, setDescription`; добавить props `initialTitle`, `initialDescription`, и расширить колбэк сохранения. Внутри:
 
 ```js
 const [title, setTitle] = React.useState(initialTitle || '');
@@ -90,11 +92,11 @@ JSX внутри диалога уже использует `title/setTitle/desc
 1. Обработчик сохранения правки получает `({ title, description })` параметром и использует их вместо state (строки 962-963 объекта задачи).
 2. Обработчик создания — аналогично.
 3. Передать в `EditBubbleDialog` `initialTitle={selectedBubble?.title || ''}`, `initialDescription={selectedBubble?.description || ''}`.
-4. Удалить `const [title, setTitle] = useState('')` и `description` (строки 249-250) и ВСЕ обращения: `grep -n '\bsetTitle\|\bsetDescription\b' src/pages/BubblesPage.js src/hooks/useMatterEngine.js` — каждое вхождение либо удалить, либо заменить. Известные места: клик-хендлер в `useMatterEngine.js:278-279` (передаётся как параметр хука — убрать из параметров и вызова), сбросы после закрытия диалогов, deep-link открытие (`BubblesPage.js:~2020`).
+4. Удалить `const [title, setTitle] = useState('')` и `description` (строки 249-250) и ВСЕ обращения: `grep -n '\bsetTitle\|\bsetDescription\b' src/pages/BubblesPage.jsx src/hooks/useMatterEngine.js` — каждое вхождение либо удалить, либо заменить. Известные места: клик-хендлер в `useMatterEngine.js:278-279` (передаётся как параметр хука — убрать из параметров и вызова), сбросы после закрытия диалогов, deep-link открытие (`BubblesPage.jsx:~2020`).
 
 Внимание: `useMatterEngine` принимает `setTitle`/`setDescription` как аргументы — сигнатуру хука и вызов синхронизировать.
 
-**Verify**: `grep -cn 'setTitle\|setDescription' src/pages/BubblesPage.js src/hooks/useMatterEngine.js` → 0; `CI=true npm run build` → exit 0 (ESLint поймает забытые ссылки).
+**Verify**: `grep -cn 'setTitle\|setDescription' src/pages/BubblesPage.jsx src/hooks/useMatterEngine.js` → 0; `CI=true npm run build` → exit 0 (ESLint поймает забытые ссылки).
 
 ### Step 4: Ручная проверка и коммит
 
@@ -106,7 +108,7 @@ JSX внутри диалога уже использует `title/setTitle/desc
 
 ## Done criteria
 
-- [ ] В `BubblesPage.js` нет state `title`/`description`
+- [ ] В `BubblesPage.jsx` нет state `title`/`description`
 - [ ] Оба диалога держат title/description локально, наружу отдают только при save
 - [ ] `CI=true npm run build` → exit 0
 - [ ] Ручной сценарий шага 4 пройден (или отмечен невозможным в headless)

@@ -18,6 +18,8 @@
 - **Depends on**: none
 - **Category**: security
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/19
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 

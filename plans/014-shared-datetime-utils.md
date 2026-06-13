@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/pages/BubblesPage.js src/hooks/useMatterEngine.js src/utils/`
+> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/pages/BubblesPage.jsx src/hooks/useMatterEngine.js src/utils/`
 > При несовпадении выдержек «Current state» с живым кодом — STOP.
 
 ## Status
@@ -17,14 +17,16 @@
 - **Depends on**: 002 (тесты — основной gate этого плана)
 - **Category**: tech-debt
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/30
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
-Логика парсинга «наивных» локальных дат (`"YYYY-MM-DDTHH:mm:ss"`) и оффсетов уведомлений продублирована: клиентская копия живёт внутри `BubblesPage.js`, серверная — в `functions/index.js` (с TZDate). Внутри src копии расходятся с сервером уже сейчас: клиентский `getOffsetMs` не понимает строковый пресет недель `'Nw'` (вернёт 0 → уведомление «за 2 недели» клиентски трактуется как «в момент дедлайна»), тогда как серверный парсер понимает `[mhdw]`. Цель: единый модуль `src/utils/dateTime.js` + юнит-тесты. Серверную копию НЕ трогаем (functions — отдельный Node-пакет, CRA не может импортировать вне `src/`; честный общий пакет — отдельное решение).
+Логика парсинга «наивных» локальных дат (`"YYYY-MM-DDTHH:mm:ss"`) и оффсетов уведомлений продублирована: клиентская копия живёт внутри `BubblesPage.jsx`, серверная — в `functions/index.js` (с TZDate). Внутри src копии расходятся с сервером уже сейчас: клиентский `getOffsetMs` не понимает строковый пресет недель `'Nw'` (вернёт 0 → уведомление «за 2 недели» клиентски трактуется как «в момент дедлайна»), тогда как серверный парсер понимает `[mhdw]`. Цель: единый модуль `src/utils/dateTime.js` + юнит-тесты. Серверную копию НЕ трогаем (functions — отдельный Node-пакет, CRA не может импортировать вне `src/`; честный общий пакет — отдельное решение).
 
 ## Current state
 
-- `src/pages/BubblesPage.js:112-131` — клиентский `parseLocalDateTime(dateString)` (без tz):
+- `src/pages/BubblesPage.jsx:112-131` — клиентский `parseLocalDateTime(dateString)` (без tz):
   ```js
   const parseLocalDateTime = (dateString) => {
       if (!dateString) return null;
@@ -41,9 +43,9 @@
   };
   ```
   Рядом должен быть `formatLocalDateTime` (используется в обработчике правки, строка 944) и `getUserTimeZone` (строка 969) — найди их грепом и включи в инвентаризацию.
-- `BubblesPage.js:2032-2049` — клиентский `getOffsetMs(notification)`: строковые пресеты только `m|h|d` (нет `w`), объектная форма `{type:'custom', value, unit}` понимает weeks.
+- `BubblesPage.jsx:2032-2049` — клиентский `getOffsetMs(notification)`: строковые пресеты только `m|h|d` (нет `w`), объектная форма `{type:'custom', value, unit}` понимает weeks.
 - Серверный аналог: `functions/index.js:131-155` — `parseLocalDateTime(dateString, tz)` с TZDate; отличие в детекте ISO-строк: сервер использует `(dateString.match(/-/g) || []).length > 2`, клиент — `dateString.includes('-', 10)`. Серверные правила — образец (但 без TZDate в src — пока tz клиенту не нужен, см. Maintenance).
-- Потребители в src: `BubblesPage.js` (многочисленно), `useMatterEngine.js` (использует `parseLocalDateTime` в live-sync колбэке — проверь, передаётся ли он параметром хука или импортируется).
+- Потребители в src: `BubblesPage.jsx` (многочисленно), `useMatterEngine.js` (использует `parseLocalDateTime` в live-sync колбэке — проверь, передаётся ли он параметром хука или импортируется).
 
 ## Commands you will need
 
@@ -56,7 +58,7 @@
 
 **In scope**:
 - `src/utils/dateTime.js` (создать), `src/utils/dateTime.test.js` (создать)
-- `src/pages/BubblesPage.js`, `src/hooks/useMatterEngine.js` (замена локальных копий на импорт)
+- `src/pages/BubblesPage.jsx`, `src/hooks/useMatterEngine.js` (замена локальных копий на импорт)
 
 **Out of scope**:
 - `functions/index.js` и functions-пакет целиком (общий npm-пакет — отдельное решение, не в этом плане).
@@ -71,7 +73,7 @@
 
 ### Step 1: Инвентаризация
 
-`grep -n 'parseLocalDateTime\|formatLocalDateTime\|getOffsetMs\|getUserTimeZone' src/ -r` — выписать все определения и потребителей. Ожидание: определения только в `BubblesPage.js`; потребители — `BubblesPage.js` и (через параметры или импорт) `useMatterEngine.js`. Несовпадение — STOP.
+`grep -n 'parseLocalDateTime\|formatLocalDateTime\|getOffsetMs\|getUserTimeZone' src/ -r` — выписать все определения и потребителей. Ожидание: определения только в `BubblesPage.jsx`; потребители — `BubblesPage.jsx` и (через параметры или импорт) `useMatterEngine.js`. Несовпадение — STOP.
 
 ### Step 2: Создать src/utils/dateTime.js
 
@@ -94,9 +96,9 @@ if (notification.endsWith('w')) return parseInt(notification) * 7 * 24 * 60 * 60
 
 ### Step 4: Переключить потребителей
 
-Удалить локальные определения из `BubblesPage.js`, импортировать из `../utils/dateTime`. Если `useMatterEngine` получал функции параметрами — можно оставить параметры (меньше правок) или импортировать напрямую; выбрать вариант с меньшим диффом.
+Удалить локальные определения из `BubblesPage.jsx`, импортировать из `../utils/dateTime`. Если `useMatterEngine` получал функции параметрами — можно оставить параметры (меньше правок) или импортировать напрямую; выбрать вариант с меньшим диффом.
 
-**Verify**: `grep -n 'const parseLocalDateTime\|function getOffsetMs' src/pages/BubblesPage.js` → пусто; `CI=true npm run build` → exit 0.
+**Verify**: `grep -n 'const parseLocalDateTime\|function getOffsetMs' src/pages/BubblesPage.jsx` → пусто; `CI=true npm run build` → exit 0.
 
 ### Step 5: Коммит
 
@@ -109,7 +111,7 @@ if (notification.endsWith('w')) return parseInt(notification) * 7 * 24 * 60 * 60
 ## Done criteria
 
 - [ ] `src/utils/dateTime.js` — 4 экспортируемые функции; тесты к ним зелёные
-- [ ] В `BubblesPage.js` нет локальных определений этих функций
+- [ ] В `BubblesPage.jsx` нет локальных определений этих функций
 - [ ] `getOffsetMs('2w')` покрыт тестом и равен 1209600000
 - [ ] `CI=true npm run build` и `npm run test:ci` → exit 0
 - [ ] `plans/README.md`: строка плана 014 → DONE

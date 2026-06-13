@@ -18,6 +18,8 @@
 - **Depends on**: none
 - **Category**: direction
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/33
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
@@ -28,9 +30,9 @@
 - Вход: `docs/superpowers/specs/2026-06-09-bubbles-overflow-mobile-options.md` — прочитать целиком. Структура: «Контекст и проблема» → 5 вариантов → «Рекомендация — комбо, а не одно» (таблица, строки 85-91) → «Следующий шаг» (строки 95-98: выбрать → глубокое исследование кода → детальный план; до выбора кода не трогать).
 - Реальность кода, которую спайк должен исследовать:
   - физика и мир: `src/hooks/useMatterEngine.js` (создание engine/render/стен; mount-once эффект), `src/utils/physicsUtils.js`;
-  - фильтрация по категориям уже есть: `src/hooks/useBubbleFilters.js`, `src/components/TasksCategoriesPanel.js`, `MobileCategorySelector.js`;
-  - list view уже есть: `src/components/TaskList.js`, `ListViewDrawer.js` — то есть варианты 3/4 опираются на существующее;
-  - подписи поверх канваса: TextOverlay (`BubblesPage.js:1557` или `src/components/TextOverlay.js` после plans/013) — камера (вариант 1) должна трансформировать и его координаты — главная техническая сложность варианта 1;
+  - фильтрация по категориям уже есть: `src/hooks/useBubbleFilters.js`, `src/components/TasksCategoriesPanel.jsx`, `MobileCategorySelector.jsx`;
+  - list view уже есть: `src/components/TaskList.jsx`, `ListViewDrawer.jsx` — то есть варианты 3/4 опираются на существующее;
+  - подписи поверх канваса: TextOverlay (`BubblesPage.jsx:1557` или `src/components/TextOverlay.js` после plans/013) — камера (вариант 1) должна трансформировать и его координаты — главная техническая сложность варианта 1;
   - размер пузыря: `radius` хранится в данных задачи (`firestoreService.js:45`) — вариант 2 (адаптивный размер) затрагивает семантику данных.
 
 ## Commands you will need
@@ -55,8 +57,8 @@
 
 ### Step 2: Оценить дешёвое комбо (3а + 4) против кода
 
-Для 3а (бейджи числа задач на категориях + авто-подсказка «слишком тесно — отфильтруй/открой список»): где взять счётчики (есть ли уже `getCategoryBubbleCounts` в `BubblesPage.js` — грепни), куда вставить подсказку, как определить «тесно» (суммарная площадь пузырей vs площадь канваса — формула из спеки, если есть).
-Для 4 (тумблер пузыри↔список при переполнении): `TaskList` уже main-screen-able? (`mainView === 'bubbles'` в `BubblesPage.js:2062` намекает на существующий переключатель видов — выясни, что уже работает).
+Для 3а (бейджи числа задач на категориях + авто-подсказка «слишком тесно — отфильтруй/открой список»): где взять счётчики (есть ли уже `getCategoryBubbleCounts` в `BubblesPage.jsx` — грепни), куда вставить подсказку, как определить «тесно» (суммарная площадь пузырей vs площадь канваса — формула из спеки, если есть).
+Для 4 (тумблер пузыри↔список при переполнении): `TaskList` уже main-screen-able? (`mainView === 'bubbles'` в `BubblesPage.jsx:2062` намекает на существующий переключатель видов — выясни, что уже работает).
 
 ### Step 3: Оценить камеру (вариант 1) честно
 

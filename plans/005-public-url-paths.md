@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/pages/BubblesPage.js src/index.js`
+> **Drift check (run first)**: `git diff --stat 0bcd99f..HEAD -- src/pages/BubblesPage.jsx src/index.jsx`
 > При несовпадении выдержек «Current state» с живым кодом — STOP.
 
 ## Status
@@ -17,6 +17,8 @@
 - **Depends on**: none
 - **Category**: dx
 - **Planned at**: commit `0bcd99f`, 2026-06-11
+- **Issue**: https://github.com/PMobile78/to-round-react/issues/21
+- **Reconciled**: 2026-06-13 — пути src обновлены под переименование `.js`→`.jsx` (HEAD `c7be9d6`); excerpts сверять через drift-check выше.
 
 ## Why this matters
 
@@ -24,16 +26,16 @@
 
 ## Current state
 
-1. `src/pages/BubblesPage.js:1023`:
+1. `src/pages/BubblesPage.jsx:1023`:
    ```js
    const popAudio = new window.Audio('/to-round-react/pop.mp3');
    ```
-2. `src/pages/BubblesPage.js:2089`:
+2. `src/pages/BubblesPage.jsx:2089`:
    ```jsx
    <img
        src="/to-round-react/bubbles.png"
    ```
-3. `src/index.js:32`:
+3. `src/index.jsx:32`:
    ```js
    const swPath = '/to-round-react/sw.js';
    navigator.serviceWorker.register(swPath).then(...)
@@ -51,7 +53,7 @@
 
 ## Scope
 
-**In scope**: `src/pages/BubblesPage.js` (две строки), `src/index.js` (одна строка).
+**In scope**: `src/pages/BubblesPage.jsx` (две строки), `src/index.jsx` (одна строка).
 
 **Out of scope**:
 - `HOMEPAGE_URL` в `functions/index.js` — серверная константа, ей PUBLIC_URL недоступен.
@@ -65,8 +67,8 @@
 
 ### Step 1: Заменить три вхождения
 
-- `BubblesPage.js:1023` → `new window.Audio(`${process.env.PUBLIC_URL}/pop.mp3`)`
-- `BubblesPage.js:2089` → `src={`${process.env.PUBLIC_URL}/bubbles.png`}`
+- `BubblesPage.jsx:1023` → `new window.Audio(`${process.env.PUBLIC_URL}/pop.mp3`)`
+- `BubblesPage.jsx:2089` → `src={`${process.env.PUBLIC_URL}/bubbles.png`}`
 - `index.js:32` → `const swPath = `${process.env.PUBLIC_URL}/sw.js`;`
 
 **Verify**: `grep -rn "'/to-round-react/" src/` → пусто; `grep -rn 'PUBLIC_URL' src/ | wc -l` → ≥3.
