@@ -47,7 +47,7 @@
 | 010 | [#26](https://github.com/PMobile78/to-round-react/issues/26) | Локальный state title/description в диалогах | P2 | M | 008* | DONE |
 | 011 | [#27](https://github.com/PMobile78/to-round-react/issues/27) | Общая форма Create/EditBubbleDialog | P3 | L | 010 | DONE (визуальная QA — за владельцем) |
 | 012 | [#28](https://github.com/PMobile78/to-round-react/issues/28) | React.lazy для MindMapPage (code splitting) | P2 | S | — | DONE |
-| 013 | [#29](https://github.com/PMobile78/to-round-react/issues/29) | TextOverlay → top-level мемоизированный компонент | P3 | M | 001 | TODO |
+| 013 | [#29](https://github.com/PMobile78/to-round-react/issues/29) | TextOverlay → top-level мемоизированный компонент | P3 | M | 001 | DONE |
 | 014 | [#30](https://github.com/PMobile78/to-round-react/issues/30) | Общие date/time-утилиты + фикс пресета 'Nw' | P3 | M | 002 | TODO |
 | 015 | [#31](https://github.com/PMobile78/to-round-react/issues/31) | Live-sync открытого диалога + призрачные тела | P3 | M | 010* | TODO |
 | 016 | [#32](https://github.com/PMobile78/to-round-react/issues/32) | Поиск по тексту описания, а не по сырому HTML | P3 | S | 002 | TODO |
