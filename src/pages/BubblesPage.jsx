@@ -37,13 +37,13 @@ import {
     subscribeToTagsUpdates,
     subscribeToBubblesUpdates,
     BUBBLE_STATUS,
-    markBubbleAsDone,
     markBubbleAsDeleted,
     getBubblesByStatus,
     cleanupOldDeletedBubbles,
     upsertBubble,
     updateBubbleFields,
-    deleteBubbleDoc
+    deleteBubbleDoc,
+    buildStatusFields
 } from '../services/firestoreService';
 
 import TaskListDrawer from '../components/ListViewDrawer';
@@ -258,6 +258,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [description, setDescription] = useState('');
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
     const [tags, setTags] = useState([]);
+    const tagsRef = useRef(tags);
+    useEffect(() => { tagsRef.current = tags; }, [tags]);
     const [selectedTagId, setSelectedTagId] = useState('');
     const [tagDialog, setTagDialog] = useState(false);
     const [tagName, setTagName] = useState('');
@@ -1064,17 +1066,21 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             Matter.World.remove(engineRef.current.world, body);
                             Matter.World.remove(engineRef.current.world, splashParticles);
                             // Обновляем статус в Firestore
-                            markBubbleAsDone(selectedBubble.id, bubbles).then(updatedBubbles => {
-                                setBubbles(updatedBubbles);
-                            });
+                            const fields = buildStatusFields(selectedBubble, BUBBLE_STATUS.DONE);
+                            updateBubbleFields(selectedBubble.id, fields)
+                                .then(() => {
+                                    setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? { ...b, ...fields } : b));
+                                })
+                                .catch(e => logger.error('Error marking bubble as done:', e));
                         }
                     };
                     animatePop();
                 } else {
                     // Если нет тела, просто удаляем
                     Matter.World.remove(engineRef.current.world, selectedBubble.body);
-                    const updatedBubbles = await markBubbleAsDone(selectedBubble.id, bubbles);
-                    setBubbles(updatedBubbles);
+                    const fields = buildStatusFields(selectedBubble, BUBBLE_STATUS.DONE);
+                    await updateBubbleFields(selectedBubble.id, fields);
+                    setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? { ...b, ...fields } : b));
                 }
             } catch (error) {
                 logger.error('Error marking bubble as done:', error);
@@ -1194,7 +1200,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 return newSet;
             });
 
-            const updatedTags = tags.filter(tag => tag.id !== tagId);
+            const updatedTags = tagsRef.current.filter(tag => tag.id !== tagId);
             setTags(updatedTags);
             saveTagsToFirestore(updatedTags);
 

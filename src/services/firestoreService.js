@@ -179,31 +179,34 @@ export const clearBubblesFromFirestore = async () => {
     }
 };
 
+// Build status-change fields (pure computation, no Firestore writes)
+export const buildStatusFields = (bubble, newStatus) => {
+    const fields = { status: newStatus, updatedAt: new Date().toISOString() };
+    if (newStatus === BUBBLE_STATUS.DELETED) {
+        fields.deletedAt = new Date().toISOString();
+    } else if (bubble.status === BUBBLE_STATUS.DELETED && newStatus !== BUBBLE_STATUS.DELETED) {
+        fields.deletedAt = null;
+    }
+    if (newStatus === BUBBLE_STATUS.DONE) {
+        Object.assign(fields, {
+            dueDate: null,
+            notifications: [],
+            recurrence: null,
+            overdueSticky: false,
+            overdueAt: null,
+            overduePulseSuppressed: false
+        });
+    }
+    return fields;
+};
+
 // Update bubble status
 export const updateBubbleStatus = async (bubbleId, newStatus, bubblesData) => {
     try {
         const bubble = bubblesData.find(b => b.id === bubbleId);
         if (!bubble) throw new Error(`Bubble ${bubbleId} not found`);
 
-        const fields = {
-            status: newStatus,
-            updatedAt: new Date().toISOString()
-        };
-
-        if (newStatus === BUBBLE_STATUS.DELETED) {
-            fields.deletedAt = new Date().toISOString();
-        } else if (bubble.status === BUBBLE_STATUS.DELETED && newStatus !== BUBBLE_STATUS.DELETED) {
-            fields.deletedAt = null;
-        }
-
-        if (newStatus === BUBBLE_STATUS.DONE) {
-            fields.dueDate = null;
-            fields.notifications = [];
-            fields.recurrence = null;
-            fields.overdueSticky = false;
-            fields.overdueAt = null;
-            fields.overduePulseSuppressed = false;
-        }
+        const fields = buildStatusFields(bubble, newStatus);
 
         const userId = getUserDocumentId();
         const ref = doc(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION, String(bubbleId));
