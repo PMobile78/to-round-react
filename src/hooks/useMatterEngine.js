@@ -342,7 +342,7 @@ export function useMatterEngine({
                     }
                     break;
                 case 'hardShadow':
-                    // Draw hard offset shadow disc behind each bubble
+                    // Two-pass draw: shadows first, then bubbles redraw on top
                     if (effectParams && renderRef.current) {
                         const ctx = renderRef.current.context;
                         const dx = effectParams.dx || 5;
@@ -352,9 +352,8 @@ export function useMatterEngine({
 
                         const bodies = engine.world.bodies;
                         ctx.save();
-                        // Use destination-over composite to draw shadow behind bubbles
-                        ctx.globalCompositeOperation = 'destination-over';
 
+                        // Pass 1: Draw all shadow discs
                         bodies.forEach((body) => {
                             if (body.label === 'Circle Body' && body.circleRadius) {
                                 const radius = body.circleRadius;
@@ -368,6 +367,33 @@ export function useMatterEngine({
                                 ctx.fill();
                             }
                         });
+
+                        // Pass 2: Redraw all bubbles on top (matching Matter's render style)
+                        bodies.forEach((body) => {
+                            if (body.label === 'Circle Body' && body.circleRadius) {
+                                const radius = body.circleRadius;
+                                const x = body.position.x;
+                                const y = body.position.y;
+
+                                // Redraw circle with the body's own render props
+                                ctx.beginPath();
+                                ctx.arc(x, y, radius, 0, Math.PI * 2);
+
+                                // Apply fill if present
+                                if (body.render.fillStyle) {
+                                    ctx.fillStyle = body.render.fillStyle;
+                                    ctx.fill();
+                                }
+
+                                // Apply stroke if present
+                                if (body.render.strokeStyle && body.render.lineWidth) {
+                                    ctx.strokeStyle = body.render.strokeStyle;
+                                    ctx.lineWidth = body.render.lineWidth;
+                                    ctx.stroke();
+                                }
+                            }
+                        });
+
                         ctx.restore();
                     }
                     break;
