@@ -1,5 +1,9 @@
 # Modern Minimal Redesign Implementation Plan
 
+## ✅ STATUS: COMPLETE (2026-06-13)
+
+Редизайн реализован и отгружен (тема Inter / `#2f6bdb` / мягкие радиусы и тени / пастельные пузыри с тонкими цветными обводками). Все шаги ниже выполнены. Коммиты: `9997111`, `3a92690`, `ce36a0b`, `0791533`, `b1a3e6e`. Впоследствии этот облик стал скином **«Modern»** в фиче ось тема×скин (см. [`2026-06-13-theme-skin-axis.md`](2026-06-13-theme-skin-axis.md), `src/theme/designs/modern.js`). Спека: [`../specs/2026-06-13-modern-minimal-redesign-design.md`](../specs/2026-06-13-modern-minimal-redesign-design.md). Ветка `redesign/modern-minimal` смержена fast-forward в `main` и удалена.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Modernize the app's visual design per spec `docs/superpowers/specs/2026-06-13-modern-minimal-redesign-design.md`: Inter font, new light/dark palettes, larger radii, soft shadows, thinner colored bubble strokes.
@@ -18,7 +22,7 @@
 - Modify: `package.json` (via npm install)
 - Modify: `src/index.jsx:1-8` (imports block)
 
-- [ ] **Step 1: Install the font package**
+- [x] **Step 1: Install the font package**
 
 ```bash
 npm install @fontsource-variable/inter --legacy-peer-deps
@@ -26,7 +30,7 @@ npm install @fontsource-variable/inter --legacy-peer-deps
 
 (`--legacy-peer-deps` is mandatory in this repo — peer dependency conflicts.)
 
-- [ ] **Step 2: Import the font in the entry point**
+- [x] **Step 2: Import the font in the entry point**
 
 In `src/index.jsx`, add as the first import:
 
@@ -34,12 +38,12 @@ In `src/index.jsx`, add as the first import:
 import '@fontsource-variable/inter';
 ```
 
-- [ ] **Step 3: Verify the build**
+- [x] **Step 3: Verify the build**
 
 Run: `npm run build`
 Expected: build succeeds; `build/assets/` contains inter woff2 files.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add package.json package-lock.json src/index.jsx
@@ -56,7 +60,7 @@ Replaces the `tagColor + '15'` hex-suffix hack used for bubble fills. Tag colors
 - Create: `src/utils/colorUtils.js`
 - Test: `src/utils/colorUtils.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/utils/colorUtils.test.js`:
 
@@ -89,12 +93,12 @@ describe('withAlpha', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/utils/colorUtils.test.js`
 Expected: FAIL — cannot resolve `./colorUtils`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `src/utils/colorUtils.js`:
 
@@ -119,12 +123,12 @@ export function withAlpha(color, alpha) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/utils/colorUtils.test.js`
 Expected: 5 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/utils/colorUtils.js src/utils/colorUtils.test.js
@@ -138,7 +142,7 @@ git commit -m "feat(design): add withAlpha color utility"
 **Files:**
 - Modify: `src/hooks/useThemeMode.js` (replace the `createAppTheme` function, lines 54–155; imports line 2)
 
-- [ ] **Step 1: Update imports**
+- [x] **Step 1: Update imports**
 
 Replace line 2:
 
@@ -146,7 +150,7 @@ Replace line 2:
 import { alpha, createTheme } from '@mui/material/styles';
 ```
 
-- [ ] **Step 2: Replace `createAppTheme` entirely**
+- [x] **Step 2: Replace `createAppTheme` entirely**
 
 Replace the whole `const createAppTheme = (mode) => { ... };` block with:
 
@@ -319,12 +323,12 @@ Notes:
 - The `.theme-button` overrides on `MuiIconButton`/`MuiButton` are deleted — `grep -rn "theme-button" src/` confirms the class is unused.
 - The hook's state logic (`themeMode`, `toggleTheme`, system listener, lines 1–53 and 157–165) stays untouched.
 
-- [ ] **Step 3: Verify build and tests**
+- [x] **Step 3: Verify build and tests**
 
 Run: `npm run build && npx vitest run src/utils/colorUtils.test.js`
 Expected: build OK, tests pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/hooks/useThemeMode.js
@@ -338,7 +342,7 @@ git commit -m "feat(design): modern minimal MUI theme (palette, Inter, radii, so
 **Files:**
 - Modify: `index.html:15`
 
-- [ ] **Step 1: Update the meta tag**
+- [x] **Step 1: Update the meta tag**
 
 Replace:
 
@@ -352,7 +356,7 @@ with:
     <meta name="theme-color" content="#2f6bdb" />
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add index.html
@@ -367,7 +371,7 @@ git commit -m "fix(design): align meta theme-color with primary palette"
 - Modify: `src/pages/BubblesPage.jsx` (`getBubbleFillStyle` ~line 383; `strokeStyle`/`lineWidth` literals at lines listed below)
 - Modify: `src/hooks/useMatterEngine.js:125-126`
 
-- [ ] **Step 1: Rewrite `getBubbleFillStyle`**
+- [x] **Step 1: Rewrite `getBubbleFillStyle`**
 
 In `src/pages/BubblesPage.jsx`, add to imports (near other `../utils` imports):
 
@@ -399,7 +403,7 @@ Replace the body of `getBubbleFillStyle` (function at ~line 383):
     };
 ```
 
-- [ ] **Step 2: Thinner strokes, new default stroke color**
+- [x] **Step 2: Thinner strokes, new default stroke color**
 
 Apply across both files (use grep to catch all occurrences, line numbers may drift):
 
@@ -412,12 +416,12 @@ grep -n "3B7DED\|lineWidth" src/pages/BubblesPage.jsx src/hooks/useMatterEngine.
 - Search-highlight emphasis `lineWidth = 4` (BubblesPage ~699, ~743) → `lineWidth = 2.5`.
 - Do **not** touch `lineWidth: 0` (~1066, splash effect) or the gray `'#B0B0B0'` no-tag stroke.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `npm run build`
 Expected: success. Then `grep -c "3B7DED" src/pages/BubblesPage.jsx src/hooks/useMatterEngine.js` → 0 occurrences in both.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/pages/BubblesPage.jsx src/hooks/useMatterEngine.js
@@ -431,7 +435,7 @@ git commit -m "feat(design): pastel bubble fills via withAlpha, 1.5px tag-colore
 **Files:**
 - Modify: `src/pages/BubblesPage.jsx` (style helpers ~351–378; header button ~2104–2126; FAB ~2212–2231; filter button ~2417–2437; instructions overlay ~2446–2457; `renderBubbleText` ~1601–1668)
 
-- [ ] **Step 1: Rewrite the style helper functions (~lines 350–378)**
+- [x] **Step 1: Rewrite the style helper functions (~lines 350–378)**
 
 Add `alpha` to the MUI imports in BubblesPage.jsx (it imports from `@mui/material`; add a separate import):
 
@@ -475,7 +479,7 @@ Replace `getButtonStyles`, `getOutlinedButtonStyles`, `getDialogPaperStyles`:
     };
 ```
 
-- [ ] **Step 2: Simplify the desktop "Add bubble" button (~2104)**
+- [x] **Step 2: Simplify the desktop "Add bubble" button (~2104)**
 
 The contained variant is now styled by the theme; drop the rgba/backdrop hack:
 
@@ -490,7 +494,7 @@ The contained variant is now styled by the theme; drop the rgba/backdrop hack:
                         </Button>
 ```
 
-- [ ] **Step 3: Simplify the mobile FAB (~2212)**
+- [x] **Step 3: Simplify the mobile FAB (~2212)**
 
 Remove the `sx` rgba override — `color="primary"` + the theme's `MuiFab` override handle it. The `Fab` keeps only its `onClick`:
 
@@ -511,7 +515,7 @@ Remove the `sx` rgba override — `color="primary"` + the theme's `MuiFab` overr
                             </Fab>
 ```
 
-- [ ] **Step 4: Filter button selected/disabled states (~2424)**
+- [x] **Step 4: Filter button selected/disabled states (~2424)**
 
 Replace the rgba ternaries inside the `sx` of the filter `IconButton`:
 
@@ -532,7 +536,7 @@ Replace the rgba ternaries inside the `sx` of the filter `IconButton`:
                                     }}
 ```
 
-- [ ] **Step 5: Bubble labels (`renderBubbleText`, ~1629–1634)**
+- [x] **Step 5: Bubble labels (`renderBubbleText`, ~1629–1634)**
 
 Replace the color/shadow lines:
 
@@ -547,7 +551,7 @@ Replace the color/shadow lines:
 
 And in the `<Typography sx={{...}}>` below (~1659): `fontWeight: 'bold'` → `fontWeight: 600`.
 
-- [ ] **Step 6: Mobile instructions overlay (~2447)**
+- [x] **Step 6: Mobile instructions overlay (~2447)**
 
 In the instructions `Box` `sx`, replace `backgroundColor: 'rgba(0, 0, 0, 0.4)'` and `borderRadius: 2` with:
 
@@ -560,7 +564,7 @@ In the instructions `Box` `sx`, replace `backgroundColor: 'rgba(0, 0, 0, 0.4)'` 
 
 (White text inside stays — the overlay is always dark.)
 
-- [ ] **Step 7: Header strip behind the top controls**
+- [x] **Step 7: Header strip behind the top controls**
 
 The bubbles screen has no app bar — controls float over the canvas (left box ~2064, right box ~2259). Per spec, give them a translucent surface strip with a 1px divider, rendered *behind* the controls so no layout/canvas-size changes are needed.
 
@@ -586,12 +590,12 @@ Insert right after the opening root `<Box sx={{...}}>` (after line ~2060, before
 
 `zIndex: 999` keeps it below the controls (1000) and above the canvas (1); `pointerEvents: 'none'` keeps bubble drag working under it.
 
-- [ ] **Step 8: Verify build**
+- [x] **Step 8: Verify build**
 
 Run: `npm run build`
 Expected: success.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/pages/BubblesPage.jsx
@@ -602,12 +606,12 @@ git commit -m "feat(design): theme-driven main screen chrome (buttons, FAB, labe
 
 ### Task 7: Full verification
 
-- [ ] **Step 1: Tests and build**
+- [x] **Step 1: Tests and build**
 
 Run: `npm test -- --run` and `npm run build`
 Expected: all tests pass, build succeeds.
 
-- [ ] **Step 2: Visual check (Chrome DevTools MCP)**
+- [x] **Step 2: Visual check (Chrome DevTools MCP)**
 
 ```bash
 npm start
@@ -622,7 +626,7 @@ Then via Chrome DevTools MCP open `http://localhost:3000/to-round-react/` (check
 
 Check specifically: Inter applied (devtools computed font-family), bubble strokes 1.5px in tag color, no leftover stark-white panels in dark mode, FAB rounded-square with colored shadow.
 
-- [ ] **Step 3: Fix anything broken, commit fixes**
+- [x] **Step 3: Fix anything broken, commit fixes**
 
 Each fix is its own small commit with prefix `fix(design):`.
 
