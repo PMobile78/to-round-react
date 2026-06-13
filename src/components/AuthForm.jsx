@@ -135,8 +135,8 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                     maxWidth: 400,
                     padding: isMobile ? 3 : 4,
                     borderRadius: 3,
-                    backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)',
-                    color: themeMode === 'light' ? '#000000' : '#ffffff'
+                    backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(22, 29, 42, 0.95)',
+                    color: themeMode === 'light' ? '#1c2330' : '#e8ecf4'
                 }}
             >
                 <Box sx={{ textAlign: 'center', marginBottom: 3 }}>
@@ -224,10 +224,10 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                                 marginBottom: 2,
                                 height: 48,
                                 fontSize: 16,
-                                backgroundColor: themeMode === 'light' ? '#3B7DED' : 'rgba(255, 255, 255, 0.2)',
+                                backgroundColor: themeMode === 'light' ? '#2f6bdb' : 'rgba(255, 255, 255, 0.2)',
                                 color: themeMode === 'light' ? '#ffffff' : '#ffffff',
                                 '&:hover': {
-                                    backgroundColor: themeMode === 'light' ? '#2C5ED1' : 'rgba(255, 255, 255, 0.3)'
+                                    backgroundColor: themeMode === 'light' ? '#2558b8' : 'rgba(255, 255, 255, 0.3)'
                                 },
                                 '&:disabled': {
                                     backgroundColor: themeMode === 'light' ? '#B0B0B0' : 'rgba(255, 255, 255, 0.1)',
@@ -313,10 +313,10 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                                 marginBottom: 2,
                                 height: 48,
                                 fontSize: 16,
-                                backgroundColor: themeMode === 'light' ? '#3B7DED' : 'rgba(255, 255, 255, 0.2)',
+                                backgroundColor: themeMode === 'light' ? '#2f6bdb' : 'rgba(255, 255, 255, 0.2)',
                                 color: themeMode === 'light' ? '#ffffff' : '#ffffff',
                                 '&:hover': {
-                                    backgroundColor: themeMode === 'light' ? '#2C5ED1' : 'rgba(255, 255, 255, 0.3)'
+                                    backgroundColor: themeMode === 'light' ? '#2558b8' : 'rgba(255, 255, 255, 0.3)'
                                 },
                                 '&:disabled': {
                                     backgroundColor: themeMode === 'light' ? '#B0B0B0' : 'rgba(255, 255, 255, 0.1)',
