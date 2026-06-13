@@ -35,7 +35,7 @@ root.render(
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-        const swPath = '/to-round-react/sw.js';
+        const swPath = `${import.meta.env.BASE_URL}sw.js`;
         navigator.serviceWorker.register(swPath).then(function (registration) {
             // Initialize FCM after SW is ready and process deep links
             initMessagingAndSaveToken();

@@ -998,7 +998,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 const body = bubble.body;
                 // Воспроизвести звук лопанья
                 try {
-                    const popAudio = new window.Audio('/to-round-react/pop.mp3');
+                    const popAudio = new window.Audio(`${import.meta.env.BASE_URL}pop.mp3`);
                     popAudio.currentTime = 0;
                     popAudio.play();
                 } catch (e) { /* ignore */ }
@@ -2084,7 +2084,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             gap: 1
                         }}>
                             <img
-                                src="/to-round-react/bubbles.png"
+                                src={`${import.meta.env.BASE_URL}bubbles.png`}
                                 alt="Bubbles"
                                 style={{
                                     width: '32px',

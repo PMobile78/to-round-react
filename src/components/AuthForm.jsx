@@ -142,7 +142,7 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                 <Box sx={{ textAlign: 'center', marginBottom: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'center', marginBottom: 1 }}>
                         <img
-                            src="/to-round-react/bubbles.png"
+                            src={`${import.meta.env.BASE_URL}bubbles.png`}
                             alt="Bubbles"
                             style={{
                                 width: '48px',
