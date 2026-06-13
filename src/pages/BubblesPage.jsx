@@ -2263,6 +2263,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
               isMobile={isMobile}
               fontSize={fontSize}
               themeMode={themeMode}
+              tags={tags}
             />
 
             {/* Полноэкранный режим списка задач (canvas остаётся смонтированным под панелью) */}
