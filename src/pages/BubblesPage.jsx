@@ -351,27 +351,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     // Function to get button styles based on theme
     const getButtonStyles = () => {
-        const isLight = themeMode === 'light';
-        return {
-            backgroundColor: alpha(theme.palette.primary.main, isLight ? 0.12 : 0.18),
-            color: isLight ? theme.palette.primary.main : theme.palette.text.primary,
-            '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.main, isLight ? 0.2 : 0.28)
-            }
-        };
+        return theme.custom?.buttonStyles || {};
     };
 
     const getOutlinedButtonStyles = () => {
-        const isLight = themeMode === 'light';
-        return {
-            color: isLight ? theme.palette.primary.main : theme.palette.text.primary,
-            borderColor: alpha(theme.palette.primary.main, isLight ? 0.5 : 0.6),
-            backgroundColor: isLight ? alpha(theme.palette.primary.main, 0.06) : 'transparent',
-            '&:hover': {
-                borderColor: theme.palette.primary.main,
-                backgroundColor: alpha(theme.palette.primary.main, isLight ? 0.12 : 0.1)
-            }
-        };
+        return theme.custom?.outlinedButtonStyles || {};
     };
 
     const getDialogPaperStyles = () => {

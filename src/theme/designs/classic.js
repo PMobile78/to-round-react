@@ -162,12 +162,40 @@ export const classic = (mode) => {
         sx: {},
       },
       backdrop: 'none',
-      buttonStyles: {
-        // For code that needs to read button styling from theme.custom
-      },
-      outlinedButtonStyles: {
-        // For code that needs to read outlined button styling from theme.custom
-      },
+      buttonStyles: mode === 'light'
+        ? {
+            backgroundColor: c.primary,
+            color: '#ffffff',
+            '&:hover': {
+              backgroundColor: '#2558b8'
+            }
+          }
+        : {
+            backgroundColor: alpha(c.primary, 0.25),
+            color: '#ffffff',
+            '&:hover': {
+              backgroundColor: alpha(c.primary, 0.35)
+            }
+          },
+      outlinedButtonStyles: mode === 'light'
+        ? {
+            color: c.primary,
+            borderColor: c.primary,
+            backgroundColor: 'transparent',
+            '&:hover': {
+              backgroundColor: alpha(c.primary, 0.08),
+              borderColor: c.primary
+            }
+          }
+        : {
+            color: c.primary,
+            borderColor: alpha(c.primary, 0.7),
+            backgroundColor: 'transparent',
+            '&:hover': {
+              backgroundColor: alpha(c.primary, 0.12),
+              borderColor: c.primary
+            }
+          },
       dialogPaper: {
         borderRadius: 4,
       },

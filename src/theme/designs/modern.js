@@ -198,12 +198,40 @@ export const modern = (mode) => {
         sx: {},
       },
       backdrop: 'none',
-      buttonStyles: {
-        // For code that needs to read button styling from theme.custom
-      },
-      outlinedButtonStyles: {
-        // For code that needs to read outlined button styling from theme.custom
-      },
+      buttonStyles: mode === 'light'
+        ? {
+            backgroundColor: alpha(c.primary, 0.12),
+            color: c.primary,
+            '&:hover': {
+              backgroundColor: alpha(c.primary, 0.2)
+            }
+          }
+        : {
+            backgroundColor: alpha(c.primary, 0.18),
+            color: c.textPrimary,
+            '&:hover': {
+              backgroundColor: alpha(c.primary, 0.28)
+            }
+          },
+      outlinedButtonStyles: mode === 'light'
+        ? {
+            color: c.primary,
+            borderColor: alpha(c.primary, 0.5),
+            backgroundColor: alpha(c.primary, 0.06),
+            '&:hover': {
+              borderColor: c.primary,
+              backgroundColor: alpha(c.primary, 0.12)
+            }
+          }
+        : {
+            color: c.textPrimary,
+            borderColor: alpha(c.primary, 0.6),
+            backgroundColor: 'transparent',
+            '&:hover': {
+              borderColor: c.primary,
+              backgroundColor: alpha(c.primary, 0.1)
+            }
+          },
       dialogPaper: {
         borderRadius: 16,
       },
