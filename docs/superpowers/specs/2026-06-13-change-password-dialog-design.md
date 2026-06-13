@@ -1,5 +1,10 @@
 # Change Password Dialog — Design Spec
 
+**Date:** 2026-06-13
+**Status:** ✅ Implemented (2026-06-13) — ветка `feature/change-password-dialog`, пока не смержена
+
+> ✅ Реализовано и проверено в живом приложении (en + uk): окно `ChangePasswordDialog`, сервис `changePassword` с реаутентификацией, пункт меню, i18n. Коммиты: `c42a9f9`, `3e2fb9a`, `379c892`, `736a3c6`, `116f7d7`. План: [`../plans/2026-06-13-change-password-dialog.md`](../plans/2026-06-13-change-password-dialog.md). GitHub issues #9–#15 закрыты.
+
 ## Context
 
 Сейчас в `src/services/authService.js` есть только `resetPassword` (email-ссылка через `sendPasswordResetEmail`). Нет смены пароля **внутри приложения** для залогиненного пользователя (email/password). Эта спека описывает визуальный и функциональный дизайн окна «Сменить пароль». Связанная задача — GitHub issue #9.
