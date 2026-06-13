@@ -35,7 +35,7 @@
 
 | Plan | Issue | Title | Priority | Effort | Depends on | Status |
 |------|-------|-------|----------|--------|------------|--------|
-| 001 | [#17](https://github.com/PMobile78/to-round-react/issues/17) | ESLint + фикс Rules of Hooks в HtmlRenderer | P1 | S | — | TODO |
+| 001 | [#17](https://github.com/PMobile78/to-round-react/issues/17) | ESLint + фикс Rules of Hooks в HtmlRenderer | P1 | S | — | DONE |
 | 002 | [#18](https://github.com/PMobile78/to-round-react/issues/18) | База верификации: npm test + тесты functions в CI | P1 | S–M | — | TODO |
 | 003 | [#19](https://github.com/PMobile78/to-round-react/issues/19) | Убрать .env.production и public/sw.js из git | P1 | S | — | TODO |
 | 004 | [#20](https://github.com/PMobile78/to-round-react/issues/20) | Зафиксировать версии зависимостей (вместо latest) | P2 | S | 002* | TODO |
