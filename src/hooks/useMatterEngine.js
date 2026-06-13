@@ -65,7 +65,7 @@ export function useMatterEngine({
         setCanvasSize(canvasSize);
 
         // Create renderer
-        const bubbleViewBackground = theme?.custom?.canvasBackground;
+        const bubbleViewBackground = theme?.custom?.canvasBackground || theme?.palette?.background?.default || '#fafbfc';
 
         const render = Render.create({
             element: canvas,

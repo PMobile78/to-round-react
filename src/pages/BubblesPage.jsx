@@ -360,8 +360,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     const getDialogPaperStyles = () => {
         return theme.custom?.dialogPaper || {
-            backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(22, 29, 42, 0.95)',
-            color: themeMode === 'light' ? '#1c2330' : '#e8ecf4'
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary
         };
     };
 
@@ -449,7 +449,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             canvas.style.background = canvasBackground;
         }
 
-        // Update existing bubbles fill style based on theme
+        // Update existing bubbles fill style and stroke width based on theme
         if (engineRef.current) {
             bubbles.forEach(bubble => {
                 if (bubble.body && bubble.body.render) {
@@ -461,10 +461,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                         }
                     }
                     bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    bubble.body.render.lineWidth = theme.custom?.bubble?.strokeWidth ?? 1.5;
                 }
             });
         }
-    }, [themeMode, tags]);
+    }, [theme, bubbles, tags]);
 
     // Force TextOverlay re-render on theme change to update text opacity
     const [textOverlayKey, setTextOverlayKey] = useState(0);

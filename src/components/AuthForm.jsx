@@ -230,8 +230,8 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                                     backgroundColor: theme.palette.primary.dark ?? theme.palette.primary.main
                                 },
                                 '&:disabled': {
-                                    backgroundColor: theme.palette.action.disabled,
-                                    color: theme.palette.action.disabledText
+                                    backgroundColor: theme.palette.action.disabledBackground,
+                                    color: theme.palette.action.disabled
                                 }
                             }}
                         >
@@ -319,8 +319,8 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                                     backgroundColor: theme.palette.primary.dark ?? theme.palette.primary.main
                                 },
                                 '&:disabled': {
-                                    backgroundColor: theme.palette.action.disabled,
-                                    color: theme.palette.action.disabledText
+                                    backgroundColor: theme.palette.action.disabledBackground,
+                                    color: theme.palette.action.disabled
                                 }
                             }}
                         >
