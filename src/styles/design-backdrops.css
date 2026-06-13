@@ -1,0 +1,39 @@
+/**
+ * Design Backdrop Styles
+ *
+ * Decorative layers rendered behind the bubbles canvas.
+ * - position: absolute; inset: 0 → fills the canvas container
+ * - z-index: 0 → sits behind canvas (z-index 1)
+ * - pointer-events: none → does not capture mouse/touch events
+ */
+
+.design-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Aurora backdrop: animated gradient drift */
+.design-backdrop--aurora {
+  background: linear-gradient(45deg, rgba(255, 182, 193, 0.1), rgba(173, 216, 230, 0.1));
+  animation: aurora-drift 8s ease-in-out infinite;
+}
+
+@keyframes aurora-drift {
+  0%, 100% {
+    background-position: 0 0;
+    opacity: 0.5;
+  }
+  50% {
+    background-position: 100% 100%;
+    opacity: 0.7;
+  }
+}
+
+/* Dots backdrop: dot grid pattern */
+.design-backdrop--dots {
+  background-image: radial-gradient(circle, rgba(100, 100, 100, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: 0 0;
+}

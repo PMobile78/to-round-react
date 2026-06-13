@@ -294,12 +294,34 @@ export function useMatterEngine({
         const runner = Runner.create();
         Runner.run(runner, engine);
 
+        // Register afterRender hook for bubble effects
+        const afterRenderHandler = () => {
+            const effectType = theme?.custom?.bubble?.effect || 'none';
+            switch (effectType) {
+                case 'glow':
+                    // TODO (Task 5): Implement glow effect drawing
+                    break;
+                case 'hardShadow':
+                    // TODO (Task 7): Implement hard shadow effect drawing
+                    break;
+                case 'clay':
+                    // TODO (Task 7): Implement clay effect drawing
+                    break;
+                case 'none':
+                default:
+                    // No effect, do nothing
+                    break;
+            }
+        };
+        Events.on(render, 'afterRender', afterRenderHandler);
+
         // Resize sync is handled by useMatterResize hook
 
         return () => {
             // cleanup handled below; resize listeners removed by hook
             Events.off(mouseConstraint, 'mousedown', mousedownHandler);
             Events.off(mouseConstraint, 'mouseup', mouseupHandler);
+            Events.off(render, 'afterRender', afterRenderHandler);
             Runner.stop(runner);
             Render.stop(render);
             World.clear(engine.world);

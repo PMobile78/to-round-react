@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './i18n';
+import './styles/design-backdrops.css';
 import { initMessagingAndSaveToken, updateMessagingTokenLanguage } from './firebaseMessaging';
 import i18n from './i18n';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';

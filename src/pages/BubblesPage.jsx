@@ -47,6 +47,7 @@ import TaskList from '../components/TaskList';
 import ResponsiveSearch from '../components/ResponsiveSearch';
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
+import { DesignBackdrop } from '../components/DesignBackdrop';
 import useSearch from '../hooks/useSearch';
 import EditBubbleDialog from '../components/EditBubbleDialog';
 import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
@@ -2457,6 +2458,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                     )}
                 </>
             ))}
+
+            {/* Decorative backdrop layer (behind canvas) */}
+            <DesignBackdrop />
 
             {/* Canvas for physics */}
             <div ref={canvasRef} style={{
