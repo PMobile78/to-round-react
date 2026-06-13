@@ -350,6 +350,9 @@ export function useMatterEngine({
                         const shadowColor = effectParams.shadowColor || '#000000';
                         const shadowAlpha = effectParams.shadowAlpha || 0.5;
 
+                        // Parse hex color once, before loops
+                        const shadowRgbaStyle = `rgba(${parseInt(shadowColor.substring(1, 3), 16)}, ${parseInt(shadowColor.substring(3, 5), 16)}, ${parseInt(shadowColor.substring(5, 7), 16)}, ${shadowAlpha})`;
+
                         const bodies = engine.world.bodies;
                         ctx.save();
 
@@ -361,7 +364,7 @@ export function useMatterEngine({
                                 const y = body.position.y;
 
                                 // Draw opaque shadow disc at offset position
-                                ctx.fillStyle = `rgba(${parseInt(shadowColor.substring(1, 3), 16)}, ${parseInt(shadowColor.substring(3, 5), 16)}, ${parseInt(shadowColor.substring(5, 7), 16)}, ${shadowAlpha})`;
+                                ctx.fillStyle = shadowRgbaStyle;
                                 ctx.beginPath();
                                 ctx.arc(x + dx, y + dy, radius, 0, Math.PI * 2);
                                 ctx.fill();

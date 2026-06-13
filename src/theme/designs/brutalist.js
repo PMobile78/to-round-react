@@ -233,11 +233,11 @@ export const brutalist = (mode) => {
       },
       backdrop: 'dots',
       buttonStyles: {
-        backgroundColor: mode === 'light' ? c.tertiary : c.tertiary,
+        backgroundColor: c.tertiary,
         color: c.textPrimary,
         border: `2px solid ${c.textPrimary}`,
         '&:hover': {
-          backgroundColor: mode === 'light' ? alpha(c.tertiary, 0.8) : alpha(c.tertiary, 0.8),
+          backgroundColor: alpha(c.tertiary, 0.8),
         },
       },
       outlinedButtonStyles: {

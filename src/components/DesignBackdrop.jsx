@@ -21,7 +21,14 @@ export function DesignBackdrop() {
       );
     case 'dots':
       return (
-        <div className="design-backdrop design-backdrop--dots" />
+        <div
+          className="design-backdrop design-backdrop--dots"
+          style={{
+            '--dot-color': theme.palette.mode === 'dark'
+              ? 'rgba(255, 255, 255, 0.14)'
+              : 'rgba(0, 0, 0, 0.12)',
+          }}
+        />
       );
     case 'none':
     default:
