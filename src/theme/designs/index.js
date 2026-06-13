@@ -30,7 +30,6 @@ export const DESIGNS = {
     },
     module: classic,
   },
-  // Placeholder entries for future designs (implemented in later tasks)
   aurora: {
     id: 'aurora',
     labelKey: 'design.aurora',

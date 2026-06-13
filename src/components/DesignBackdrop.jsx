@@ -5,8 +5,8 @@ import { useTheme } from '@mui/material/styles';
  *
  * Renders a decorative layer behind the bubbles canvas based on theme.custom.backdrop.
  * - 'none': renders null (no decorative layer)
- * - 'aurora': renders an aurora layer (placeholder for Task 5)
- * - 'dots': renders a dot-grid layer (placeholder for Task 6)
+ * - 'aurora': renders an aurora layer (animated neon gradient)
+ * - 'dots': renders a dot-grid layer (theme-aware dot pattern)
  *
  * Positioned absolutely behind the canvas (z-index 0), not capturing pointer events.
  */
