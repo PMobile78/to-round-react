@@ -375,7 +375,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     };
 
     const getDialogPaperStyles = () => {
-        return {
+        return theme.custom?.dialogPaper || {
             backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(22, 29, 42, 0.95)',
             color: themeMode === 'light' ? '#1c2330' : '#e8ecf4'
         };
@@ -390,17 +390,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             return 'transparent';
         }
 
-        if (themeMode === 'light') {
-            if (tagColor) {
-                return withAlpha(tagColor, 0.10);
-            }
-            return withAlpha('#2f6bdb', 0.08);
-        } else {
-            if (tagColor) {
-                return withAlpha(tagColor, 0.14);
-            }
-            return 'rgba(255, 255, 255, 0.06)';
+        if (tagColor) {
+            return withAlpha(tagColor, theme.custom?.bubble?.fill?.tagAlpha ?? 0.10);
         }
+        return theme.custom?.bubble?.fill?.defaultFill ?? 'rgba(255, 255, 255, 0.06)';
     };
 
     // Function to get canvas dimensions depending on screen size
@@ -447,6 +440,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         getBubbleFillStyle,
         getCanvasSize,
         parseLocalDateTime,
+        theme,
     });
 
     // Перестраиваем размеры канваса и границы мира при ресайзе окна
@@ -465,16 +459,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     useEffect(() => {
         if (renderRef.current && renderRef.current.canvas) {
             const canvas = renderRef.current.canvas;
+            const canvasBackground = theme.custom?.canvasBackground;
 
-            if (themeMode === 'light') {
-                // Для светлой темы - светлый фон
-                renderRef.current.options.background = '#fafbfc';
-                canvas.style.background = '#fafbfc';
-            } else {
-                // Для темной темы - сине-графитовый градиент
-                renderRef.current.options.background = '#151c28';
-                canvas.style.background = 'linear-gradient(160deg, #151c28 0%, #1b2433 100%)';
-            }
+            renderRef.current.options.background = canvasBackground;
+            canvas.style.background = canvasBackground;
         }
 
         // Update existing bubbles fill style based on theme
@@ -696,7 +684,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             }
                         }
                         bubble.body.render.strokeStyle = highlightColor;
-                        bubble.body.render.lineWidth = 2.5;
+                        bubble.body.render.lineWidth = theme.custom?.bubble?.highlightStrokeWidth ?? 2.5;
                         // Добавляем свечение цветом тега
                         bubble.body.render.shadowColor = highlightColor;
                         bubble.body.render.shadowBlur = 15;
@@ -712,7 +700,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             }
                         }
                         bubble.body.render.strokeStyle = originalStrokeColor;
-                        bubble.body.render.lineWidth = 1.5;
+                        bubble.body.render.lineWidth = theme.custom?.bubble?.strokeWidth ?? 1.5;
                         // Убираем свечение
                         bubble.body.render.shadowColor = 'transparent';
                         bubble.body.render.shadowBlur = 0;
@@ -740,7 +728,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             }
                         }
                         bubble.body.render.strokeStyle = highlightColor;
-                        bubble.body.render.lineWidth = 2.5;
+                        bubble.body.render.lineWidth = theme.custom?.bubble?.highlightStrokeWidth ?? 2.5;
                         // Добавляем свечение цветом тега
                         bubble.body.render.shadowColor = highlightColor;
                         bubble.body.render.shadowBlur = 15;
@@ -756,7 +744,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             }
                         }
                         bubble.body.render.strokeStyle = originalStrokeColor;
-                        bubble.body.render.lineWidth = 1.5;
+                        bubble.body.render.lineWidth = theme.custom?.bubble?.strokeWidth ?? 1.5;
                         // Убираем свечение
                         bubble.body.render.shadowColor = 'transparent';
                         bubble.body.render.shadowBlur = 0;
@@ -764,7 +752,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 }
             }
         });
-    }, [getFilteredBubbles, bubbles, tags, foundBubblesIds, debouncedBubblesSearchQuery]);
+    }, [getFilteredBubbles, bubbles, tags, foundBubblesIds, debouncedBubblesSearchQuery, theme]);
 
 
 
@@ -787,7 +775,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             render: {
                 fillStyle: getBubbleFillStyle(tagColor),
                 strokeStyle: strokeColor,
-                lineWidth: 1.5
+                lineWidth: theme.custom?.bubble?.strokeWidth ?? 1.5
             }
         });
 
@@ -923,7 +911,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                     render: {
                         fillStyle: fillStyle,
                         strokeStyle: strokeColor,
-                        lineWidth: 1.5
+                        lineWidth: theme.custom?.bubble?.strokeWidth ?? 1.5
                     }
                 }
             );
@@ -1627,11 +1615,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
             // Определяем стили в зависимости от поиска
             const textOpacity = hasSearchQuery ? (isFound ? 1 : 0.4) : 1;
-            const textColor = theme.palette.text.primary;
+            const textColor = theme.custom?.bubble?.label?.color ?? theme.palette.text.primary;
 
-            const textShadow = themeMode === 'light'
-                ? '0 1px 2px rgba(255, 255, 255, 0.65)'
-                : '0 1px 3px rgba(0, 0, 0, 0.5)';
+            const textShadow = theme.custom?.bubble?.label?.shadow
+                ? (themeMode === 'light'
+                    ? '0 1px 2px rgba(255, 255, 255, 0.65)'
+                    : '0 1px 3px rgba(0, 0, 0, 0.5)')
+                : 'none';
 
             return bubble.title ? (
                 <Box
@@ -1656,7 +1646,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                                 isMobile ? fontSize * 0.75 : fontSize,
                                 Math.min(bubble.radius / (isMobile ? 2.2 : 3), isMobile ? fontSize * 1.2 : fontSize * 1.3)
                             ),
-                            fontWeight: 600,
+                            fontWeight: theme.custom?.bubble?.label?.weight ?? 600,
                             lineHeight: 1.1,
                             wordBreak: 'break-word'
                         }}
@@ -2059,7 +2049,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             transition: 'margin-left 0.3s ease, width 0.3s ease'
         }}>
             {/* Полоса хедера за плавающими контролами */}
-            {mainView === 'bubbles' && (
+            {mainView === 'bubbles' && theme.custom?.headerStrip?.show !== false && (
                 <Box sx={{
                     position: 'absolute',
                     top: 0,
@@ -2070,7 +2060,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                     backgroundColor: alpha(theme.palette.background.paper, themeMode === 'light' ? 0.75 : 0.65),
                     backdropFilter: 'blur(10px)',
                     borderBottom: `1px solid ${theme.palette.divider}`,
-                    pointerEvents: 'none'
+                    pointerEvents: 'none',
+                    ...theme.custom?.headerStrip?.sx
                 }} />
             )}
             {/* Заголовок и кнопки - адаптивный */}
@@ -2450,7 +2441,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             left: 10,
                             right: 10,
                             zIndex: 1000,
-                            backgroundColor: 'rgba(15, 18, 25, 0.55)',
+                            backgroundColor: alpha(theme.palette.background.paper, 0.55),
                             backdropFilter: 'blur(8px)',
                             padding: 1.5,
                             borderRadius: 3,
@@ -2462,17 +2453,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                                     position: 'absolute',
                                     top: 2,
                                     right: 2,
-                                    color: 'white',
+                                    color: theme.palette.text.primary,
                                     padding: 0.5,
                                     '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                                        backgroundColor: alpha(theme.palette.text.primary, 0.1)
                                     }
                                 }}
                                 size="small"
                             >
                                 <CloseOutlined fontSize="small" />
                             </IconButton>
-                            <Typography variant="caption" sx={{ color: 'white', fontSize: 12, paddingRight: 3 }}>
+                            <Typography variant="caption" sx={{ color: theme.palette.text.primary, fontSize: 12, paddingRight: 3 }}>
                                 {t('bubbles.mobileClickInstruction')}
                             </Typography>
                         </Box>

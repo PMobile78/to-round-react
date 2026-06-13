@@ -47,6 +47,7 @@ export function useMatterEngine({
     getBubbleFillStyle,
     getCanvasSize,
     parseLocalDateTime,
+    theme,
 }) {
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -64,9 +65,7 @@ export function useMatterEngine({
         setCanvasSize(canvasSize);
 
         // Create renderer
-        const bubbleViewBackground = themeMode === 'light'
-            ? '#fafbfc'
-            : 'linear-gradient(160deg, #151c28 0%, #1b2433 100%)';
+        const bubbleViewBackground = theme?.custom?.canvasBackground;
 
         const render = Render.create({
             element: canvas,
@@ -122,8 +121,8 @@ export function useMatterEngine({
                                 frictionAir: 0.01,
                                 render: {
                                     fillStyle: getBubbleFillStyle(tagColor),
-                                    strokeStyle: storedBubble.strokeStyle || '#2f6bdb',
-                                    lineWidth: 1.5
+                                    strokeStyle: storedBubble.strokeStyle || theme?.custom?.bubble?.defaultStroke || '#2f6bdb',
+                                    lineWidth: theme?.custom?.bubble?.strokeWidth ?? 1.5
                                 }
                             }),
                             radius: storedBubble.radius,
