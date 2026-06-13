@@ -254,8 +254,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [bubbles, setBubbles] = useState([]);
     const [selectedBubble, setSelectedBubble] = useState(null);
     const [editDialog, setEditDialog] = useState(false);
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
     const [tags, setTags] = useState([]);
     const tagsRef = useRef(tags);
@@ -419,8 +417,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setBubbles,
         setCanvasSize,
         setSelectedBubble,
-        setTitle,
-        setDescription,
         setSelectedTagId,
         setEditBubbleSize,
         setEditDialog,
@@ -819,8 +815,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     // Function for opening create bubble dialog
     const openCreateDialog = () => {
-        setTitle('');
-        setDescription('');
         const categoryReserved = new Set(['all', 'no-tags', 'planned-tasks']);
         const tagFromPanel =
             selectedCategory &&
@@ -837,7 +831,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     };
 
     // Function for creating a new bubble
-    const createNewBubble = () => {
+    const createNewBubble = ({ title, description }) => {
         if (!engineRef.current || !renderRef.current || !title.trim()) {
             return;
         }
@@ -867,14 +861,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
         // Close dialog and reset form
         setCreateDialog(false);
-        setTitle('');
-        setDescription('');
         setSelectedTagId('');
         setDueDate(null);
     };
 
     // Save bubble changes
-    const handleSaveBubble = () => {
+    const handleSaveBubble = ({ title, description }) => {
         if (!title.trim()) return;
         if (selectedBubble && engineRef.current) {
             // Сначала обновляем физическое тело
@@ -957,8 +949,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
         setEditDialog(false);
         setSelectedBubble(null);
-        setTitle('');
-        setDescription('');
         setEditDueDate(null);
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
@@ -979,8 +969,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         }
         setEditDialog(false);
         setSelectedBubble(null);
-        setTitle('');
-        setDescription('');
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
@@ -1088,8 +1076,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         }
         setEditDialog(false);
         setSelectedBubble(null);
-        setTitle('');
-        setDescription('');
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
@@ -1097,8 +1083,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const handleCloseDialog = () => {
         setEditDialog(false);
         setSelectedBubble(null);
-        setTitle('');
-        setDescription('');
         setSelectedTagId('');
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
@@ -1884,8 +1868,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 setEditDueDate(null);
             }
             // basic fields for Save button logic
-            setTitle(selectedBubble.title || '');
-            setDescription(selectedBubble.description || '');
             setSelectedTagId(selectedBubble.tagId || '');
             if (typeof selectedBubble.radius === 'number') {
                 setEditBubbleSize(selectedBubble.radius);
@@ -2526,8 +2508,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             listSearchQuery={listSearchQuery}
                             setListSearchQuery={setListSearchQuery}
                             setSelectedBubble={setSelectedBubble}
-                            setTitle={setTitle}
-                            setDescription={setDescription}
                             setSelectedTagId={setSelectedTagId}
                             setEditDialog={setEditDialog}
                             handleListTagFilterChange={handleListTagFilterChange}
@@ -2552,10 +2532,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 isMobile={isMobile}
                 themeMode={themeMode}
                 getDialogPaperStyles={getDialogPaperStyles}
-                title={title}
-                setTitle={setTitle}
-                description={description}
-                setDescription={setDescription}
+                initialTitle={selectedBubble?.title || ''}
+                initialDescription={selectedBubble?.description || ''}
                 editDueDate={editDueDate}
                 setEditDueDate={setEditDueDate}
                 isOverdue={isOverdue}
@@ -2780,10 +2758,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 isMobile={isMobile}
                 themeMode={themeMode}
                 getDialogPaperStyles={getDialogPaperStyles}
-                title={title}
-                setTitle={setTitle}
-                description={description}
-                setDescription={setDescription}
                 dueDate={dueDate}
                 setDueDate={setDueDate}
                 isOverdue={isOverdue}
@@ -2902,8 +2876,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 listSearchQuery={listSearchQuery}
                 setListSearchQuery={setListSearchQuery}
                 setSelectedBubble={setSelectedBubble}
-                setTitle={setTitle}
-                setDescription={setDescription}
                 setSelectedTagId={setSelectedTagId}
                 setEditDialog={setEditDialog}
                 handleListTagFilterChange={handleListTagFilterChange}

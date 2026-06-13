@@ -38,10 +38,6 @@ export default function CreateBubbleDialog(props) {
         isMobile,
         themeMode,
         getDialogPaperStyles,
-        title,
-        setTitle,
-        description,
-        setDescription,
         dueDate,
         setDueDate,
         isOverdue,
@@ -61,6 +57,16 @@ export default function CreateBubbleDialog(props) {
         useRichText,
         onToggleUseRichText
     } = props;
+
+    const [title, setTitle] = React.useState('');
+    const [description, setDescription] = React.useState('');
+
+    React.useEffect(() => {
+        if (open) {
+            setTitle('');
+            setDescription('');
+        }
+    }, [open]);
 
     const currentLang = (typeof i18n.language === 'string' ? i18n.language : 'en') || 'en';
     const adapterLocale = currentLang.startsWith('uk') ? uk : currentLang.startsWith('ru') ? ru : enUS;
@@ -268,7 +274,7 @@ export default function CreateBubbleDialog(props) {
                 <Button onClick={onClose} color="inherit" fullWidth={isSmallScreen} sx={{ minHeight: isMobile ? 48 : 36 }}>
                     {t('bubbles.cancel')}
                 </Button>
-                <Button onClick={onCreate} variant="contained" fullWidth={isSmallScreen} sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36 }} disabled={!title.trim()}>
+                <Button onClick={() => onCreate({ title, description })} variant="contained" fullWidth={isSmallScreen} sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36 }} disabled={!title.trim()}>
                     {t('bubbles.create')}
                 </Button>
             </DialogActions>

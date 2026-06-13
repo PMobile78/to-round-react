@@ -31,8 +31,6 @@ export function useMatterEngine({
     setBubbles,
     setCanvasSize,
     setSelectedBubble,
-    setTitle,
-    setDescription,
     setSelectedTagId,
     setEditBubbleSize,
     setEditDialog,
@@ -281,8 +279,6 @@ export function useMatterEngine({
                         const clickedBubble = currentBubblesState.find(b => b.body.id === targetBodyId);
                         if (clickedBubble) {
                             setSelectedBubble(clickedBubble);
-                            setTitle(clickedBubble.title || '');
-                            setDescription(clickedBubble.description || '');
                             setSelectedTagId(clickedBubble.tagId || '');
                             setEditBubbleSize(clickedBubble.radius);
                             setEditDialog(true);

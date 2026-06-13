@@ -61,8 +61,6 @@ const TaskList = ({
     listSearchQuery,
     setListSearchQuery,
     setSelectedBubble,
-    setTitle,
-    setDescription,
     setSelectedTagId,
     setEditDialog,
     handleListTagFilterChange,
@@ -317,11 +315,9 @@ const TaskList = ({
     // Edit task from list view
     const handleEditTask = useCallback((task) => {
         setSelectedBubble(task);
-        setTitle(task.title || '');
-        setDescription(task.description || '');
         setSelectedTagId(task.tagId || '');
         setEditDialog(true);
-    }, [setSelectedBubble, setTitle, setDescription, setSelectedTagId, setEditDialog]);
+    }, [setSelectedBubble, setSelectedTagId, setEditDialog]);
 
     const tasks = sortedAndFilteredTasks;
     const isEmpty = tasks.length === 0;

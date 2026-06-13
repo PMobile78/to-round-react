@@ -38,10 +38,8 @@ export default function EditBubbleDialog(props) {
         isMobile,
         themeMode,
         getDialogPaperStyles,
-        title,
-        setTitle,
-        description,
-        setDescription,
+        initialTitle,
+        initialDescription,
         editDueDate,
         setEditDueDate,
         isOverdue,
@@ -67,6 +65,16 @@ export default function EditBubbleDialog(props) {
         useRichText,
         onToggleUseRichText
     } = props;
+
+    const [title, setTitle] = React.useState(initialTitle || '');
+    const [description, setDescription] = React.useState(initialDescription || '');
+
+    React.useEffect(() => {
+        if (open) {
+            setTitle(initialTitle || '');
+            setDescription(initialDescription || '');
+        }
+    }, [open, initialTitle, initialDescription]);
 
     const currentLang = (typeof i18n.language === 'string' ? i18n.language : 'en') || 'en';
     const adapterLocale = currentLang.startsWith('uk') ? uk : currentLang.startsWith('ru') ? ru : enUS;
@@ -324,7 +332,7 @@ export default function EditBubbleDialog(props) {
                     <Button onClick={onClose} color="inherit" fullWidth={isSmallScreen} size={isSmallScreen ? 'small' : 'medium'} sx={{ order: isSmallScreen ? 2 : 1, ...(!isSmallScreen && { minHeight: 36 }) }}>
                         {t('bubbles.cancel')}
                     </Button>
-                    <Button onClick={handleSaveBubble} variant="contained" fullWidth={isSmallScreen} size={isSmallScreen ? 'small' : 'medium'} sx={{ borderRadius: 2, order: isSmallScreen ? 1 : 2, ...(!isSmallScreen && { minHeight: 36 }) }} disabled={!title.trim()}>
+                    <Button onClick={() => handleSaveBubble({ title, description })} variant="contained" fullWidth={isSmallScreen} size={isSmallScreen ? 'small' : 'medium'} sx={{ borderRadius: 2, order: isSmallScreen ? 1 : 2, ...(!isSmallScreen && { minHeight: 36 }) }} disabled={!title.trim()}>
                         {t('bubbles.save')}
                     </Button>
                 </Box>
