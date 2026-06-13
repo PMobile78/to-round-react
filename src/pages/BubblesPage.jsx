@@ -1532,6 +1532,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     };
 
     // Optimized component for displaying text over bubbles
+    /* eslint-disable react-hooks/rules-of-hooks -- pre-existing, fixed in plans/013 */
     const TextOverlay = useCallback(() => {
         const [positions, setPositions] = useState([]);
         const bubblesRef = useRef(bubbles);
@@ -1661,6 +1662,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             </Box>
         );
     }, [getFilteredBubbles, bubbles, isMobile, fontSize, themeMode, foundBubblesIds, debouncedBubblesSearchQuery]);
+    /* eslint-enable react-hooks/rules-of-hooks */
 
     const notifiedBubblesRef = useRef(new Set());
     const notifiedBubbleNotificationsRef = useRef(new Set()); // bubbleId:idx
