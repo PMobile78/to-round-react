@@ -405,11 +405,12 @@ export function useMatterEngine({
                     if (effectParams && renderRef.current) {
                         const ctx = renderRef.current.context;
                         const shadowColor = effectParams.shadowColor || 'rgba(0, 0, 0, 0.1)';
+                        const shadowFill = effectParams.shadowFill || 'rgba(0, 0, 0, 0.8)';
                         const blurRadius = effectParams.blurRadius || 12;
                         const dx = effectParams.dx || 3;
                         const dy = effectParams.dy || 3;
-                        const highlightColor = effectParams.highlightColor || 'rgba(255, 255, 255, 0.5)';
-                        const highlightAlpha = effectParams.highlightAlpha || 0.4;
+                        const highlightInner = effectParams.highlightInner || 'rgba(255, 255, 255, 0.5)';
+                        const highlightOuter = effectParams.highlightOuter || 'rgba(255, 255, 255, 0)';
 
                         const bodies = engine.world.bodies;
                         ctx.save();
@@ -427,8 +428,8 @@ export function useMatterEngine({
                                 ctx.shadowOffsetX = dx;
                                 ctx.shadowOffsetY = dy;
 
-                                // Opaque fill so the shadow blur is visible
-                                ctx.fillStyle = shadowColor.replace(')', ', 0.8)').replace('rgba(', 'rgba(');
+                                // Use explicit opaque fill for shadow disc source
+                                ctx.fillStyle = shadowFill;
                                 ctx.beginPath();
                                 ctx.arc(x, y, radius, 0, Math.PI * 2);
                                 ctx.fill();
@@ -471,8 +472,8 @@ export function useMatterEngine({
                                     x - radius * 0.4, y - radius * 0.4, 0,
                                     x, y, radius
                                 );
-                                highlightGradient.addColorStop(0, highlightColor.replace(')', `, ${highlightAlpha})`).replace('rgba(', 'rgba('));
-                                highlightGradient.addColorStop(0.7, highlightColor.replace(')', ', 0)').replace('rgba(', 'rgba('));
+                                highlightGradient.addColorStop(0, highlightInner);
+                                highlightGradient.addColorStop(1, highlightOuter);
 
                                 ctx.fillStyle = highlightGradient;
                                 ctx.beginPath();

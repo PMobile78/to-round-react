@@ -206,12 +206,17 @@ export const clay = (mode) => {
         },
         effect: 'clay',
         effectParams: {
-          shadowColor: c.shadowColor,
+          shadowColor: c.shadowColor, // For ctx.shadowColor in blur
+          shadowFill: mode === 'light'
+            ? 'rgba(50, 40, 45, 0.8)' // Opaque shadow disc source (light)
+            : 'rgba(0, 0, 0, 0.7)', // Opaque shadow disc source (dark)
           blurRadius: mode === 'light' ? 10 : 14,
           dx: 3,
           dy: 3,
-          highlightColor: c.shadowHighlight,
-          highlightAlpha: mode === 'light' ? 0.5 : 0.25,
+          highlightInner: mode === 'light'
+            ? 'rgba(255, 255, 255, 0.5)' // Top-left gradient stop
+            : 'rgba(255, 255, 255, 0.15)', // Top-left gradient stop (dark)
+          highlightOuter: 'rgba(255, 255, 255, 0)', // Edge stop (transparent)
         },
         label: {
           weight: 500,
