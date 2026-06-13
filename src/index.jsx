@@ -1,4 +1,5 @@
 import '@fontsource-variable/inter';
+import '@fontsource-variable/sora';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

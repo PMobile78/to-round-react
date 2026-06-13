@@ -308,7 +308,37 @@ export function useMatterEngine({
             const effectParams = themeRef.current?.custom?.bubble?.effectParams;
             switch (effectType) {
                 case 'glow':
-                    // TODO (Task 5): Implement glow effect drawing with effectParams
+                    // Draw neon glow halos around each bubble
+                    if (effectParams && renderRef.current) {
+                        const ctx = renderRef.current.context;
+                        const glowColor = effectParams.glowColor || '#a78bfa';
+                        const blurRadius = effectParams.blurRadius || 12;
+
+                        // Iterate over all bodies and draw glow for circle bodies
+                        const bodies = engine.world.bodies;
+                        ctx.save();
+                        bodies.forEach((body) => {
+                            if (body.label === 'Circle Body' && body.circleRadius) {
+                                const radius = body.circleRadius;
+                                const x = body.position.x;
+                                const y = body.position.y;
+
+                                // Set up shadow glow
+                                ctx.shadowBlur = blurRadius;
+                                ctx.shadowColor = glowColor;
+                                ctx.shadowOffsetX = 0;
+                                ctx.shadowOffsetY = 0;
+
+                                // Re-stroke the circle with glow (glow is achieved via shadow)
+                                ctx.strokeStyle = glowColor;
+                                ctx.lineWidth = 0.5;
+                                ctx.beginPath();
+                                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                                ctx.stroke();
+                            }
+                        });
+                        ctx.restore();
+                    }
                     break;
                 case 'hardShadow':
                     // TODO (Task 7): Implement hard shadow effect drawing with effectParams

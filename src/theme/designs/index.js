@@ -1,5 +1,6 @@
 import { modern } from './modern';
 import { classic } from './classic';
+import { aurora } from './aurora';
 
 /**
  * Design skins registry
@@ -34,9 +35,9 @@ export const DESIGNS = {
     previewColors: {
       primary: '#a78bfa',
       secondary: '#f472b6',
-      background: '#fef5ff',
+      background: '#0b0e1a',
     },
-    module: null, // Implemented in Task 3
+    module: aurora,
   },
   brutalist: {
     id: 'brutalist',

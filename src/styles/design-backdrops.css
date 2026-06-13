@@ -14,20 +14,34 @@
   pointer-events: none;
 }
 
-/* Aurora backdrop: animated gradient drift */
+/* Aurora backdrop: animated neon gradient with glassmorphic drift */
 .design-backdrop--aurora {
-  background: linear-gradient(45deg, rgba(255, 182, 193, 0.1), rgba(173, 216, 230, 0.1));
-  animation: aurora-drift 8s ease-in-out infinite;
+  background:
+    radial-gradient(ellipse 800px 500px at 20% 50%, rgba(167, 139, 250, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 600px 400px at 80% 30%, rgba(216, 180, 255, 0.06) 0%, transparent 50%),
+    linear-gradient(135deg, rgba(11, 14, 26, 0.95) 0%, rgba(22, 21, 43, 0.95) 50%, rgba(11, 14, 26, 0.95) 100%);
+  background-attachment: fixed;
+  animation: aurora-drift 12s ease-in-out infinite;
 }
 
 @keyframes aurora-drift {
-  0%, 100% {
+  0% {
     background-position: 0 0;
-    opacity: 0.5;
+    filter: blur(0px) brightness(1);
+  }
+  25% {
+    filter: blur(1px) brightness(1.05);
   }
   50% {
-    background-position: 100% 100%;
-    opacity: 0.7;
+    background-position: 100px 100px;
+    filter: blur(2px) brightness(1.1);
+  }
+  75% {
+    filter: blur(1px) brightness(1.05);
+  }
+  100% {
+    background-position: 0 0;
+    filter: blur(0px) brightness(1);
   }
 }
 
