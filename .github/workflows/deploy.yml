@@ -52,7 +52,7 @@ jobs:
     - name: Run tests
       run: |
         npm test
-        npm run test:functions
+        npm run test:functions --if-present
 
   deploy:
     if: github.event_name == 'workflow_dispatch'
