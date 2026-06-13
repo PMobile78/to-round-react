@@ -73,13 +73,13 @@ export const aurora = (mode) => {
     },
 
     typography: {
-      fontFamily: "'Sora', 'InterVariable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
-      h1: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora', system-ui" },
-      h2: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora', system-ui" },
-      h3: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora', system-ui" },
-      h4: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora', system-ui" },
-      h5: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora', system-ui" },
-      h6: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora', system-ui" },
+      fontFamily: "'InterVariable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+      h1: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
+      h2: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
+      h3: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
+      h4: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
+      h5: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
+      h6: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
       button: { fontWeight: 500, textTransform: 'none', fontFamily: "'InterVariable', 'Inter'" },
     },
 

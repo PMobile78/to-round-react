@@ -323,17 +323,18 @@ export function useMatterEngine({
                                 const x = body.position.x;
                                 const y = body.position.y;
 
-                                // Set up shadow glow
+                                // Set up shadow glow (shadow creates the halo effect)
                                 ctx.shadowBlur = blurRadius;
                                 ctx.shadowColor = glowColor;
                                 ctx.shadowOffsetX = 0;
                                 ctx.shadowOffsetY = 0;
 
-                                // Re-stroke the circle with glow (glow is achieved via shadow)
-                                ctx.strokeStyle = glowColor;
-                                ctx.lineWidth = 0.5;
+                                // Draw thin invisible stroke slightly inside bubble to emit glow
+                                // (invisible stroke lets shadow dominate; inside radius avoids double-edge)
+                                ctx.strokeStyle = 'rgba(0, 0, 0, 0)';
+                                ctx.lineWidth = 0.25;
                                 ctx.beginPath();
-                                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                                ctx.arc(x, y, Math.max(1, radius - 1), 0, Math.PI * 2);
                                 ctx.stroke();
                             }
                         });
