@@ -90,6 +90,11 @@
       "last 1 safari version"
     ]
   },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.2",
     "dotenv": "^16.6.1",
