@@ -52,7 +52,7 @@
 | 015 | [#31](https://github.com/PMobile78/to-round-react/issues/31) | Live-sync открытого диалога + призрачные тела | P3 | M | 010* | DONE |
 | 016 | [#32](https://github.com/PMobile78/to-round-react/issues/32) | Поиск по тексту описания, а не по сырому HTML | P3 | S | 002 | DONE |
 | 017 | [#33](https://github.com/PMobile78/to-round-react/issues/33) | SPIKE: переполнение пузырями на мобиле (по спеке) | P2 | M | — | DEFERRED (по запросу владельца — обдумать) |
-| 018 | [#34](https://github.com/PMobile78/to-round-react/issues/34) | Offline-персистентность Firestore (PWA) | P2 | S | — | TODO |
+| 018 | [#34](https://github.com/PMobile78/to-round-react/issues/34) | Offline-персистентность Firestore (PWA) | P2 | S | — | DONE |
 | 019 | [#35](https://github.com/PMobile78/to-round-react/issues/35) | DESIGN: связка mind map ↔ задачи | P3 | M | — | DEFERRED (по запросу владельца — обдумать) |
 
 `*` — мягкая зависимость: можно выполнять и без неё, но порядок из таблицы
