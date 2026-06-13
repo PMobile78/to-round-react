@@ -251,7 +251,7 @@ export const brutalist = (mode) => {
         },
       },
       dialogPaper: {
-        borderRadius: 0,
+        borderRadius: '0px',
       },
     },
   };

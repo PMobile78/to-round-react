@@ -261,7 +261,7 @@ export const aurora = (mode) => {
             }
           },
       dialogPaper: {
-        borderRadius: 20,
+        borderRadius: '20px',
       },
     },
   };

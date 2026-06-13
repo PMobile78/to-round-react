@@ -197,7 +197,7 @@ export const classic = (mode) => {
             }
           },
       dialogPaper: {
-        borderRadius: 4,
+        borderRadius: '4px',
       },
     },
   };

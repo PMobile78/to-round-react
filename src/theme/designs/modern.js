@@ -233,7 +233,7 @@ export const modern = (mode) => {
             }
           },
       dialogPaper: {
-        borderRadius: 16,
+        borderRadius: '16px',
       },
     },
   };

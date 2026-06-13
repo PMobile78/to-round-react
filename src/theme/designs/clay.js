@@ -267,7 +267,7 @@ export const clay = (mode) => {
             },
           },
       dialogPaper: {
-        borderRadius: 28,
+        borderRadius: '28px',
       },
     },
   };
