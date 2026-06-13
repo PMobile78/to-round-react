@@ -1,5 +1,9 @@
 # Change Password Dialog Implementation Plan
 
+## ✅ STATUS: COMPLETE (2026-06-13)
+
+Все 6 задач выполнены через subagent-driven development (субагенты на sonnet) с двухстадийным ревью каждой (соответствие спеке → качество кода) + финальное ревью всей фичи (READY TO MERGE). Коммиты: `c42a9f9`, `3e2fb9a`, `379c892`, `736a3c6`, `116f7d7`. 33/33 теста зелёные, `npm run build` успешно. GitHub issues #9–#15 закрыты. Живая ручная QA пройдена в **обеих локалях (en + uk)**: happy-path с реальной сменой пароля и откатом + повторным входом, несовпадение повтора, < 6 символов, новый = текущему, неверный текущий пароль, индикатор силы, сброс состояния диалога, тёмная тема. Ветка `feature/change-password-dialog` пока **НЕ смержена** (push в `main` = деплой; решение о merge/PR за владельцем).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Добавить окно «Сменить пароль» для залогиненного пользователя (email/password) с реаутентификацией, живой валидацией, советующим индикатором силы и экраном успеха.
@@ -31,7 +35,7 @@
 - Create: `src/utils/passwordPolicy.js`
 - Test: `src/utils/passwordPolicy.test.js`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Создать `src/utils/passwordPolicy.test.js`:
 
@@ -84,12 +88,12 @@ describe('validatePasswordForm', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npm test -- src/utils/passwordPolicy.test.js`
 Expected: FAIL — «Failed to resolve import "./passwordPolicy"» / функции не определены.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Создать `src/utils/passwordPolicy.js`:
 
@@ -124,12 +128,12 @@ export const validatePasswordForm = ({ currentPassword, newPassword, confirmPass
 };
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npm test -- src/utils/passwordPolicy.test.js`
 Expected: PASS — все 8 тестов зелёные.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/utils/passwordPolicy.js src/utils/passwordPolicy.test.js
@@ -144,7 +148,7 @@ git commit -m "feat(auth): password policy util (strength + form validation)"
 - Modify: `src/services/authService.js`
 - Test: `src/services/authService.changePassword.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Создать `src/services/authService.changePassword.test.js`:
 
@@ -191,12 +195,12 @@ describe('changePassword', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm test -- src/services/authService.changePassword.test.js`
 Expected: FAIL — `changePassword` не экспортируется.
 
-- [ ] **Step 3: Add the import and error key, then implement changePassword**
+- [x] **Step 3: Add the import and error key, then implement changePassword**
 
 В `src/services/authService.js` дополнить импорт из `firebase/auth` (добавить три имени к существующему списку):
 
@@ -239,12 +243,12 @@ export const changePassword = async (currentPassword, newPassword) => {
 };
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm test -- src/services/authService.changePassword.test.js`
 Expected: PASS — оба теста зелёные.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/services/authService.js src/services/authService.changePassword.test.js
@@ -259,7 +263,7 @@ git commit -m "feat(auth): changePassword service with reauthentication"
 - Modify: `src/locales/en/translation.json`
 - Modify: `src/locales/uk/translation.json`
 
-- [ ] **Step 1: Add the `changePassword` block to English**
+- [x] **Step 1: Add the `changePassword` block to English**
 
 В `src/locales/en/translation.json` после блока `"design": { ... },` (он закрывается перед `"categories": {`) вставить новый top-level блок:
 
@@ -293,7 +297,7 @@ git commit -m "feat(auth): changePassword service with reauthentication"
     },
 ```
 
-- [ ] **Step 2: Add the `changePassword` block to Ukrainian**
+- [x] **Step 2: Add the `changePassword` block to Ukrainian**
 
 В `src/locales/uk/translation.json` в той же позиции (после блока `"design": { ... },`) вставить:
 
@@ -327,12 +331,12 @@ git commit -m "feat(auth): changePassword service with reauthentication"
     },
 ```
 
-- [ ] **Step 3: Verify JSON is valid**
+- [x] **Step 3: Verify JSON is valid**
 
 Run: `node -e "JSON.parse(require('fs').readFileSync('src/locales/en/translation.json','utf8')); JSON.parse(require('fs').readFileSync('src/locales/uk/translation.json','utf8')); console.log('OK')"`
 Expected: `OK` (никаких SyntaxError — проверь висячие запятые).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/locales/en/translation.json src/locales/uk/translation.json
@@ -346,7 +350,7 @@ git commit -m "feat(i18n): change password dialog strings (en, uk)"
 **Files:**
 - Create: `src/components/ChangePasswordDialog.jsx`
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 Создать `src/components/ChangePasswordDialog.jsx`:
 
@@ -554,12 +558,12 @@ const ChangePasswordDialog = ({ open, onClose, isSmallScreen, isMobile, getDialo
 export default ChangePasswordDialog;
 ```
 
-- [ ] **Step 2: Verify it builds**
+- [x] **Step 2: Verify it builds**
 
 Run: `npm run build`
 Expected: сборка успешна, без ошибок про неразрешённые импорты.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/ChangePasswordDialog.jsx
@@ -574,7 +578,7 @@ git commit -m "feat(auth): ChangePasswordDialog component"
 - Modify: `src/pages/BubblesPage.jsx`
 - Modify: `src/components/MainMenuDrawer.jsx`
 
-- [ ] **Step 1: Import the component in BubblesPage**
+- [x] **Step 1: Import the component in BubblesPage**
 
 В `src/pages/BubblesPage.jsx` после строки `import AppearanceDialog from '../components/AppearanceDialog';` (≈ строка 28) добавить:
 
@@ -582,7 +586,7 @@ git commit -m "feat(auth): ChangePasswordDialog component"
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
 ```
 
-- [ ] **Step 2: Add dialog state**
+- [x] **Step 2: Add dialog state**
 
 В `src/pages/BubblesPage.jsx` после строки `const [appearanceDialogOpen, setAppearanceDialogOpen] = useState(false); // Диалог оформления` (≈ строка 289) добавить:
 
@@ -590,7 +594,7 @@ import ChangePasswordDialog from '../components/ChangePasswordDialog';
     const [changePasswordOpen, setChangePasswordOpen] = useState(false); // Диалог смены пароля
 ```
 
-- [ ] **Step 3: Pass the open handler to MainMenuDrawer**
+- [x] **Step 3: Pass the open handler to MainMenuDrawer**
 
 В `src/pages/BubblesPage.jsx` после строки `onOpenAppearanceDialog={() => setAppearanceDialogOpen(true)}` (≈ строка 2745) добавить:
 
@@ -598,7 +602,7 @@ import ChangePasswordDialog from '../components/ChangePasswordDialog';
                 onOpenChangePasswordDialog={() => setChangePasswordOpen(true)}
 ```
 
-- [ ] **Step 4: Render the dialog**
+- [x] **Step 4: Render the dialog**
 
 В `src/pages/BubblesPage.jsx` сразу после закрывающего тега `<AppearanceDialog ... />` (блок начинается ≈ строка 2850) добавить:
 
@@ -612,7 +616,7 @@ import ChangePasswordDialog from '../components/ChangePasswordDialog';
             />
 ```
 
-- [ ] **Step 5: Add the menu item in MainMenuDrawer**
+- [x] **Step 5: Add the menu item in MainMenuDrawer**
 
 В `src/components/MainMenuDrawer.jsx` добавить иконку в импорт из `@mui/icons-material` (в существующий список, например после `AccountTreeOutlined`):
 
@@ -647,12 +651,12 @@ import ChangePasswordDialog from '../components/ChangePasswordDialog';
                     </ListItem>
 ```
 
-- [ ] **Step 6: Verify it builds and tests pass**
+- [x] **Step 6: Verify it builds and tests pass**
 
 Run: `npm run build && npm test`
 Expected: сборка успешна; тесты зелёные (util + service).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/pages/BubblesPage.jsx src/components/MainMenuDrawer.jsx
@@ -665,18 +669,18 @@ git commit -m "feat(auth): wire ChangePasswordDialog into menu"
 
 **Files:** нет (ручная проверка).
 
-- [ ] **Step 1: Run the dev server**
+- [x] **Step 1: Run the dev server**
 
 Run: `npm start`
 Открыть приложение, залогиниться (email/password).
 
-- [ ] **Step 2: Verify the happy path**
+- [x] **Step 2: Verify the happy path**
 
 Открыть меню → «Сменить пароль». Ввести верный текущий пароль, новый (≥6, отличный от текущего), совпадающий повтор → «Сохранить» → появляется экран с зелёной галочкой и «Готово». Закрыть, выйти, войти с новым паролем — успешно.
 
 Expected: пароль реально сменился.
 
-- [ ] **Step 3: Verify validation and errors**
+- [x] **Step 3: Verify validation and errors**
 
 - Повтор ≠ новый → красный helperText «Пароли не совпадают», «Сохранить» неактивна.
 - Новый < 6 → «Минимум 6 символов».
@@ -684,11 +688,11 @@ Expected: пароль реально сменился.
 - Неверный текущий пароль → после «Сохранить» helperText под полем текущего «Неверный текущий пароль».
 - Индикатор силы меняет цвет/ярлык по мере ввода нового пароля и не блокирует сохранение.
 
-- [ ] **Step 4: Verify theming (chrome-devtools)**
+- [x] **Step 4: Verify theming (chrome-devtools)**
 
 Проверить окно в light/dark и desktop/mobile: фон/текст наследуют тему (нет «прибитых» цветов фона), цвета индикатора/ошибок/успеха читаемы. Переключить пару скинов (если доступны) — окно наследует оформление.
 
-- [ ] **Step 5: Final commit if any tweaks were needed**
+- [x] **Step 5: Final commit if any tweaks were needed**
 
 ```bash
 git add -A
