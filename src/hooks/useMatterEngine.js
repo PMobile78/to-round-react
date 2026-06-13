@@ -342,7 +342,34 @@ export function useMatterEngine({
                     }
                     break;
                 case 'hardShadow':
-                    // TODO (Task 7): Implement hard shadow effect drawing with effectParams
+                    // Draw hard offset shadow disc behind each bubble
+                    if (effectParams && renderRef.current) {
+                        const ctx = renderRef.current.context;
+                        const dx = effectParams.dx || 5;
+                        const dy = effectParams.dy || 5;
+                        const shadowColor = effectParams.shadowColor || '#000000';
+                        const shadowAlpha = effectParams.shadowAlpha || 0.5;
+
+                        const bodies = engine.world.bodies;
+                        ctx.save();
+                        // Use destination-over composite to draw shadow behind bubbles
+                        ctx.globalCompositeOperation = 'destination-over';
+
+                        bodies.forEach((body) => {
+                            if (body.label === 'Circle Body' && body.circleRadius) {
+                                const radius = body.circleRadius;
+                                const x = body.position.x;
+                                const y = body.position.y;
+
+                                // Draw opaque shadow disc at offset position
+                                ctx.fillStyle = `rgba(${parseInt(shadowColor.substring(1, 3), 16)}, ${parseInt(shadowColor.substring(3, 5), 16)}, ${parseInt(shadowColor.substring(5, 7), 16)}, ${shadowAlpha})`;
+                                ctx.beginPath();
+                                ctx.arc(x + dx, y + dy, radius, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        });
+                        ctx.restore();
+                    }
                     break;
                 case 'clay':
                     // TODO (Task 7): Implement clay effect drawing with effectParams
