@@ -32,6 +32,7 @@ import { FilterMenu } from './FilterMenu';
 import SearchField from './SearchField';
 import useSearch from '../hooks/useSearch';
 import HtmlRenderer from './HtmlRenderer';
+import { stripHtml } from '../utils/stripHtml';
 import {
     BUBBLE_STATUS,
     markBubbleAsDone,
@@ -244,7 +245,7 @@ const TaskList = ({
         const query = debouncedSearchQuery.toLowerCase().trim();
         const searchFilteredBubbles = statusFilteredBubbles.filter(bubble => {
             const titleMatch = (bubble.title || '').toLowerCase().includes(query);
-            const descriptionMatch = (bubble.description || '').toLowerCase().includes(query);
+            const descriptionMatch = stripHtml(bubble.description || '').toLowerCase().includes(query);
             const tag = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
             const tagMatch = tag ? tag.name.toLowerCase().includes(query) : false;
             return titleMatch || descriptionMatch || tagMatch;

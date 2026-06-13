@@ -67,6 +67,7 @@ import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
 import { withAlpha } from '../utils/colorUtils';
 import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime, getOffsetMs } from '../utils/dateTime';
+import { stripHtml } from '../utils/stripHtml';
 
 
 // Helpers for JSON export
@@ -1334,7 +1335,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             const titleMatch = (task.title || '').toLowerCase().includes(query);
 
             // Search in description
-            const descriptionMatch = (task.description || '').toLowerCase().includes(query);
+            const descriptionMatch = stripHtml(task.description || '').toLowerCase().includes(query);
 
             // Search in tag name
             const tag = task.tagId ? tags.find(t => t.id === task.tagId) : null;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { stripHtml } from '../utils/stripHtml';
 
 /**
  * Универсальный хук для поиска с debouncing
@@ -33,7 +34,7 @@ export const useSearch = (items = [], tags = [], searchFunction = null, debounce
             const titleMatch = (item.title || '').toLowerCase().includes(lowerQuery);
 
             // Search in description
-            const descriptionMatch = (item.description || '').toLowerCase().includes(lowerQuery);
+            const descriptionMatch = stripHtml(item.description || '').toLowerCase().includes(lowerQuery);
 
             // Search in tag name
             const tag = item.tagId ? tags.find(t => t.id === item.tagId) : null;

@@ -72,8 +72,8 @@
     "i18next-browser-languagedetector": "^8.2.0",
     "matter-js": "^0.20.0",
     "mind-elixir": "^5.12.2",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0",
     "react-i18next": "^15.5.3"
   },
   "peerDependencies": {
@@ -99,6 +99,7 @@
     "eslint": "^10.5.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "gh-pages": "^6.3.0",
+    "happy-dom": "^20.10.3",
     "vite": "^8.0.16",
     "vitest": "^4.1.8"
   }
