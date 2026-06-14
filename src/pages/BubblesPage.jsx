@@ -34,9 +34,6 @@ import {
     loadBubblesFromFirestore,
     clearBubblesFromFirestore,
     saveTagsToFirestore,
-    upsertTagInFirestore,
-    deleteTagFromFirestore,
-    subscribeToTagsUpdates,
     subscribeToBubblesUpdates,
     BUBBLE_STATUS,
     markBubbleAsDeleted,
@@ -66,6 +63,7 @@ import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
 import { useMatterEngine } from '../hooks/useMatterEngine';
 import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
+import { useTags } from '../hooks/useTags';
 import { withAlpha } from '../utils/colorUtils';
 import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime, getOffsetMs } from '../utils/dateTime';
 import { stripHtml } from '../utils/stripHtml';
@@ -85,21 +83,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // 600px and below
 
-    // Predefined color palette
-    // const COLOR_PALETTE = [
-    //     '#FF6B6B', '#FF8E8E', '#FFA07A', '#FFD700', '#C5E063',
-    //     '#98FB98', '#90EE90', '#20B2AA', '#7FFFD4', '#4682B4',
-    //     '#87CEEB', '#6495ED', '#4169E1', '#6A5ACD', '#8A2BE2',
-    //     '#DA70D6', '#C71585', '#FF69B4', '#696969', '#A9A9A9'
-    // ];
-
-    // My palette
-    const COLOR_PALETTE = [
-        '#da3833', '#ee603c', '#fd8b2b', '#e9be00', '#b7be00',
-        '#7db44e', '#46a549', '#00a47a', '#34c09d', '#007771',
-        '#00a5cf', '#0089b5', '#005ea4', '#6179cf', '#434d82',
-        '#b14dd1', '#c04097', '#f25e6a', '#4d697e', '#86a49c'
-    ];
     const canvasRef = useRef(null);
     const engineRef = useRef(null);
     const renderRef = useRef(null);
@@ -114,15 +97,40 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         liveEditRef.current = { editDialog, selectedBubbleId: selectedBubble?.id ?? null };
     }, [editDialog, selectedBubble]);
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-    const [tags, setTags] = useState([]);
-    const tagsRef = useRef(tags);
-    useEffect(() => { tagsRef.current = tags; }, [tags]);
-    const [selectedTagId, setSelectedTagId] = useState('');
-    const [tagDialog, setTagDialog] = useState(false);
-    const [tagName, setTagName] = useState('');
-    const [tagColor, setTagColor] = useState('#2f6bdb');
-    const [editingTag, setEditingTag] = useState(null);
-    const [tagMenuAnchor, setTagMenuAnchor] = useState(null);
+
+    // Tag state + behaviour extracted into useTags (Task 2/6 of #38).
+    // pageDeps bridges page-owned deps that are defined *after* this call or that
+    // would otherwise create a useTags <-> useBubbleFilters cycle (setFilterTags
+    // comes from useBubbleFilters, which itself needs `tags` from useTags).
+    // Tag handlers read pageDeps.current at call-time, so render order is fine.
+    const tagPageDepsRef = useRef({});
+    const {
+        tags,
+        setTags,
+        tagsRef,
+        selectedTagId,
+        setSelectedTagId,
+        tagDialog,
+        tagName,
+        setTagName,
+        tagColor,
+        setTagColor,
+        editingTag,
+        tagMenuAnchor,
+        setTagMenuAnchor,
+        deletingTags,
+        deleteTimers,
+        handleOpenTagDialog,
+        handleSaveTag,
+        handleDeleteTag,
+        handleUndoDeleteTag,
+        handleCloseTagDialog,
+        getBubbleCountByTag,
+        getNextAvailableColor,
+        isColorAvailable,
+        canCreateMoreTags,
+        COLOR_PALETTE
+    } = useTags({ user, bubbles, pageDeps: tagPageDepsRef });
 
     // Filter / category state extracted into hook
     const {
@@ -180,8 +188,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         const saved = localStorage.getItem('bubbles-show-instructions');
         return saved === null ? true : saved === 'true';
     }); // Показывать ли подсказки инструкций
-    const [deletingTags, setDeletingTags] = useState(new Set()); // Теги в процессе удаления
-    const [deleteTimers, setDeleteTimers] = useState(new Map()); // Таймеры удаления тегов
     const [bubbleBackgroundEnabled, setBubbleBackgroundEnabled] = useState(() => {
         const saved = localStorage.getItem('bubbles-background-enabled');
         return saved === null ? true : saved === 'true';
@@ -245,6 +251,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             return withAlpha(tagColor, theme.custom?.bubble?.fill?.tagAlpha ?? 0.10);
         }
         return theme.custom?.bubble?.fill?.defaultFill ?? 'rgba(255, 255, 255, 0.06)';
+    };
+
+    // Keep the bridge to useTags fresh: tag handlers read these at call-time.
+    tagPageDepsRef.current = {
+        setBubbles,
+        setFilterTags,
+        setListFilterTags,
+        getBubbleFillStyle,
+        setCategoriesDialog
     };
 
     // Function to get canvas dimensions depending on screen size
@@ -333,57 +348,58 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         }
     }, [theme, bubbles, tags]);
 
-    // Real-time tags synchronization (wait for auth user)
+    // Reconcile filter selections + recolor bubbles whenever the tag set changes.
+    // Seam (Task 2/6 of #38): the live `setTags` half of the old
+    // subscribeToTagsUpdates effect now lives in useTags; this [tags] effect keeps
+    // the filter-reconciliation + bubble-recolor half here. The very first run
+    // (initial empty `tags` on mount) is skipped so saved filters aren't wiped
+    // before tags load — matching the original subscription-driven timing.
+    const tagsReconcileInitRef = useRef(false);
     useEffect(() => {
-        if (!user) return;
-        const unsubscribe = subscribeToTagsUpdates((updatedTags) => {
-            // Ensure updatedTags is always an array
-            const tagsArray = Array.isArray(updatedTags) ? updatedTags : [];
-            setTags(tagsArray);
+        if (!tagsReconcileInitRef.current) {
+            tagsReconcileInitRef.current = true;
+            return;
+        }
+        const existingTagIds = tags.map(tag => tag.id);
 
-            // Update filter tags to remove deleted tags
-            setFilterTags(currentFilterTags => {
-                const existingTagIds = tagsArray.map(tag => tag.id);
-                const validFilterTags = currentFilterTags.filter(id => existingTagIds.includes(id));
-                // Не записываем ключ впервые, чтобы не блокировать первичную инициализацию фильтра
-                const hadFilterKey = localStorage.getItem('bubbles-filter-tags') !== null;
-                if (hadFilterKey) {
-                    localStorage.setItem('bubbles-filter-tags', JSON.stringify(validFilterTags));
-                }
-                return validFilterTags;
-            });
-
-            // Update list filter tags to remove deleted tags
-            setListFilterTags(currentListFilterTags => {
-                const existingTagIds = tagsArray.map(tag => tag.id);
-                const validListFilterTags = currentListFilterTags.filter(id => existingTagIds.includes(id));
-                const hadListFilterKey = localStorage.getItem('bubbles-list-filter-tags') !== null;
-                if (hadListFilterKey) {
-                    localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(validListFilterTags));
-                }
-                return validListFilterTags;
-            });
-
-            // Update bubble colors and fill styles when tags change
-            setBubbles(currentBubbles => {
-                return currentBubbles.map(bubble => {
-                    if (bubble.tagId) {
-                        const tag = tagsArray.find(t => t.id === bubble.tagId);
-                        if (tag && bubble.body) {
-                            bubble.body.render.strokeStyle = tag.color;
-                            bubble.body.render.fillStyle = getBubbleFillStyle(tag.color);
-                        }
-                    } else if (bubble.body) {
-                        bubble.body.render.strokeStyle = '#B0B0B0';
-                        bubble.body.render.fillStyle = getBubbleFillStyle(null);
-                    }
-                    return bubble;
-                });
-            });
+        // Update filter tags to remove deleted tags
+        setFilterTags(currentFilterTags => {
+            const validFilterTags = currentFilterTags.filter(id => existingTagIds.includes(id));
+            // Не записываем ключ впервые, чтобы не блокировать первичную инициализацию фильтра
+            const hadFilterKey = localStorage.getItem('bubbles-filter-tags') !== null;
+            if (hadFilterKey) {
+                localStorage.setItem('bubbles-filter-tags', JSON.stringify(validFilterTags));
+            }
+            return validFilterTags;
         });
 
-        return () => unsubscribe();
-    }, [user]);
+        // Update list filter tags to remove deleted tags
+        setListFilterTags(currentListFilterTags => {
+            const validListFilterTags = currentListFilterTags.filter(id => existingTagIds.includes(id));
+            const hadListFilterKey = localStorage.getItem('bubbles-list-filter-tags') !== null;
+            if (hadListFilterKey) {
+                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(validListFilterTags));
+            }
+            return validListFilterTags;
+        });
+
+        // Update bubble colors and fill styles when tags change
+        setBubbles(currentBubbles => {
+            return currentBubbles.map(bubble => {
+                if (bubble.tagId) {
+                    const tag = tags.find(t => t.id === bubble.tagId);
+                    if (tag && bubble.body) {
+                        bubble.body.render.strokeStyle = tag.color;
+                        bubble.body.render.fillStyle = getBubbleFillStyle(tag.color);
+                    }
+                } else if (bubble.body) {
+                    bubble.body.render.strokeStyle = '#B0B0B0';
+                    bubble.body.render.fillStyle = getBubbleFillStyle(null);
+                }
+                return bubble;
+            });
+        });
+    }, [tags]);
 
     // Инициализация настроек фильтра списка задач после загрузки тегов
     useEffect(() => {
@@ -954,156 +970,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         }
     };
 
-    // Functions for working with tags
-    const handleOpenTagDialog = (tag = null) => {
-        if (tag) {
-            setEditingTag(tag);
-            setTagName(tag.name);
-            setTagColor(tag.color);
-        } else {
-            if (!canCreateMoreTags()) {
-                return; // Не открываем диалог, если нет доступных цветов
-            }
-            setEditingTag(null);
-            setTagName('');
-            setTagColor(getNextAvailableColor() || '#2f6bdb');
-        }
-        setTagDialog(true);
-    };
-
-    const handleSaveTag = () => {
-        // Проверяем, что цвет доступен (если это новый тег или изменился цвет)
-        if (!editingTag && !isColorAvailable(tagColor)) {
-            return; // Цвет уже занят
-        }
-
-        if (editingTag && editingTag.color !== tagColor && !isColorAvailable(tagColor)) {
-            return; // Цвет уже занят при редактировании
-        }
-
-        const newTag = {
-            id: editingTag ? editingTag.id : Math.random().toString(36).substr(2, 9),
-            name: tagName.trim(),
-            color: tagColor
-        };
-
-        let updatedTags;
-        if (editingTag) {
-            updatedTags = tags.map(tag => tag.id === editingTag.id ? newTag : tag);
-        } else {
-            updatedTags = [...tags, newTag];
-        }
-
-        setTags(updatedTags);
-        // Transactional single-tag write: avoids clobbering concurrent tag edits
-        // from another device. onSnapshot reconciles local state afterwards.
-        upsertTagInFirestore(newTag).catch(e => logger.error('Error saving tag:', e));
-
-        // Автоматически активируем новый тег в фильтрах (только для создания, не для редактирования)
-        if (!editingTag) {
-            // Активируем в фильтрах Bubbles View
-            setFilterTags(prev => {
-                const newFilterTags = [...prev, newTag.id];
-                localStorage.setItem('bubbles-filter-tags', JSON.stringify(newFilterTags));
-                return newFilterTags;
-            });
-
-            // Активируем в фильтрах List View
-            setListFilterTags(prev => {
-                const newListFilterTags = [...prev, newTag.id];
-                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(newListFilterTags));
-                return newListFilterTags;
-            });
-        }
-
-        setTagDialog(false);
-        setEditingTag(null);
-        setTagName('');
-        setTagColor(getNextAvailableColor() || '#2f6bdb');
-
-        // Открываем обратно диалог категорий (и для создания, и для редактирования)
-        setTimeout(() => {
-            setCategoriesDialog(true);
-        }, 100);
-    };
-
-    const handleDeleteTag = (tagId) => {
-        // Добавляем тег в состояние удаления
-        setDeletingTags(prev => new Set([...prev, tagId]));
-
-        // Создаем таймер и сохраняем его
-        const timer = setTimeout(() => {
-            setDeletingTags(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(tagId);
-                return newSet;
-            });
-
-            const updatedTags = tagsRef.current.filter(tag => tag.id !== tagId);
-            setTags(updatedTags);
-            // Transactional single-tag delete: reads fresh server state so a tag
-            // added/edited on another device is not overwritten by a stale array.
-            deleteTagFromFirestore(tagId).catch(e => logger.error('Error deleting tag:', e));
-
-            // Удаляем ссылки на этот тег из пузырей
-            const affectedIds = new Set();
-            setBubbles(prev => prev.map(bubble => {
-                if (bubble.tagId === tagId) {
-                    affectedIds.add(bubble.id);
-                    // Сбрасываем цвет пузыря на светло-серый и обновляем fillStyle
-                    bubble.body.render.strokeStyle = '#B0B0B0';
-                    bubble.body.render.fillStyle = getBubbleFillStyle(null);
-                    return { ...bubble, tagId: null };
-                }
-                return bubble;
-            }));
-            affectedIds.forEach(id =>
-                updateBubbleFields(id, { tagId: null }).catch(e => logger.error('Error clearing tag from bubble:', e))
-            );
-
-            // Удаляем таймер из Map
-            setDeleteTimers(prev => {
-                const newMap = new Map(prev);
-                newMap.delete(tagId);
-                return newMap;
-            });
-        }, 7000);
-
-        // Сохраняем таймер
-        setDeleteTimers(prev => new Map(prev).set(tagId, timer));
-    };
-
-    const handleCloseTagDialog = () => {
-        setTagDialog(false);
-        setEditingTag(null);
-        setTagName('');
-        setTagColor(getNextAvailableColor() || '#2f6bdb');
-
-        // Открываем обратно диалог категорий при отмене
-        setTimeout(() => {
-            setCategoriesDialog(true);
-        }, 100);
-    };
-
-    const handleUndoDeleteTag = (tagId) => {
-        // Очищаем таймер удаления
-        const timer = deleteTimers.get(tagId);
-        if (timer) {
-            clearTimeout(timer);
-            setDeleteTimers(prev => {
-                const newMap = new Map(prev);
-                newMap.delete(tagId);
-                return newMap;
-            });
-        }
-
-        // Убираем тег из состояния удаления
-        setDeletingTags(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(tagId);
-            return newSet;
-        });
-    };
+    // Tag dialog/CRUD + color helpers live in useTags (Task 2/6 of #38).
 
     // Memoized functions for filter management
     const handleTagFilterChange = useCallback((tagId) => {
@@ -1254,47 +1121,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
         return searchFilteredBubbles.length;
     }, [bubbles, tags, listFilter, listSearchQuery]);
-
-    // Function to count all bubbles by category (for category management dialog)
-    const getBubbleCountByTag = (tagId) => {
-        if (tagId === null) {
-            // Count bubbles without tags or with deleted tags
-            return bubbles.filter(bubble => {
-                if (!bubble.tagId) return true;
-                const tagExists = tags.find(t => t.id === bubble.tagId);
-                return !tagExists; // Включаем пузыри с удаленными тегами
-            }).length;
-        }
-        return bubbles.filter(bubble => bubble.tagId === tagId).length;
-    };
-
-    // Функции для работы с цветами
-    const getUsedColors = () => {
-        return tags.map(tag => tag.color);
-    };
-
-    const getAvailableColors = () => {
-        const usedColors = getUsedColors();
-        return COLOR_PALETTE.filter(color => !usedColors.includes(color));
-    };
-
-    const getNextAvailableColor = () => {
-        const availableColors = getAvailableColors();
-        return availableColors.length > 0 ? availableColors[0] : null;
-    };
-
-    const isColorAvailable = (color) => {
-        const usedColors = getUsedColors();
-        // Если редактируем тег, его текущий цвет всегда доступен
-        if (editingTag && editingTag.color === color) {
-            return true;
-        }
-        return !usedColors.includes(color);
-    };
-
-    const canCreateMoreTags = () => {
-        return getAvailableColors().length > 0;
-    };
 
     // Функции для работы с категориями (тегами)
     const getCategoryBubbleCounts = () => {
