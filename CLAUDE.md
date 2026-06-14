@@ -25,7 +25,7 @@ npm run version:major
 ## Architecture
 
 **Stack:** React (Vite 8), Firebase (Auth + Firestore client + Cloud Functions Gen2 + FCM), Matter.js, MUI v7, TipTap (rich text), i18next, @xyflow/react + mind-elixir (mind maps), date-fns, DOMPurify.  
-**Hosting:** GitHub Pages. Deployed via `.github/workflows/deploy.yml` on push to `main`/`master`.
+**Hosting:** GitHub Pages. Deployed via `.github/workflows/deploy.yml` — **manual** `workflow_dispatch` only (push/PR run tests, not deploy).
 
 ### Frontend structure
 
@@ -96,7 +96,7 @@ The service worker (`public/sw.js`) is generated from env vars by `scripts/gener
 
 ### CI / Version management
 
-`.github/workflows/deploy.yml` auto-runs `npm run version:patch` on every push to `main`, commits the bump with `[skip ci]`, builds, and deploys to GitHub Pages. The current version in `package.json` is the source of truth. See [docs/deployment.md](docs/deployment.md).
+`.github/workflows/deploy.yml` has two jobs: `test` (push/PR/dispatch — runs tests, no deploy) and `deploy` (**manual `workflow_dispatch` only**, `needs: test`). The manual run bumps the version at the chosen level (`patch`/`minor`/`major` input, default `patch`), commits the bump with `[skip ci]`, builds, and deploys to GitHub Pages. Must be run from `main`/`master` (github-pages environment protection rule). The current version in `package.json` is the source of truth. See [docs/deployment.md](docs/deployment.md).
 
 ## Active refactor context
 
