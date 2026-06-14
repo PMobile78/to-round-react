@@ -2257,7 +2257,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
             <TextOverlay
               bubbles={bubbles}
               getFilteredBubbles={getFilteredBubbles}
-              engineRef={engineRef}
               foundBubblesIds={foundBubblesIds}
               debouncedBubblesSearchQuery={debouncedBubblesSearchQuery}
               isMobile={isMobile}

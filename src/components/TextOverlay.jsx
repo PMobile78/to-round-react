@@ -10,7 +10,6 @@ import { parseLocalDateTime } from '../utils/dateTime';
  * Props:
  *   - bubbles: array of bubble objects with physics bodies
  *   - getFilteredBubbles: function/array of filtered bubbles (memoized)
- *   - engineRef: Matter.Engine ref
  *   - foundBubblesIds: Set of bubble IDs matching search
  *   - debouncedBubblesSearchQuery: current search query string
  *   - isMobile: boolean
@@ -20,7 +19,6 @@ import { parseLocalDateTime } from '../utils/dateTime';
 function TextOverlay({
   bubbles,
   getFilteredBubbles,
-  engineRef,
   foundBubblesIds,
   debouncedBubblesSearchQuery,
   isMobile,
@@ -45,8 +43,12 @@ function TextOverlay({
   }, [updateRefs]);
 
   useEffect(() => {
-    if (!engineRef.current) return undefined;
-
+    // Запускаем rAF-цикл всегда: engineRef.current ещё null на момент
+    // монтирования дочернего компонента (родительский эффект, выставляющий
+    // engineRef, выполняется позже), а пустой массив зависимостей не давал
+    // эффекту перезапуститься. В dev это маскировал двойной вызов StrictMode,
+    // в prod-сборке цикл не стартовал вовсе. Тело цикла само фильтрует пузыри
+    // без готового тела, поэтому ранний выход не нужен.
     const updatePositions = () => {
       const filteredBubbles = filteredBubblesRef.current || [];
       const newPositions = filteredBubbles
