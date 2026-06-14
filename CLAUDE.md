@@ -81,9 +81,10 @@ The scheduled Cloud Function reads tasks **only** from the subcollection via an 
 
 ### Cloud Functions
 
-`functions/index.js` exports **two** functions (region `europe-west1`):
-- `scheduleDueDateNotifications` — `onSchedule` every minute; queries only **due** bubbles via the `nextNotifyAt` index, sends FCM **reminder** / **overdue** notifications, dedups via `notification-sent` (hourly cleanup of entries older than 7 days)
+`functions/index.js` exports **three** functions (region `europe-west1`):
+- `scheduleDueDateNotifications` — `onSchedule` every minute; queries only **due** bubbles via the `nextNotifyAt` index, sends FCM **reminder** / **overdue** notifications, dedups via `notification-sent`
 - `maintainNextNotifyAt` — `onDocumentWritten` trigger keeping each task's `nextNotifyAt` field current
+- `cleanupNotificationSent` — `onSchedule` hourly (`0 * * * *`); trims `notification-sent` entries older than 7 days (decoupled from the per-minute notifier so a single missed run no longer skips cleanup for an hour)
 - Locales `en` and `uk`; `ru` → `en` fallback
 
 Full design and operations: [docs/notifications.md](docs/notifications.md).

@@ -11,7 +11,8 @@ import {
     serverTimestamp,
     onSnapshot,
     where,
-    writeBatch
+    writeBatch,
+    runTransaction
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getCurrentUser } from './authService';
@@ -299,6 +300,14 @@ export const restoreBubble = async (bubbleId, bubblesData) => {
 };
 
 // Tags operations
+//
+// Tags live as an array in a single document (`user-tags/{uid}`). Whole-array
+// writes (saveTagsToFirestore) clobber concurrent edits from other devices when
+// the local snapshot is stale. For single-tag add/edit/delete prefer the
+// transactional helpers below: each reads the current array *inside* the
+// transaction and applies only its own delta, so a concurrent change on another
+// device is preserved. saveTagsToFirestore stays for deliberate whole-list ops
+// (import, reorder) where replacing the entire array is the intended semantics.
 export const saveTagsToFirestore = async (tagsData) => {
     try {
         const userId = getUserDocumentId();
@@ -317,6 +326,44 @@ export const saveTagsToFirestore = async (tagsData) => {
         if (!uid) return;
         localStorage.setItem(`tags_${uid}`, JSON.stringify(tagsData));
     }
+};
+
+// Read the current tags array from a transaction snapshot, defensively.
+const readTagsFromSnap = (snap) => {
+    if (!snap.exists()) return [];
+    const tags = snap.data()?.tags;
+    return Array.isArray(tags) ? tags : [];
+};
+
+// Add or update a single tag atomically. Returns the resulting tags array.
+// Transaction reads fresh server state, so a tag added/edited on another device
+// since the local snapshot is not overwritten.
+export const upsertTagInFirestore = async (tag) => {
+    const userId = getUserDocumentId();
+    const tagsRef = doc(db, TAGS_COLLECTION, userId);
+    return runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(tagsRef);
+        const current = readTagsFromSnap(snap);
+        const idx = current.findIndex(t => t.id === tag.id);
+        const next = idx >= 0
+            ? current.map(t => (t.id === tag.id ? tag : t))
+            : [...current, tag];
+        transaction.set(tagsRef, { tags: next, updatedAt: serverTimestamp(), userId }, { merge: true });
+        return next;
+    });
+};
+
+// Remove a single tag by id atomically. Returns the resulting tags array.
+export const deleteTagFromFirestore = async (tagId) => {
+    const userId = getUserDocumentId();
+    const tagsRef = doc(db, TAGS_COLLECTION, userId);
+    return runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(tagsRef);
+        const current = readTagsFromSnap(snap);
+        const next = current.filter(t => t.id !== tagId);
+        transaction.set(tagsRef, { tags: next, updatedAt: serverTimestamp(), userId }, { merge: true });
+        return next;
+    });
 };
 
 export const loadTagsFromFirestore = async () => {

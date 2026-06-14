@@ -35,6 +35,8 @@ import {
     loadBubblesFromFirestore,
     clearBubblesFromFirestore,
     saveTagsToFirestore,
+    upsertTagInFirestore,
+    deleteTagFromFirestore,
     subscribeToTagsUpdates,
     subscribeToBubblesUpdates,
     BUBBLE_STATUS,
@@ -1091,7 +1093,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         }
 
         setTags(updatedTags);
-        saveTagsToFirestore(updatedTags);
+        // Transactional single-tag write: avoids clobbering concurrent tag edits
+        // from another device. onSnapshot reconciles local state afterwards.
+        upsertTagInFirestore(newTag).catch(e => logger.error('Error saving tag:', e));
 
         // Автоматически активируем новый тег в фильтрах (только для создания, не для редактирования)
         if (!editingTag) {
@@ -1135,7 +1139,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
             const updatedTags = tagsRef.current.filter(tag => tag.id !== tagId);
             setTags(updatedTags);
-            saveTagsToFirestore(updatedTags);
+            // Transactional single-tag delete: reads fresh server state so a tag
+            // added/edited on another device is not overwritten by a stale array.
+            deleteTagFromFirestore(tagId).catch(e => logger.error('Error deleting tag:', e));
 
             // Удаляем ссылки на этот тег из пузырей
             const affectedIds = new Set();

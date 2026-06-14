@@ -133,11 +133,22 @@ db.collectionGroup('bubbles')
 
 `onSchedule` `every 1 minutes`, регион `europe-west1`, `maxInstances: 10`. Каждый прогон:
 
-1. на минуте `:00` каждого часа — `cleanupOldNotificationSent()` (чистит записи старше 7 дней);
-2. `fetchDueBubbles(now)` — индексный запрос только due-задач, группировка по пользователю;
-3. FCM-токены читаются **только** для пользователей из выборки (`getUserFcmTokens`);
-4. для каждой задачи: `isBubbleOverdue` → `handleOverdue`, иначе `handleReminder`;
-5. в `finally` — **всегда** `updateNextNotifyAt(...)`, иначе задача читалась бы каждую минуту.
+1. `fetchDueBubbles(now)` — индексный запрос только due-задач, группировка по пользователю;
+2. FCM-токены читаются **только** для пользователей из выборки (`getUserFcmTokens`);
+3. для каждой задачи: `isBubbleOverdue` → `handleOverdue`, иначе `handleReminder`;
+4. в `finally` — **всегда** `updateNextNotifyAt(...)`, иначе задача читалась бы каждую минуту.
+
+Очистка `notification-sent` вынесена в отдельную функцию (см. ниже) — ежеминутный
+прогон housekeeping больше не делает.
+
+### Scheduled-функция `cleanupNotificationSent`
+
+`onSchedule` `0 * * * *` (раз в час), регион `europe-west1`, `maxInstances: 1`. Вызывает
+`cleanupOldNotificationSent()` (чистит записи `notification-sent` старше 7 дней).
+Развязана с ежеминутным нотификатором: раньше cleanup висел на ветке `now.getMinutes() === 0`
+внутри `scheduleDueDateNotifications`, и единственный пропущенный прогон в `:00` (cold start,
+наложение, ошибка или не-кратное `every N`-расписание) откладывал чистку на целый час.
+Отдельный почасовой cron устраняет эту хрупкость.
 
 - **`handleReminder`** — выбирает свежий наступивший reminder (`pickReminderToSend`,
   без жёсткого окна — пропуск минуты не теряет напоминание), шлёт, дедуп по `notification-sent`.
@@ -168,20 +179,15 @@ db.collectionGroup('bubbles')
 - **`*/N * * * *`** (unix-cron, Cloud Scheduler) — привязка к началу часа, срабатывает
   **строго кратно** N (`13:00 → 13:05 → 13:10…`) независимо от времени деплоя.
 
-Почему это критично: cleanup завязан на конкретную минуту часа:
+Раньше это было критично, потому что cleanup жил внутри ежеминутного нотификатора на ветке
+`now.getMinutes() === 0`: с `every N` расписание могло встать на `:03, :08…`, условие не
+срабатывало никогда, и `notification-sent` рос бесконечно. Теперь cleanup вынесен в отдельный
+почасовой cron `cleanupNotificationSent` (`0 * * * *`), поэтому от формата расписания
+нотификатора он больше не зависит.
 
-```js
-// functions/index.js — внутри scheduleDueDateNotifications
-if (now.getMinutes() === 0) {
-    await cleanupOldNotificationSent();
-}
-```
-
-С `*/N` минута `:00` гарантированно попадает раз в час → cleanup работает. С `every N`
-расписание может встать на `:03, :08…` — `getMinutes() === 0` **не сработает никогда**, и
-`notification-sent` будет расти бесконечно.
-
-> **Вывод:** при переходе на запуск реже минуты используйте `*/N * * * *`, а не `every N minutes`.
+> **Вывод:** для самого нотификатора при переходе на запуск реже минуты предпочтительнее
+> `*/N * * * *`, а не `every N minutes` (предсказуемая привязка к началу часа). Очистка
+> `notification-sent` теперь не зависит от этого выбора.
 
 Источники: [Cloud Scheduler — cron format](https://cloud.google.com/scheduler/docs/configuring/cron-job-schedules),
 [App Engine — cron.yaml](https://cloud.google.com/appengine/docs/legacy/standard/python/config/cronref).
@@ -235,11 +241,12 @@ flowchart TD
     comp --> setN["Записать nextNotifyAt<br/>(или FieldValue.delete, если событий нет)"]
   end
 
+  subgraph clean["cleanupNotificationSent (hourly, 0 * * * *)"]
+    c0(["Старт почасового прогона"]) --> cl["cleanupOldNotificationSent (>7 дней)"]
+  end
+
   subgraph sched["scheduleDueDateNotifications (every 1 minute)"]
-    s0(["Старт прогона, now"]) --> clean{"now.getMinutes() == 0?"}
-    clean -->|да| cl["cleanupOldNotificationSent (>7 дней)"]
-    clean -->|нет| q["fetchDueBubbles:<br/>status==active AND nextNotifyAt <= now"]
-    cl --> q
+    s0(["Старт прогона, now"]) --> q["fetchDueBubbles:<br/>status==active AND nextNotifyAt <= now"]
     q --> grp["Группировка по пользователю +<br/>FCM-токены только для них"]
     grp --> each["Для каждой due-задачи"]
     each --> ov{"isBubbleOverdue?"}
