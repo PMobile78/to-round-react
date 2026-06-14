@@ -1,5 +1,9 @@
 # Code review — 2026-06-10
 
+> **Статус на 2026-06-14: отработано.** По повторной сверке с кодом практически все находки закрыты (см. отметки ✅ ниже). Остаются 2 минорных пункта, вынесенных в GitHub Issues: cron-cleanup на `getMinutes()===0` (риск ≈ 0 при `* * * * *`) и перезапись всего массива тегов в `saveTagsToFirestore` (узкое окно гонки между устройствами).
+>
+> Закрыто: п.1 (`git rm --cached`), п.2 (hooks order + добавлен `eslint.config.js`), п.3/4 (точечный `updateBubbleFields` вместо перезаписи, side effects убраны), п.7/8 (`liveEditRef.current` + `World.remove`), п.9 (атомарный `ref.create()`), п.10 (cron `* * * * *`), п.11 (`import.meta.env.BASE_URL`), п.12 (`getOffsetMs` в utils c `w`), п.13 (вынесены `EditBubbleDialog`/`CreateBubbleDialog`), п.17 (`React.lazy` для MindMapPage), п.19 (`stripHtml` в поиске), FCM-токен при logout, фиксация версий зависимостей. Гонки п.5/6 устранены (`tagsRef.current` + функциональные `setBubbles`).
+
 **TL;DR:** архитектура безопасности в целом здоровая (правила Firestore owner-only с default deny, весь HTML проходит через DOMPurify, продуманная работа с таймзонами в Cloud Functions). Но есть три серьёзные проблемы: **полная перезапись всех задач в Firestore при каждом изменении** (главный источник затрат и лишних вызовов функций), **нарушение Rules of Hooks в HtmlRenderer** (потенциальный крэш) и **`.env.production` с `public/sw.js`, отслеживаемые в git** вопреки `.gitignore`. Ниже — всё по категориям.
 
 ---
