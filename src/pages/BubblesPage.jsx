@@ -1,23 +1,18 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import {
     Box,
-    Typography,
-    Button,
     IconButton,
     useMediaQuery,
     useTheme,
-    Fab,
-    Tooltip,
     MenuItem,
     Menu,
     ListItemIcon,
     ListItemText,
-    Paper,
 
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
-    CloseOutlined, DeleteOutlined, Add, FilterList, Menu as MenuIcon, ViewList, Refresh,
+    DeleteOutlined, Menu as MenuIcon,
 } from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
@@ -42,10 +37,12 @@ import {
 } from '../services/firestoreService';
 
 import TaskListDrawer from '../components/ListViewDrawer';
-import TaskList from '../components/TaskList';
-import ResponsiveSearch from '../components/ResponsiveSearch';
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
+import BubbleViewHeader from '../components/BubbleViewHeader';
+import BubbleViewToolbar from '../components/BubbleViewToolbar';
+import BubbleViewFab from '../components/BubbleViewFab';
+import TasksFullScreenView from '../components/TasksFullScreenView';
 import { DesignBackdrop } from '../components/DesignBackdrop';
 import useSearch from '../hooks/useSearch';
 import EditBubbleDialog from '../components/EditBubbleDialog';
@@ -1095,100 +1092,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 }} />
             )}
             {/* Заголовок и кнопки - адаптивный */}
-            {mainView === 'bubbles' && (!isMobile ? (
-                <>
-                    <Box sx={{
-                        position: 'absolute',
-                        top: 20,
-                        left: (!isMobile && categoriesPanelEnabled) ? 20 : 20,
-                        zIndex: 1000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        transition: 'left 0.3s ease'
-                    }}>
-                        <IconButton
-                            onClick={() => setMenuDrawerOpen(true)}
-                            sx={{
-                                ...getButtonStyles(),
-                                marginRight: 1
-                            }}
-                        >
-                            <MenuIcon />
-                        </IconButton>
-                        <Box sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1
-                        }}>
-                            <img
-                                src={`${import.meta.env.BASE_URL}bubbles.png`}
-                                alt="Bubbles"
-                                style={{
-                                    width: '32px',
-                                    height: '32px',
-                                    objectFit: 'contain'
-                                }}
-                            />
-                            {/* <Typography variant="h4" sx={{
-                                color: themeMode === 'light' ? '#2C3E50' : 'white',
-                                fontWeight: 'bold'
-                            }}>
-                                {t('bubbles.title')}
-                            </Typography> */}
-                        </Box>
-                        <Button
-                            variant="contained"
-                            onClick={openCreateDialog}
-                            startIcon={<Add />}
-                            sx={{ height: 36 }}
-                        >
-                            {t('bubbles.addBubble')}
-                        </Button>
-                        {/* <Button
-                            variant="contained"
-                            onClick={openCreateDialog}
-                            sx={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
-                                }
-                            }}
-                        >
-                            {t('bubbles.addBubble')}
-                        </Button> */}
-                    </Box>
-                </>
-            ) : (
-                // Mobile version without category selector
-                <Box sx={{
-                    position: 'absolute',
-                    top: 10,
-                    left: 0,
-                    right: 0,
-                    zIndex: 1000,
-                    display: 'flex',
-                    justifyContent: 'flex-start',
-                    alignItems: 'center',
-                    padding: '0 10px',
-                    gap: 1
-                }}>
-                    <IconButton
-                        onClick={() => setMenuDrawerOpen(true)}
-                        sx={getButtonStyles()}
-                    >
-                        <MenuIcon />
-                    </IconButton>
-                    <Tooltip title={t('bubbles.reload')}>
-                        <IconButton
-                            onClick={() => window.location.reload()}
-                            sx={{ ...getButtonStyles(), ml: 1 }}
-                        >
-                            <Refresh />
-                        </IconButton>
-                    </Tooltip>
-                </Box>
-            ))}
+            {mainView === 'bubbles' && (
+                <BubbleViewHeader
+                    isMobile={isMobile}
+                    categoriesPanelEnabled={categoriesPanelEnabled}
+                    t={t}
+                    getButtonStyles={getButtonStyles}
+                    onOpenMenu={setMenuDrawerOpen}
+                    onAddBubble={openCreateDialog}
+                />
+            )}
 
 
 
@@ -1216,290 +1129,38 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
             {/* Плавающие кнопки для мобильных устройств */}
             {mainView === 'bubbles' && isMobile && (
-                <>
-                    <Box
-                        ref={fabRef}
-                        onPointerDown={onFabPointerDown}
-                        sx={{
-                            position: 'fixed',
-                            left: (fabPosition?.x ?? getDefaultFabPosition().x),
-                            top: (fabPosition?.y ?? getDefaultFabPosition().y),
-                            zIndex: 1000,
-                            cursor: isDraggingFab ? 'grabbing' : 'grab',
-                            touchAction: 'none',
-                        }}
-                    >
-                        <Tooltip title={t('bubbles.addBubble')}>
-                            <Fab
-                                color="primary"
-                                onClick={(e) => {
-                                    if (suppressNextClickRef.current) {
-                                        suppressNextClickRef.current = false;
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        return;
-                                    }
-                                    openCreateDialog();
-                                }}
-                            >
-                                <Add />
-                            </Fab>
-                        </Tooltip>
-                    </Box>
-                    {/* <Tooltip title={t('bubbles.clearAll')}>
-                        <Fab
-                            color="secondary"
-                            onClick={clearAllBubbles}
-                            size="medium"
-                            sx={{
-                                position: 'absolute',
-                                bottom: 100, // Увеличен отступ для навигационной панели
-                                left: 20,
-                                zIndex: 1000,
-                                backgroundColor: 'rgba(255, 87, 87, 0.9)',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 87, 87, 1)'
-                                }
-                            }}
-                        >
-                            <Clear />
-                        </Fab>
-                    </Tooltip> */}
-
-                </>
+                <BubbleViewFab
+                    t={t}
+                    fabRef={fabRef}
+                    onFabPointerDown={onFabPointerDown}
+                    fabPosition={fabPosition}
+                    getDefaultFabPosition={getDefaultFabPosition}
+                    isDraggingFab={isDraggingFab}
+                    suppressNextClickRef={suppressNextClickRef}
+                    onAddBubble={openCreateDialog}
+                />
             )}
 
             {/* Селектор языка и инструкции */}
-            {mainView === 'bubbles' && (!isMobile ? (
-                <Box sx={{
-                    position: 'absolute',
-                    top: 20,
-                    right: 20,
-                    zIndex: 1000,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                    alignItems: 'flex-end'
-                }}>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                        <Tooltip title={t('bubbles.searchPlaceholder')} placement="bottom">
-                            <Box sx={{ display: 'inline-flex' }}>
-                                <ResponsiveSearch
-                                    searchQuery={bubblesSearchQuery}
-                                    setSearchQuery={setBubblesSearchQuery}
-                                    themeMode={themeMode}
-                                    placement="desktop"
-                                    showInstructions={showInstructions}
-                                    resultsCount={t('bubbles.searchResults', { count: searchFoundBubbles.length })}
-                                    showResultsCount
-                                    categoriesPanelEnabled={categoriesPanelEnabled}
-                                />
-                            </Box>
-                        </Tooltip>
-
-                        {/* View Mode Toggle */}
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                            {/* Иконка поиска теперь инкапсулирована внутри ResponsiveSearch */}
-                            <Tooltip title={t('bubbles.listView')} placement="bottom">
-                                <span>
-                                    <Button
-                                        onClick={() => setListViewDialog(true)}
-                                        variant="outlined"
-                                        size="small"
-                                        startIcon={<ViewList />}
-                                        sx={{
-                                            ...getOutlinedButtonStyles(),
-                                            height: 36
-                                        }}
-                                    >
-                                        {t('bubbles.listView')}
-                                    </Button>
-                                </span>
-                            </Tooltip>
-                            <Tooltip
-                                title={categoriesPanelEnabled ? t('bubbles.filterDisabled') : t('bubbles.filterButton')}
-                                placement="top"
-                            >
-                                <span>
-                                    <Button
-                                        onClick={() => {
-                                            if (!categoriesPanelEnabled) {
-                                                setFilterDrawerOpen(true);
-                                            }
-                                        }}
-                                        variant="outlined"
-                                        size="small"
-                                        startIcon={<FilterList />}
-                                        disabled={categoriesPanelEnabled}
-                                        sx={{
-                                            ...getOutlinedButtonStyles(),
-                                            height: 36,
-                                            backgroundColor: alpha(
-                                                theme.palette.primary.main,
-                                                !isAllSelected()
-                                                    ? (themeMode === 'light' ? 0.15 : 0.2)
-                                                    : (themeMode === 'light' ? 0.08 : 0)
-                                            ),
-                                            opacity: categoriesPanelEnabled ? 0.5 : 1,
-                                            '&:disabled': {
-                                                backgroundColor: theme.palette.action.disabledBackground,
-                                                color: theme.palette.action.disabled
-                                            }
-                                        }}
-                                    >
-                                        {t('bubbles.filterButton')}
-                                    </Button>
-                                </span>
-                            </Tooltip>
-                        </Box>
-
-
-
-                    </Box>
-                    {/* Оверлей поиска для узких/мобильных в компоненте ResponsiveSearch не нужен отдельно */}
-
-                    {showInstructions && (
-                        <Box sx={{
-                            backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                            padding: 2,
-                            borderRadius: 2,
-                            position: 'relative'
-                        }}>
-                            <IconButton
-                                onClick={handleCloseInstructions}
-                                sx={{
-                                    position: 'absolute',
-                                    top: 4,
-                                    right: 4,
-                                    color: 'white',
-                                    padding: 0.5,
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                                    }
-                                }}
-                                size="small"
-                            >
-                                <CloseOutlined fontSize="small" />
-                            </IconButton>
-                            <Typography variant="body2" sx={{ color: 'white', marginBottom: 1, paddingRight: 2 }}>
-                                {t('bubbles.clickInstruction')}
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: 'white', paddingRight: 2 }}>
-                                {t('bubbles.dragInstruction')}
-                            </Typography>
-                        </Box>
-                    )}
-                </Box>
-            ) : (
-                <>
-                    <Box sx={{
-                        position: 'absolute',
-                        top: 10,
-                        right: 10,
-                        zIndex: 1000,
-                        display: 'flex',
-                        gap: 1,
-                        alignItems: 'center'
-                    }}>
-                        <Tooltip title={t('bubbles.searchPlaceholder')} placement="bottom-start">
-                            <Box sx={{ display: 'inline-flex' }}>
-                                <ResponsiveSearch
-                                    searchQuery={bubblesSearchQuery}
-                                    setSearchQuery={setBubblesSearchQuery}
-                                    themeMode={themeMode}
-                                    placement="mobile"
-                                    showInstructions={showInstructions}
-                                    resultsCount={t('bubbles.searchResults', { count: searchFoundBubbles.length })}
-                                    showResultsCount
-                                    categoriesPanelEnabled={categoriesPanelEnabled}
-                                />
-                            </Box>
-                        </Tooltip>
-
-                        {/* View Mode Toggle for Mobile */}
-                        <Tooltip title={t('bubbles.listView')} placement="bottom-start">
-                            <span>
-                                <IconButton
-                                    onClick={() => setListViewDialog(true)}
-                                    sx={getButtonStyles()}
-                                >
-                                    <ViewList />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Tooltip
-                            title={categoriesPanelEnabled ? t('bubbles.filterDisabled') : t('bubbles.filterButton')}
-                            placement="top"
-                        >
-                            <span>
-                                <IconButton
-                                    onClick={() => {
-                                        if (!categoriesPanelEnabled) {
-                                            setFilterDrawerOpen(true);
-                                        }
-                                    }}
-                                    disabled={categoriesPanelEnabled}
-                                    sx={{
-                                        ...getButtonStyles(),
-                                        backgroundColor: alpha(
-                                            theme.palette.primary.main,
-                                            !isAllSelected()
-                                                ? (themeMode === 'light' ? 0.22 : 0.3)
-                                                : (themeMode === 'light' ? 0.12 : 0.18)
-                                        ),
-                                        opacity: categoriesPanelEnabled ? 0.5 : 1,
-                                        '&:disabled': {
-                                            backgroundColor: theme.palette.action.disabledBackground,
-                                            color: theme.palette.action.disabled
-                                        }
-                                    }}
-                                >
-                                    <FilterList />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-
-
-
-                    </Box>
-
-                    {/* Поле поиска для мобильной версии теперь инкапсулировано в ResponsiveSearch */}
-                    {showInstructions && (
-                        <Box sx={{
-                            position: 'absolute',
-                            top: isSmallScreen ? 60 : 70,
-                            left: 10,
-                            right: 10,
-                            zIndex: 1000,
-                            backgroundColor: alpha(theme.palette.background.paper, 0.55),
-                            backdropFilter: 'blur(8px)',
-                            padding: 1.5,
-                            borderRadius: 3,
-                            textAlign: 'center'
-                        }}>
-                            <IconButton
-                                onClick={handleCloseInstructions}
-                                sx={{
-                                    position: 'absolute',
-                                    top: 2,
-                                    right: 2,
-                                    color: theme.palette.text.primary,
-                                    padding: 0.5,
-                                    '&:hover': {
-                                        backgroundColor: alpha(theme.palette.text.primary, 0.1)
-                                    }
-                                }}
-                                size="small"
-                            >
-                                <CloseOutlined fontSize="small" />
-                            </IconButton>
-                            <Typography variant="caption" sx={{ color: theme.palette.text.primary, fontSize: 12, paddingRight: 3 }}>
-                                {t('bubbles.mobileClickInstruction')}
-                            </Typography>
-                        </Box>
-                    )}
-                </>
-            ))}
+            {mainView === 'bubbles' && (
+                <BubbleViewToolbar
+                    isMobile={isMobile}
+                    isSmallScreen={isSmallScreen}
+                    t={t}
+                    themeMode={themeMode}
+                    bubblesSearchQuery={bubblesSearchQuery}
+                    setBubblesSearchQuery={setBubblesSearchQuery}
+                    searchFoundBubbles={searchFoundBubbles}
+                    showInstructions={showInstructions}
+                    categoriesPanelEnabled={categoriesPanelEnabled}
+                    setListViewDialog={setListViewDialog}
+                    setFilterDrawerOpen={setFilterDrawerOpen}
+                    isAllSelected={isAllSelected}
+                    getOutlinedButtonStyles={getOutlinedButtonStyles}
+                    getButtonStyles={getButtonStyles}
+                    handleCloseInstructions={handleCloseInstructions}
+                />
+            )}
 
             {/* Decorative backdrop layer (behind canvas) */}
             <DesignBackdrop />
@@ -1527,67 +1188,39 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
             {/* Полноэкранный режим списка задач (canvas остаётся смонтированным под панелью) */}
             {mainView === 'tasks' && (
-                <Paper elevation={16} square sx={{
-                    position: 'absolute',
-                    inset: 0,
-                    zIndex: 1200,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden'
-                }}>
-                    <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        padding: '12px 16px',
-                        color: 'text.primary',
-                        flexShrink: 0
-                    }}>
-                        <IconButton onClick={() => setMenuDrawerOpen(true)} sx={{ color: 'text.primary' }}>
-                            <MenuIcon />
-                        </IconButton>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
-                            {t('bubbles.listView')}
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            onClick={openCreateDialog}
-                            startIcon={<Add />}
-                        >
-                            {t('bubbles.addBubble')}
-                        </Button>
-                    </Box>
-                    <Box sx={{ flex: 1, overflow: 'auto' }}>
-                        <TaskList
-                            bubbles={bubbles}
-                            setBubbles={setBubbles}
-                            tags={tags}
-                            listFilter={listFilter}
-                            setListFilter={setListFilter}
-                            listSortBy={listSortBy}
-                            setListSortBy={setListSortBy}
-                            listSortOrder={listSortOrder}
-                            setListSortOrder={setListSortOrder}
-                            listFilterTags={listFilterTags}
-                            setListFilterTags={setListFilterTags}
-                            listShowNoTag={listShowNoTag}
-                            setListShowNoTag={setListShowNoTag}
-                            listSearchQuery={listSearchQuery}
-                            setListSearchQuery={setListSearchQuery}
-                            setSelectedBubble={setSelectedBubble}
-                            setSelectedTagId={setSelectedTagId}
-                            setEditDialog={setEditDialog}
-                            handleListTagFilterChange={handleListTagFilterChange}
-                            handleListNoTagFilterChange={handleListNoTagFilterChange}
-                            clearAllListFilters={clearAllListFilters}
-                            selectAllListFilters={selectAllListFilters}
-                            getBubbleCountByTagForListView={getBubbleCountByTagForListView}
-                            themeMode={themeMode}
-                            isAllListFiltersSelected={isAllListFiltersSelected()}
-                            onOpenFilterMenu={() => setFilterDrawerOpen(true)}
-                        />
-                    </Box>
-                </Paper>
+                <TasksFullScreenView
+                    t={t}
+                    onOpenMenu={setMenuDrawerOpen}
+                    onAddBubble={openCreateDialog}
+                    taskListProps={{
+                        bubbles,
+                        setBubbles,
+                        tags,
+                        listFilter,
+                        setListFilter,
+                        listSortBy,
+                        setListSortBy,
+                        listSortOrder,
+                        setListSortOrder,
+                        listFilterTags,
+                        setListFilterTags,
+                        listShowNoTag,
+                        setListShowNoTag,
+                        listSearchQuery,
+                        setListSearchQuery,
+                        setSelectedBubble,
+                        setSelectedTagId,
+                        setEditDialog,
+                        handleListTagFilterChange,
+                        handleListNoTagFilterChange,
+                        clearAllListFilters,
+                        selectAllListFilters,
+                        getBubbleCountByTagForListView,
+                        themeMode,
+                        isAllListFiltersSelected: isAllListFiltersSelected(),
+                        onOpenFilterMenu: () => setFilterDrawerOpen(true)
+                    }}
+                />
             )}
 
             {/* Диалог редактирования */}
