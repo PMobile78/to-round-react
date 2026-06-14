@@ -515,17 +515,25 @@ exports.maintainNextNotifyAt = onDocumentWritten({
     return null;
 });
 
+// Hourly housekeeping: trim the notification-sent dedup collection.
+// Decoupled from the per-minute notifier so a single missed :00 run no longer
+// skips cleanup for a whole hour (a missed hourly run just retries next hour).
+exports.cleanupNotificationSent = onSchedule({
+    schedule: '0 * * * *',
+    region: 'europe-west1',
+    maxInstances: 1
+}, async () => {
+    try { await cleanupOldNotificationSent(); }
+    catch (e) { console.error('cleanupOldNotificationSent error', e); }
+    return null;
+});
+
 exports.scheduleDueDateNotifications = onSchedule({
     schedule: '* * * * *',
     region: 'europe-west1',
     maxInstances: 10
 }, async () => {
     const now = new Date();
-
-    if (now.getMinutes() === 0) {
-        try { await cleanupOldNotificationSent(); }
-        catch (e) { console.error('cleanupOldNotificationSent error', e); }
-    }
 
     const users = await fetchDueBubbles(now);
 
