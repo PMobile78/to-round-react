@@ -65,7 +65,8 @@ import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
 import { useTags } from '../hooks/useTags';
 import { withAlpha } from '../utils/colorUtils';
-import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime, getOffsetMs } from '../utils/dateTime';
+import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime } from '../utils/dateTime';
+import { isOverdue, getActiveNotification, buildNotificationKey, notificationKeyPrefix } from '../utils/notifications';
 import { stripHtml } from '../utils/stripHtml';
 import { exportJsonFile } from '../utils/exportJson';
 import {
@@ -1143,12 +1144,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         )).length;
     }, [bubbles]);
 
-    // Функция для проверки просроченности due date
-    const isOverdue = (dueDate) => {
-        if (!dueDate) return false;
-        const parsed = parseLocalDateTime(dueDate);
-        return parsed ? parsed < new Date() : false;
-    };
+    // isOverdue moved to utils/notifications.js (Task 3/6 of #38).
 
     // Функция выхода
     const handleLogout = () => {
@@ -1306,25 +1302,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                     return;
                 }
                 // 1. Найти ближайшее сработавшее уведомление, которое не удалено
-                let activeNotifIdx = null;
-                let activeNotifTargetTime = null;
-                if (Array.isArray(bubble.notifications) && bubble.notifications.length > 0) {
-                    // Сортируем по времени срабатывания (от ближайшего к дальнему)
-                    const notifWithTime = bubble.notifications.map((notif, idx) => {
-                        const offset = getOffsetMs(notif);
-                        return { idx, targetTime: due - offset, notif };
-                    }).sort((a, b) => a.targetTime - b.targetTime);
-                    for (const { idx, targetTime } of notifWithTime) {
-                        if (now >= targetTime && now < due) {
-                            activeNotifIdx = idx;
-                            activeNotifTargetTime = targetTime;
-                            break;
-                        }
-                    }
-                }
+                const activeNotif = getActiveNotification(bubble, now);
+                const activeNotifIdx = activeNotif ? activeNotif.idx : null;
+                const activeNotifTargetTime = activeNotif ? activeNotif.targetTime : null;
                 // 2. Если есть активное уведомление — пульсируем только по нему
                 if (activeNotifIdx !== null) {
-                    const key = `${bubble.id}:${activeNotifTargetTime}`;
+                    const key = buildNotificationKey(bubble.id, activeNotifTargetTime);
                     if (!notifiedBubbleNotificationsRef.current.has(key)) {
                         // showNotificationAndVibrate(bubble); // disabled for FCM testing
                         notifiedBubbleNotificationsRef.current.add(key);
@@ -2107,7 +2090,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                         // Очищаем все уведомления для этой задачи
                         const keysToDelete = [];
                         notifiedBubbleNotificationsRef.current.forEach(key => {
-                            if (key.startsWith(selectedBubble.id + ':')) {
+                            if (key.startsWith(notificationKeyPrefix(selectedBubble.id))) {
                                 keysToDelete.push(key);
                             }
                         });
