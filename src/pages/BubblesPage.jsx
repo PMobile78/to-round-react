@@ -64,9 +64,10 @@ import { useMatterEngine } from '../hooks/useMatterEngine';
 import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
 import { useTags } from '../hooks/useTags';
+import { useBubbleNotifications } from '../hooks/useBubbleNotifications';
 import { withAlpha } from '../utils/colorUtils';
 import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime } from '../utils/dateTime';
-import { isOverdue, getActiveNotification, buildNotificationKey, notificationKeyPrefix } from '../utils/notifications';
+import { isOverdue, notificationKeyPrefix } from '../utils/notifications';
 import { stripHtml } from '../utils/stripHtml';
 import { exportJsonFile } from '../utils/exportJson';
 import {
@@ -220,9 +221,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // Состояние размера пузыря при редактировании
     const [editBubbleSize, setEditBubbleSize] = useState(45); // Размер при редактировании
 
-    const [dueDate, setDueDate] = useState(null); // Для создания
-    const [editDueDate, setEditDueDate] = useState(null); // Для редактирования
-
     // Function to get button styles based on theme
     const getButtonStyles = () => {
         return theme.custom?.buttonStyles || {};
@@ -269,14 +267,41 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
 
 
-    // Refs for overdue/sticky pulse tracking — declared here so useMatterEngine can use them
-    const stickyPulseRef = useRef(new Set()); // keep pulsing after repeat-every reschedule
-    const lastDueRef = useRef(new Map());
-    const manuallyStoppedPulsingRef = useRef(new Set()); // задачи, которые пользователь остановил вручную
-
-    // Edit dialog notification/recurrence state — declared here so useMatterEngine can use them
-    const [editNotifications, setEditNotifications] = useState([]); // для редактирования
-    const [editRecurrence, setEditRecurrence] = useState(null);
+    // Notification + overdue-pulse state, refs and the rAF pulse loop
+    // extracted into useBubbleNotifications (Task 4/6 of #38). Declared here so
+    // useMatterEngine and the dialogs below can consume the state/refs.
+    const {
+        dueDate,
+        setDueDate,
+        editDueDate,
+        setEditDueDate,
+        editNotifications,
+        setEditNotifications,
+        editRecurrence,
+        setEditRecurrence,
+        createNotifications,
+        setCreateNotifications,
+        createRecurrence,
+        setCreateRecurrence,
+        notifDialogOpen,
+        setNotifDialogOpen,
+        notifValue,
+        setNotifValue,
+        stickyPulseRef,
+        lastDueRef,
+        manuallyStoppedPulsingRef,
+        notifiedBubblesRef,
+        notifiedBubbleNotificationsRef
+    } = useBubbleNotifications({
+        bubbles,
+        tags,
+        engineRef,
+        getBubbleFillStyle,
+        selectedBubble,
+        editDialog,
+        t,
+        i18nLanguage: i18n.language
+    });
 
     // Physics engine — initialised once on mount via hook
     useMatterEngine({
@@ -1196,175 +1221,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     // Optimized component for displaying text over bubbles
 
-    const notifiedBubblesRef = useRef(new Set());
-    const notifiedBubbleNotificationsRef = useRef(new Set()); // bubbleId:idx
-
-    // Keep pulsing even if editor opened; stop only by explicit Stop button
-
-    // --- Пульсация для просроченных задач и уведомлений ---
-    useEffect(() => {
-        if (!engineRef.current) return;
-
-        let animationFrame;
-        let pulsePhase = 0;
-
-        // Temporarily disabled local notifications to test FCM only
-        // const showNotificationAndVibrate = (bubble) => {
-        //     // if (navigator.vibrate) {
-        //     //     navigator.vibrate([200, 100, 200]);
-        //     // }
-        //     if (typeof window !== 'undefined' && 'Notification' in window) {
-        //         try {
-        //             console.log('[NOTIFY] Notification.permission:', Notification.permission);
-        //             if ('serviceWorker' in navigator) {
-        //                 navigator.serviceWorker.getRegistrations().then(regs => {
-        //                     console.log('[NOTIFY] ServiceWorker registrations:', regs);
-        //                 });
-        //             }
-        //             const title = t('bubbles.overdueNotificationTitle');
-        //             let body = '';
-        //             if (bubble.title) {
-        //                 body = t('bubbles.overdueNotificationBodyWithTitle', { title: bubble.title });
-        //             } else {
-        //                 body = t('bubbles.overdueNotificationBody');
-        //             }
-        //             if (Notification.permission === "granted") {
-        //                 try {
-        //                     if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-        //                         console.log('[NOTIFY] Trying to show notification via ServiceWorker:', title, body);
-        //                         navigator.serviceWorker.ready.then(function (registration) {
-        //                             registration.showNotification(title, { body })
-        //                                 .then(() => console.log('[NOTIFY] showNotification success'))
-        //                                 .catch(e => console.error('[NOTIFY] showNotification error:', e));
-        //                         }).catch(e => console.error('[NOTIFY] navigator.serviceWorker.ready error:', e));
-        //                     } else {
-        //                         console.warn('[NOTIFY] ServiceWorker not supported');
-        //                     }
-        //                 } catch (e) {
-        //                     console.error('[NOTIFY] Exception in showNotification:', e);
-        //                 }
-        //             } else if (Notification.permission !== "denied") {
-        //                 console.log('[NOTIFY] Requesting notification permission...');
-        //                 Notification.requestPermission().then(permission => {
-        //                     console.log('[NOTIFY] Permission result:', permission);
-        //                     if (permission === "granted") {
-        //                         try {
-        //                             if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-        //                                 console.log('[NOTIFY] Trying to show notification via ServiceWorker (after permission):', title, body);
-        //                                 navigator.serviceWorker.ready.then(function (registration) {
-        //                                     registration.showNotification(title, { body })
-        //                                         .then(() => console.log('[NOTIFY] showNotification success'))
-        //                                         .catch(e => console.error('[NOTIFY] showNotification error:', e));
-        //                                 }).catch(e => console.error('[NOTIFY] navigator.serviceWorker.ready error:', e));
-        //                             } else {
-        //                                 console.warn('[NOTIFY] ServiceWorker not supported');
-        //                             }
-        //                         } catch (e) {
-        //                             console.error('[NOTIFY] Exception in showNotification (after permission):', e);
-        //                         }
-        //                     }
-        //                 }).catch(e => console.error('[NOTIFY] requestPermission error:', e));
-        //             }
-        //         } catch (e) {
-        //             console.error('[NOTIFY] Outer catch:', e);
-        //         }
-        //     }
-        // };
-
-        const animate = () => {
-            const now = Date.now();
-            pulsePhase += 0.12;
-            bubbles.forEach(bubble => {
-                if (!bubble.body || bubble.status !== BUBBLE_STATUS.ACTIVE || !bubble.dueDate) return;
-                const parsedDue = parseLocalDateTime(bubble.dueDate);
-                if (!parsedDue) return;
-                const due = parsedDue.getTime();
-
-                // Если открыт редактор этой бульбашки и включён Repeat — не мерцать
-                if (editDialog && selectedBubble && selectedBubble.id === bubble.id && bubble.recurrence) {
-                    if (Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
-                        const scale = bubble.radius / bubble.body.circleRadius;
-                        Matter.Body.scale(bubble.body, scale, scale);
-                    }
-                    const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
-                    return;
-                }
-                // 0. Пользователь остановил пульсацию вручную — не мерцать,
-                // пока не изменится/не перенесётся dueDate (флаг сбрасывается отдельно).
-                if (bubble.overduePulseSuppressed || manuallyStoppedPulsingRef.current.has(bubble.id)) {
-                    if (Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
-                        const scale = bubble.radius / bubble.body.circleRadius;
-                        Matter.Body.scale(bubble.body, scale, scale);
-                    }
-                    const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
-                    return;
-                }
-                // 1. Найти ближайшее сработавшее уведомление, которое не удалено
-                const activeNotif = getActiveNotification(bubble, now);
-                const activeNotifIdx = activeNotif ? activeNotif.idx : null;
-                const activeNotifTargetTime = activeNotif ? activeNotif.targetTime : null;
-                // 2. Если есть активное уведомление — пульсируем только по нему
-                if (activeNotifIdx !== null) {
-                    const key = buildNotificationKey(bubble.id, activeNotifTargetTime);
-                    if (!notifiedBubbleNotificationsRef.current.has(key)) {
-                        // showNotificationAndVibrate(bubble); // disabled for FCM testing
-                        notifiedBubbleNotificationsRef.current.add(key);
-                    }
-                    // Пульсация
-                    const baseRadius = bubble.radius;
-                    const pulse = 1 + 0.13 * Math.sin(pulsePhase + bubble.body.id % 10);
-                    const newRadius = baseRadius * pulse;
-                    const currentRadius = bubble.body.circleRadius;
-                    const scale = newRadius / currentRadius;
-                    if (Math.abs(scale - 1) > 0.01) {
-                        Matter.Body.scale(bubble.body, scale, scale);
-                    }
-                    const pulseValue = Math.abs(Math.sin(pulsePhase + bubble.body.id % 10));
-                    if (pulseValue > 0.7) {
-                        bubble.body.render.fillStyle = 'rgba(255,0,0,0.5)';
-                    } else {
-                        const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                        bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
-                    }
-                    return; // не пульсируем по dueDate, если есть активное уведомление
-                }
-                // 3. Если нет активных уведомлений, но dueDate просрочен — пульсация по dueDate
-                const shouldPulseOverdue = now >= due || stickyPulseRef.current.has(bubble.id);
-                if (shouldPulseOverdue || bubble.overdueSticky) {
-                    if (!notifiedBubblesRef.current.has(bubble.id)) {
-                        // showNotificationAndVibrate(bubble); // disabled for FCM testing
-                        notifiedBubblesRef.current.add(bubble.id);
-                    }
-                    const baseRadius = bubble.radius;
-                    const pulse = 1 + 0.13 * Math.sin(pulsePhase + bubble.body.id % 10);
-                    const newRadius = baseRadius * pulse;
-                    const currentRadius = bubble.body.circleRadius;
-                    const scale = newRadius / currentRadius;
-                    if (Math.abs(scale - 1) > 0.01) {
-                        Matter.Body.scale(bubble.body, scale, scale);
-                    }
-                    const pulseValue = Math.abs(Math.sin(pulsePhase + bubble.body.id % 10));
-                    if (pulseValue > 0.7) {
-                        bubble.body.render.fillStyle = 'rgba(255,0,0,0.5)';
-                    } else {
-                        const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                        bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
-                    }
-                } else if (bubble.body && Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
-                    // Сбросить радиус, если не пульсируем
-                    const scale = bubble.radius / bubble.body.circleRadius;
-                    Matter.Body.scale(bubble.body, scale, scale);
-                    const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
-                }
-            });
-            animationFrame = requestAnimationFrame(animate);
-        };
-        animate();
-        return () => cancelAnimationFrame(animationFrame);
-    }, [bubbles, tags, getBubbleFillStyle, t, i18n.language]);
+    // Notification refs + the rAF pulse loop now live in useBubbleNotifications.
 
     // --- Сброс пульсации при удалении уведомления ---
     // Для editNotifications
@@ -1422,19 +1279,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         updateBubbleFields(selectedBubble.id, fields).catch(e => logger.error('Error toggling rich text:', e));
     };
 
-    // Сброс уведомлений при смене языка
-    useEffect(() => {
-        notifiedBubblesRef.current = new Set();
-    }, [i18n.language]);
-
-    // Состояния для диалога уведомлений
-    const [notifDialogOpen, setNotifDialogOpen] = useState(false);
-    const [notifValue, setNotifValue] = useState(null);
+    // Notification dialog/create state + language-reset effect now live in
+    // useBubbleNotifications (Task 4/6 of #38).
     const [aboutOpen, setAboutOpen] = useState(false);
-
-    // Внутри компонента:
-    const [createNotifications, setCreateNotifications] = useState([]); // для создания
-    const [createRecurrence, setCreateRecurrence] = useState(null); // { every, unit }
 
     // Stable callbacks for recurrence setters
     const handleSetCreateRecurrence = useCallback((value) => {
