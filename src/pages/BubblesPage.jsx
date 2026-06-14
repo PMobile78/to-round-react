@@ -249,7 +249,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [changePasswordOpen, setChangePasswordOpen] = useState(false); // Диалог смены пароля
     const [fontSize, setFontSize] = useState(() => {
         const savedFontSize = localStorage.getItem('bubbles-font-size');
-        return savedFontSize ? parseInt(savedFontSize) : 12;
+        return savedFontSize ? parseInt(savedFontSize) : 8;
     }); // Размер шрифта для надписей в пузырях
     const [logoutDialog, setLogoutDialog] = useState(false); // Диалог подтверждения выхода
     const [listViewDialog, setListViewDialog] = useState(false); // Диалог списка задач
@@ -2626,7 +2626,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 getDialogPaperStyles={getDialogPaperStyles}
                 fontSize={fontSize}
                 onFontSizeChange={handleFontSizeChange}
-                onReset={() => handleFontSizeChange(12)}
+                onReset={() => handleFontSizeChange(8)}
             />
 
             {/* Диалог оформления */}

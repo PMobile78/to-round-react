@@ -10,7 +10,7 @@ export const useThemeMode = () => {
 
     const [design, setDesign] = useState(() => {
         const savedDesign = localStorage.getItem('app-design');
-        return savedDesign || 'modern';
+        return savedDesign || 'classic';
     });
 
     // Функция для получения системной темы
@@ -77,8 +77,8 @@ export const useThemeMode = () => {
     const createAppTheme = (mode, designId) => {
         const designModule = getDesignModule(designId);
         if (!designModule) {
-            console.warn(`Design module not found for design: ${designId}, falling back to modern`);
-            return createAppTheme(mode, 'modern');
+            console.warn(`Design module not found for design: ${designId}, falling back to classic`);
+            return createAppTheme(mode, 'classic');
         }
         const designConfig = designModule(mode);
         return createTheme(designConfig);

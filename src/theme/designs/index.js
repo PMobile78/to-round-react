@@ -10,16 +10,6 @@ import { clay } from './clay';
  */
 
 export const DESIGNS = {
-  modern: {
-    id: 'modern',
-    labelKey: 'design.modern',
-    previewColors: {
-      primary: '#2f6bdb',
-      secondary: '#FF6B6B',
-      background: '#fafbfc',
-    },
-    module: modern,
-  },
   classic: {
     id: 'classic',
     labelKey: 'design.classic',
@@ -29,6 +19,16 @@ export const DESIGNS = {
       background: '#f5f5f5',
     },
     module: classic,
+  },
+  modern: {
+    id: 'modern',
+    labelKey: 'design.modern',
+    previewColors: {
+      primary: '#2f6bdb',
+      secondary: '#FF6B6B',
+      background: '#fafbfc',
+    },
+    module: modern,
   },
   aurora: {
     id: 'aurora',
