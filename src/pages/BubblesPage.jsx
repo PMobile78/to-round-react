@@ -48,8 +48,7 @@ import {
     sanitizeBubble,
     sanitizeTag,
     sanitizeBubblesForExport,
-    readBubbleViewPlannedTasksFromLS,
-    BUBBLES_PLANNED_TASKS_VIEW_LS_KEY
+    readBubbleViewPlannedTasksFromLS
 } from '../utils/bubbleData';
 
 
@@ -137,7 +136,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         COLOR_PALETTE
     } = useTags({ user, bubbles, pageDeps: tagPageDepsRef });
 
-    // Filter / category state extracted into hook
+    // Filter / category state extracted into hook.
+    // filterPageDepsRef bridges deps the bubbles-view count callback needs but that
+    // are defined *after* this call (bubbles + search state); read at call-time.
+    const filterPageDepsRef = useRef({});
     const {
         filterTags,
         setFilterTags,
@@ -151,7 +153,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setCategoriesPanelEnabled,
         handleCategorySelect,
         handleToggleCategoriesPanel,
-    } = useBubbleFilters({ tags });
+        handleTagFilterChange,
+        handleNoTagFilterChange,
+        clearAllFilters,
+        selectAllFilters,
+        isAllSelected,
+        getBubbleCountByTagForBubblesView,
+    } = useBubbleFilters({ tags, pageDeps: filterPageDepsRef });
 
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
@@ -543,6 +551,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         debouncedSearchQuery: debouncedBubblesSearchQuery
     } = useSearch(getFilteredBubbles, tags);
 
+    // Keep the bridge to useBubbleFilters fresh: getBubbleCountByTagForBubblesView
+    // reads these at call-time (defined after the hook runs).
+    filterPageDepsRef.current = {
+        bubbles,
+        searchFoundBubbles,
+        debouncedSearchQuery: debouncedBubblesSearchQuery
+    };
+
     // Создаем Set ID найденных пузырей для быстрого поиска
     const foundBubblesIds = useMemo(() => {
         return new Set(searchFoundBubbles.map(bubble => bubble.id));
@@ -697,59 +713,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     // Tag dialog/CRUD + color helpers live in useTags (Task 2/6 of #38).
 
-    // Memoized functions for filter management
-    const handleTagFilterChange = useCallback((tagId) => {
-        setBubbleViewPlannedTasksOnly(false);
-        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
-        setFilterTags(prev => {
-            const newFilterTags = prev.includes(tagId)
-                ? prev.filter(id => id !== tagId)
-                : [...prev, tagId];
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify(newFilterTags));
-            return newFilterTags;
-        });
-
-        // Сбрасываем выбранную категорию при ручном изменении фильтров
-        setSelectedCategory(null);
-    }, []);
-
-    const handleNoTagFilterChange = useCallback(() => {
-        setBubbleViewPlannedTasksOnly(false);
-        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
-        setShowNoTag(prev => {
-            const newShowNoTag = !prev;
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(newShowNoTag));
-            return newShowNoTag;
-        });
-
-        // Сбрасываем выбранную категорию при ручном изменении фильтров
-        setSelectedCategory(null);
-    }, []);
-
-    const clearAllFilters = useCallback(() => {
-        setBubbleViewPlannedTasksOnly(false);
-        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
-        setFilterTags([]);
-        setShowNoTag(false);
-        setSelectedCategory(null); // Сбрасываем выбранную категорию
-        localStorage.setItem('bubbles-filter-tags', JSON.stringify([]));
-        localStorage.setItem('bubbles-show-no-tag', JSON.stringify(false));
-    }, []);
-
-    const selectAllFilters = useCallback(() => {
-        setBubbleViewPlannedTasksOnly(false);
-        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
-        const allTagIds = tags.map(tag => tag.id);
-        setFilterTags(allTagIds);
-        setShowNoTag(true);
-        setSelectedCategory(null); // Сбрасываем выбранную категорию
-        localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-        localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-    }, [tags]);
-
-    const isAllSelected = useCallback(() => {
-        return tags.length > 0 && filterTags.length === tags.length && showNoTag;
-    }, [tags, filterTags, showNoTag]);
+    // Bubbles-view filter callbacks (handleTagFilterChange, handleNoTagFilterChange,
+    // clearAllFilters, selectAllFilters, isAllSelected) now live in useBubbleFilters
+    // (Task B of #66).
 
     // Memoized functions for list filter management
     const handleListTagFilterChange = useCallback((tagId) => {
@@ -789,24 +755,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         return tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
     }, [tags, listFilterTags, listShowNoTag]);
 
-    // Memoized function to count bubbles by category for Bubbles View (always shows total count, regardless of filters)
-    const getBubbleCountByTagForBubblesView = useCallback((tagId) => {
-        // Всегда показываем общее количество пузырей для каждого тега, независимо от фильтров
-        // Но учитываем поиск - если есть поиск, показываем только найденные пузыри
-        const bubblesForCount = debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim()
-            ? searchFoundBubbles
-            : bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE); // Только активные пузыри
-
-        if (tagId === null) {
-            // Count bubbles without tags or with deleted tags
-            return bubblesForCount.filter(bubble => {
-                if (!bubble.tagId) return true;
-                const tagExists = tags.find(t => t.id === bubble.tagId);
-                return !tagExists; // Включаем пузыри с удаленными тегами
-            }).length;
-        }
-        return bubblesForCount.filter(bubble => bubble.tagId === tagId).length;
-    }, [bubbles, tags, searchFoundBubbles, debouncedBubblesSearchQuery]);
+    // getBubbleCountByTagForBubblesView now lives in useBubbleFilters (Task B of #66);
+    // its late-bound deps are fed via filterPageDepsRef below.
 
     // Function to count bubbles by category for List View (based on selected status and search) - memoized
     const getBubbleCountByTagForListView = useCallback((tagId) => {
