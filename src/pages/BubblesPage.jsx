@@ -414,14 +414,19 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // Reconcile filter selections + recolor bubbles whenever the tag set changes.
     // Seam (Task 2/6 of #38): the live `setTags` half of the old
     // subscribeToTagsUpdates effect now lives in useTags; this [tags] effect keeps
-    // the filter-reconciliation + bubble-recolor half here. The very first run
-    // (initial empty `tags` on mount) is skipped so saved filters aren't wiped
-    // before tags load — matching the original subscription-driven timing.
+    // the filter-reconciliation + bubble-recolor half here. Reconciliation must
+    // not run until tags have actually loaded: every empty `tags` snapshot before
+    // the first real one (initial mount, StrictMode's double-invoke, empty
+    // intermediate Firestore emits) would otherwise treat every saved filter id as
+    // "deleted" and wipe `bubbles-filter-tags` to [] — silently clearing the
+    // user's selected category on every page reload. Skip until the first
+    // non-empty snapshot flips the guard, matching the original
+    // subscription-driven timing.
     const tagsReconcileInitRef = useRef(false);
     useEffect(() => {
         if (!tagsReconcileInitRef.current) {
+            if (tags.length === 0) return;
             tagsReconcileInitRef.current = true;
-            return;
         }
         const existingTagIds = tags.map(tag => tag.id);
 
