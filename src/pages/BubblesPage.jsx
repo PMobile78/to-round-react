@@ -1,27 +1,13 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import {
     Box,
-    IconButton,
     useMediaQuery,
     useTheme,
-    MenuItem,
-    Menu,
-    ListItemIcon,
-    ListItemText,
-
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import {
-    DeleteOutlined, Menu as MenuIcon,
-} from '@mui/icons-material';
 import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
-import MainMenuDrawer from '../components/MainMenuDrawer';
-import AboutDialog from '../components/AboutDialog';
-import FontSettingsDialog from '../components/FontSettingsDialog';
-import AppearanceDialog from '../components/AppearanceDialog';
-import ChangePasswordDialog from '../components/ChangePasswordDialog';
-import LogoutConfirmDialog from '../components/LogoutConfirmDialog';
+import BubblesDialogs from '../components/BubblesDialogs';
 import TextOverlay from '../components/TextOverlay';
 import { logoutUser } from '../services/authService';
 import {
@@ -36,7 +22,6 @@ import {
     deleteBubbleDoc
 } from '../services/firestoreService';
 
-import TaskListDrawer from '../components/ListViewDrawer';
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
 import BubbleViewHeader from '../components/BubbleViewHeader';
@@ -45,12 +30,7 @@ import BubbleViewFab from '../components/BubbleViewFab';
 import TasksFullScreenView from '../components/TasksFullScreenView';
 import { DesignBackdrop } from '../components/DesignBackdrop';
 import useSearch from '../hooks/useSearch';
-import EditBubbleDialog from '../components/EditBubbleDialog';
-import TasksCategoriesDialog from '../components/TasksCategoriesDialog';
-import TaskFilterDrawer from '../components/TaskFilterDrawer';
-import CreateBubbleDialog from '../components/CreateBubbleDialog';
 import logger from '../utils/logger';
-import TagEditorDialog from '../components/TagEditorDialog';
 import { useMatterResize } from '../hooks/useMatterResize';
 import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
 import { useMatterEngine } from '../hooks/useMatterEngine';
@@ -61,7 +41,7 @@ import { useBubbleNotifications } from '../hooks/useBubbleNotifications';
 import { useBubbleCrud } from '../hooks/useBubbleCrud';
 import { withAlpha } from '../utils/colorUtils';
 import { parseLocalDateTime } from '../utils/dateTime';
-import { isOverdue, notificationKeyPrefix } from '../utils/notifications';
+import { notificationKeyPrefix } from '../utils/notifications';
 import { stripHtml } from '../utils/stripHtml';
 import { exportJsonFile } from '../utils/exportJson';
 import {
@@ -1070,6 +1050,108 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         // is a ref — neither needs to be listed. bubbles is listed so the effect retries until loaded.
     }, [bubbles]);
 
+    // Stop-pulsing handler for the edit dialog. Clears the local pulse refs for
+    // the selected task, marks it as manually stopped, persists the suppressed
+    // overdue flags and closes the dialog. Lives here (not in BubblesDialogs)
+    // because it touches the page-owned bubble state and notification refs.
+    const handleStopPulsing = async () => {
+        try {
+            if (!selectedBubble) return;
+
+            // Очищаем локальные ссылки на пульсацию
+            stickyPulseRef.current.delete(selectedBubble.id);
+            notifiedBubblesRef.current.delete(selectedBubble.id);
+
+            // Добавляем задачу в список вручную остановленных
+            manuallyStoppedPulsingRef.current.add(selectedBubble.id);
+
+            // Очищаем все уведомления для этой задачи
+            const keysToDelete = [];
+            notifiedBubbleNotificationsRef.current.forEach(key => {
+                if (key.startsWith(notificationKeyPrefix(selectedBubble.id))) {
+                    keysToDelete.push(key);
+                }
+            });
+            keysToDelete.forEach(key => {
+                notifiedBubbleNotificationsRef.current.delete(key);
+            });
+
+            // Персистим намерение «остановлено вручную» + сбрасываем серверный sticky-флаг
+            const updatedBubble = {
+                ...selectedBubble,
+                overduePulseSuppressed: true,
+                overdueSticky: false,
+                overdueAt: null,
+                updatedAt: new Date().toISOString()
+            };
+
+            setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? updatedBubble : b));
+            updateBubbleFields(selectedBubble.id, {
+                overduePulseSuppressed: true, overdueSticky: false, overdueAt: null, updatedAt: updatedBubble.updatedAt
+            }).catch(e => logger.error('Error stopping pulsing:', e));
+
+            // Close edit dialog after stop pulsing
+            setEditDialog(false);
+            setSelectedBubble(null);
+        } catch (e) {
+            logger.error('Error stopping pulsing:', e);
+        }
+    };
+
+    // Whether the edit dialog should show the "stop pulsing" button: active task
+    // with a valid recurrence that is currently inside a notification window,
+    // overdue, or flagged sticky. Computed each render from selectedBubble.
+    const editDialogShowStopPulsing = (() => {
+        try {
+            if (!selectedBubble || selectedBubble.status !== BUBBLE_STATUS.ACTIVE) return false;
+
+            const rec = selectedBubble.recurrence;
+            const every = rec && typeof rec === 'object' ? Number(rec.every) : NaN;
+            if (!Number.isFinite(every) || every < 1) return false;
+
+            const now = Date.now();
+
+            // Проверяем наличие dueDate и просроченность
+            if (selectedBubble.dueDate) {
+                const parsedDue = parseLocalDateTime(selectedBubble.dueDate);
+                if (!parsedDue) return false;
+                const due = parsedDue.getTime();
+
+                // active notification window
+                if (Array.isArray(selectedBubble.notifications) && selectedBubble.notifications.length > 0) {
+                    for (const notif of selectedBubble.notifications) {
+                        let offsetMs = 0;
+                        if (typeof notif === 'string') {
+                            const m = notif.match(/^(\d+)([mhdw])$/i);
+                            if (m) {
+                                const val = Number(m[1]);
+                                const u = m[2].toLowerCase();
+                                offsetMs = u === 'm' ? val * 60 * 1000 : u === 'h' ? val * 60 * 60 * 1000 : u === 'd' ? val * 24 * 60 * 60 * 1000 : val * 7 * 24 * 60 * 60 * 1000;
+                            }
+                        } else if (typeof notif === 'object') {
+                            const v = Number(notif.value);
+                            const unit = notif.unit;
+                            if (Number.isFinite(v) && v > 0) {
+                                offsetMs = unit === 'minutes' ? v * 60 * 1000 : unit === 'hours' ? v * 60 * 60 * 1000 : unit === 'days' ? v * 24 * 60 * 60 * 1000 : unit === 'weeks' ? v * 7 * 24 * 60 * 60 * 1000 : 0;
+                            }
+                        }
+                        const targetTime = due - offsetMs;
+                        if (Number.isFinite(targetTime) && now >= targetTime && now < due) return true;
+                    }
+                }
+
+                if (now >= due) return true;
+            }
+
+            // Показываем кнопку Stop для задач с overdueSticky или в stickyPulseRef
+            if (selectedBubble.overdueSticky || stickyPulseRef.current.has(selectedBubble.id)) {
+                return true;
+            }
+
+            return false;
+        } catch (_) { return false; }
+    })();
+
     return (
         <Box sx={{
             width: (!isMobile && categoriesPanelEnabled && mainView === 'bubbles') ? 'calc(100vw - 320px)' : '100vw',
@@ -1228,20 +1310,24 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 />
             )}
 
-            {/* Диалог редактирования */}
-            <EditBubbleDialog
-                open={editDialog}
-                onClose={handleCloseDialog}
+            {/* Все диалоги и дроверы (Task A of #64) */}
+            <BubblesDialogs
                 t={t}
-                isSmallScreen={isSmallScreen}
                 isMobile={isMobile}
+                isSmallScreen={isSmallScreen}
                 themeMode={themeMode}
                 getDialogPaperStyles={getDialogPaperStyles}
-                initialTitle={selectedBubble?.title || ''}
-                initialDescription={selectedBubble?.description || ''}
+                tags={tags}
+                setTags={setTags}
+                bubbles={bubbles}
+                setBubbles={setBubbles}
+                editDialog={editDialog}
+                handleCloseDialog={handleCloseDialog}
+                selectedBubble={selectedBubble}
+                setSelectedBubble={setSelectedBubble}
+                setEditDialog={setEditDialog}
                 editDueDate={editDueDate}
                 setEditDueDate={setEditDueDate}
-                isOverdue={isOverdue}
                 notifDialogOpen={notifDialogOpen}
                 setNotifDialogOpen={setNotifDialogOpen}
                 notifValue={notifValue}
@@ -1249,7 +1335,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 editNotifications={editNotifications}
                 setEditNotifications={setEditNotifications}
                 handleDeleteNotification={handleDeleteNotification}
-                tags={tags}
                 selectedTagId={selectedTagId}
                 setSelectedTagId={setSelectedTagId}
                 editBubbleSize={editBubbleSize}
@@ -1257,149 +1342,19 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 handleDeleteBubble={handleDeleteBubble}
                 handleMarkAsDone={handleMarkAsDone}
                 handleSaveBubble={handleSaveBubble}
-                onStopPulsing={async () => {
-                    try {
-                        if (!selectedBubble) return;
-
-                        // Очищаем локальные ссылки на пульсацию
-                        stickyPulseRef.current.delete(selectedBubble.id);
-                        notifiedBubblesRef.current.delete(selectedBubble.id);
-
-                        // Добавляем задачу в список вручную остановленных
-                        manuallyStoppedPulsingRef.current.add(selectedBubble.id);
-
-                        // Очищаем все уведомления для этой задачи
-                        const keysToDelete = [];
-                        notifiedBubbleNotificationsRef.current.forEach(key => {
-                            if (key.startsWith(notificationKeyPrefix(selectedBubble.id))) {
-                                keysToDelete.push(key);
-                            }
-                        });
-                        keysToDelete.forEach(key => {
-                            notifiedBubbleNotificationsRef.current.delete(key);
-                        });
-
-                        // Персистим намерение «остановлено вручную» + сбрасываем серверный sticky-флаг
-                        const updatedBubble = {
-                            ...selectedBubble,
-                            overduePulseSuppressed: true,
-                            overdueSticky: false,
-                            overdueAt: null,
-                            updatedAt: new Date().toISOString()
-                        };
-
-                        setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? updatedBubble : b));
-                        updateBubbleFields(selectedBubble.id, {
-                            overduePulseSuppressed: true, overdueSticky: false, overdueAt: null, updatedAt: updatedBubble.updatedAt
-                        }).catch(e => logger.error('Error stopping pulsing:', e));
-
-                        // Close edit dialog after stop pulsing
-                        setEditDialog(false);
-                        setSelectedBubble(null);
-                    } catch (e) {
-                        logger.error('Error stopping pulsing:', e);
-                    }
-                }}
-                showStopPulsing={(() => {
-                    try {
-                        if (!selectedBubble || selectedBubble.status !== BUBBLE_STATUS.ACTIVE) return false;
-
-                        const rec = selectedBubble.recurrence;
-                        const every = rec && typeof rec === 'object' ? Number(rec.every) : NaN;
-                        if (!Number.isFinite(every) || every < 1) return false;
-
-                        const now = Date.now();
-
-                        // Проверяем наличие dueDate и просроченность
-                        if (selectedBubble.dueDate) {
-                            const parsedDue = parseLocalDateTime(selectedBubble.dueDate);
-                            if (!parsedDue) return false;
-                            const due = parsedDue.getTime();
-
-                            // active notification window
-                            if (Array.isArray(selectedBubble.notifications) && selectedBubble.notifications.length > 0) {
-                                for (const notif of selectedBubble.notifications) {
-                                    let offsetMs = 0;
-                                    if (typeof notif === 'string') {
-                                        const m = notif.match(/^(\d+)([mhdw])$/i);
-                                        if (m) {
-                                            const val = Number(m[1]);
-                                            const u = m[2].toLowerCase();
-                                            offsetMs = u === 'm' ? val * 60 * 1000 : u === 'h' ? val * 60 * 60 * 1000 : u === 'd' ? val * 24 * 60 * 60 * 1000 : val * 7 * 24 * 60 * 60 * 1000;
-                                        }
-                                    } else if (typeof notif === 'object') {
-                                        const v = Number(notif.value);
-                                        const unit = notif.unit;
-                                        if (Number.isFinite(v) && v > 0) {
-                                            offsetMs = unit === 'minutes' ? v * 60 * 1000 : unit === 'hours' ? v * 60 * 60 * 1000 : unit === 'days' ? v * 24 * 60 * 60 * 1000 : unit === 'weeks' ? v * 7 * 24 * 60 * 60 * 1000 : 0;
-                                        }
-                                    }
-                                    const targetTime = due - offsetMs;
-                                    if (Number.isFinite(targetTime) && now >= targetTime && now < due) return true;
-                                }
-                            }
-
-                            if (now >= due) return true;
-                        }
-
-                        // Показываем кнопку Stop для задач с overdueSticky или в stickyPulseRef
-                        if (selectedBubble.overdueSticky || stickyPulseRef.current.has(selectedBubble.id)) {
-                            return true;
-                        }
-
-                        return false;
-                    } catch (_) { return false; }
-                })()}
+                onStopPulsing={handleStopPulsing}
+                showStopPulsing={editDialogShowStopPulsing}
                 editRecurrence={editRecurrence}
-                setEditRecurrence={handleSetEditRecurrence}
-                useRichText={useRichTextEdit}
-                onToggleUseRichText={handleToggleEditUseRichText}
-            />
-            {/* Меню управления тегами */}
-            {/* Меню управления тегами */}
-            <Menu
-                anchorEl={tagMenuAnchor}
-                open={Boolean(tagMenuAnchor)}
-                onClose={() => setTagMenuAnchor(null)}
-            >
-                {tags.map(tag => (
-                    <MenuItem key={tag.id} onClick={() => {
-                        setTagMenuAnchor(null);
-                        handleOpenTagDialog(tag);
-                    }}>
-                        <ListItemIcon>
-                            <Box
-                                sx={{
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: '50%',
-                                    backgroundColor: tag.color,
-                                    border: '1px solid #ccc'
-                                }}
-                            />
-                        </ListItemIcon>
-                        <ListItemText primary={tag.name} />
-                        <IconButton
-                            size="small"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteTag(tag.id);
-                                setTagMenuAnchor(null);
-                            }}
-                        >
-                            <DeleteOutlined fontSize="small" />
-                        </IconButton>
-                    </MenuItem>
-                ))}
-            </Menu>
-
-            {/* Диалог создания/редактирования тега */}
-            <TagEditorDialog
-                open={tagDialog}
-                onClose={handleCloseTagDialog}
-                isSmallScreen={isSmallScreen}
-                isMobile={isMobile}
-                colorPalette={COLOR_PALETTE}
+                handleSetEditRecurrence={handleSetEditRecurrence}
+                useRichTextEdit={useRichTextEdit}
+                handleToggleEditUseRichText={handleToggleEditUseRichText}
+                tagMenuAnchor={tagMenuAnchor}
+                setTagMenuAnchor={setTagMenuAnchor}
+                handleOpenTagDialog={handleOpenTagDialog}
+                handleDeleteTag={handleDeleteTag}
+                tagDialog={tagDialog}
+                handleCloseTagDialog={handleCloseTagDialog}
+                COLOR_PALETTE={COLOR_PALETTE}
                 editingTag={editingTag}
                 tagName={tagName}
                 setTagName={setTagName}
@@ -1407,167 +1362,70 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 setTagColor={setTagColor}
                 isColorAvailable={isColorAvailable}
                 canCreateMoreTags={canCreateMoreTags}
-                onSave={handleSaveTag}
-            />
-
-            {/* Левое главное меню */}
-            <MainMenuDrawer
-                open={menuDrawerOpen}
-                onClose={() => setMenuDrawerOpen(false)}
-                isMobile={isMobile}
-                themeMode={themeMode}
+                handleSaveTag={handleSaveTag}
+                menuDrawerOpen={menuDrawerOpen}
+                setMenuDrawerOpen={setMenuDrawerOpen}
                 themeToggleProps={themeToggleProps}
                 toggleTheme={toggleTheme}
                 bubbleBackgroundEnabled={bubbleBackgroundEnabled}
-                onToggleBubbleBackground={handleToggleBubbleBackground}
+                handleToggleBubbleBackground={handleToggleBubbleBackground}
                 mainView={mainView}
-                onToggleMainView={handleToggleMainView}
+                handleToggleMainView={handleToggleMainView}
                 categoriesPanelEnabled={categoriesPanelEnabled}
-                onToggleCategoriesPanel={handleToggleCategoriesPanel}
-                onOpenCategoriesDialog={() => setCategoriesDialog(true)}
-                onOpenFontSettingsDialog={() => setFontSettingsDialog(true)}
-                onOpenAppearanceDialog={() => setAppearanceDialogOpen(true)}
-                onOpenChangePasswordDialog={() => setChangePasswordOpen(true)}
+                handleToggleCategoriesPanel={handleToggleCategoriesPanel}
+                setCategoriesDialog={setCategoriesDialog}
+                setFontSettingsDialog={setFontSettingsDialog}
+                setAppearanceDialogOpen={setAppearanceDialogOpen}
+                setChangePasswordOpen={setChangePasswordOpen}
                 onOpenMindMap={onOpenMindMap}
-                onAbout={() => setAboutOpen(true)}
-                onLogout={handleLogout}
-                onExportJson={handleExportJson}
-                onImportJson={handleImportJson}
-            />
-
-            <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} t={t} />
-
-            {/* Боковое меню фильтрации (вынесено в компонент) */}
-            <TaskFilterDrawer
-                open={filterDrawerOpen}
-                onClose={() => setFilterDrawerOpen(false)}
-                isMobile={isMobile}
-                themeMode={themeMode}
-                tags={tags}
+                setAboutOpen={setAboutOpen}
+                handleLogout={handleLogout}
+                handleExportJson={handleExportJson}
+                handleImportJson={handleImportJson}
+                aboutOpen={aboutOpen}
+                filterDrawerOpen={filterDrawerOpen}
+                setFilterDrawerOpen={setFilterDrawerOpen}
                 filterTags={filterTags}
                 showNoTag={showNoTag}
-                onToggleNoTag={handleNoTagFilterChange}
-                onToggleTag={handleTagFilterChange}
-                onSelectAll={selectAllFilters}
-                onClearAll={clearAllFilters}
-                isAllSelected={isAllSelected()}
+                handleNoTagFilterChange={handleNoTagFilterChange}
+                handleTagFilterChange={handleTagFilterChange}
+                selectAllFilters={selectAllFilters}
+                clearAllFilters={clearAllFilters}
+                isAllSelected={isAllSelected}
                 getBubbleCountByTagForBubblesView={getBubbleCountByTagForBubblesView}
-            />
-
-            {/* Диалог создания нового пузыря */}
-            <CreateBubbleDialog
-                open={createDialog}
-                onClose={() => setCreateDialog(false)}
-                t={t}
-                isSmallScreen={isSmallScreen}
-                isMobile={isMobile}
-                themeMode={themeMode}
-                getDialogPaperStyles={getDialogPaperStyles}
+                createDialog={createDialog}
+                setCreateDialog={setCreateDialog}
                 dueDate={dueDate}
                 setDueDate={setDueDate}
-                isOverdue={isOverdue}
-                notifDialogOpen={notifDialogOpen}
-                setNotifDialogOpen={setNotifDialogOpen}
-                notifValue={notifValue}
-                setNotifValue={setNotifValue}
                 createNotifications={createNotifications}
                 setCreateNotifications={setCreateNotifications}
                 createRecurrence={createRecurrence}
-                setCreateRecurrence={handleSetCreateRecurrence}
+                handleSetCreateRecurrence={handleSetCreateRecurrence}
                 handleDeleteCreateNotification={handleDeleteCreateNotification}
-                tags={tags}
-                selectedTagId={selectedTagId}
-                setSelectedTagId={setSelectedTagId}
                 bubbleSize={bubbleSize}
                 setBubbleSize={setBubbleSize}
-                onCreate={createNewBubble}
-                useRichText={useRichTextCreate}
-                onToggleUseRichText={setUseRichTextCreate}
-            />
-            {/* Диалог управления категориями задач - вынесен в отдельный компонент с поддержкой DnD */}
-            <TasksCategoriesDialog
-                open={categoriesDialog}
-                onClose={() => setCategoriesDialog(false)}
-                tags={tags}
+                createNewBubble={createNewBubble}
+                useRichTextCreate={useRichTextCreate}
+                setUseRichTextCreate={setUseRichTextCreate}
+                categoriesDialog={categoriesDialog}
                 deletingTags={deletingTags}
-                canCreateMoreTags={canCreateMoreTags}
-                onAddTag={() => {
-                    if (canCreateMoreTags()) {
-                        setCategoriesDialog(false);
-                        handleOpenTagDialog();
-                    }
-                }}
-                onEditTag={(tag) => {
-                    setCategoriesDialog(false);
-                    handleOpenTagDialog(tag);
-                }}
-                onDeleteTag={(tagId) => handleDeleteTag(tagId)}
-                onUndoDeleteTag={(tagId) => handleUndoDeleteTag(tagId)}
+                handleUndoDeleteTag={handleUndoDeleteTag}
                 getBubbleCountByTag={getBubbleCountByTag}
-                themeMode={themeMode}
-                isMobile={isMobile}
-                isSmallScreen={isSmallScreen}
-                getDialogPaperStyles={getDialogPaperStyles}
-                onReorderTags={(updated) => {
-                    setTags(updated);
-                    saveTagsToFirestore(updated);
-                }}
-            />
-
-            {/* Диалог настроек шрифта */}
-            <FontSettingsDialog
-                open={fontSettingsDialog}
-                onClose={() => setFontSettingsDialog(false)}
-                isSmallScreen={isSmallScreen}
-                isMobile={isMobile}
-                themeMode={themeMode}
-                getDialogPaperStyles={getDialogPaperStyles}
+                fontSettingsDialog={fontSettingsDialog}
                 fontSize={fontSize}
-                onFontSizeChange={handleFontSizeChange}
-                onReset={() => handleFontSizeChange(8)}
-            />
-
-            {/* Диалог оформления */}
-            <AppearanceDialog
-                open={appearanceDialogOpen}
-                onClose={() => setAppearanceDialogOpen(false)}
-                isSmallScreen={isSmallScreen}
-                isMobile={isMobile}
-                themeMode={themeModeState}
+                handleFontSizeChange={handleFontSizeChange}
+                appearanceDialogOpen={appearanceDialogOpen}
+                themeModeState={themeModeState}
                 setThemeMode={setThemeMode}
                 design={design}
                 setDesign={setDesign}
                 designs={designs}
-                getDialogPaperStyles={getDialogPaperStyles}
-            />
-
-            {/* Диалог смены пароля */}
-            <ChangePasswordDialog
-                open={changePasswordOpen}
-                onClose={() => setChangePasswordOpen(false)}
-                isSmallScreen={isSmallScreen}
-                isMobile={isMobile}
-                getDialogPaperStyles={getDialogPaperStyles}
-            />
-
-            {/* Диалог подтверждения выхода */}
-            <LogoutConfirmDialog
-                open={logoutDialog}
-                onClose={() => setLogoutDialog(false)}
-                isMobile={isMobile}
-                getDialogPaperStyles={getDialogPaperStyles}
-                onConfirm={confirmLogout}
-            />
-
-            {/* Боковая панель списка задач */}
-            <TaskListDrawer
-                open={listViewDialog}
-                onClose={() => setListViewDialog(false)}
-                isMobile={isMobile}
-                themeMode={themeMode}
-                bubbles={bubbles}
-                setBubbles={setBubbles}
-                tags={tags}
+                changePasswordOpen={changePasswordOpen}
+                logoutDialog={logoutDialog}
+                setLogoutDialog={setLogoutDialog}
+                confirmLogout={confirmLogout}
+                listViewDialog={listViewDialog}
+                setListViewDialog={setListViewDialog}
                 listFilter={listFilter}
                 setListFilter={setListFilter}
                 listSortBy={listSortBy}
@@ -1580,16 +1438,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 setListShowNoTag={setListShowNoTag}
                 listSearchQuery={listSearchQuery}
                 setListSearchQuery={setListSearchQuery}
-                setSelectedBubble={setSelectedBubble}
-                setSelectedTagId={setSelectedTagId}
-                setEditDialog={setEditDialog}
                 handleListTagFilterChange={handleListTagFilterChange}
                 handleListNoTagFilterChange={handleListNoTagFilterChange}
                 clearAllListFilters={clearAllListFilters}
                 selectAllListFilters={selectAllListFilters}
                 getBubbleCountByTagForListView={getBubbleCountByTagForListView}
-                isAllListFiltersSelected={isAllListFiltersSelected()}
-                onOpenFilterMenu={() => setFilterDrawerOpen(true)}
+                isAllListFiltersSelected={isAllListFiltersSelected}
             />
 
             {/* Панель категорий - только для десктопа */}
