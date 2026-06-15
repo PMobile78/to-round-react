@@ -37,7 +37,6 @@ export default function RepeatSettings({ value, onChange, t, disabled = false, i
             if (enabled) setEnabled(false);
             onChange(null);
         }
-        // eslint-disable-next-line
     }, [disabled]);
 
     // Update repeat data when state changes
@@ -55,7 +54,6 @@ export default function RepeatSettings({ value, onChange, t, disabled = false, i
         }
 
         onChange(repeatData);
-        // eslint-disable-next-line
     }, [enabled, disabled, every, unit, selectedDays]);
 
     const weekDays = [

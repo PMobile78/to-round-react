@@ -710,7 +710,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         } catch (e) {
             // ignore
         }
-        // eslint-disable-next-line
         // Intentional: setSelectedBubble/setEditDialog are stable useState setters; deepLinkHandledRef
         // is a ref — neither needs to be listed. bubbles is listed so the effect retries until loaded.
     }, [bubbles]);
