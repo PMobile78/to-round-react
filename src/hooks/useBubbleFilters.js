@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { lsGet, lsSet } from '../utils/storage';
+import { BUBBLE_STATUS } from '../services/firestoreService';
 
 const BUBBLES_PLANNED_TASKS_VIEW_LS_KEY = 'bubbles-planned-tasks-only';
 
@@ -7,7 +8,38 @@ function readBubbleViewPlannedTasksFromLS() {
     return lsGet(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, false) === true;
 }
 
-export function useBubbleFilters({ tags }) {
+// Pure helper: toggle a tag id in/out of the filter list (returns a new array).
+export function toggleTagInFilter(filterTags, tagId) {
+    return filterTags.includes(tagId)
+        ? filterTags.filter((id) => id !== tagId)
+        : [...filterTags, tagId];
+}
+
+// Pure helper: true when every tag is selected and "no tag" bubbles are shown.
+export function isAllTagsSelected(tags, filterTags, showNoTag) {
+    return tags.length > 0 && filterTags.length === tags.length && showNoTag;
+}
+
+// Pure helper: count active (or search-found) bubbles for a tag in bubbles-view.
+// Always reflects the total count for the tag, independent of the active filters,
+// but honours the current search query when one is present. `tagId === null`
+// counts bubbles without a tag (or whose tag was deleted).
+export function countBubblesByTagForBubblesView({ bubbles, tags, searchFoundBubbles, debouncedSearchQuery }, tagId) {
+    const bubblesForCount = debouncedSearchQuery && debouncedSearchQuery.trim()
+        ? searchFoundBubbles
+        : bubbles.filter((bubble) => bubble.status === BUBBLE_STATUS.ACTIVE);
+
+    if (tagId === null) {
+        return bubblesForCount.filter((bubble) => {
+            if (!bubble.tagId) return true;
+            const tagExists = tags.find((t) => t.id === bubble.tagId);
+            return !tagExists; // include bubbles whose tag was deleted
+        }).length;
+    }
+    return bubblesForCount.filter((bubble) => bubble.tagId === tagId).length;
+}
+
+export function useBubbleFilters({ tags, pageDeps }) {
     const [filterTags, setFilterTags] = useState(() => {
         const saved = localStorage.getItem('bubbles-filter-tags');
         return saved ? JSON.parse(saved) : [];
@@ -179,6 +211,70 @@ export function useBubbleFilters({ tags }) {
         localStorage.setItem('bubbles-categories-panel-enabled', JSON.stringify(newValue));
     };
 
+    // --- bubbles-view filter callbacks (moved from BubblesPage, Task B of #66) ---
+    const handleTagFilterChange = useCallback((tagId) => {
+        setBubbleViewPlannedTasksOnly(false);
+        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+        setFilterTags((prev) => {
+            const newFilterTags = toggleTagInFilter(prev, tagId);
+            localStorage.setItem('bubbles-filter-tags', JSON.stringify(newFilterTags));
+            return newFilterTags;
+        });
+        // Сбрасываем выбранную категорию при ручном изменении фильтров
+        setSelectedCategory(null);
+    }, []);
+
+    const handleNoTagFilterChange = useCallback(() => {
+        setBubbleViewPlannedTasksOnly(false);
+        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+        setShowNoTag((prev) => {
+            const newShowNoTag = !prev;
+            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(newShowNoTag));
+            return newShowNoTag;
+        });
+        // Сбрасываем выбранную категорию при ручном изменении фильтров
+        setSelectedCategory(null);
+    }, []);
+
+    const clearAllFilters = useCallback(() => {
+        setBubbleViewPlannedTasksOnly(false);
+        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+        setFilterTags([]);
+        setShowNoTag(false);
+        setSelectedCategory(null); // Сбрасываем выбранную категорию
+        localStorage.setItem('bubbles-filter-tags', JSON.stringify([]));
+        localStorage.setItem('bubbles-show-no-tag', JSON.stringify(false));
+    }, []);
+
+    const selectAllFilters = useCallback(() => {
+        setBubbleViewPlannedTasksOnly(false);
+        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+        const allTagIds = tags.map((tag) => tag.id);
+        setFilterTags(allTagIds);
+        setShowNoTag(true);
+        setSelectedCategory(null); // Сбрасываем выбранную категорию
+        localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
+        localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
+    }, [tags]);
+
+    const isAllSelected = useCallback(() => {
+        return isAllTagsSelected(tags, filterTags, showNoTag);
+    }, [tags, filterTags, showNoTag]);
+
+    // Count bubbles by tag for the bubbles view. `bubbles` and the current search
+    // state are defined *after* this hook runs in BubblesPage, so they are read at
+    // call-time from the pageDeps bridge ref. Consumers of this callback are not
+    // memoized, so a stable identity here is safe.
+    const getBubbleCountByTagForBubblesView = useCallback((tagId) => {
+        const deps = (pageDeps && pageDeps.current) || {};
+        return countBubblesByTagForBubblesView({
+            bubbles: deps.bubbles || [],
+            tags,
+            searchFoundBubbles: deps.searchFoundBubbles || [],
+            debouncedSearchQuery: deps.debouncedSearchQuery
+        }, tagId);
+    }, [tags, pageDeps]);
+
     return {
         filterTags,
         setFilterTags,
@@ -192,5 +288,11 @@ export function useBubbleFilters({ tags }) {
         setCategoriesPanelEnabled,
         handleCategorySelect,
         handleToggleCategoriesPanel,
+        handleTagFilterChange,
+        handleNoTagFilterChange,
+        clearAllFilters,
+        selectAllFilters,
+        isAllSelected,
+        getBubbleCountByTagForBubblesView,
     };
 }
