@@ -11,7 +11,6 @@ import BubblesDialogs from '../components/BubblesDialogs';
 import TextOverlay from '../components/TextOverlay';
 import { logoutUser } from '../services/authService';
 import {
-    saveBubblesToFirestore,
     loadBubblesFromFirestore,
     saveTagsToFirestore,
     subscribeToBubblesUpdates,
@@ -36,17 +35,14 @@ import { useMatterEngine } from '../hooks/useMatterEngine';
 import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
 import { useListFilters } from '../hooks/useListFilters';
+import { useBubbleImportExport } from '../hooks/useBubbleImportExport';
 import { useTags } from '../hooks/useTags';
 import { useBubbleNotifications } from '../hooks/useBubbleNotifications';
 import { useBubbleCrud } from '../hooks/useBubbleCrud';
 import { withAlpha } from '../utils/colorUtils';
 import { parseLocalDateTime } from '../utils/dateTime';
 import { notificationKeyPrefix } from '../utils/notifications';
-import { exportJsonFile } from '../utils/exportJson';
 import {
-    sanitizeBubble,
-    sanitizeTag,
-    sanitizeBubblesForExport,
     readBubbleViewPlannedTasksFromLS
 } from '../utils/bubbleData';
 
@@ -177,6 +173,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         isAllListFiltersSelected,
         getBubbleCountByTagForListView,
     } = useListFilters({ tags, pageDeps: listFilterPageDepsRef });
+
+    // JSON import/export handlers extracted into useBubbleImportExport (Task D of #68).
+    // importExportPageDepsRef bridges the page-owned `bubbles` + `tags` the export
+    // builder reads at call-time (refreshed below), keeping a stable handler identity.
+    const importExportPageDepsRef = useRef({});
+    const {
+        handleExportJson,
+        handleImportJson,
+    } = useBubbleImportExport({ pageDeps: importExportPageDepsRef, setBubbles, setTags });
 
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
@@ -564,6 +569,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         listSearchQuery
     };
 
+    // Keep the bridge to useBubbleImportExport fresh: handleExportJson reads
+    // bubbles + tags at call-time (export builder).
+    importExportPageDepsRef.current = {
+        bubbles,
+        tags
+    };
+
     // Создаем Set ID найденных пузырей для быстрого поиска
     const foundBubblesIds = useMemo(() => {
         return new Set(searchFoundBubbles.map(bubble => bubble.id));
@@ -840,45 +852,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setEditRecurrence(value);
     }, []);
 
-    // Export current data to JSON
-    const handleExportJson = useCallback(() => {
-        const pad = (n) => String(n).padStart(2, '0');
-        const now = new Date();
-        const filename = `todo-round-export-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.json`;
-        const data = {
-            version: 1,
-            exportedAt: now.toISOString(),
-            bubbles: sanitizeBubblesForExport(bubbles),
-            tags
-        };
-        exportJsonFile(data, filename);
-    }, [bubbles, tags]);
-
-    // Import data from JSON (replace existing)
-    const handleImportJson = useCallback(async (data) => {
-        try {
-            const importedTags = Array.isArray(data?.tags)
-                ? data.tags.map(sanitizeTag).filter(Boolean)
-                : [];
-            const importedBubbles = Array.isArray(data?.bubbles)
-                ? data.bubbles.map(sanitizeBubble).filter(Boolean)
-                : [];
-
-            setTags(importedTags);
-            await saveTagsToFirestore(importedTags);
-
-            setBubbles(importedBubbles);
-            await saveBubblesToFirestore(importedBubbles);
-
-            // TODO: replace with proper React state + Matter.js reinit to avoid full page reload.
-            // Imported bubbles are plain objects without Matter.js .body references; the physics
-            // engine initialisation useEffect runs only once on mount, so a reload is required
-            // to reattach physics bodies to the freshly imported bubbles.
-            window.location.reload();
-        } catch (e) {
-            logger.error('Import JSON failed', e);
-        }
-    }, []);
+    // JSON import/export (handleExportJson / handleImportJson) now lives in
+    // useBubbleImportExport (Task D of #68); sourced from the hook above.
 
     // open-bubble deep-link listener now lives in useBubbleCrud (Task 5/6 of #38).
 
