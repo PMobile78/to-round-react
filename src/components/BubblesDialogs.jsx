@@ -1,13 +1,4 @@
 import React from 'react';
-import {
-    Box,
-    IconButton,
-    MenuItem,
-    Menu,
-    ListItemIcon,
-    ListItemText,
-} from '@mui/material';
-import { DeleteOutlined } from '@mui/icons-material';
 import EditBubbleDialog from './EditBubbleDialog';
 import TagEditorDialog from './TagEditorDialog';
 import MainMenuDrawer from './MainMenuDrawer';
@@ -70,9 +61,7 @@ const BubblesDialogs = ({
     handleSetEditRecurrence,
     useRichTextEdit,
     handleToggleEditUseRichText,
-    // Tag context menu
-    tagMenuAnchor,
-    setTagMenuAnchor,
+    // Tag actions (used by the categories dialog)
     handleOpenTagDialog,
     handleDeleteTag,
     // Tag editor dialog
@@ -217,43 +206,6 @@ const BubblesDialogs = ({
                 useRichText={useRichTextEdit}
                 onToggleUseRichText={handleToggleEditUseRichText}
             />
-            {/* Меню управления тегами */}
-            <Menu
-                anchorEl={tagMenuAnchor}
-                open={Boolean(tagMenuAnchor)}
-                onClose={() => setTagMenuAnchor(null)}
-            >
-                {tags.map(tag => (
-                    <MenuItem key={tag.id} onClick={() => {
-                        setTagMenuAnchor(null);
-                        handleOpenTagDialog(tag);
-                    }}>
-                        <ListItemIcon>
-                            <Box
-                                sx={{
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: '50%',
-                                    backgroundColor: tag.color,
-                                    border: '1px solid #ccc'
-                                }}
-                            />
-                        </ListItemIcon>
-                        <ListItemText primary={tag.name} />
-                        <IconButton
-                            size="small"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteTag(tag.id);
-                                setTagMenuAnchor(null);
-                            }}
-                        >
-                            <DeleteOutlined fontSize="small" />
-                        </IconButton>
-                    </MenuItem>
-                ))}
-            </Menu>
-
             {/* Диалог создания/редактирования тега */}
             <TagEditorDialog
                 open={tagDialog}

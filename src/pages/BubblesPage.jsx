@@ -123,8 +123,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         tagColor,
         setTagColor,
         editingTag,
-        tagMenuAnchor,
-        setTagMenuAnchor,
         deletingTags,
         deleteTimers,
         handleOpenTagDialog,
@@ -1348,8 +1346,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 handleSetEditRecurrence={handleSetEditRecurrence}
                 useRichTextEdit={useRichTextEdit}
                 handleToggleEditUseRichText={handleToggleEditUseRichText}
-                tagMenuAnchor={tagMenuAnchor}
-                setTagMenuAnchor={setTagMenuAnchor}
                 handleOpenTagDialog={handleOpenTagDialog}
                 handleDeleteTag={handleDeleteTag}
                 tagDialog={tagDialog}

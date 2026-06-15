@@ -35,7 +35,6 @@ export function useTags({ user, bubbles, pageDeps }) {
     const [tagName, setTagName] = useState('');
     const [tagColor, setTagColor] = useState('#2f6bdb');
     const [editingTag, setEditingTag] = useState(null);
-    const [tagMenuAnchor, setTagMenuAnchor] = useState(null);
     const [deletingTags, setDeletingTags] = useState(new Set()); // Теги в процессе удаления
     const [deleteTimers, setDeleteTimers] = useState(new Map()); // Таймеры удаления тегов
 
@@ -237,8 +236,6 @@ export function useTags({ user, bubbles, pageDeps }) {
         tagColor,
         setTagColor,
         editingTag,
-        tagMenuAnchor,
-        setTagMenuAnchor,
         deletingTags,
         deleteTimers,
         handleOpenTagDialog,
