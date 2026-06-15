@@ -16,7 +16,6 @@ import {
     saveTagsToFirestore,
     subscribeToBubblesUpdates,
     BUBBLE_STATUS,
-    getBubblesByStatus,
     cleanupOldDeletedBubbles,
     updateBubbleFields,
     deleteBubbleDoc
@@ -36,13 +35,13 @@ import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
 import { useMatterEngine } from '../hooks/useMatterEngine';
 import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
+import { useListFilters } from '../hooks/useListFilters';
 import { useTags } from '../hooks/useTags';
 import { useBubbleNotifications } from '../hooks/useBubbleNotifications';
 import { useBubbleCrud } from '../hooks/useBubbleCrud';
 import { withAlpha } from '../utils/colorUtils';
 import { parseLocalDateTime } from '../utils/dateTime';
 import { notificationKeyPrefix } from '../utils/notifications';
-import { stripHtml } from '../utils/stripHtml';
 import { exportJsonFile } from '../utils/exportJson';
 import {
     sanitizeBubble,
@@ -161,6 +160,24 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         getBubbleCountByTagForBubblesView,
     } = useBubbleFilters({ tags, pageDeps: filterPageDepsRef });
 
+    // List-view filter / count state extracted into useListFilters (Task C of #67).
+    // listFilterPageDepsRef bridges deps the list count/filter callbacks need but
+    // that are defined *after* this call (bubbles + listFilter + list search); read
+    // at call-time.
+    const listFilterPageDepsRef = useRef({});
+    const {
+        listFilterTags,
+        setListFilterTags,
+        listShowNoTag,
+        setListShowNoTag,
+        handleListTagFilterChange,
+        handleListNoTagFilterChange,
+        clearAllListFilters,
+        selectAllListFilters,
+        isAllListFiltersSelected,
+        getBubbleCountByTagForListView,
+    } = useListFilters({ tags, pageDeps: listFilterPageDepsRef });
+
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false); // Состояние панели категорий
@@ -183,14 +200,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         const saved = localStorage.getItem('bubbles-list-sort-order');
         return saved ? saved : 'desc';
     }); // 'asc', 'desc'
-    const [listFilterTags, setListFilterTags] = useState(() => {
-        const saved = localStorage.getItem('bubbles-list-filter-tags');
-        return saved ? JSON.parse(saved) : [];
-    }); // Массив ID выбранных тегов для фильтрации в списке
-    const [listShowNoTag, setListShowNoTag] = useState(() => {
-        const saved = localStorage.getItem('bubbles-list-show-no-tag');
-        return saved ? JSON.parse(saved) : true;
-    }); // Показывать ли задачи без тегов в списке
+    // listFilterTags / listShowNoTag state now live in useListFilters (Task C of #67).
     const [listSearchQuery, setListSearchQuery] = useState(''); // Поисковый запрос для списка задач
 
     const [showInstructions, setShowInstructions] = useState(() => {
@@ -454,21 +464,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         });
     }, [tags]);
 
-    // Инициализация настроек фильтра списка задач после загрузки тегов
-    useEffect(() => {
-        if (tags.length > 0) {
-            // Тоже самое для настроек фильтра в списке задач
-            const savedListFilterTags = localStorage.getItem('bubbles-list-filter-tags');
-            const savedListShowNoTag = localStorage.getItem('bubbles-list-show-no-tag');
-            if (savedListFilterTags === null && savedListShowNoTag === null) {
-                const allTagIds = tags.map(tag => tag.id);
-                setListFilterTags(allTagIds);
-                setListShowNoTag(true);
-                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(allTagIds));
-                localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(true));
-            }
-        }
-    }, [tags]);
+    // List-filter init-effect (settings after tags load) now lives in useListFilters
+    // (Task C of #67).
 
     // При включении панели категорий оставляем текущие фильтры и выбранную категорию как есть
     // Выбор в панели определяется текущими filterTags/showNoTag
@@ -557,6 +554,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         bubbles,
         searchFoundBubbles,
         debouncedSearchQuery: debouncedBubblesSearchQuery
+    };
+
+    // Keep the bridge to useListFilters fresh: getBubbleCountByTagForListView /
+    // getFilteredBubblesForList read these at call-time (defined after the hook runs).
+    listFilterPageDepsRef.current = {
+        bubbles,
+        listFilter,
+        listSearchQuery
     };
 
     // Создаем Set ID найденных пузырей для быстрого поиска
@@ -682,34 +687,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // handleToggleEditUseRichText + the open-bubble deep-link listener) live in
     // useBubbleCrud (Task 5/6 of #38).
 
-    // Function for filtering bubbles for list view (supports all statuses) - memoized
-    const getFilteredBubblesForList = useMemo(() => {
-        // In list mode, filter by selected status
-        const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
-
-        // Apply tag filters using separate list filter states
-        // Check if all tags are selected and showNoTag is true - show all bubbles
-        const allTagsSelected = tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
-
-        if (allTagsSelected) {
-            return filteredByStatus;
-        }
-
-        return filteredByStatus.filter(bubble => {
-            // Проверяем, существует ли тег для пузыря
-            const tagExists = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
-
-            // Если выбраны теги и пузырь имеет один из выбранных тегов (который существует)
-            if (listFilterTags.length > 0 && bubble.tagId && tagExists && listFilterTags.includes(bubble.tagId)) {
-                return true;
-            }
-            // Если включен фильтр "No Tag" и у пузыря нет тега или тег был удален
-            if (listShowNoTag && (!bubble.tagId || !tagExists)) {
-                return true;
-            }
-            return false;
-        });
-    }, [bubbles, tags, listFilter, listFilterTags, listShowNoTag]);
+    // getFilteredBubblesForList now lives in useListFilters (Task C of #67); its
+    // late-bound deps (bubbles + listFilter) are fed via listFilterPageDepsRef below.
 
     // Tag dialog/CRUD + color helpers live in useTags (Task 2/6 of #38).
 
@@ -717,85 +696,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // clearAllFilters, selectAllFilters, isAllSelected) now live in useBubbleFilters
     // (Task B of #66).
 
-    // Memoized functions for list filter management
-    const handleListTagFilterChange = useCallback((tagId) => {
-        setListFilterTags(prev => {
-            const newListFilterTags = prev.includes(tagId)
-                ? prev.filter(id => id !== tagId)
-                : [...prev, tagId];
-            localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(newListFilterTags));
-            return newListFilterTags;
-        });
-    }, []);
-
-    const handleListNoTagFilterChange = useCallback(() => {
-        setListShowNoTag(prev => {
-            const newListShowNoTag = !prev;
-            localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(newListShowNoTag));
-            return newListShowNoTag;
-        });
-    }, []);
-
-    const clearAllListFilters = useCallback(() => {
-        setListFilterTags([]);
-        setListShowNoTag(false);
-        localStorage.setItem('bubbles-list-filter-tags', JSON.stringify([]));
-        localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(false));
-    }, []);
-
-    const selectAllListFilters = useCallback(() => {
-        const allTagIds = tags.map(tag => tag.id);
-        setListFilterTags(allTagIds);
-        setListShowNoTag(true);
-        localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(allTagIds));
-        localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(true));
-    }, [tags]);
-
-    const isAllListFiltersSelected = useCallback(() => {
-        return tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
-    }, [tags, listFilterTags, listShowNoTag]);
+    // List-view filter callbacks (handleListTagFilterChange, handleListNoTagFilterChange,
+    // clearAllListFilters, selectAllListFilters, isAllListFiltersSelected) and
+    // getBubbleCountByTagForListView now live in useListFilters (Task C of #67);
+    // their late-bound deps are fed via listFilterPageDepsRef below.
 
     // getBubbleCountByTagForBubblesView now lives in useBubbleFilters (Task B of #66);
     // its late-bound deps are fed via filterPageDepsRef below.
-
-    // Function to count bubbles by category for List View (based on selected status and search) - memoized
-    const getBubbleCountByTagForListView = useCallback((tagId) => {
-        const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
-        let tagFilteredBubbles;
-
-        if (tagId === null) {
-            // Count bubbles without tags or with deleted tags in selected status
-            tagFilteredBubbles = filteredByStatus.filter(bubble => {
-                if (!bubble.tagId) return true;
-                const tagExists = tags.find(t => t.id === bubble.tagId);
-                return !tagExists; // Включаем пузыри с удаленными тегами
-            });
-        } else {
-            tagFilteredBubbles = filteredByStatus.filter(bubble => bubble.tagId === tagId);
-        }
-
-        // Apply search filter using the same logic as in ListView
-        if (!listSearchQuery.trim()) {
-            return tagFilteredBubbles.length;
-        }
-
-        const query = listSearchQuery.toLowerCase().trim();
-        const searchFilteredBubbles = tagFilteredBubbles.filter(task => {
-            // Search in title
-            const titleMatch = (task.title || '').toLowerCase().includes(query);
-
-            // Search in description
-            const descriptionMatch = stripHtml(task.description || '').toLowerCase().includes(query);
-
-            // Search in tag name
-            const tag = task.tagId ? tags.find(t => t.id === task.tagId) : null;
-            const tagMatch = tag ? tag.name.toLowerCase().includes(query) : false;
-
-            return titleMatch || descriptionMatch || tagMatch;
-        });
-
-        return searchFilteredBubbles.length;
-    }, [bubbles, tags, listFilter, listSearchQuery]);
 
     // Функции для работы с категориями (тегами)
     const getCategoryBubbleCounts = () => {
