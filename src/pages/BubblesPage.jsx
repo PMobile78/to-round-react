@@ -5,7 +5,6 @@ import {
     useTheme,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import Matter from 'matter-js';
 import { useTranslation } from 'react-i18next';
 import BubblesDialogs from '../components/BubblesDialogs';
 import TextOverlay from '../components/TextOverlay';
@@ -27,7 +26,6 @@ import BubbleViewToolbar from '../components/BubbleViewToolbar';
 import BubbleViewFab from '../components/BubbleViewFab';
 import TasksFullScreenView from '../components/TasksFullScreenView';
 import { DesignBackdrop } from '../components/DesignBackdrop';
-import useSearch from '../hooks/useSearch';
 import logger from '../utils/logger';
 import { useMatterResize } from '../hooks/useMatterResize';
 import { computeCanvasSize, createWorldBounds } from '../utils/physicsUtils';
@@ -36,6 +34,7 @@ import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
 import { useListFilters } from '../hooks/useListFilters';
 import { useBubbleImportExport } from '../hooks/useBubbleImportExport';
+import { useBubbleWorld } from '../hooks/useBubbleWorld';
 import { useTags } from '../hooks/useTags';
 import { useBubbleNotifications } from '../hooks/useBubbleNotifications';
 import { useBubbleCrud } from '../hooks/useBubbleCrud';
@@ -483,75 +482,25 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         });
     };
 
-    // Memoized function for filtering bubbles (for physics world - only active)
-    const getFilteredBubbles = useMemo(() => {
-        // Always show only active bubbles in physics world
-        const filteredByStatus = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
-
-        // Apply tag filters
-        // Check if all tags are selected and showNoTag is true - show all bubbles
-        const allTagsSelected = tags.length > 0 && filterTags.length === tags.length && showNoTag;
-
-        let tagFiltered;
-        if (allTagsSelected) {
-            tagFiltered = filteredByStatus;
-        } else {
-            tagFiltered = filteredByStatus.filter(bubble => {
-                // Проверяем, существует ли тег для пузыря
-                const tagExists = bubble.tagId ? tags.find(t => t.id === bubble.tagId) : null;
-
-                // Если выбраны теги и пузырь имеет один из выбранных тегов (который существует)
-                if (filterTags.length > 0 && bubble.tagId && tagExists && filterTags.includes(bubble.tagId)) {
-                    return true;
-                }
-                // Если включен фильтр "No Tag" и у пузыря нет тега или тег был удален
-                if (showNoTag && (!bubble.tagId || !tagExists)) {
-                    return true;
-                }
-                return false;
-            });
-        }
-
-        if (!bubbleViewPlannedTasksOnly) {
-            return tagFiltered;
-        }
-
-        // Как в TaskList для вкладки «Запланированные»: dueDate строго в будущем, не выполнены и не удалены
-        const now = new Date();
-        return tagFiltered.filter((bubble) => (
-            bubble.dueDate &&
-            new Date(bubble.dueDate) > now &&
-            bubble.status !== BUBBLE_STATUS.DELETED &&
-            bubble.status !== BUBBLE_STATUS.DONE
-        ));
-    }, [bubbles, tags, filterTags, showNoTag, bubbleViewPlannedTasksOnly]);
-    // Применение фильтрации при загрузке пузырей
-    useEffect(() => {
-        if (bubbles.length > 0 && engineRef.current) {
-            // Применяем фильтрацию сразу после загрузки пузырей
-            const filteredIds = new Set(getFilteredBubbles.map(b => b.id));
-
-            bubbles.forEach(bubble => {
-                if (bubble && bubble.body) {
-                    const isVisible = filteredIds.has(bubble.id);
-                    const isCurrentlyInWorld = engineRef.current.world.bodies.includes(bubble.body);
-
-                    if (isVisible && !isCurrentlyInWorld) {
-                        // Добавляем пузырь в физический мир только если он проходит фильтрацию
-                        Matter.World.add(engineRef.current.world, bubble.body);
-                    }
-                }
-            });
-        }
-    }, [bubbles, getFilteredBubbles]);
-
-    // Use the search hook only to determine which bubbles are found (not to filter)
+    // Matter.js world sync (getFilteredBubbles + the world-fill / visibility-highlight
+    // effects + the useSearch wiring + foundBubblesIds) now lives in useBubbleWorld
+    // (Task E of #69). All inputs are page state defined above, so the hook takes plain
+    // values — no pageDeps ref bridge needed (unlike useBubbleFilters / useListFilters).
     const {
-        filteredItems: searchFoundBubbles,
-        searchQuery: currentBubblesSearchQuery,
-        setSearchQuery: setCurrentBubblesSearchQuery,
-        debouncedSearchQuery: debouncedBubblesSearchQuery
-    } = useSearch(getFilteredBubbles, tags);
+        getFilteredBubbles,
+        searchFoundBubbles,
+        debouncedBubblesSearchQuery,
+        foundBubblesIds,
+    } = useBubbleWorld({
+        engineRef,
+        bubbles,
+        tags,
+        filterTags,
+        showNoTag,
+        bubbleViewPlannedTasksOnly,
+        bubblesSearchQuery,
+        theme,
+    });
 
     // Keep the bridge to useBubbleFilters fresh: getBubbleCountByTagForBubblesView
     // reads these at call-time (defined after the hook runs).
@@ -576,121 +525,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         tags
     };
 
-    // Создаем Set ID найденных пузырей для быстрого поиска
-    const foundBubblesIds = useMemo(() => {
-        return new Set(searchFoundBubbles.map(bubble => bubble.id));
-    }, [searchFoundBubbles]);
-
-    // Синхронизируем состояние поиска
-    React.useEffect(() => {
-        setCurrentBubblesSearchQuery(bubblesSearchQuery);
-    }, [bubblesSearchQuery, setCurrentBubblesSearchQuery]);
-
-    // Filter bubbles visibility and highlight search results
-    useEffect(() => {
-        if (!engineRef.current) return;
-
-        const filteredIds = new Set(getFilteredBubbles.map(b => b.id));
-
-        bubbles.forEach(bubble => {
-            if (bubble && bubble.body) {
-                const isVisible = filteredIds.has(bubble.id);
-                const isCurrentlyInWorld = engineRef.current.world.bodies.includes(bubble.body);
-                const isFound = foundBubblesIds.has(bubble.id);
-                const hasSearchQuery = debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim();
-
-                if (isVisible && !isCurrentlyInWorld) {
-                    // Add bubble to physical world if it's visible and not already there
-                    // Ensure body size matches logical radius (fix for restored bubbles after pop animation)
-                    if (bubble.body && Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
-                        const scale = bubble.radius / bubble.body.circleRadius;
-                        Matter.Body.scale(bubble.body, scale, scale);
-                    }
-                    Matter.World.add(engineRef.current.world, bubble.body);
-
-                    // Update styles for the bubble
-                    bubble.body.render.opacity = hasSearchQuery ? (isFound ? 1 : 0.3) : 1;
-
-                    // Обновляем обводку
-                    if (hasSearchQuery && isFound) {
-                        // Определяем цвет подсветки на основе тега
-                        let highlightColor = '#B0B0B0'; // Серый цвет для пузырей без тегов
-                        if (bubble.tagId) {
-                            const tag = tags.find(t => t.id === bubble.tagId);
-                            if (tag) {
-                                highlightColor = tag.color;
-                            }
-                        }
-                        bubble.body.render.strokeStyle = highlightColor;
-                        bubble.body.render.lineWidth = theme.custom?.bubble?.highlightStrokeWidth ?? 2.5;
-                        // Добавляем свечение цветом тега
-                        bubble.body.render.shadowColor = highlightColor;
-                        bubble.body.render.shadowBlur = 15;
-                        bubble.body.render.shadowOffsetX = 0;
-                        bubble.body.render.shadowOffsetY = 0;
-                    } else {
-                        // Возвращаем оригинальный цвет обводки
-                        let originalStrokeColor = '#B0B0B0';
-                        if (bubble.tagId) {
-                            const tag = tags.find(t => t.id === bubble.tagId);
-                            if (tag) {
-                                originalStrokeColor = tag.color;
-                            }
-                        }
-                        bubble.body.render.strokeStyle = originalStrokeColor;
-                        bubble.body.render.lineWidth = theme.custom?.bubble?.strokeWidth ?? 1.5;
-                        // Убираем свечение
-                        bubble.body.render.shadowColor = 'transparent';
-                        bubble.body.render.shadowBlur = 0;
-                    }
-                } else if (!isVisible && isCurrentlyInWorld) {
-                    // Remove bubble from the physical world
-                    Matter.World.remove(engineRef.current.world, bubble.body);
-                } else if (isVisible && isCurrentlyInWorld) {
-                    // Update styles for visible bubbles based on search
-                    // Also normalize radius if it diverged from the stored one
-                    if (bubble.body && Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
-                        const scale = bubble.radius / bubble.body.circleRadius;
-                        Matter.Body.scale(bubble.body, scale, scale);
-                    }
-                    bubble.body.render.opacity = hasSearchQuery ? (isFound ? 1 : 0.3) : 1;
-
-                    // Обновляем стили для найденных пузырей
-                    if (hasSearchQuery && isFound) {
-                        // Определяем цвет подсветки на основе тега
-                        let highlightColor = '#B0B0B0'; // Серый цвет для пузырей без тегов
-                        if (bubble.tagId) {
-                            const tag = tags.find(t => t.id === bubble.tagId);
-                            if (tag) {
-                                highlightColor = tag.color;
-                            }
-                        }
-                        bubble.body.render.strokeStyle = highlightColor;
-                        bubble.body.render.lineWidth = theme.custom?.bubble?.highlightStrokeWidth ?? 2.5;
-                        // Добавляем свечение цветом тега
-                        bubble.body.render.shadowColor = highlightColor;
-                        bubble.body.render.shadowBlur = 15;
-                        bubble.body.render.shadowOffsetX = 0;
-                        bubble.body.render.shadowOffsetY = 0;
-                    } else {
-                        // Возвращаем оригинальный цвет обводки
-                        let originalStrokeColor = '#B0B0B0';
-                        if (bubble.tagId) {
-                            const tag = tags.find(t => t.id === bubble.tagId);
-                            if (tag) {
-                                originalStrokeColor = tag.color;
-                            }
-                        }
-                        bubble.body.render.strokeStyle = originalStrokeColor;
-                        bubble.body.render.lineWidth = theme.custom?.bubble?.strokeWidth ?? 1.5;
-                        // Убираем свечение
-                        bubble.body.render.shadowColor = 'transparent';
-                        bubble.body.render.shadowBlur = 0;
-                    }
-                }
-            }
-        });
-    }, [getFilteredBubbles, bubbles, tags, foundBubblesIds, debouncedBubblesSearchQuery, theme]);
+    // foundBubblesIds + the search-state sync effect + the visibility/highlight effect
+    // now live in useBubbleWorld (Task E of #69); foundBubblesIds is returned above.
 
 
 
