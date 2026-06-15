@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import logger from '../utils/logger';
-import { Drawer, Box, Typography, List, ListItem, ListItemIcon, ListItemText, Divider, Switch } from '@mui/material';
+import { Drawer, Box, Typography, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider, Switch } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import {
     LanguageOutlined,
@@ -105,8 +105,7 @@ const MainMenuDrawer = ({
                 </Box>
 
                 <List sx={{ padding: 0 }}>
-                    <ListItem
-                        button
+                    <ListItemButton
                         onClick={() => {
                             onClose();
                             onOpenMindMap && onOpenMindMap();
@@ -120,12 +119,11 @@ const MainMenuDrawer = ({
                             primary={t('mindmap.title')}
                             primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
                         />
-                    </ListItem>
+                    </ListItemButton>
 
                     <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
 
-                    <ListItem
-                        button
+                    <ListItemButton
                         onClick={() => {
                             onClose();
                             onExportJson && onExportJson();
@@ -139,10 +137,9 @@ const MainMenuDrawer = ({
                             primary={t('bubbles.exportJson')}
                             primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
                         />
-                    </ListItem>
+                    </ListItemButton>
 
-                    <ListItem
-                        button
+                    <ListItemButton
                         onClick={handleImportClick}
                         sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
                     >
@@ -160,7 +157,7 @@ const MainMenuDrawer = ({
                             onChange={handleFileChange}
                             style={{ display: 'none' }}
                         />
-                    </ListItem>
+                    </ListItemButton>
 
                     <ListItem sx={{ padding: '16px 24px' }}>
                         <ListItemIcon sx={{ minWidth: 40 }}>
@@ -180,8 +177,7 @@ const MainMenuDrawer = ({
 
                     <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
 
-                    <ListItem
-                        button
+                    <ListItemButton
                         onClick={() => {
                             onClose();
                             onOpenCategoriesDialog && onOpenCategoriesDialog();
@@ -195,10 +191,9 @@ const MainMenuDrawer = ({
                             primary={t('bubbles.taskCategories')}
                             primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
                         />
-                    </ListItem>
+                    </ListItemButton>
 
-                    <ListItem
-                        button
+                    <ListItemButton
                         onClick={() => {
                             onClose();
                             onOpenFontSettingsDialog && onOpenFontSettingsDialog();
@@ -212,10 +207,9 @@ const MainMenuDrawer = ({
                             primary={t('bubbles.fontSettings')}
                             primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
                         />
-                    </ListItem>
+                    </ListItemButton>
 
-                    <ListItem
-                        button
+                    <ListItemButton
                         onClick={() => {
                             onClose();
                             onOpenAppearanceDialog && onOpenAppearanceDialog();
@@ -229,10 +223,9 @@ const MainMenuDrawer = ({
                             primary={t('appearance.menuLabel')}
                             primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
                         />
-                    </ListItem>
+                    </ListItemButton>
 
-                    <ListItem
-                        button
+                    <ListItemButton
                         onClick={() => {
                             onClose();
                             onOpenChangePasswordDialog && onOpenChangePasswordDialog();
@@ -246,7 +239,7 @@ const MainMenuDrawer = ({
                             primary={t('changePassword.menuLabel')}
                             primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
                         />
-                    </ListItem>
+                    </ListItemButton>
 
                     <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
 
@@ -315,8 +308,7 @@ const MainMenuDrawer = ({
                         </Box>
                     </ListItem>
 
-                    <ListItem
-                        button
+                    <ListItemButton
                         onClick={() => {
                             onClose();
                             onAbout && onAbout();
@@ -327,12 +319,11 @@ const MainMenuDrawer = ({
                             <Info sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
                         </ListItemIcon>
                         <ListItemText primary={t('bubbles.about')} primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }} />
-                    </ListItem>
+                    </ListItemButton>
 
                     <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
 
-                    <ListItem
-                        button
+                    <ListItemButton
                         onClick={() => {
                             onClose();
                             onLogout && onLogout();
@@ -343,7 +334,7 @@ const MainMenuDrawer = ({
                             <Logout sx={{ color: themeMode === 'light' ? '#D32F2F' : '#FF8A80' }} />
                         </ListItemIcon>
                         <ListItemText primary={t('auth.logout')} primaryTypographyProps={{ color: themeMode === 'light' ? '#D32F2F' : '#FF8A80', fontWeight: 500 }} />
-                    </ListItem>
+                    </ListItemButton>
                 </List>
             </Box>
         </Drawer>
