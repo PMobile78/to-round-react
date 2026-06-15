@@ -389,7 +389,6 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         }
         window.addEventListener('open-bubble', handleOpenBubble);
         return () => window.removeEventListener('open-bubble', handleOpenBubble);
-        // eslint-disable-next-line
         // Intentional: setSelectedBubble/setEditDialog are stable useState setters and do not
         // need to be listed. bubbles is in the array so the handler always sees the latest list.
     }, [bubbles]);
