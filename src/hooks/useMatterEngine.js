@@ -8,6 +8,7 @@ import {
     BUBBLE_STATUS,
 } from '../services/firestoreService';
 import logger from '../utils/logger';
+import { shouldPauseEngine } from '../utils/engineIdle';
 
 /**
  * Initializes the Matter.js physics engine, renderer, and runner.
@@ -61,8 +62,9 @@ export function useMatterEngine({
         const canvas = canvasRef.current;
         const { Engine, Render, Runner, Bodies, World, Mouse, MouseConstraint, Events, Query } = Matter;
 
-        // Creating a Physics Engine
-        const engine = Engine.create();
+        // Creating a Physics Engine. enableSleeping lets settled bodies sleep so the
+        // idle loop control below can stop the Runner/Render rAF loop at rest (perf #76).
+        const engine = Engine.create({ enableSleeping: true });
         engineRef.current = engine;
 
         // Disable default gravity to customize yours
@@ -311,6 +313,55 @@ export function useMatterEngine({
         const runner = Runner.create();
         Runner.run(runner, engine);
 
+        // --- Idle loop control (perf #76) ---
+        // With enableSleeping (engine), settled bodies sleep; here we stop the Runner +
+        // Render rAF loop once every bubble is asleep, so an idle or empty scene costs ~0
+        // CPU/GPU. Any pointer interaction, body add/remove, or repaint request wakes it.
+        let running = true;
+        let idleTicks = 0;
+        const IDLE_TICKS_BEFORE_PAUSE = 20; // ~0.3s of full rest before pausing
+
+        const wake = () => {
+            idleTicks = 0;
+            if (running) return;
+            running = true;
+            Render.run(render);
+            Runner.run(runner, engine);
+        };
+
+        // Membership changes (filter, CRUD, splash, walls, initial load): also wake the
+        // sleeping bubbles so the pile re-settles into the new layout (pre-fix behaviour).
+        const wakeScene = () => {
+            for (const b of engine.world.bodies) {
+                if (b.label === 'Circle Body' && b.isSleeping) Matter.Sleeping.set(b, false);
+            }
+            wake();
+        };
+
+        const pauseIfIdle = () => {
+            if (!running) return;
+            if (shouldPauseEngine({ bodies: engine.world.bodies, isDragging: !!mouseConstraint.body })) {
+                if (++idleTicks >= IDLE_TICKS_BEFORE_PAUSE) {
+                    running = false;
+                    Runner.stop(runner);
+                    Render.stop(render);
+                }
+            } else {
+                idleTicks = 0;
+            }
+        };
+
+        Events.on(engine, 'afterUpdate', pauseIfIdle);
+        Events.on(engine.world, 'afterAdd', wakeScene);
+        Events.on(engine.world, 'afterRemove', wakeScene);
+
+        const wakeOnPointer = () => wake();
+        render.canvas.addEventListener('mousedown', wakeOnPointer);
+        render.canvas.addEventListener('touchstart', wakeOnPointer, { passive: true });
+
+        // Exposed so style-only repaints (search highlight, theme) and resize can wake it.
+        engine.requestWake = wake;
+
         // Register afterRender hook for bubble effects
         const afterRenderHandler = () => {
             const effectType = themeRef.current?.custom?.bubble?.effect || 'none';
@@ -509,6 +560,11 @@ export function useMatterEngine({
             Events.off(mouseConstraint, 'mousedown', mousedownHandler);
             Events.off(mouseConstraint, 'mouseup', mouseupHandler);
             Events.off(render, 'afterRender', afterRenderHandler);
+            Events.off(engine, 'afterUpdate', pauseIfIdle);
+            Events.off(engine.world, 'afterAdd', wakeScene);
+            Events.off(engine.world, 'afterRemove', wakeScene);
+            render.canvas.removeEventListener('mousedown', wakeOnPointer);
+            render.canvas.removeEventListener('touchstart', wakeOnPointer);
             Runner.stop(runner);
             Render.stop(render);
             World.clear(engine.world);
