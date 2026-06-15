@@ -22,7 +22,7 @@ import {
  *
  * `pageDeps` is a ref carrying page-owned callbacks the tag handlers need at
  * call-time — `setBubbles`, `setFilterTags`, `setListFilterTags`,
- * `getBubbleFillStyle`, `setCategoriesDialog`. It is a ref (not plain params)
+ * `getBubbleFillStyle`. It is a ref (not plain params)
  * to avoid a useTags <-> useBubbleFilters render-order cycle: `setFilterTags`
  * comes from useBubbleFilters, which needs `tags` produced here.
  */
@@ -88,7 +88,7 @@ export function useTags({ user, bubbles, pageDeps }) {
     };
 
     const handleSaveTag = () => {
-        const { setFilterTags, setListFilterTags, setCategoriesDialog } = pageDeps.current;
+        const { setFilterTags, setListFilterTags } = pageDeps.current;
         // Проверяем, что цвет доступен (если это новый тег или изменился цвет)
         if (!editingTag && !isColorAvailable(tagColor)) {
             return; // Цвет уже занят
@@ -137,11 +137,6 @@ export function useTags({ user, bubbles, pageDeps }) {
         setEditingTag(null);
         setTagName('');
         setTagColor(getNextAvailableColor() || '#2f6bdb');
-
-        // Открываем обратно диалог категорий (и для создания, и для редактирования)
-        setTimeout(() => {
-            setCategoriesDialog(true);
-        }, 100);
     };
 
     const handleDeleteTag = (tagId) => {
@@ -192,16 +187,10 @@ export function useTags({ user, bubbles, pageDeps }) {
     };
 
     const handleCloseTagDialog = () => {
-        const { setCategoriesDialog } = pageDeps.current;
         setTagDialog(false);
         setEditingTag(null);
         setTagName('');
         setTagColor(getNextAvailableColor() || '#2f6bdb');
-
-        // Открываем обратно диалог категорий при отмене
-        setTimeout(() => {
-            setCategoriesDialog(true);
-        }, 100);
     };
 
     const handleUndoDeleteTag = (tagId) => {

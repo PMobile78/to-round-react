@@ -252,8 +252,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setBubbles,
         setFilterTags,
         setListFilterTags,
-        getBubbleFillStyle,
-        setCategoriesDialog
+        getBubbleFillStyle
     };
 
     // Function to get canvas dimensions depending on screen size

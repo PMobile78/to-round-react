@@ -306,12 +306,10 @@ const BubblesDialogs = ({
                 canCreateMoreTags={canCreateMoreTags}
                 onAddTag={() => {
                     if (canCreateMoreTags()) {
-                        setCategoriesDialog(false);
                         handleOpenTagDialog();
                     }
                 }}
                 onEditTag={(tag) => {
-                    setCategoriesDialog(false);
                     handleOpenTagDialog(tag);
                 }}
                 onDeleteTag={(tagId) => handleDeleteTag(tagId)}
