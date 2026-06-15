@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     List,
-    ListItem,
+    ListItemButton,
     ListItemIcon,
     ListItemText,
     Typography,
@@ -114,8 +114,7 @@ const TasksCategoriesPanel = ({
             {/* Список категорий */}
             <List sx={{ padding: 0 }}>
                 {/* Все категории */}
-                <ListItem
-                    button
+                <ListItemButton
                     onClick={() => onCategorySelect('all')}
                     selected={selectedCategory === 'all'}
                     sx={{
@@ -159,12 +158,11 @@ const TasksCategoriesPanel = ({
                     >
                         {bubbles.filter(bubble => bubble.status === 'active').length}
                     </Typography>
-                </ListItem>
+                </ListItemButton>
 
 
                 {/* No tags категория */}
-                <ListItem
-                    button
+                <ListItemButton
                     onClick={() => onCategorySelect('no-tags')}
                     selected={selectedCategory === 'no-tags'}
                     sx={{
@@ -208,12 +206,11 @@ const TasksCategoriesPanel = ({
                     >
                         {bubbles.filter(bubble => bubble.status === 'active' && !bubble.tagId).length}
                     </Typography>
-                </ListItem>
+                </ListItemButton>
 
 
                 {/* Запланированные (как вкладка в списке задач): dueDate в будущем */}
-                <ListItem
-                    button
+                <ListItemButton
                     onClick={() => onCategorySelect('planned-tasks')}
                     selected={selectedCategory === 'planned-tasks'}
                     sx={{
@@ -257,7 +254,7 @@ const TasksCategoriesPanel = ({
                     >
                         {plannedTasksCount}
                     </Typography>
-                </ListItem>
+                </ListItemButton>
 
                 <Divider
                     textAlign="left"
@@ -287,8 +284,7 @@ const TasksCategoriesPanel = ({
 
                 {allCategories.map((category, index) => (
                     <React.Fragment key={category.id}>
-                        <ListItem
-                            button
+                        <ListItemButton
                             draggable
                             onDragStart={handleDragStart(index)}
                             onDragOver={handleDragOver(index)}
@@ -350,7 +346,7 @@ const TasksCategoriesPanel = ({
                             >
                                 {getBubbleCount(category.id)}
                             </Typography>
-                        </ListItem>
+                        </ListItemButton>
                         {index < allCategories.length - 1 && (
                             <Divider sx={{
                                 backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
