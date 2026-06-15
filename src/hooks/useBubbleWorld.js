@@ -115,6 +115,11 @@ export function useBubbleWorld({
                 }
             }
         });
+
+        // Membership changes already wake the engine via world afterAdd/afterRemove, but a
+        // style-only change (e.g. search highlight on the same visible set) must still trigger
+        // a repaint while the idle loop is paused (perf #76).
+        engineRef.current.requestWake?.();
     }, [getFilteredBubbles, bubbles, tags, foundBubblesIds, debouncedBubblesSearchQuery, theme, engineRef]);
 
     return { getFilteredBubbles, searchFoundBubbles, debouncedBubblesSearchQuery, foundBubblesIds };

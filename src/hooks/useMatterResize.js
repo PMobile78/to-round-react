@@ -24,6 +24,8 @@ export function useMatterResize({
             const newSize = computeCanvasSize({ isMobile, categoriesPanelEnabled });
             setCanvasSize(newSize);
             updateRenderAndBounds({ engine, render, wallsRef, newSize });
+            // Repaint at the new size in case the idle loop is paused (perf #76).
+            engine.requestWake?.();
         };
 
         // initial pass (e.g. when toggling categories panel)
