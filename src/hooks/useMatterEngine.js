@@ -86,6 +86,7 @@ export function useMatterEngine({
                 background: 'transparent',
                 showAngleIndicator: false,
                 showVelocity: false,
+                showSleeping: false,
             }
         });
         renderRef.current = render;
