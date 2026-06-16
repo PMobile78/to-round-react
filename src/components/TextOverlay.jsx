@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { Box, Typography, useTheme, alpha } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { parseLocalDateTime } from '../utils/dateTime';
+import { shouldSyncOverlayPositions } from '../utils/rafGating';
 
 /**
  * TextOverlay: Renders bubble titles overlaid on the canvas.
@@ -15,6 +16,7 @@ import { parseLocalDateTime } from '../utils/dateTime';
  *   - isMobile: boolean
  *   - fontSize: base font size in px
  *   - themeMode: 'light' or 'dark'
+ *   - engineRef: ref to the Matter engine (perf #78 — gate position sync on activity)
  */
 function TextOverlay({
   bubbles,
@@ -24,7 +26,8 @@ function TextOverlay({
   isMobile,
   fontSize,
   themeMode,
-  tags = []
+  tags = [],
+  engineRef
 }) {
   const theme = useTheme();
   const { t, i18n } = useTranslation();
@@ -50,6 +53,14 @@ function TextOverlay({
     // в prod-сборке цикл не стартовал вовсе. Тело цикла само фильтрует пузыри
     // без готового тела, поэтому ранний выход не нужен.
     const updatePositions = () => {
+      // perf #78: while the engine is paused, bodies are frozen — the labels are
+      // already in place, so skip the O(N) map + setPositions. The loop keeps
+      // spinning (empty reschedule is ~free) and resumes the moment the engine
+      // wakes (drag / filter / search / create / delete / resize all wake it).
+      if (!shouldSyncOverlayPositions(engineRef?.current?.isAwake?.())) {
+        rafId = requestAnimationFrame(updatePositions);
+        return;
+      }
       const filteredBubbles = filteredBubblesRef.current || [];
       const newPositions = filteredBubbles
         .filter(bubble => bubble && bubble.body && bubble.body.position)
