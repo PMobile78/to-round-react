@@ -86,6 +86,7 @@ export function useMatterEngine({
                 background: 'transparent',
                 showAngleIndicator: false,
                 showVelocity: false,
+                showSleeping: false,
             }
         });
         renderRef.current = render;
@@ -361,6 +362,9 @@ export function useMatterEngine({
 
         // Exposed so style-only repaints (search highlight, theme) and resize can wake it.
         engine.requestWake = wake;
+        // Exposed activity getter (perf #78): the TextOverlay and useBubbleNotifications
+        // rAF loops gate their per-frame O(N) work on this, so an idle scene costs ~0.
+        engine.isAwake = () => running;
 
         // Register afterRender hook for bubble effects
         const afterRenderHandler = () => {

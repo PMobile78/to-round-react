@@ -3,6 +3,12 @@ import Matter from 'matter-js';
 import { BUBBLE_STATUS } from '../services/firestoreService';
 import { parseLocalDateTime } from '../utils/dateTime';
 import { getActiveNotification, buildNotificationKey } from '../utils/notifications';
+import { bubbleShouldPulse } from '../utils/rafGating';
+
+// perf #78: while the Matter engine is idle the pulse loop does no per-frame work;
+// instead it scans this often (ms) for a bubble newly crossing into "should pulse"
+// (e.g. its due time passes) and wakes the engine so pulsing starts from idle too.
+const IDLE_PULSE_CHECK_MS = 500;
 
 /**
  * Notification + overdue-pulse state and the rAF pulse loop, extracted from
@@ -60,6 +66,7 @@ export function useBubbleNotifications({
 
         let animationFrame;
         let pulsePhase = 0;
+        let lastIdleCheck = 0; // perf #78: throttle the idle "did anything become due?" scan
 
         // Temporarily disabled local notifications to test FCM only
         // const showNotificationAndVibrate = (bubble) => {
@@ -125,6 +132,33 @@ export function useBubbleNotifications({
         // };
 
         const animate = () => {
+            // perf #78: gate the per-frame O(N) pulse work on engine activity.
+            // While the engine is asleep the bodies are frozen and nothing is
+            // pulsing (an active pulse calls Body.scale every frame, which keeps
+            // the engine awake). So skip the full loop and instead run only a
+            // cheap, throttled scan for a bubble newly crossing into "should
+            // pulse" (e.g. its due time just passed) and wake the engine — that
+            // makes pulsing start even from a fully idle scene. While awake the
+            // loop runs exactly as before.
+            const engine = engineRef.current;
+            if (engine?.isAwake?.() === false) {
+                const ts = Date.now();
+                if (ts - lastIdleCheck >= IDLE_PULSE_CHECK_MS) {
+                    lastIdleCheck = ts;
+                    const needWake = bubbles.some(bubble =>
+                        bubble.body
+                        && bubble.status === BUBBLE_STATUS.ACTIVE
+                        && bubbleShouldPulse(bubble, ts, {
+                            stickyIds: stickyPulseRef.current,
+                            suppressedIds: manuallyStoppedPulsingRef.current
+                        })
+                    );
+                    if (needWake) engine.requestWake();
+                }
+                animationFrame = requestAnimationFrame(animate);
+                return;
+            }
+
             const now = Date.now();
             pulsePhase += 0.12;
             bubbles.forEach(bubble => {
