@@ -13,6 +13,10 @@ import { auth } from '../firebase';
 import logger from '../utils/logger';
 import { removeCurrentToken } from '../firebaseMessaging';
 
+// Upper bound for the best-effort FCM token cleanup on logout, so a slow
+// network / FCM round-trip cannot hang the sign-out.
+const LOGOUT_TOKEN_CLEANUP_TIMEOUT_MS = 2000;
+
 const firebaseErrorMessages = {
     'auth/user-not-found': 'User not found.',
     'auth/wrong-password': 'Incorrect password.',
@@ -64,8 +68,14 @@ export const logoutUser = async () => {
     try {
         const uid = auth.currentUser?.uid;
         // Remove this device's FCM token before sign-out (owner-only rules block it afterwards).
-        // Must not block logout, so swallow its errors.
-        try { await removeCurrentToken(); } catch (e) { /* logout proceeds regardless */ }
+        // Best-effort and time-boxed: swallow its errors and never let a slow FCM/network
+        // round-trip hang logout — proceed to sign-out after the timeout regardless.
+        try {
+            await Promise.race([
+                removeCurrentToken(),
+                new Promise((resolve) => setTimeout(resolve, LOGOUT_TOKEN_CLEANUP_TIMEOUT_MS)),
+            ]);
+        } catch (e) { /* logout proceeds regardless */ }
         await signOut(auth);
         // Clear user-specific localStorage data after sign-out
         if (uid) {
