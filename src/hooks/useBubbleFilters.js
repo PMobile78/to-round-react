@@ -20,6 +20,22 @@ export function isAllTagsSelected(tags, filterTags, showNoTag) {
     return tags.length > 0 && filterTags.length === tags.length && showNoTag;
 }
 
+// Pure helper: detect a persisted tag filter that references tags from another
+// account. The `bubbles-filter-tags` / `bubbles-show-no-tag` localStorage keys are
+// shared across all accounts in the browser and are not cleared on logout, so after
+// re-logging into a different account the saved filter can point at tag ids that no
+// longer exist — leaving no category highlighted in the Task categories panel.
+// Returns a reset-to-"all" descriptor when stale ids are present, or null when the
+// filter is consistent with the loaded `tags`.
+export function reconcileStaleFilterTags(tags, filterTags) {
+    if (tags.length === 0) return null;
+    const tagIds = new Set(tags.map((tag) => tag.id));
+    const hasStale = filterTags.some((id) => !tagIds.has(id));
+    if (!hasStale) return null;
+    const allTagIds = tags.map((tag) => tag.id);
+    return { filterTags: allTagIds, showNoTag: true, selectedCategory: 'all' };
+}
+
 // Pure helper: count active (or search-found) bubbles for a tag in bubbles-view.
 // Always reflects the total count for the tag, independent of the active filters,
 // but honours the current search query when one is present. `tagId === null`
@@ -114,6 +130,20 @@ export function useBubbleFilters({ tags, pageDeps }) {
             } else if (savedFilterTags && savedShowNoTag) {
                 const filterTags = JSON.parse(savedFilterTags);
                 const showNoTag = JSON.parse(savedShowNoTag);
+
+                // Сохранённый фильтр может ссылаться на теги предыдущего аккаунта
+                // (ключи localStorage общие для всех аккаунтов и не чистятся при
+                // logout). В этом случае сбрасываем фильтр на "all", иначе в панели
+                // категорий не подсветится ни один пункт.
+                const staleReset = reconcileStaleFilterTags(tags, filterTags);
+                if (staleReset) {
+                    setFilterTags(staleReset.filterTags);
+                    setShowNoTag(staleReset.showNoTag);
+                    setSelectedCategory(staleReset.selectedCategory);
+                    localStorage.setItem('bubbles-filter-tags', JSON.stringify(staleReset.filterTags));
+                    localStorage.setItem('bubbles-show-no-tag', JSON.stringify(staleReset.showNoTag));
+                    return;
+                }
 
                 // Если выбраны все теги и включен показ пузырей без тегов - это "all"
                 if (filterTags.length === tags.length && showNoTag) {

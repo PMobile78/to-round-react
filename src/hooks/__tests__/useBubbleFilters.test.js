@@ -18,7 +18,8 @@ vi.mock('firebase/firestore', () => ({
 import {
     toggleTagInFilter,
     isAllTagsSelected,
-    countBubblesByTagForBubblesView
+    countBubblesByTagForBubblesView,
+    reconcileStaleFilterTags
 } from '../useBubbleFilters';
 
 const tag = (id) => ({ id, name: id, color: '#000' });
@@ -61,6 +62,40 @@ describe('isAllTagsSelected (isAllSelected)', () => {
 
     it('is false when there are no tags at all', () => {
         expect(isAllTagsSelected([], [], true)).toBe(false);
+    });
+});
+
+describe('reconcileStaleFilterTags (account switch)', () => {
+    const tags = [tag('a'), tag('b')];
+
+    it('resets to "all" when the filter holds a tag id from another account', () => {
+        // single category from a previous account whose tag does not exist anymore
+        expect(reconcileStaleFilterTags(tags, ['old-tag-from-account-A'])).toEqual({
+            filterTags: ['a', 'b'],
+            showNoTag: true,
+            selectedCategory: 'all'
+        });
+    });
+
+    it('resets when only some of the saved ids are stale', () => {
+        expect(reconcileStaleFilterTags(tags, ['a', 'old-tag'])).toEqual({
+            filterTags: ['a', 'b'],
+            showNoTag: true,
+            selectedCategory: 'all'
+        });
+    });
+
+    it('returns null when every saved id exists for the current account', () => {
+        expect(reconcileStaleFilterTags(tags, ['a'])).toBeNull();
+        expect(reconcileStaleFilterTags(tags, ['a', 'b'])).toBeNull();
+    });
+
+    it('returns null for the empty filter ("no tags" category is account-agnostic)', () => {
+        expect(reconcileStaleFilterTags(tags, [])).toBeNull();
+    });
+
+    it('returns null while tags are still loading (empty tags)', () => {
+        expect(reconcileStaleFilterTags([], ['anything'])).toBeNull();
     });
 });
 
