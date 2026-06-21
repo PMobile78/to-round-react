@@ -1,22 +1,35 @@
-import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Button, IconButton } from '@mui/material';
+import React, { useState } from 'react';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Button, IconButton, CircularProgress } from '@mui/material';
 import { CloseOutlined } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
 const LogoutConfirmDialog = ({ open, onClose, isMobile, getDialogPaperStyles, onConfirm }) => {
     const { t } = useTranslation();
+    const [loading, setLoading] = useState(false);
+
+    // Guard against a double-submit and give feedback while logout (which does a
+    // best-effort FCM token cleanup + sign-out) is in flight.
+    const handleConfirm = async () => {
+        if (loading) return;
+        setLoading(true);
+        try {
+            await onConfirm();
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={loading ? undefined : onClose}
             maxWidth="xs"
             fullWidth
             PaperProps={{ sx: { borderRadius: 3, ...getDialogPaperStyles(), margin: isMobile ? 1 : 3 } }}
         >
             <DialogTitle sx={{ color: 'text.primary', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {t('auth.logoutConfirm')}
-                <IconButton onClick={onClose} sx={{ color: 'text.primary' }}>
+                <IconButton onClick={onClose} disabled={loading} sx={{ color: 'text.primary' }}>
                     <CloseOutlined />
                 </IconButton>
             </DialogTitle>
@@ -26,10 +39,18 @@ const LogoutConfirmDialog = ({ open, onClose, isMobile, getDialogPaperStyles, on
                 </Typography>
             </DialogContent>
             <DialogActions sx={{ padding: isMobile ? 2 : 3, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                <Button onClick={onClose} color="inherit" variant="outlined" fullWidth sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36 }}>
+                <Button onClick={onClose} disabled={loading} color="inherit" variant="outlined" fullWidth sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36 }}>
                     {t('bubbles.cancel')}
                 </Button>
-                <Button onClick={onConfirm} color="primary" variant="contained" fullWidth sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36 }}>
+                <Button
+                    onClick={handleConfirm}
+                    disabled={loading}
+                    color="primary"
+                    variant="contained"
+                    fullWidth
+                    startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
+                    sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36 }}
+                >
                     {t('auth.approveLogout')}
                 </Button>
             </DialogActions>
