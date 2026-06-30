@@ -6,6 +6,8 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
+import { lsGet, lsSet, lsGetString } from '../utils/storage';
+import { LS } from '../utils/storageKeys';
 import BubblesDialogs from '../components/BubblesDialogs';
 import TextOverlay from '../components/TextOverlay';
 import { logoutUser } from '../services/authService';
@@ -190,33 +192,33 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [appearanceDialogOpen, setAppearanceDialogOpen] = useState(false); // Диалог оформления
     const [changePasswordOpen, setChangePasswordOpen] = useState(false); // Диалог смены пароля
     const [fontSize, setFontSize] = useState(() => {
-        const savedFontSize = localStorage.getItem('bubbles-font-size');
+        const savedFontSize = lsGetString(LS.FONT_SIZE);
         return savedFontSize ? parseInt(savedFontSize) : 8;
     }); // Размер шрифта для надписей в пузырях
     const [logoutDialog, setLogoutDialog] = useState(false); // Диалог подтверждения выхода
     const [listViewDialog, setListViewDialog] = useState(false); // Диалог списка задач
     const [listFilter, setListFilter] = useState('active'); // 'active', 'done', 'postpone', 'deleted'
     const [listSortBy, setListSortBy] = useState(() => {
-        const saved = localStorage.getItem('bubbles-list-sort-by');
+        const saved = lsGetString(LS.LIST_SORT_BY);
         return saved ? saved : 'updatedAt';
     }); // 'createdAt', 'updatedAt', 'title', 'tag'
     const [listSortOrder, setListSortOrder] = useState(() => {
-        const saved = localStorage.getItem('bubbles-list-sort-order');
+        const saved = lsGetString(LS.LIST_SORT_ORDER);
         return saved ? saved : 'desc';
     }); // 'asc', 'desc'
     // listFilterTags / listShowNoTag state now live in useListFilters (Task C of #67).
     const [listSearchQuery, setListSearchQuery] = useState(''); // Поисковый запрос для списка задач
 
     const [showInstructions, setShowInstructions] = useState(() => {
-        const saved = localStorage.getItem('bubbles-show-instructions');
+        const saved = lsGetString(LS.SHOW_INSTRUCTIONS);
         return saved === null ? true : saved === 'true';
     }); // Показывать ли подсказки инструкций
     const [bubbleBackgroundEnabled, setBubbleBackgroundEnabled] = useState(() => {
-        const saved = localStorage.getItem('bubbles-background-enabled');
+        const saved = lsGetString(LS.BACKGROUND_ENABLED);
         return saved === null ? true : saved === 'true';
     }); // Включен ли фон пузырей
     const [mainView, setMainView] = useState(() => {
-        return localStorage.getItem('bubbles-main-view') === 'tasks' ? 'tasks' : 'bubbles';
+        return lsGetString(LS.MAIN_VIEW) === 'tasks' ? 'tasks' : 'bubbles';
     }); // Режим главного окна: 'bubbles' (canvas) | 'tasks' (список задач)
 
     // Состояние поиска для Bubbles View
@@ -433,9 +435,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setFilterTags(currentFilterTags => {
             const validFilterTags = currentFilterTags.filter(id => existingTagIds.includes(id));
             // Не записываем ключ впервые, чтобы не блокировать первичную инициализацию фильтра
-            const hadFilterKey = localStorage.getItem('bubbles-filter-tags') !== null;
+            const hadFilterKey = lsGet(LS.FILTER_TAGS) !== null;
             if (hadFilterKey) {
-                localStorage.setItem('bubbles-filter-tags', JSON.stringify(validFilterTags));
+                lsSet(LS.FILTER_TAGS, validFilterTags);
             }
             return validFilterTags;
         });
@@ -443,9 +445,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         // Update list filter tags to remove deleted tags
         setListFilterTags(currentListFilterTags => {
             const validListFilterTags = currentListFilterTags.filter(id => existingTagIds.includes(id));
-            const hadListFilterKey = localStorage.getItem('bubbles-list-filter-tags') !== null;
+            const hadListFilterKey = lsGet(LS.LIST_FILTER_TAGS) !== null;
             if (hadListFilterKey) {
-                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(validListFilterTags));
+                lsSet(LS.LIST_FILTER_TAGS, validListFilterTags);
             }
             return validListFilterTags;
         });
@@ -592,25 +594,25 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // Функция для сохранения настроек шрифта
     const handleFontSizeChange = (newSize) => {
         setFontSize(newSize);
-        localStorage.setItem('bubbles-font-size', newSize.toString());
+        lsSet(LS.FONT_SIZE, newSize.toString());
     };
 
     // Функция для закрытия подсказок
     const handleCloseInstructions = () => {
         setShowInstructions(false);
-        localStorage.setItem('bubbles-show-instructions', 'false');
+        lsSet(LS.SHOW_INSTRUCTIONS, 'false');
     };
 
     const handleToggleMainView = () => {
         const next = mainView === 'tasks' ? 'bubbles' : 'tasks';
         setMainView(next);
-        localStorage.setItem('bubbles-main-view', next);
+        lsSet(LS.MAIN_VIEW, next);
     };
 
     const handleToggleBubbleBackground = () => {
         const newValue = !bubbleBackgroundEnabled;
         setBubbleBackgroundEnabled(newValue);
-        localStorage.setItem('bubbles-background-enabled', newValue.toString());
+        lsSet(LS.BACKGROUND_ENABLED, newValue.toString());
 
         // Обновляем фон всех пузырей
         setBubbles(prev => {
