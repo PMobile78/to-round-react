@@ -4,6 +4,7 @@ import {
     Box,
     Paper,
     IconButton,
+    Divider,
     useTheme,
 } from '@mui/material';
 import {
