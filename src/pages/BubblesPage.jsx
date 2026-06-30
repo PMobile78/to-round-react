@@ -40,7 +40,8 @@ import { useBubbleNotifications } from '../hooks/useBubbleNotifications';
 import { useBubbleCrud } from '../hooks/useBubbleCrud';
 import { withAlpha } from '../utils/colorUtils';
 import { parseLocalDateTime } from '../utils/dateTime';
-import { notificationKeyPrefix } from '../utils/notifications';
+import { notificationKeyPrefix, shouldShowStopPulsing } from '../utils/notifications';
+import { applyBubbleFill } from '../utils/bubbleStyle';
 import {
     readBubbleViewPlannedTasksFromLS
 } from '../utils/bubbleData';
@@ -403,7 +404,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             tagColor = tag.color;
                         }
                     }
-                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    applyBubbleFill(bubble, { tagColor }, getBubbleFillStyle);
                     bubble.body.render.lineWidth = theme.custom?.bubble?.strokeWidth ?? 1.5;
                 }
             });
@@ -456,12 +457,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 if (bubble.tagId) {
                     const tag = tags.find(t => t.id === bubble.tagId);
                     if (tag && bubble.body) {
-                        bubble.body.render.strokeStyle = tag.color;
-                        bubble.body.render.fillStyle = getBubbleFillStyle(tag.color);
+                        applyBubbleFill(bubble, { tagColor: tag.color, stroke: tag.color }, getBubbleFillStyle);
                     }
                 } else if (bubble.body) {
-                    bubble.body.render.strokeStyle = '#B0B0B0';
-                    bubble.body.render.fillStyle = getBubbleFillStyle(null);
+                    applyBubbleFill(bubble, { tagColor: null, stroke: '#B0B0B0' }, getBubbleFillStyle);
                 }
                 return bubble;
             });
@@ -616,7 +615,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setBubbles(prev => {
             const updatedBubbles = prev.map(bubble => {
                 const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                applyBubbleFill(bubble, { tagColor }, getBubbleFillStyle);
                 return bubble;
             });
             return updatedBubbles;
@@ -765,56 +764,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // Whether the edit dialog should show the "stop pulsing" button: active task
     // with a valid recurrence that is currently inside a notification window,
     // overdue, or flagged sticky. Computed each render from selectedBubble.
-    const editDialogShowStopPulsing = (() => {
-        try {
-            if (!selectedBubble || selectedBubble.status !== BUBBLE_STATUS.ACTIVE) return false;
-
-            const rec = selectedBubble.recurrence;
-            const every = rec && typeof rec === 'object' ? Number(rec.every) : NaN;
-            if (!Number.isFinite(every) || every < 1) return false;
-
-            const now = Date.now();
-
-            // Проверяем наличие dueDate и просроченность
-            if (selectedBubble.dueDate) {
-                const parsedDue = parseLocalDateTime(selectedBubble.dueDate);
-                if (!parsedDue) return false;
-                const due = parsedDue.getTime();
-
-                // active notification window
-                if (Array.isArray(selectedBubble.notifications) && selectedBubble.notifications.length > 0) {
-                    for (const notif of selectedBubble.notifications) {
-                        let offsetMs = 0;
-                        if (typeof notif === 'string') {
-                            const m = notif.match(/^(\d+)([mhdw])$/i);
-                            if (m) {
-                                const val = Number(m[1]);
-                                const u = m[2].toLowerCase();
-                                offsetMs = u === 'm' ? val * 60 * 1000 : u === 'h' ? val * 60 * 60 * 1000 : u === 'd' ? val * 24 * 60 * 60 * 1000 : val * 7 * 24 * 60 * 60 * 1000;
-                            }
-                        } else if (typeof notif === 'object') {
-                            const v = Number(notif.value);
-                            const unit = notif.unit;
-                            if (Number.isFinite(v) && v > 0) {
-                                offsetMs = unit === 'minutes' ? v * 60 * 1000 : unit === 'hours' ? v * 60 * 60 * 1000 : unit === 'days' ? v * 24 * 60 * 60 * 1000 : unit === 'weeks' ? v * 7 * 24 * 60 * 60 * 1000 : 0;
-                            }
-                        }
-                        const targetTime = due - offsetMs;
-                        if (Number.isFinite(targetTime) && now >= targetTime && now < due) return true;
-                    }
-                }
-
-                if (now >= due) return true;
-            }
-
-            // Показываем кнопку Stop для задач с overdueSticky или в stickyPulseRef
-            if (selectedBubble.overdueSticky || stickyPulseRef.current.has(selectedBubble.id)) {
-                return true;
-            }
-
-            return false;
-        } catch (_) { return false; }
-    })();
+    const editDialogShowStopPulsing = shouldShowStopPulsing(
+        selectedBubble, Date.now(), stickyPulseRef.current
+    );
 
     return (
         <Box sx={{
