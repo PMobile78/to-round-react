@@ -9,6 +9,7 @@ import {
 } from '../services/firestoreService';
 import logger from '../utils/logger';
 import { shouldPauseEngine } from '../utils/engineIdle';
+import { hexToRgba } from '../utils/colorUtils';
 
 /**
  * Initializes the Matter.js physics engine, renderer, and runner.
@@ -415,7 +416,7 @@ export function useMatterEngine({
                         const shadowAlpha = effectParams.shadowAlpha || 0.5;
 
                         // Parse hex color once, before loops
-                        const shadowRgbaStyle = `rgba(${parseInt(shadowColor.substring(1, 3), 16)}, ${parseInt(shadowColor.substring(3, 5), 16)}, ${parseInt(shadowColor.substring(5, 7), 16)}, ${shadowAlpha})`;
+                        const shadowRgbaStyle = hexToRgba(shadowColor, shadowAlpha) || `rgba(0, 0, 0, ${shadowAlpha})`;
 
                         const bodies = engine.world.bodies;
                         ctx.save();
