@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { lsGet, lsSet } from '../utils/storage';
+import { LS } from '../utils/storageKeys';
 import { BUBBLE_STATUS } from '../services/firestoreService';
 
-const BUBBLES_PLANNED_TASKS_VIEW_LS_KEY = 'bubbles-planned-tasks-only';
-
 function readBubbleViewPlannedTasksFromLS() {
-    return lsGet(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, false) === true;
+    return lsGet(LS.PLANNED_TASKS_ONLY, false) === true;
 }
 
 // Pure helper: toggle a tag id in/out of the filter list (returns a new array).
@@ -56,15 +55,13 @@ export function countBubblesByTagForBubblesView({ bubbles, tags, searchFoundBubb
 }
 
 export function useBubbleFilters({ tags, pageDeps }) {
-    const [filterTags, setFilterTags] = useState(() => {
-        const saved = localStorage.getItem('bubbles-filter-tags');
-        return saved ? JSON.parse(saved) : [];
-    }); // Массив ID выбранных тегов для фильтрации
+    const [filterTags, setFilterTags] = useState(() =>
+        lsGet(LS.FILTER_TAGS, [])
+    ); // Массив ID выбранных тегов для фильтрации
 
-    const [showNoTag, setShowNoTag] = useState(() => {
-        const saved = localStorage.getItem('bubbles-show-no-tag');
-        return saved ? JSON.parse(saved) : true;
-    }); // Показывать ли пузыри без тегов
+    const [showNoTag, setShowNoTag] = useState(() =>
+        lsGet(LS.SHOW_NO_TAG, true)
+    ); // Показывать ли пузыри без тегов
 
     const [bubbleViewPlannedTasksOnly, setBubbleViewPlannedTasksOnly] = useState(readBubbleViewPlannedTasksFromLS);
 
@@ -73,12 +70,12 @@ export function useBubbleFilters({ tags, pageDeps }) {
             return 'planned-tasks';
         }
         // Восстанавливаем выбранную категорию на основе сохраненных фильтров
-        const savedFilterTags = localStorage.getItem('bubbles-filter-tags');
-        const savedShowNoTag = localStorage.getItem('bubbles-show-no-tag');
+        const savedFilterTags = lsGet(LS.FILTER_TAGS);
+        const savedShowNoTag = lsGet(LS.SHOW_NO_TAG);
 
-        if (savedFilterTags && savedShowNoTag) {
-            const filterTags = JSON.parse(savedFilterTags);
-            const showNoTag = JSON.parse(savedShowNoTag);
+        if (savedFilterTags && savedShowNoTag !== null) {
+            const filterTags = savedFilterTags;
+            const showNoTag = savedShowNoTag;
 
             // Если выбраны все теги и включен показ пузырей без тегов - это "all"
             if (filterTags.length > 0 && showNoTag) {
@@ -97,27 +94,26 @@ export function useBubbleFilters({ tags, pageDeps }) {
         return null;
     }); // Выбранная категория
 
-    const [categoriesPanelEnabled, setCategoriesPanelEnabled] = useState(() => {
-        const saved = localStorage.getItem('bubbles-categories-panel-enabled');
-        return saved ? JSON.parse(saved) : false;
-    }); // Постоянное отображение панели категорий
+    const [categoriesPanelEnabled, setCategoriesPanelEnabled] = useState(() =>
+        lsGet(LS.CATEGORIES_PANEL_ENABLED, false)
+    ); // Постоянное отображение панели категорий
 
     // Синхронизация selectedCategory с фильтрами после загрузки тегов
     useEffect(() => {
         if (tags.length > 0) {
             // Если на устройстве нет сохраненных настроек фильтра, выбираем все теги и показываем без тега
-            let savedFilterTags = localStorage.getItem('bubbles-filter-tags');
-            let savedShowNoTag = localStorage.getItem('bubbles-show-no-tag');
+            let savedFilterTags = lsGet(LS.FILTER_TAGS);
+            let savedShowNoTag = lsGet(LS.SHOW_NO_TAG);
 
             if (savedFilterTags === null && savedShowNoTag === null) {
                 const allTagIds = tags.map(tag => tag.id);
                 setFilterTags(allTagIds);
                 setShowNoTag(true);
                 setSelectedCategory('all');
-                localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-                localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-                savedFilterTags = JSON.stringify(allTagIds);
-                savedShowNoTag = JSON.stringify(true);
+                lsSet(LS.FILTER_TAGS, allTagIds);
+                lsSet(LS.SHOW_NO_TAG, true);
+                savedFilterTags = allTagIds;
+                savedShowNoTag = true;
             }
 
             if (bubbleViewPlannedTasksOnly) {
@@ -125,11 +121,11 @@ export function useBubbleFilters({ tags, pageDeps }) {
                 setFilterTags(allTagIds);
                 setShowNoTag(true);
                 setSelectedCategory('planned-tasks');
-                localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-                localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
-            } else if (savedFilterTags && savedShowNoTag) {
-                const filterTags = JSON.parse(savedFilterTags);
-                const showNoTag = JSON.parse(savedShowNoTag);
+                lsSet(LS.FILTER_TAGS, allTagIds);
+                lsSet(LS.SHOW_NO_TAG, true);
+            } else if (savedFilterTags && savedShowNoTag !== null) {
+                const filterTags = savedFilterTags;
+                const showNoTag = savedShowNoTag;
 
                 // Сохранённый фильтр может ссылаться на теги предыдущего аккаунта
                 // (ключи localStorage общие для всех аккаунтов и не чистятся при
@@ -140,8 +136,8 @@ export function useBubbleFilters({ tags, pageDeps }) {
                     setFilterTags(staleReset.filterTags);
                     setShowNoTag(staleReset.showNoTag);
                     setSelectedCategory(staleReset.selectedCategory);
-                    localStorage.setItem('bubbles-filter-tags', JSON.stringify(staleReset.filterTags));
-                    localStorage.setItem('bubbles-show-no-tag', JSON.stringify(staleReset.showNoTag));
+                    lsSet(LS.FILTER_TAGS, staleReset.filterTags);
+                    lsSet(LS.SHOW_NO_TAG, staleReset.showNoTag);
                     return;
                 }
 
@@ -201,53 +197,53 @@ export function useBubbleFilters({ tags, pageDeps }) {
 
         if (categoryId === 'all') {
             setBubbleViewPlannedTasksOnly(false);
-            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+            lsSet(LS.PLANNED_TASKS_ONLY, false);
             // Показываем все пузыри - устанавливаем все теги
             const allTagIds = tags.map(tag => tag.id);
             setFilterTags(allTagIds);
             setShowNoTag(true);
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
+            lsSet(LS.FILTER_TAGS, allTagIds);
+            lsSet(LS.SHOW_NO_TAG, true);
         } else if (categoryId === 'planned-tasks') {
             const allTagIds = tags.map(tag => tag.id);
             setBubbleViewPlannedTasksOnly(true);
-            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(true));
+            lsSet(LS.PLANNED_TASKS_ONLY, true);
             setFilterTags(allTagIds);
             setShowNoTag(true);
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
+            lsSet(LS.FILTER_TAGS, allTagIds);
+            lsSet(LS.SHOW_NO_TAG, true);
         } else if (categoryId === 'no-tags') {
             setBubbleViewPlannedTasksOnly(false);
-            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+            lsSet(LS.PLANNED_TASKS_ONLY, false);
             // Показываем только пузыри без тегов
             setFilterTags([]);
             setShowNoTag(true);
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify([]));
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
+            lsSet(LS.FILTER_TAGS, []);
+            lsSet(LS.SHOW_NO_TAG, true);
         } else {
             setBubbleViewPlannedTasksOnly(false);
-            localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+            lsSet(LS.PLANNED_TASKS_ONLY, false);
             // Устанавливаем фильтр только на выбранную категорию
             setFilterTags([categoryId]);
             setShowNoTag(false); // Отключаем показ пузырей без тегов
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify([categoryId]));
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(false));
+            lsSet(LS.FILTER_TAGS, [categoryId]);
+            lsSet(LS.SHOW_NO_TAG, false);
         }
     };
 
     const handleToggleCategoriesPanel = () => {
         const newValue = !categoriesPanelEnabled;
         setCategoriesPanelEnabled(newValue);
-        localStorage.setItem('bubbles-categories-panel-enabled', JSON.stringify(newValue));
+        lsSet(LS.CATEGORIES_PANEL_ENABLED, newValue);
     };
 
     // --- bubbles-view filter callbacks (moved from BubblesPage, Task B of #66) ---
     const handleTagFilterChange = useCallback((tagId) => {
         setBubbleViewPlannedTasksOnly(false);
-        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+        lsSet(LS.PLANNED_TASKS_ONLY, false);
         setFilterTags((prev) => {
             const newFilterTags = toggleTagInFilter(prev, tagId);
-            localStorage.setItem('bubbles-filter-tags', JSON.stringify(newFilterTags));
+            lsSet(LS.FILTER_TAGS, newFilterTags);
             return newFilterTags;
         });
         // Сбрасываем выбранную категорию при ручном изменении фильтров
@@ -256,10 +252,10 @@ export function useBubbleFilters({ tags, pageDeps }) {
 
     const handleNoTagFilterChange = useCallback(() => {
         setBubbleViewPlannedTasksOnly(false);
-        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+        lsSet(LS.PLANNED_TASKS_ONLY, false);
         setShowNoTag((prev) => {
             const newShowNoTag = !prev;
-            localStorage.setItem('bubbles-show-no-tag', JSON.stringify(newShowNoTag));
+            lsSet(LS.SHOW_NO_TAG, newShowNoTag);
             return newShowNoTag;
         });
         // Сбрасываем выбранную категорию при ручном изменении фильтров
@@ -268,23 +264,23 @@ export function useBubbleFilters({ tags, pageDeps }) {
 
     const clearAllFilters = useCallback(() => {
         setBubbleViewPlannedTasksOnly(false);
-        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+        lsSet(LS.PLANNED_TASKS_ONLY, false);
         setFilterTags([]);
         setShowNoTag(false);
         setSelectedCategory(null); // Сбрасываем выбранную категорию
-        localStorage.setItem('bubbles-filter-tags', JSON.stringify([]));
-        localStorage.setItem('bubbles-show-no-tag', JSON.stringify(false));
+        lsSet(LS.FILTER_TAGS, []);
+        lsSet(LS.SHOW_NO_TAG, false);
     }, []);
 
     const selectAllFilters = useCallback(() => {
         setBubbleViewPlannedTasksOnly(false);
-        localStorage.setItem(BUBBLES_PLANNED_TASKS_VIEW_LS_KEY, JSON.stringify(false));
+        lsSet(LS.PLANNED_TASKS_ONLY, false);
         const allTagIds = tags.map((tag) => tag.id);
         setFilterTags(allTagIds);
         setShowNoTag(true);
         setSelectedCategory(null); // Сбрасываем выбранную категорию
-        localStorage.setItem('bubbles-filter-tags', JSON.stringify(allTagIds));
-        localStorage.setItem('bubbles-show-no-tag', JSON.stringify(true));
+        lsSet(LS.FILTER_TAGS, allTagIds);
+        lsSet(LS.SHOW_NO_TAG, true);
     }, [tags]);
 
     const isAllSelected = useCallback(() => {
