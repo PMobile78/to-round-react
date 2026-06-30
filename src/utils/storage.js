@@ -14,3 +14,15 @@ export const lsSet = (key, value) => {
     // ignore quota errors
   }
 };
+
+// reads a value that may have been stored either as raw string (legacy) or JSON
+export const lsGetString = (key, fallback = null) => {
+  const raw = localStorage.getItem(key);
+  if (raw === null) return fallback;
+  try {
+    const v = JSON.parse(raw);
+    return typeof v === 'string' ? v : raw;
+  } catch {
+    return raw;
+  }
+};

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { lsSet } from '../utils/storage';
+import { LS } from '../utils/storageKeys';
 import {
     subscribeToTagsUpdates,
     upsertTagInFirestore,
@@ -121,14 +123,14 @@ export function useTags({ user, bubbles, pageDeps }) {
             // Активируем в фильтрах Bubbles View
             setFilterTags(prev => {
                 const newFilterTags = [...prev, newTag.id];
-                localStorage.setItem('bubbles-filter-tags', JSON.stringify(newFilterTags));
+                lsSet(LS.FILTER_TAGS, newFilterTags);
                 return newFilterTags;
             });
 
             // Активируем в фильтрах List View
             setListFilterTags(prev => {
                 const newListFilterTags = [...prev, newTag.id];
-                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(newListFilterTags));
+                lsSet(LS.LIST_FILTER_TAGS, newListFilterTags);
                 return newListFilterTags;
             });
         }

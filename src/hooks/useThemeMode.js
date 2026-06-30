@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { createTheme } from '@mui/material/styles';
+import { lsGetString, lsSet } from '../utils/storage';
+import { LS } from '../utils/storageKeys';
 import { getDesignModule, DESIGNS } from '../theme/designs';
 
 export const useThemeMode = () => {
     const [themeMode, setThemeMode] = useState(() => {
-        const savedTheme = localStorage.getItem('app-theme-mode');
+        const savedTheme = lsGetString(LS.THEME_MODE);
         return savedTheme || 'system';
     });
 
     const [design, setDesign] = useState(() => {
-        const savedDesign = localStorage.getItem('app-design');
+        const savedDesign = lsGetString(LS.DESIGN);
         return savedDesign || 'classic';
     });
 
@@ -36,24 +38,24 @@ export const useThemeMode = () => {
             newMode = 'light';
         }
         setThemeMode(newMode);
-        localStorage.setItem('app-theme-mode', newMode);
+        lsSet(LS.THEME_MODE, newMode);
     };
 
     const setThemeModeExplicit = (mode) => {
         setThemeMode(mode);
-        localStorage.setItem('app-theme-mode', mode);
+        lsSet(LS.THEME_MODE, mode);
     };
 
     const setDesignExplicit = (designId) => {
         if (DESIGNS[designId]) {
             setDesign(designId);
-            localStorage.setItem('app-design', designId);
+            lsSet(LS.DESIGN, designId);
         }
     };
 
     // Слушаем изменения системной темы
     useEffect(() => {
-        localStorage.setItem('app-theme-mode', themeMode);
+        lsSet(LS.THEME_MODE, themeMode);
 
         if (themeMode === 'system') {
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -69,7 +71,7 @@ export const useThemeMode = () => {
 
     // Persist design to localStorage whenever it changes
     useEffect(() => {
-        localStorage.setItem('app-design', design);
+        lsSet(LS.DESIGN, design);
     }, [design]);
 
     const actualTheme = getActualTheme();
