@@ -8,12 +8,12 @@ import {
     Typography,
     Button,
     IconButton,
-    List,
-    ListItem
+    List
 } from '@mui/material';
-import { Add, CloseOutlined, DeleteOutlined, Edit, Category, DragHandle, DragIndicator } from '@mui/icons-material';
+import { Add, CloseOutlined, DeleteOutlined, Edit, Category } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { reorderArray } from '../utils/reorderArray';
+import CategoryList from './CategoryList';
 
 const TasksCategoriesDialog = ({
     open,
@@ -84,96 +84,50 @@ const TasksCategoriesDialog = ({
             </DialogTitle>
             <DialogContent sx={{ padding: isMobile ? 2 : 3, paddingTop: isMobile ? 4 : 5, paddingBottom: isMobile ? 10 : 0 }}>
                 {tags.length > 0 ? (
-                    <List sx={{ padding: 0, marginTop: 3 }}>
-                        {tags.map((tag, index) => {
+                    <CategoryList
+                        tags={tags}
+                        selectedCategory={null}
+                        onCategorySelect={() => {}}
+                        bubbleCounts={{}}
+                        plannedTasksCount={0}
+                        bubbles={[]}
+                        themeMode={themeMode}
+                        variant="dialog"
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        draggedIndex={draggedIndex}
+                        isItemDeleting={(tag) => deletingTags?.has ? deletingTags.has(tag.id) : false}
+                        getBubbleCountByTag={getBubbleCountByTag}
+                        renderRowExtra={(tag) => {
                             const isDeleting = deletingTags?.has ? deletingTags.has(tag.id) : false;
-                            return (
-                                <ListItem
-                                    key={tag.id}
-                                    draggable={!isDeleting}
-                                    onDragStart={handleDragStart(index)}
-                                    onDragOver={handleDragOver(index)}
-                                    onDrop={handleDrop(index)}
+                            return isDeleting ? (
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => onUndoDeleteTag(tag.id)}
                                     sx={{
-                                        border: '1px solid #E0E0E0',
-                                        borderRadius: 2,
-                                        marginBottom: 1,
-                                        padding: 2,
-                                        opacity: isDeleting ? 0.7 : 1,
-                                        transition: 'opacity 0.3s ease',
-                                        cursor: isDeleting ? 'default' : 'grab',
-                                        '& .drag-handle': {
-                                            opacity: 0,
-                                            transition: 'opacity 0.15s ease'
-                                        },
-                                        '&:hover .drag-handle': {
-                                            opacity: 1
-                                        },
-                                        backgroundColor: draggedIndex === index ? (themeMode === 'light' ? '#F8F9FA' : '#2a2a2a') : 'transparent'
+                                        color: 'primary.main',
+                                        borderColor: 'primary.main',
+                                        textTransform: 'none',
+                                        fontSize: '0.75rem',
+                                        padding: '4px 8px'
                                     }}
                                 >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
-                                        {!isDeleting && (
-                                            <Box
-                                                sx={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    borderRadius: '50%',
-                                                    backgroundColor: tag.color,
-                                                    border: '2px solid #E0E0E0'
-                                                }}
-                                            />
-                                        )}
-                                        <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {isDeleting ? (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <DeleteOutlined sx={{ fontSize: 20, color: 'text.secondary' }} />
-                                                        {t('bubbles.tagDeleted')}
-                                                    </Box>
-                                                ) : (
-                                                    tag.name
-                                                )}
-                                            </Typography>
-                                            {!isDeleting && (
-                                                <Typography variant="body2" color="text.secondary">
-                                                    {getBubbleCountByTag(tag.id)} {getBubbleCountByTag(tag.id) === 1 ? t('bubbles.bubble') : t('bubbles.bubbles')}
-                                                </Typography>
-                                            )}
-                                        </Box>
-                                        <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
-                                            {isDeleting ? (
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    onClick={() => onUndoDeleteTag(tag.id)}
-                                                    sx={{
-                                                        color: 'primary.main',
-                                                        borderColor: 'primary.main',
-                                                        textTransform: 'none',
-                                                        fontSize: '0.75rem',
-                                                        padding: '4px 8px'
-                                                    }}
-                                                >
-                                                    {t('bubbles.undo')}
-                                                </Button>
-                                            ) : (
-                                                <>
-                                                    <IconButton size="small" onClick={() => onEditTag(tag)} sx={{ color: 'primary.main' }}>
-                                                        <Edit fontSize="small" />
-                                                    </IconButton>
-                                                    <IconButton size="small" onClick={() => onDeleteTag(tag.id)} sx={{ color: 'error.main' }}>
-                                                        <DeleteOutlined fontSize="small" />
-                                                    </IconButton>
-                                                    <DragIndicator className="drag-handle" sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa', ml: 0.5, cursor: 'grab' }} />
-                                                </>
-                                            )}
-                                        </Box>
-                                    </Box>
-                                </ListItem>
+                                    {t('bubbles.undo')}
+                                </Button>
+                            ) : (
+                                <>
+                                    <IconButton size="small" onClick={() => onEditTag(tag)} sx={{ color: 'primary.main' }}>
+                                        <Edit fontSize="small" />
+                                    </IconButton>
+                                    <IconButton size="small" onClick={() => onDeleteTag(tag.id)} sx={{ color: 'error.main' }}>
+                                        <DeleteOutlined fontSize="small" />
+                                    </IconButton>
+                                </>
                             );
-                        })}
-                    </List>
+                        }}
+                    />
                 ) : (
                     <Box
                         sx={{

@@ -2,15 +2,14 @@ import React from 'react';
 import {
     Box,
     Select,
-    MenuItem,
     FormControl,
     Typography,
-    Chip,
     ListSubheader,
 } from '@mui/material';
 import { LabelOutlined, AllInclusive, LocalOffer } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { BUBBLE_STATUS } from '../services/firestoreService';
+import CategoryList from './CategoryList';
 
 const ellipsisLabelSx = {
     overflow: 'hidden',
@@ -64,106 +63,6 @@ const MobileCategorySelector = ({
         onCategorySelect(value);
     };
 
-    const renderCategoryOption = (category) => {
-        const count = getBubbleCount(category.id);
-        return (
-            <MenuItem
-                key={category.id}
-                value={category.id}
-                sx={menuRowSx}
-            >
-                <Box sx={labelRowSx}>
-                    <LabelOutlined sx={{ color: category.color, fontSize: 20, flexShrink: 0 }} />
-                    <Typography
-                        variant="body2"
-                        title={category.name}
-                        sx={{
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                            ...ellipsisLabelSx,
-                        }}
-                    >
-                        {category.name}
-                    </Typography>
-                </Box>
-                <Chip
-                    label={count}
-                    size="small"
-                    sx={{
-                        flexShrink: 0,
-                        backgroundColor: 'transparent',
-                        color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                        fontWeight: 'bold',
-                        fontSize: '12px',
-                        border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}`
-                    }}
-                />
-            </MenuItem>
-        );
-    };
-
-    const renderAllCategoriesOption = () => {
-        const count = getBubbleCount('all');
-        return (
-            <MenuItem
-                key="all-categories"
-                value="all"
-                sx={menuRowSx}
-            >
-                <Box sx={labelRowSx}>
-                    <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa', fontSize: 20, flexShrink: 0 }} />
-                    <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', ...ellipsisLabelSx }}>
-                        {t('categories.allCategories')}
-                    </Typography>
-                </Box>
-                <Chip
-                    label={count}
-                    size="small"
-                    sx={{
-                        flexShrink: 0,
-                        backgroundColor: 'transparent',
-                        color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                        fontWeight: 'bold',
-                        fontSize: '12px',
-                        border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}`
-                    }}
-                />
-            </MenuItem>
-        );
-    };
-
-    const renderPresetRow = (value, label, icon) => {
-        const count = getBubbleCount(value);
-        return (
-            <MenuItem
-                key={value}
-                value={value}
-                sx={menuRowSx}
-            >
-                <Box sx={labelRowSx}>
-                    <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{icon}</Box>
-                    <Typography
-                        variant="body2"
-                        title={typeof label === 'string' ? label : undefined}
-                        sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', ...ellipsisLabelSx }}
-                    >
-                        {label}
-                    </Typography>
-                </Box>
-                <Chip
-                    label={count}
-                    size="small"
-                    sx={{
-                        flexShrink: 0,
-                        backgroundColor: 'transparent',
-                        color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                        fontWeight: 'bold',
-                        fontSize: '12px',
-                        border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}`
-                    }}
-                />
-            </MenuItem>
-        );
-    };
 
     const getSelectedCategoryName = () => {
         if (!selectedCategory) return '';
@@ -271,31 +170,16 @@ const MobileCategorySelector = ({
                     }
                 }}
             >
-                {renderAllCategoriesOption()}
-                {renderPresetRow(
-                    'no-tags',
-                    t('bubbles.noTags'),
-                    <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa', fontSize: 20 }} />
-                )}
-                {renderPresetRow(
-                    'planned-tasks',
-                    t('bubbles.postponedTasks'),
-                    <LocalOffer sx={{ color: '#FF9800', fontSize: 20 }} />
-                )}
-                {tags.length > 0 && (
-                    <ListSubheader
-                        sx={{
-                            lineHeight: '32px',
-                            backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.98)' : 'rgba(52, 73, 94, 0.98)',
-                            color: themeMode === 'light' ? '#757575' : '#aaaaaa',
-                            fontSize: '0.7rem',
-                            letterSpacing: 1
-                        }}
-                    >
-                        {t('bubbles.tags', { defaultValue: 'Tags' })}
-                    </ListSubheader>
-                )}
-                {tags.map(renderCategoryOption)}
+                <CategoryList
+                    tags={tags}
+                    selectedCategory={selectedCategory}
+                    onCategorySelect={onCategorySelect}
+                    bubbleCounts={bubbleCounts}
+                    plannedTasksCount={plannedTasksCount}
+                    bubbles={bubbles}
+                    themeMode={themeMode}
+                    variant="dropdown"
+                />
             </Select>
         </FormControl>
     );
