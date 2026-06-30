@@ -12,6 +12,9 @@ import {
 } from '@mui/material';
 import { Language, Check } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { alpha } from '@mui/material/styles';
+import { lsSet } from '../utils/storage';
+import { LS } from '../utils/storageKeys';
 
 const LanguageSelector = ({ themeMode = 'light', sx = {} }) => {
     const { i18n, t } = useTranslation();
@@ -45,7 +48,7 @@ const LanguageSelector = ({ themeMode = 'light', sx = {} }) => {
 
     const handleLanguageChange = (languageCode) => {
         i18n.changeLanguage(languageCode);
-        localStorage.setItem('i18nextLng', languageCode);
+        lsSet(LS.I18N_LNG, languageCode);
         handleClose();
     };
 
@@ -56,14 +59,10 @@ const LanguageSelector = ({ themeMode = 'light', sx = {} }) => {
             <IconButton
                 onClick={handleClick}
                 sx={{
-                    color: themeMode === 'light' ? '#3B7DED' : 'white',
-                    backgroundColor: themeMode === 'light'
-                        ? 'rgba(59, 125, 237, 0.15)'
-                        : 'rgba(255, 255, 255, 0.1)',
+                    color: theme.palette.primary.main,
+                    backgroundColor: alpha(theme.palette.primary.main, 0.15),
                     '&:hover': {
-                        backgroundColor: themeMode === 'light'
-                            ? 'rgba(59, 125, 237, 0.25)'
-                            : 'rgba(255, 255, 255, 0.2)'
+                        backgroundColor: alpha(theme.palette.primary.main, 0.25)
                     },
                     width: isMobile ? 40 : 48,
                     height: isMobile ? 40 : 48
@@ -79,20 +78,18 @@ const LanguageSelector = ({ themeMode = 'light', sx = {} }) => {
                 onClose={handleClose}
                 PaperProps={{
                     sx: {
-                        backgroundColor: themeMode === 'light'
-                            ? 'rgba(255, 255, 255, 0.95)'
-                            : 'rgba(30, 30, 30, 0.95)',
-                        color: themeMode === 'light' ? '#000000' : '#ffffff',
+                        backgroundColor: alpha(theme.palette.background.paper, 0.95),
+                        color: 'text.primary',
                         backdropFilter: 'blur(10px)',
                         borderRadius: 2,
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                        boxShadow: theme.shadows[8],
                         minWidth: 200
                     }
                 }}
                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             >
-                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid rgba(0, 0, 0, 0.1)' }}>
+                <Box sx={{ px: 2, py: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
                     <Typography variant="caption" color="text.secondary" fontWeight="bold">
                         {t('common.language')}
                     </Typography>
@@ -104,13 +101,13 @@ const LanguageSelector = ({ themeMode = 'light', sx = {} }) => {
                         selected={i18n.language === language.code}
                         sx={{
                             '&.Mui-selected': {
-                                backgroundColor: 'rgba(59, 125, 237, 0.1)',
+                                backgroundColor: alpha(theme.palette.primary.main, 0.1),
                                 '&:hover': {
-                                    backgroundColor: 'rgba(59, 125, 237, 0.15)'
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.15)
                                 }
                             },
                             '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                                backgroundColor: theme.palette.action.hover
                             }
                         }}
                     >

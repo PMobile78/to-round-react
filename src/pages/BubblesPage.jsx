@@ -6,6 +6,8 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
+import { lsGet, lsSet, lsGetString } from '../utils/storage';
+import { LS } from '../utils/storageKeys';
 import BubblesDialogs from '../components/BubblesDialogs';
 import TextOverlay from '../components/TextOverlay';
 import { logoutUser } from '../services/authService';
@@ -40,7 +42,8 @@ import { useBubbleNotifications } from '../hooks/useBubbleNotifications';
 import { useBubbleCrud } from '../hooks/useBubbleCrud';
 import { withAlpha } from '../utils/colorUtils';
 import { parseLocalDateTime } from '../utils/dateTime';
-import { notificationKeyPrefix } from '../utils/notifications';
+import { notificationKeyPrefix, shouldShowStopPulsing } from '../utils/notifications';
+import { applyBubbleFill } from '../utils/bubbleStyle';
 import {
     readBubbleViewPlannedTasksFromLS
 } from '../utils/bubbleData';
@@ -190,33 +193,33 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [appearanceDialogOpen, setAppearanceDialogOpen] = useState(false); // Диалог оформления
     const [changePasswordOpen, setChangePasswordOpen] = useState(false); // Диалог смены пароля
     const [fontSize, setFontSize] = useState(() => {
-        const savedFontSize = localStorage.getItem('bubbles-font-size');
+        const savedFontSize = lsGetString(LS.FONT_SIZE);
         return savedFontSize ? parseInt(savedFontSize) : 8;
     }); // Размер шрифта для надписей в пузырях
     const [logoutDialog, setLogoutDialog] = useState(false); // Диалог подтверждения выхода
     const [listViewDialog, setListViewDialog] = useState(false); // Диалог списка задач
     const [listFilter, setListFilter] = useState('active'); // 'active', 'done', 'postpone', 'deleted'
     const [listSortBy, setListSortBy] = useState(() => {
-        const saved = localStorage.getItem('bubbles-list-sort-by');
+        const saved = lsGetString(LS.LIST_SORT_BY);
         return saved ? saved : 'updatedAt';
     }); // 'createdAt', 'updatedAt', 'title', 'tag'
     const [listSortOrder, setListSortOrder] = useState(() => {
-        const saved = localStorage.getItem('bubbles-list-sort-order');
+        const saved = lsGetString(LS.LIST_SORT_ORDER);
         return saved ? saved : 'desc';
     }); // 'asc', 'desc'
     // listFilterTags / listShowNoTag state now live in useListFilters (Task C of #67).
     const [listSearchQuery, setListSearchQuery] = useState(''); // Поисковый запрос для списка задач
 
     const [showInstructions, setShowInstructions] = useState(() => {
-        const saved = localStorage.getItem('bubbles-show-instructions');
+        const saved = lsGetString(LS.SHOW_INSTRUCTIONS);
         return saved === null ? true : saved === 'true';
     }); // Показывать ли подсказки инструкций
     const [bubbleBackgroundEnabled, setBubbleBackgroundEnabled] = useState(() => {
-        const saved = localStorage.getItem('bubbles-background-enabled');
+        const saved = lsGetString(LS.BACKGROUND_ENABLED);
         return saved === null ? true : saved === 'true';
     }); // Включен ли фон пузырей
     const [mainView, setMainView] = useState(() => {
-        return localStorage.getItem('bubbles-main-view') === 'tasks' ? 'tasks' : 'bubbles';
+        return lsGetString(LS.MAIN_VIEW) === 'tasks' ? 'tasks' : 'bubbles';
     }); // Режим главного окна: 'bubbles' (canvas) | 'tasks' (список задач)
 
     // Состояние поиска для Bubbles View
@@ -403,7 +406,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                             tagColor = tag.color;
                         }
                     }
-                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    applyBubbleFill(bubble, { tagColor }, getBubbleFillStyle);
                     bubble.body.render.lineWidth = theme.custom?.bubble?.strokeWidth ?? 1.5;
                 }
             });
@@ -433,9 +436,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setFilterTags(currentFilterTags => {
             const validFilterTags = currentFilterTags.filter(id => existingTagIds.includes(id));
             // Не записываем ключ впервые, чтобы не блокировать первичную инициализацию фильтра
-            const hadFilterKey = localStorage.getItem('bubbles-filter-tags') !== null;
+            const hadFilterKey = lsGet(LS.FILTER_TAGS) !== null;
             if (hadFilterKey) {
-                localStorage.setItem('bubbles-filter-tags', JSON.stringify(validFilterTags));
+                lsSet(LS.FILTER_TAGS, validFilterTags);
             }
             return validFilterTags;
         });
@@ -443,9 +446,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         // Update list filter tags to remove deleted tags
         setListFilterTags(currentListFilterTags => {
             const validListFilterTags = currentListFilterTags.filter(id => existingTagIds.includes(id));
-            const hadListFilterKey = localStorage.getItem('bubbles-list-filter-tags') !== null;
+            const hadListFilterKey = lsGet(LS.LIST_FILTER_TAGS) !== null;
             if (hadListFilterKey) {
-                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(validListFilterTags));
+                lsSet(LS.LIST_FILTER_TAGS, validListFilterTags);
             }
             return validListFilterTags;
         });
@@ -456,12 +459,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 if (bubble.tagId) {
                     const tag = tags.find(t => t.id === bubble.tagId);
                     if (tag && bubble.body) {
-                        bubble.body.render.strokeStyle = tag.color;
-                        bubble.body.render.fillStyle = getBubbleFillStyle(tag.color);
+                        applyBubbleFill(bubble, { tagColor: tag.color, stroke: tag.color }, getBubbleFillStyle);
                     }
                 } else if (bubble.body) {
-                    bubble.body.render.strokeStyle = '#B0B0B0';
-                    bubble.body.render.fillStyle = getBubbleFillStyle(null);
+                    applyBubbleFill(bubble, { tagColor: null, stroke: '#B0B0B0' }, getBubbleFillStyle);
                 }
                 return bubble;
             });
@@ -592,31 +593,31 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // Функция для сохранения настроек шрифта
     const handleFontSizeChange = (newSize) => {
         setFontSize(newSize);
-        localStorage.setItem('bubbles-font-size', newSize.toString());
+        lsSet(LS.FONT_SIZE, newSize.toString());
     };
 
     // Функция для закрытия подсказок
     const handleCloseInstructions = () => {
         setShowInstructions(false);
-        localStorage.setItem('bubbles-show-instructions', 'false');
+        lsSet(LS.SHOW_INSTRUCTIONS, 'false');
     };
 
     const handleToggleMainView = () => {
         const next = mainView === 'tasks' ? 'bubbles' : 'tasks';
         setMainView(next);
-        localStorage.setItem('bubbles-main-view', next);
+        lsSet(LS.MAIN_VIEW, next);
     };
 
     const handleToggleBubbleBackground = () => {
         const newValue = !bubbleBackgroundEnabled;
         setBubbleBackgroundEnabled(newValue);
-        localStorage.setItem('bubbles-background-enabled', newValue.toString());
+        lsSet(LS.BACKGROUND_ENABLED, newValue.toString());
 
         // Обновляем фон всех пузырей
         setBubbles(prev => {
             const updatedBubbles = prev.map(bubble => {
                 const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                applyBubbleFill(bubble, { tagColor }, getBubbleFillStyle);
                 return bubble;
             });
             return updatedBubbles;
@@ -765,56 +766,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // Whether the edit dialog should show the "stop pulsing" button: active task
     // with a valid recurrence that is currently inside a notification window,
     // overdue, or flagged sticky. Computed each render from selectedBubble.
-    const editDialogShowStopPulsing = (() => {
-        try {
-            if (!selectedBubble || selectedBubble.status !== BUBBLE_STATUS.ACTIVE) return false;
-
-            const rec = selectedBubble.recurrence;
-            const every = rec && typeof rec === 'object' ? Number(rec.every) : NaN;
-            if (!Number.isFinite(every) || every < 1) return false;
-
-            const now = Date.now();
-
-            // Проверяем наличие dueDate и просроченность
-            if (selectedBubble.dueDate) {
-                const parsedDue = parseLocalDateTime(selectedBubble.dueDate);
-                if (!parsedDue) return false;
-                const due = parsedDue.getTime();
-
-                // active notification window
-                if (Array.isArray(selectedBubble.notifications) && selectedBubble.notifications.length > 0) {
-                    for (const notif of selectedBubble.notifications) {
-                        let offsetMs = 0;
-                        if (typeof notif === 'string') {
-                            const m = notif.match(/^(\d+)([mhdw])$/i);
-                            if (m) {
-                                const val = Number(m[1]);
-                                const u = m[2].toLowerCase();
-                                offsetMs = u === 'm' ? val * 60 * 1000 : u === 'h' ? val * 60 * 60 * 1000 : u === 'd' ? val * 24 * 60 * 60 * 1000 : val * 7 * 24 * 60 * 60 * 1000;
-                            }
-                        } else if (typeof notif === 'object') {
-                            const v = Number(notif.value);
-                            const unit = notif.unit;
-                            if (Number.isFinite(v) && v > 0) {
-                                offsetMs = unit === 'minutes' ? v * 60 * 1000 : unit === 'hours' ? v * 60 * 60 * 1000 : unit === 'days' ? v * 24 * 60 * 60 * 1000 : unit === 'weeks' ? v * 7 * 24 * 60 * 60 * 1000 : 0;
-                            }
-                        }
-                        const targetTime = due - offsetMs;
-                        if (Number.isFinite(targetTime) && now >= targetTime && now < due) return true;
-                    }
-                }
-
-                if (now >= due) return true;
-            }
-
-            // Показываем кнопку Stop для задач с overdueSticky или в stickyPulseRef
-            if (selectedBubble.overdueSticky || stickyPulseRef.current.has(selectedBubble.id)) {
-                return true;
-            }
-
-            return false;
-        } catch (_) { return false; }
-    })();
+    const editDialogShowStopPulsing = shouldShowStopPulsing(
+        selectedBubble, Date.now(), stickyPulseRef.current
+    );
 
     return (
         <Box sx={{

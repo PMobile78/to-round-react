@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { lsGet, lsSet } from '../utils/storage';
+import { LS } from '../utils/storageKeys';
 import { getBubblesByStatus } from '../services/firestoreService';
 import { stripHtml } from '../utils/stripHtml';
 import { toggleTagInFilter } from './useBubbleFilters';
@@ -84,28 +86,26 @@ export function countBubblesByTagForListView({ bubbles, tags, listFilter, listSe
 }
 
 export function useListFilters({ tags, pageDeps }) {
-    const [listFilterTags, setListFilterTags] = useState(() => {
-        const saved = localStorage.getItem('bubbles-list-filter-tags');
-        return saved ? JSON.parse(saved) : [];
-    }); // Массив ID выбранных тегов для фильтрации в списке
+    const [listFilterTags, setListFilterTags] = useState(() =>
+        lsGet(LS.LIST_FILTER_TAGS, [])
+    ); // Массив ID выбранных тегов для фильтрации в списке
 
-    const [listShowNoTag, setListShowNoTag] = useState(() => {
-        const saved = localStorage.getItem('bubbles-list-show-no-tag');
-        return saved ? JSON.parse(saved) : true;
-    }); // Показывать ли задачи без тегов в списке
+    const [listShowNoTag, setListShowNoTag] = useState(() =>
+        lsGet(LS.LIST_SHOW_NO_TAG, true)
+    ); // Показывать ли задачи без тегов в списке
 
     // Инициализация настроек фильтра списка задач после загрузки тегов
     useEffect(() => {
         if (tags.length > 0) {
             // Тоже самое для настроек фильтра в списке задач
-            const savedListFilterTags = localStorage.getItem('bubbles-list-filter-tags');
-            const savedListShowNoTag = localStorage.getItem('bubbles-list-show-no-tag');
+            const savedListFilterTags = lsGet(LS.LIST_FILTER_TAGS);
+            const savedListShowNoTag = lsGet(LS.LIST_SHOW_NO_TAG);
             if (savedListFilterTags === null && savedListShowNoTag === null) {
                 const allTagIds = tags.map(tag => tag.id);
                 setListFilterTags(allTagIds);
                 setListShowNoTag(true);
-                localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(allTagIds));
-                localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(true));
+                lsSet(LS.LIST_FILTER_TAGS, allTagIds);
+                lsSet(LS.LIST_SHOW_NO_TAG, true);
             }
         }
     }, [tags]);
@@ -114,7 +114,7 @@ export function useListFilters({ tags, pageDeps }) {
     const handleListTagFilterChange = useCallback((tagId) => {
         setListFilterTags(prev => {
             const newListFilterTags = toggleTagInFilter(prev, tagId);
-            localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(newListFilterTags));
+            lsSet(LS.LIST_FILTER_TAGS, newListFilterTags);
             return newListFilterTags;
         });
     }, []);
@@ -122,7 +122,7 @@ export function useListFilters({ tags, pageDeps }) {
     const handleListNoTagFilterChange = useCallback(() => {
         setListShowNoTag(prev => {
             const newListShowNoTag = !prev;
-            localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(newListShowNoTag));
+            lsSet(LS.LIST_SHOW_NO_TAG, newListShowNoTag);
             return newListShowNoTag;
         });
     }, []);
@@ -130,16 +130,16 @@ export function useListFilters({ tags, pageDeps }) {
     const clearAllListFilters = useCallback(() => {
         setListFilterTags([]);
         setListShowNoTag(false);
-        localStorage.setItem('bubbles-list-filter-tags', JSON.stringify([]));
-        localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(false));
+        lsSet(LS.LIST_FILTER_TAGS, []);
+        lsSet(LS.LIST_SHOW_NO_TAG, false);
     }, []);
 
     const selectAllListFilters = useCallback(() => {
         const allTagIds = tags.map(tag => tag.id);
         setListFilterTags(allTagIds);
         setListShowNoTag(true);
-        localStorage.setItem('bubbles-list-filter-tags', JSON.stringify(allTagIds));
-        localStorage.setItem('bubbles-list-show-no-tag', JSON.stringify(true));
+        lsSet(LS.LIST_FILTER_TAGS, allTagIds);
+        lsSet(LS.LIST_SHOW_NO_TAG, true);
     }, [tags]);
 
     const isAllListFiltersSelected = useCallback(() => {

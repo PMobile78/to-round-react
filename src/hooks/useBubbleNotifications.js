@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
+import { useTheme } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { BUBBLE_STATUS } from '../services/firestoreService';
 import { parseLocalDateTime } from '../utils/dateTime';
 import { getActiveNotification, buildNotificationKey } from '../utils/notifications';
 import { bubbleShouldPulse } from '../utils/rafGating';
+import { applyBubbleFill } from '../utils/bubbleStyle';
 
 // perf #78: while the Matter engine is idle the pulse loop does no per-frame work;
 // instead it scans this often (ms) for a bubble newly crossing into "should pulse"
@@ -36,6 +39,9 @@ export function useBubbleNotifications({
     t,
     i18nLanguage
 }) {
+    const theme = useTheme();
+    const overdueColor = alpha(theme.palette.error.main, 0.5);
+
     const [dueDate, setDueDate] = useState(null); // Для создания
     const [editDueDate, setEditDueDate] = useState(null); // Для редактирования
 
@@ -174,7 +180,7 @@ export function useBubbleNotifications({
                         Matter.Body.scale(bubble.body, scale, scale);
                     }
                     const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    applyBubbleFill(bubble, { tagColor }, getBubbleFillStyle);
                     return;
                 }
                 // 0. Пользователь остановил пульсацию вручную — не мерцать,
@@ -185,7 +191,7 @@ export function useBubbleNotifications({
                         Matter.Body.scale(bubble.body, scale, scale);
                     }
                     const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    applyBubbleFill(bubble, { tagColor }, getBubbleFillStyle);
                     return;
                 }
                 // 1. Найти ближайшее сработавшее уведомление, которое не удалено
@@ -210,10 +216,10 @@ export function useBubbleNotifications({
                     }
                     const pulseValue = Math.abs(Math.sin(pulsePhase + bubble.body.id % 10));
                     if (pulseValue > 0.7) {
-                        bubble.body.render.fillStyle = 'rgba(255,0,0,0.5)';
+                        applyBubbleFill(bubble, { overdueColor }, getBubbleFillStyle);
                     } else {
                         const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                        bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                        applyBubbleFill(bubble, { tagColor }, getBubbleFillStyle);
                     }
                     return; // не пульсируем по dueDate, если есть активное уведомление
                 }
@@ -234,17 +240,17 @@ export function useBubbleNotifications({
                     }
                     const pulseValue = Math.abs(Math.sin(pulsePhase + bubble.body.id % 10));
                     if (pulseValue > 0.7) {
-                        bubble.body.render.fillStyle = 'rgba(255,0,0,0.5)';
+                        applyBubbleFill(bubble, { overdueColor }, getBubbleFillStyle);
                     } else {
                         const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                        bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                        applyBubbleFill(bubble, { tagColor }, getBubbleFillStyle);
                     }
                 } else if (bubble.body && Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
                     // Сбросить радиус, если не пульсируем
                     const scale = bubble.radius / bubble.body.circleRadius;
                     Matter.Body.scale(bubble.body, scale, scale);
                     const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
-                    bubble.body.render.fillStyle = getBubbleFillStyle(tagColor);
+                    applyBubbleFill(bubble, { tagColor }, getBubbleFillStyle);
                 }
             });
             animationFrame = requestAnimationFrame(animate);

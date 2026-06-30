@@ -32,11 +32,13 @@ export function useBubbleImportExport({ pageDeps, setBubbles, setTags }) {
         try {
             const { importedTags, importedBubbles } = parseImportData(data);
 
-            setTags(importedTags);
-            await saveTagsToFirestore(importedTags);
+            await Promise.all([
+                saveTagsToFirestore(importedTags),
+                saveBubblesToFirestore(importedBubbles),
+            ]);
 
+            setTags(importedTags);
             setBubbles(importedBubbles);
-            await saveBubblesToFirestore(importedBubbles);
 
             // TODO: replace with proper React state + Matter.js reinit to avoid full page reload.
             // Imported bubbles are plain objects without Matter.js .body references; the physics
@@ -45,6 +47,7 @@ export function useBubbleImportExport({ pageDeps, setBubbles, setTags }) {
             window.location.reload();
         } catch (e) {
             logger.error('Import JSON failed', e);
+            // state untouched on failure
         }
     }, [setTags, setBubbles]);
 

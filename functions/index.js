@@ -389,38 +389,16 @@ async function updateBubbleDueDate(userId, bubbleId, nextDue, tz) {
     const formattedDueDate = formatLocalDateTime(nextDue, tz) || nextDue.toISOString();
     const subDoc = db.collection('user-bubbles').doc(userId).collection('bubbles').doc(String(bubbleId));
     const subSnap = await subDoc.get();
-    if (subSnap.exists) {
-        await subDoc.set({ dueDate: formattedDueDate, updatedAt: new Date().toISOString() }, { merge: true });
-        await db.collection('user-bubbles').doc(userId).set({ updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        return;
-    }
-    // Legacy fallback: array in parent doc
-    const docRef = db.collection('user-bubbles').doc(userId);
-    const snapshot = await docRef.get();
-    if (!snapshot.exists) return;
-    const data = snapshot.data() || {};
-    const list = Array.isArray(data.bubbles) ? data.bubbles : [];
-    const updated = list.map(b => (b.id === bubbleId ? { ...b, dueDate: formattedDueDate, updatedAt: new Date().toISOString() } : b));
-    await docRef.set({ ...data, bubbles: updated, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    if (!subSnap.exists) return;
+    await subDoc.set({ dueDate: formattedDueDate, updatedAt: new Date().toISOString() }, { merge: true });
 }
 
 async function updateBubbleFields(userId, bubbleId, fields) {
     const subDoc = db.collection('user-bubbles').doc(userId).collection('bubbles').doc(String(bubbleId));
     const subSnap = await subDoc.get();
+    if (!subSnap.exists) return;
     const payload = Object.assign({}, fields, { updatedAt: new Date().toISOString() });
-    if (subSnap.exists) {
-        await subDoc.set(payload, { merge: true });
-        await db.collection('user-bubbles').doc(userId).set({ updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        return;
-    }
-    // Legacy fallback
-    const docRef = db.collection('user-bubbles').doc(userId);
-    const snapshot = await docRef.get();
-    if (!snapshot.exists) return;
-    const data = snapshot.data() || {};
-    const list = Array.isArray(data.bubbles) ? data.bubbles : [];
-    const updated = list.map(b => (b.id === bubbleId ? { ...b, ...payload } : b));
-    await docRef.set({ ...data, bubbles: updated, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    await subDoc.set(payload, { merge: true });
 }
 
 // Пересчитать и записать nextNotifyAt от актуального (локально обновлённого) состояния задачи.

@@ -1,4 +1,6 @@
 import React, { useMemo, useCallback, useEffect } from 'react';
+import { lsSet } from '../utils/storage';
+import { LS } from '../utils/storageKeys';
 import logger from '../utils/logger';
 import {
     Box,
@@ -16,20 +18,20 @@ import {
     ListItem,
     Tooltip,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
     CheckCircle,
     DeleteOutlined,
-    Edit,
     LocalOffer,
-    Restore,
     ArrowUpward,
     ArrowDownward,
-    FilterList // добавил иконку фильтра
+    FilterList // добавил иконку фільтра
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 import { FilterMenu } from './FilterMenu';
 import SearchField from './SearchField';
+import TaskActionButtons from './TaskActionButtons';
 import useSearch from '../hooks/useSearch';
 import HtmlRenderer from './HtmlRenderer';
 import { stripHtml } from '../utils/stripHtml';
@@ -171,43 +173,29 @@ const TaskList = ({
     const getStatusIcon = useCallback((status) => {
         switch (status) {
             case BUBBLE_STATUS.DONE:
-                return <CheckCircle sx={{ color: '#4CAF50' }} />;
+                return <CheckCircle sx={{ color: theme.palette.success.main }} />;
             case BUBBLE_STATUS.DELETED:
-                return <DeleteOutlined sx={{ color: '#F44336' }} />;
+                return <DeleteOutlined sx={{ color: theme.palette.error.main }} />;
             case BUBBLE_STATUS.POSTPONE:
-                return <LocalOffer sx={{ color: '#FF9800' }} />;
+                return <LocalOffer sx={{ color: theme.palette.warning.main }} />;
             default:
-                return <CheckCircle sx={{ color: '#2196F3' }} />;
+                return <CheckCircle sx={{ color: theme.palette.info.main }} />;
         }
-    }, []);
+    }, [theme]);
 
     // Memoized status colors
     const getStatusColor = useCallback((status) => {
-        if (themeMode === 'light') {
-            switch (status) {
-                case BUBBLE_STATUS.DONE:
-                    return '#E8F5E8';
-                case BUBBLE_STATUS.DELETED:
-                    return '#FFEBEE';
-                case BUBBLE_STATUS.POSTPONE:
-                    return '#FFF3E0';
-                default:
-                    return 'transparent'; // Прозрачный фон для активных задач
-            }
-        } else {
-            // Dark theme colors
-            switch (status) {
-                case BUBBLE_STATUS.DONE:
-                    return '#1B5E20';
-                case BUBBLE_STATUS.DELETED:
-                    return '#4A1418';
-                case BUBBLE_STATUS.POSTPONE:
-                    return '#4A3B00';
-                default:
-                    return 'transparent'; // Прозрачный фон для активных задач
-            }
+        switch (status) {
+            case BUBBLE_STATUS.DONE:
+                return alpha(theme.palette.success.main, 0.12);
+            case BUBBLE_STATUS.DELETED:
+                return alpha(theme.palette.error.main, 0.12);
+            case BUBBLE_STATUS.POSTPONE:
+                return alpha(theme.palette.warning.main, 0.12);
+            default:
+                return 'transparent'; // Transparent background for active tasks
         }
-    }, [themeMode]);
+    }, [theme]);
 
     // Memoized task count calculation
     const getTasksCountByStatus = useCallback((status) => {
@@ -328,7 +316,7 @@ const TaskList = ({
             padding: 2,
             height: '100%',
             overflow: 'auto',
-            color: themeMode === 'light' ? '#000000' : '#ffffff'
+            color: 'text.primary'
         }}>
             {/* Filter and Sort controls */}
             <Box sx={{
@@ -340,13 +328,13 @@ const TaskList = ({
                 flexWrap: 'wrap',
                 flexDirection: isMobile ? 'column' : 'row'
             }}>
-                {/* Кнопка/меню фильтра с подсветкой */}
+                {/* Кнопка/меню фільтра з підсвіткою */}
                 <Box
                     sx={{
                         display: 'inline-block',
-                        color: !isAllListFiltersSelected ? 'primary.main' : (themeMode === 'light' ? '#757575' : '#aaaaaa'),
-                        backgroundColor: !isAllListFiltersSelected ? 'rgba(59, 125, 237, 0.15)' : 'transparent',
-                        border: !isAllListFiltersSelected ? '1px solid #3B7DED' : '1px solid transparent',
+                        color: !isAllListFiltersSelected ? 'primary.main' : 'text.secondary',
+                        backgroundColor: !isAllListFiltersSelected ? alpha(theme.palette.primary.main, 0.15) : 'transparent',
+                        border: !isAllListFiltersSelected ? `1px solid ${theme.palette.primary.main}` : '1px solid transparent',
                         borderRadius: 1,
                         transition: 'all 0.2s',
                         marginRight: 2
@@ -383,7 +371,7 @@ const TaskList = ({
                             onChange={(e) => {
                                 const newSortBy = e.target.value;
                                 setListSortBy(newSortBy);
-                                localStorage.setItem('bubbles-list-sort-by', newSortBy);
+                                lsSet(LS.LIST_SORT_BY, newSortBy);
                             }}
                         >
                             <MenuItem value="createdAt">{t('bubbles.createdAt')}</MenuItem>
@@ -397,14 +385,14 @@ const TaskList = ({
                             onClick={() => {
                                 const newSortOrder = listSortOrder === 'asc' ? 'desc' : 'asc';
                                 setListSortOrder(newSortOrder);
-                                localStorage.setItem('bubbles-list-sort-order', newSortOrder);
+                                lsSet(LS.LIST_SORT_ORDER, newSortOrder);
                             }}
                             sx={{
                                 color: 'primary.main',
                                 border: '1px solid',
-                                borderColor: 'rgba(25, 118, 210, 0.5)',
+                                borderColor: alpha(theme.palette.primary.main, 0.5),
                                 '&:hover': {
-                                    backgroundColor: 'rgba(25, 118, 210, 0.05)'
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.05)
                                 }
                             }}
                         >
@@ -462,16 +450,16 @@ const TaskList = ({
                 <Box sx={{
                     marginBottom: 2,
                     padding: 2,
-                    backgroundColor: themeMode === 'light' ? '#FFF3E0' : '#4A3B00',
-                    border: themeMode === 'light' ? '1px solid #FFB74D' : '1px solid #FF9800',
+                    backgroundColor: alpha(theme.palette.warning.main, 0.12),
+                    border: `1px solid ${theme.palette.warning.main}`,
                     borderRadius: 2,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1
                 }}>
-                    <LocalOffer sx={{ color: '#FF9800', fontSize: 20 }} />
+                    <LocalOffer sx={{ color: theme.palette.warning.main, fontSize: 20 }} />
                     <Typography variant="body2" sx={{
-                        color: themeMode === 'light' ? '#E65100' : '#FFB74D'
+                        color: theme.palette.warning.dark || theme.palette.warning.main
                     }}>
                         {t('bubbles.deletedTasksWarning', { days: DELETED_TASKS_CLEANUP_DAYS })}
                     </Typography>
@@ -483,7 +471,7 @@ const TaskList = ({
                 <Box sx={{
                     textAlign: 'center',
                     padding: 4,
-                    color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                    color: 'text.secondary'
                 }}>
                     <Typography variant="h6" gutterBottom>
                         {listFilter === 'active' && t('bubbles.noActiveTasks')}
@@ -506,8 +494,7 @@ const TaskList = ({
                                     padding: 2,
                                     borderRadius: 2,
                                     backgroundColor: getStatusColor(task.status),
-                                    border: '1px solid #E0E0E0',
-                                    // border: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333'
+                                    border: `1px solid ${theme.palette.divider}`
                                 }}
                             >
                                 <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', gap: 2, overflow: 'hidden' }}>
@@ -520,7 +507,7 @@ const TaskList = ({
                                     <Box sx={{ flex: 1, minWidth: 0 }}>
                                         <Typography variant="h6" sx={{
                                             marginBottom: 1,
-                                            color: themeMode === 'light' ? '#000000' : '#ffffff',
+                                            color: 'text.primary',
                                             wordBreak: 'break-word',
                                             overflowWrap: 'break-word',
                                             hyphens: 'auto'
@@ -532,8 +519,8 @@ const TaskList = ({
                                             <Box sx={{ marginBottom: 1 }}>
                                                 <Typography variant="body2" sx={{
                                                     color: isOverdue(task.dueDate)
-                                                        ? '#f44336'
-                                                        : (themeMode === 'light' ? '#1976d2' : '#90caf9'),
+                                                        ? theme.palette.error.main
+                                                        : theme.palette.info.main,
                                                     fontWeight: 500,
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -545,12 +532,12 @@ const TaskList = ({
                                                             component="span"
                                                             variant="caption"
                                                             sx={{
-                                                                color: '#f44336',
+                                                                color: theme.palette.error.main,
                                                                 fontWeight: 'bold',
-                                                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                                                backgroundColor: alpha(theme.palette.error.main, 0.1),
                                                                 padding: '2px 6px',
                                                                 borderRadius: 1,
-                                                                border: '1px solid rgba(244, 67, 54, 0.3)'
+                                                                border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`
                                                             }}
                                                         >
                                                             {t('bubbles.overdue')}
@@ -579,8 +566,8 @@ const TaskList = ({
                                                 label={t('bubbles.noTag')}
                                                 size="small"
                                                 sx={{
-                                                    backgroundColor: '#B0B0B0',
-                                                    color: 'white',
+                                                    backgroundColor: theme.palette.grey[500],
+                                                    color: theme.palette.getContrastText(theme.palette.grey[500]),
                                                     marginBottom: 1
                                                 }}
                                             />
@@ -589,20 +576,20 @@ const TaskList = ({
                                         {/* Dates */}
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                             <Typography variant="caption" sx={{
-                                                color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                                                color: 'text.secondary'
                                             }}>
                                                 {t('bubbles.createdAt')}: {formatDate(task.createdAt)}
                                             </Typography>
                                             {task.updatedAt && task.updatedAt !== task.createdAt && (
                                                 <Typography variant="caption" sx={{
-                                                    color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                                                    color: 'text.secondary'
                                                 }}>
                                                     {t('bubbles.updatedAt')}: {formatDate(task.updatedAt)}
                                                 </Typography>
                                             )}
                                             {task.deletedAt && (
                                                 <Typography variant="caption" sx={{
-                                                    color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                                                    color: 'text.secondary'
                                                 }}>
                                                     {t('bubbles.deletedAt')}: {formatDate(task.deletedAt)}
                                                 </Typography>
@@ -611,120 +598,15 @@ const TaskList = ({
                                     </Box>
 
                                     {/* Actions */}
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                                        {task.status === BUBBLE_STATUS.ACTIVE && (
-                                            <>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleEditTask(task)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.editBubble')}
-                                                >
-                                                    <Edit />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleMarkTaskAsDone(task.id)}
-                                                    sx={{ color: 'success.main' }}
-                                                    title={t('bubbles.markAsDone')}
-                                                >
-                                                    <CheckCircle />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleDeleteTask(task.id)}
-                                                    sx={{ color: 'error.main' }}
-                                                    title={t('bubbles.deleteBubble')}
-                                                >
-                                                    <DeleteOutlined />
-                                                </IconButton>
-                                            </>
-                                        )}
-                                        {task.status === BUBBLE_STATUS.DONE && (
-                                            <>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleEditTask(task)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.editBubble')}
-                                                >
-                                                    <Edit />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleRestoreBubble(task.id)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.restoreBubble')}
-                                                >
-                                                    <Restore />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleDeleteTask(task.id)}
-                                                    sx={{ color: 'error.main' }}
-                                                    title={t('bubbles.deleteBubble')}
-                                                >
-                                                    <DeleteOutlined />
-                                                </IconButton>
-                                            </>
-                                        )}
-                                        {task.status === BUBBLE_STATUS.DELETED && (
-                                            <>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleEditTask(task)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.editBubble')}
-                                                >
-                                                    <Edit />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleRestoreBubble(task.id)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.restoreBubble')}
-                                                >
-                                                    <Restore />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handlePermanentDeleteTask(task.id)}
-                                                    sx={{ color: 'error.main' }}
-                                                    title={t('bubbles.permanentDelete')}
-                                                >
-                                                    <DeleteOutlined />
-                                                </IconButton>
-                                            </>
-                                        )}
-                                        {task.status === BUBBLE_STATUS.POSTPONE && (
-                                            <>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleEditTask(task)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.editBubble')}
-                                                >
-                                                    <Edit />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleRestoreBubble(task.id)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.restoreBubble')}
-                                                >
-                                                    <Restore />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleDeleteTask(task.id)}
-                                                    sx={{ color: 'error.main' }}
-                                                    title={t('bubbles.deleteBubble')}
-                                                >
-                                                    <DeleteOutlined />
-                                                </IconButton>
-                                            </>
-                                        )}
-                                    </Box>
+                                    <TaskActionButtons
+                                        task={task}
+                                        t={t}
+                                        onEdit={handleEditTask}
+                                        onMarkDone={handleMarkTaskAsDone}
+                                        onDelete={handleDeleteTask}
+                                        onRestore={handleRestoreBubble}
+                                        onPermanentDelete={handlePermanentDeleteTask}
+                                    />
                                 </Box>
                             </ListItem>
                         );

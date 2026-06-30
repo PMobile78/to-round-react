@@ -1,0 +1,406 @@
+import React from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import TextAlign from '@tiptap/extension-text-align';
+import Underline from '@tiptap/extension-underline';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
+import CodeBlock from '@tiptap/extension-code-block';
+import Blockquote from '@tiptap/extension-blockquote';
+import HorizontalRule from '@tiptap/extension-horizontal-rule';
+import { Box } from '@mui/material';
+import RichTextToolbar from './RichTextToolbar';
+import { useEditorResize } from '../hooks/useEditorResize';
+
+// ---------------------------------------------------------------------------
+// TipTap extension configuration
+// ---------------------------------------------------------------------------
+
+function createExtensions(placeholder) {
+    return [
+        StarterKit,
+        Placeholder.configure({
+            placeholder,
+        }),
+        TextAlign.configure({
+            types: ['heading', 'paragraph'],
+        }),
+        Underline,
+        TextStyle,
+        Color,
+        Highlight.configure({
+            multicolor: true,
+        }),
+        TaskList,
+        TaskItem.configure({
+            nested: true,
+        }),
+        Link.configure({
+            openOnClick: false,
+            HTMLAttributes: {
+                class: 'rich-text-link',
+            },
+        }),
+        Image.configure({
+            HTMLAttributes: {
+                class: 'rich-text-image',
+            },
+        }),
+        Table.configure({
+            resizable: true,
+        }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        CodeBlock,
+        Blockquote,
+        HorizontalRule,
+    ];
+}
+
+// ---------------------------------------------------------------------------
+// TipTapRichEditor — inner editor component
+// ---------------------------------------------------------------------------
+
+function TipTapRichEditor({
+    value = '',
+    onChange,
+    placeholder = 'Введите описание...',
+    isMobile = false,
+    themeMode = 'light',
+    t
+}) {
+    const { editorHeight, handleDragStart } = useEditorResize(300);
+
+    const onChangeRef = React.useRef(onChange);
+    onChangeRef.current = onChange;
+
+    // Memoize extensions so they're not recreated on every render
+    const extensions = React.useMemo(() => createExtensions(placeholder), [placeholder]);
+
+    const editor = useEditor({
+        extensions,
+        content: '',
+        onUpdate: ({ editor }) => {
+            onChangeRef.current(editor.getHTML());
+        },
+        editorProps: {
+            attributes: {
+                class: 'prose prose-sm max-w-none focus:outline-none',
+                style: {
+                    fontSize: isMobile ? '16px' : '14px',
+                    lineHeight: '1.5',
+                    minHeight: '300px',
+                    padding: isMobile ? '16px' : '20px',
+                    border: `1px solid ${themeMode === 'light' ? '#ccc' : '#555'}`,
+                    borderRadius: '4px',
+                    backgroundColor: themeMode === 'light' ? '#fff' : '#333',
+                    color: themeMode === 'light' ? '#000' : '#fff',
+                    caretColor: themeMode === 'light' ? '#000' : '#fff',
+                    resize: 'vertical',
+                    overflow: 'auto'
+                }
+            }
+        }
+    }, [isMobile, themeMode, placeholder]);
+
+    // Обновляем содержимое редактора при изменении value
+    React.useEffect(() => {
+        if (editor && value !== editor.getHTML()) {
+            editor.commands.setContent(value);
+        }
+    }, [editor, value]);
+
+    // Принудительно устанавливаем caret-color через глобальные стили
+    React.useEffect(() => {
+        const caretColor = themeMode === 'light' ? '#000' : '#fff';
+        const styleId = 'prosemirror-caret-color';
+
+        // Удаляем предыдущий стиль
+        const existingStyle = document.getElementById(styleId);
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+
+        // Добавляем новый стиль
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .ProseMirror {
+                caret-color: ${caretColor} !important;
+                padding: ${isMobile ? '8px' : '12px'} !important;
+            }
+            .ProseMirror * {
+                caret-color: ${caretColor} !important;
+            }
+            .ProseMirror p {
+                caret-color: ${caretColor} !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .ProseMirror p:empty {
+                caret-color: ${caretColor} !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .ProseMirror div {
+                caret-color: ${caretColor} !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .ProseMirror br {
+                caret-color: ${caretColor} !important;
+            }
+
+            /* Убираем отступы между элементами */
+            .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .ProseMirror ul, .ProseMirror ol {
+                margin: 0 !important;
+                padding-left: 1.5em !important;
+            }
+
+            .ProseMirror li {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            /* Стили для TaskList */
+            .ProseMirror ul[data-type="taskList"] {
+                list-style: none;
+                padding: 0;
+            }
+            .ProseMirror ul[data-type="taskList"] li {
+                display: flex;
+                align-items: center;
+                margin: 0.25rem 0;
+            }
+            .ProseMirror ul[data-type="taskList"] li > label {
+                flex: 0 0 auto;
+                margin-right: 0.5rem;
+                user-select: none;
+                display: flex;
+                align-items: center;
+            }
+            .ProseMirror ul[data-type="taskList"] li > div {
+                flex: 1 1 auto;
+                min-height: 1.2em;
+                display: flex;
+                align-items: center;
+            }
+            .ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+                cursor: pointer;
+                margin: 0;
+                vertical-align: middle;
+            }
+
+            /* Стили для ссылок */
+            .ProseMirror .rich-text-link {
+                color: #1976d2;
+                text-decoration: underline;
+                cursor: pointer;
+            }
+            .ProseMirror .rich-text-link:hover {
+                text-decoration: none;
+            }
+
+            /* Стили для изображений */
+            .ProseMirror .rich-text-image {
+                max-width: 100%;
+                height: auto;
+                display: block;
+                margin: 1rem 0;
+            }
+
+            /* Стили для таблиц */
+            .ProseMirror table {
+                border-collapse: collapse;
+                table-layout: fixed;
+                width: 100%;
+                margin: 1rem 0;
+                overflow: hidden;
+            }
+            .ProseMirror table td, .ProseMirror table th {
+                min-width: 1em;
+                border: 2px solid #ced4da;
+                padding: 3px 5px;
+                vertical-align: top;
+                box-sizing: border-box;
+                position: relative;
+            }
+            .ProseMirror table th {
+                font-weight: bold;
+                text-align: left;
+                background-color: #f1f3f4;
+            }
+
+            /* Стили для блока кода */
+            .ProseMirror pre {
+                background: #0d1117;
+                color: #c9d1d9;
+                font-family: 'JetBrainsMono', 'SFMono-Regular', 'SF Mono', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+                padding: 0.75rem 1rem;
+                border-radius: 0.5rem;
+                margin: 1rem 0;
+                overflow-x: auto;
+            }
+            .ProseMirror pre code {
+                color: inherit;
+                padding: 0;
+                background: none;
+                font-size: 0.8rem;
+            }
+
+            /* Стили для цитат */
+            .ProseMirror blockquote {
+                padding-left: 1rem;
+                border-left: 2px solid #e0e0e0;
+                margin-left: 0;
+                margin-right: 0;
+                font-style: italic;
+            }
+
+            /* Стили для горизонтальной линии */
+            .ProseMirror hr {
+                border: none;
+                border-top: 2px solid #e0e0e0;
+                margin: 2rem 0;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Очистка при размонтировании
+        return () => {
+            const styleToRemove = document.getElementById(styleId);
+            if (styleToRemove) {
+                styleToRemove.remove();
+            }
+        };
+    }, [themeMode]);
+
+    if (!editor) {
+        return null;
+    }
+
+    return (
+        <Box sx={{
+            border: `1px solid ${themeMode === 'light' ? '#ccc' : '#555'}`,
+            borderRadius: '4px',
+            overflow: isMobile ? 'hidden' : 'auto',
+            resize: isMobile ? 'none' : 'vertical',
+            minHeight: '220px',
+            height: isMobile ? `${editorHeight}px` : undefined,
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
+            <RichTextToolbar editor={editor} t={t} themeMode={themeMode} />
+                <Box sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: isMobile ? 'auto' : 'visible',
+                    WebkitOverflowScrolling: isMobile ? 'touch' : undefined,
+                    touchAction: isMobile ? 'pan-y' : undefined,
+                    overscrollBehavior: isMobile ? 'contain' : undefined,
+                    // Отступ вокруг контента - уменьшен
+                    padding: '8px'
+                }}>
+                    <EditorContent
+                        editor={editor}
+                        sx={{
+                            '--caret-color': themeMode === 'light' ? '#000' : '#fff',
+                            '& .ProseMirror': {
+                                outline: 'none',
+                                fontSize: isMobile ? '16px' : '14px',
+                                lineHeight: '1.5',
+                                minHeight: isMobile ? 'auto' : '300px',
+                                // Добавим внутренние отступы у реального поля - уменьшены
+                                padding: `${isMobile ? '8px' : '12px'} !important`,
+                                paddingBottom: isMobile ? '28px !important' : `${isMobile ? '8px' : '12px'} !important`,
+                                backgroundColor: themeMode === 'light' ? '#fff' : '#333',
+                                color: themeMode === 'light' ? '#000' : '#fff',
+                                caretColor: `var(--caret-color) !important`,
+                                '&:focus': {
+                                    caretColor: `var(--caret-color) !important`,
+                                },
+                                '& *': {
+                                    caretColor: `var(--caret-color) !important`,
+                                },
+                                '& p': {
+                                    caretColor: `var(--caret-color) !important`,
+                                    margin: '0 !important',
+                                    padding: '0 !important',
+                                },
+                                '& p:empty': {
+                                    caretColor: `var(--caret-color) !important`,
+                                    margin: '0 !important',
+                                    padding: '0 !important',
+                                },
+                                '& p.is-editor-empty': {
+                                    caretColor: `var(--caret-color) !important`,
+                                    margin: '0 !important',
+                                    padding: '0 !important',
+                                },
+                                '& div': {
+                                    caretColor: `var(--caret-color) !important`,
+                                    margin: '0 !important',
+                                    padding: '0 !important',
+                                }
+                            },
+                            '& .ProseMirror p.is-editor-empty:first-child::before': {
+                                color: themeMode === 'light' ? '#adb5bd' : '#6c757d',
+                                content: `attr(data-placeholder)`,
+                                float: 'left',
+                                height: 0,
+                                pointerEvents: 'none',
+                            }
+                        }}
+                    />
+                </Box>
+                {isMobile && (
+                    <Box
+                        onMouseDown={handleDragStart}
+                        onTouchStart={handleDragStart}
+                        sx={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: 28,
+                            cursor: 'ns-resize',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
+                            borderTop: `1px solid ${themeMode === 'light' ? '#e0e0e0' : '#444'}`,
+                            '&:active': {
+                                backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)'
+                            }
+                        }}
+                    >
+                        <Box sx={{
+                            width: 36,
+                            height: 4,
+                            borderRadius: 2,
+                            backgroundColor: themeMode === 'light' ? '#9e9e9e' : '#bdbdbd'
+                        }} />
+                    </Box>
+                )}
+            </Box>
+    );
+}
+
+export default TipTapRichEditor;

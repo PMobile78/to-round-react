@@ -16,3 +16,12 @@ export function withAlpha(color, alpha) {
     }
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+// Converts #RRGGBB hex to rgba() with the given alpha.
+// Accepts optional leading #. Only matches 6-digit hex (not 3-digit or named colors).
+// Returns null for invalid input (non-hex, wrong length, non-string, null, undefined).
+export function hexToRgba(hex, alpha = 1) {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || '').trim());
+    if (!m) return null;
+    return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})`;
+}

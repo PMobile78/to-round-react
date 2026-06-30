@@ -1,5 +1,6 @@
 import { alpha } from '@mui/material/styles';
 import { withAlpha } from '../../utils/colorUtils';
+import { buildDesign } from '../buildDesign';
 
 /**
  * Aurora Glass design skin
@@ -12,11 +13,28 @@ import { withAlpha } from '../../utils/colorUtils';
  * - Effect: glow with neon halo params
  */
 
-export const aurora = (mode) => {
-  const palettes = {
+const buildAuroraShadows = (c, mode, alphaFn) => {
+  const shadows = ['none'];
+  for (let i = 1; i <= 24; i++) {
+    const y = Math.round(1 + i * 0.75);
+    const blur = Math.round(4 + i * 1.6);
+    const opacity = Math.min(0.08 + i * 0.008, 0.25);
+    shadows.push(`0 ${y}px ${blur}px ${alphaFn(c.primary, opacity)}`);
+  }
+  return shadows;
+};
+
+export const aurora = buildDesign({
+  id: 'aurora',
+  palette: {
     light: {
       primary: '#9d4edd',
       accent: '#e0aaff',
+      secondary: '#f472b6',
+      success: '#3a9d6d',
+      warning: '#d4a035',
+      error: '#c85a54',
+      info: '#7c3aed',
       backgroundDefault: '#faf8ff',
       paper: '#ffffff',
       bubbleView: 'linear-gradient(135deg, #faf8ff 0%, #f5ecff 100%)',
@@ -28,6 +46,11 @@ export const aurora = (mode) => {
     dark: {
       primary: '#a78bfa',
       accent: '#d8b4ff',
+      secondary: '#f472b6',
+      success: '#6dd5ad',
+      warning: '#e8c05c',
+      error: '#f08080',
+      info: '#a78bfa',
       backgroundDefault: '#0b0e1a',
       paper: '#1a1d2e',
       bubbleView: 'linear-gradient(160deg, #0b0e1a 0%, #16152b 100%)',
@@ -36,152 +59,88 @@ export const aurora = (mode) => {
       divider: '#2d2347',
       glowColor: '#a78bfa',
     },
-  };
-
-  const c = palettes[mode];
-
-  const buildAuroraShadows = () => {
-    const shadows = ['none'];
-    for (let i = 1; i <= 24; i++) {
-      const y = Math.round(1 + i * 0.75);
-      const blur = Math.round(4 + i * 1.6);
-      const opacity = Math.min(0.08 + i * 0.008, 0.25);
-      shadows.push(`0 ${y}px ${blur}px ${alpha(c.primary, opacity)}`);
+  },
+  tokens: {
+    fontFamily: "'InterVariable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    fontWeightHeading: 600,
+    headingExtras: { letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
+    textTransform: 'none',
+    borderRadius: 16,
+    shadowsBuilder: buildAuroraShadows,
+  },
+  bubble: {
+    strokeWidth: 1.5,
+    highlightStrokeWidth: 2.5,
+    effect: 'glow',
+    labelWeight: 600,
+    labelShadow: (mode) => mode === 'dark',
+    fill: (c, mode) => ({
+      tagAlpha: mode === 'light' ? 0.12 : 0.18,
+      defaultFill: mode === 'light'
+        ? withAlpha(c.primary, 0.09)
+        : 'rgba(167, 139, 250, 0.08)',
+    }),
+    effectParams: (c, mode) => ({
+      glowColor: c.glowColor,
+      blurRadius: mode === 'light' ? 8 : 16,
+    }),
+    defaultStroke: (c) => c.glowColor,
+  },
+  headerStrip: {
+    show: true,
+    sx: (c, mode, alphaFn) => ({
+      backgroundColor: mode === 'light'
+        ? 'rgba(255, 248, 255, 0.7)'
+        : 'rgba(26, 29, 46, 0.5)',
+      backdropFilter: 'blur(8px)',
+      borderBottom: `1px solid ${alphaFn(c.primary, mode === 'light' ? 0.15 : 0.25)}`,
+    }),
+  },
+  backdrop: 'aurora',
+  buttonStyles: (c, mode, alphaFn) => (mode === 'light'
+    ? {
+      backgroundColor: alphaFn(c.primary, 0.15),
+      color: c.primary,
+      '&:hover': {
+        backgroundColor: alphaFn(c.primary, 0.25),
+      },
     }
-    return shadows;
-  };
-
-  return {
-    palette: {
-      mode,
-      primary: { main: c.primary },
-      secondary: { main: '#f472b6' },
-      success: { main: mode === 'light' ? '#3a9d6d' : '#6dd5ad' },
-      warning: { main: mode === 'light' ? '#d4a035' : '#e8c05c' },
-      error: { main: mode === 'light' ? '#c85a54' : '#f08080' },
-      info: { main: mode === 'light' ? '#7c3aed' : '#a78bfa' },
-      background: {
-        default: c.backgroundDefault,
-        paper: c.paper,
-        bubbleView: c.bubbleView,
+    : {
+      backgroundColor: alphaFn(c.glowColor, 0.2),
+      color: c.textPrimary,
+      '&:hover': {
+        backgroundColor: alphaFn(c.glowColor, 0.3),
       },
-      text: {
-        primary: c.textPrimary,
-        secondary: c.textSecondary,
+    }),
+  outlinedButtonStyles: (c, mode, alphaFn) => (mode === 'light'
+    ? {
+      color: c.primary,
+      borderColor: alphaFn(c.primary, 0.6),
+      backgroundColor: alphaFn(c.primary, 0.06),
+      '&:hover': {
+        borderColor: c.primary,
+        backgroundColor: alphaFn(c.primary, 0.15),
       },
-      divider: c.divider,
-    },
-
-    typography: {
-      fontFamily: "'InterVariable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
-      h1: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
-      h2: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
-      h3: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
-      h4: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
-      h5: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
-      h6: { fontWeight: 600, letterSpacing: '-0.01em', fontFamily: "'Sora Variable', system-ui" },
-      button: { fontWeight: 500, textTransform: 'none', fontFamily: "'InterVariable', 'Inter'" },
-    },
-
-    shape: {
-      borderRadius: 16,
-    },
-
-    shadows: buildAuroraShadows(),
-
-    components: {
-      MuiCssBaseline: {
-        styleOverrides: {
-          body: {
-            '& a': {
-              color: c.primary,
-              textDecoration: 'none',
-              '&:hover': {
-                color: c.accent,
-                textDecoration: 'underline',
-              },
-              '&:visited': {
-                color: mode === 'light' ? '#7c3aed' : '#d8b4ff',
-              },
-            },
-          },
-        },
+    }
+    : {
+      color: c.accent,
+      borderColor: alphaFn(c.glowColor, 0.7),
+      backgroundColor: alphaFn(c.glowColor, 0.08),
+      '&:hover': {
+        borderColor: c.glowColor,
+        backgroundColor: alphaFn(c.glowColor, 0.15),
       },
-      MuiPaper: {
-        styleOverrides: {
-          root: {
-            backgroundImage: 'none',
-            backgroundColor: mode === 'light'
-              ? 'rgba(255, 248, 255, 0.8)'
-              : 'rgba(26, 29, 46, 0.6)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: 16,
-          },
-        },
-      },
-      MuiDialog: {
-        styleOverrides: {
-          paper: {
-            borderRadius: 20,
-            backgroundColor: mode === 'light'
-              ? 'rgba(255, 248, 255, 0.95)'
-              : 'rgba(26, 29, 46, 0.95)',
-            backdropFilter: 'blur(12px)',
-            border: mode === 'light'
-              ? `1px solid ${alpha(c.primary, 0.2)}`
-              : `1px solid ${alpha(c.primary, 0.3)}`,
-          },
-        },
-      },
-      MuiDrawer: {
-        styleOverrides: {
-          paper: {
-            backgroundImage: 'none',
-            backgroundColor: mode === 'light'
-              ? 'rgba(255, 248, 255, 0.9)'
-              : 'rgba(26, 29, 46, 0.9)',
-            backdropFilter: 'blur(10px)',
-          },
-        },
-      },
-      MuiButton: {
-        styleOverrides: {
-          root: {
-            borderRadius: 12,
-          },
-        },
-      },
-      MuiFab: {
-        styleOverrides: {
-          root: {
-            borderRadius: 16,
-            boxShadow: `0 8px 24px ${alpha(c.glowColor, 0.4)}`,
-            '&:active': {
-              boxShadow: `0 4px 12px ${alpha(c.glowColor, 0.5)}`,
-            },
-          },
-        },
-      },
-      MuiOutlinedInput: {
-        styleOverrides: {
-          root: {
-            borderRadius: 12,
-          },
-        },
-      },
-      MuiChip: {
-        styleOverrides: {
-          root: {
-            borderRadius: 10,
-          },
-        },
-      },
-      MuiLink: {
-        styleOverrides: {
-          root: {
+    }),
+  componentOverrides: (c, mode, alphaFn) => ({
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          '& a': {
             color: c.primary,
+            textDecoration: 'none',
             '&:hover': {
               color: c.accent,
+              textDecoration: 'underline',
             },
             '&:visited': {
               color: mode === 'light' ? '#7c3aed' : '#d8b4ff',
@@ -190,79 +149,83 @@ export const aurora = (mode) => {
         },
       },
     },
-
-    custom: {
-      design: 'aurora',
-      bubble: {
-        strokeWidth: 1.5,
-        highlightStrokeWidth: 2.5,
-        defaultStroke: c.glowColor,
-        fill: {
-          tagAlpha: mode === 'light' ? 0.12 : 0.18,
-          defaultFill: mode === 'light'
-            ? withAlpha(c.primary, 0.09)
-            : 'rgba(167, 139, 250, 0.08)',
-        },
-        effect: 'glow',
-        effectParams: {
-          glowColor: c.glowColor,
-          blurRadius: mode === 'light' ? 8 : 16,
-        },
-        label: {
-          weight: 600,
-          color: c.textPrimary,
-          shadow: mode === 'dark',
-        },
-      },
-      canvasBackground: c.bubbleView,
-      headerStrip: {
-        show: true,
-        sx: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
           backgroundColor: mode === 'light'
-            ? 'rgba(255, 248, 255, 0.7)'
-            : 'rgba(26, 29, 46, 0.5)',
-          backdropFilter: 'blur(8px)',
-          borderBottom: `1px solid ${alpha(c.primary, mode === 'light' ? 0.15 : 0.25)}`,
+            ? 'rgba(255, 248, 255, 0.8)'
+            : 'rgba(26, 29, 46, 0.6)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: 16,
         },
-      },
-      backdrop: 'aurora',
-      buttonStyles: mode === 'light'
-        ? {
-            backgroundColor: alpha(c.primary, 0.15),
-            color: c.primary,
-            '&:hover': {
-              backgroundColor: alpha(c.primary, 0.25)
-            }
-          }
-        : {
-            backgroundColor: alpha(c.glowColor, 0.2),
-            color: c.textPrimary,
-            '&:hover': {
-              backgroundColor: alpha(c.glowColor, 0.3)
-            }
-          },
-      outlinedButtonStyles: mode === 'light'
-        ? {
-            color: c.primary,
-            borderColor: alpha(c.primary, 0.6),
-            backgroundColor: alpha(c.primary, 0.06),
-            '&:hover': {
-              borderColor: c.primary,
-              backgroundColor: alpha(c.primary, 0.15)
-            }
-          }
-        : {
-            color: c.accent,
-            borderColor: alpha(c.glowColor, 0.7),
-            backgroundColor: alpha(c.glowColor, 0.08),
-            '&:hover': {
-              borderColor: c.glowColor,
-              backgroundColor: alpha(c.glowColor, 0.15)
-            }
-          },
-      dialogPaper: {
-        borderRadius: '20px',
       },
     },
-  };
-};
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 20,
+          backgroundColor: mode === 'light'
+            ? 'rgba(255, 248, 255, 0.95)'
+            : 'rgba(26, 29, 46, 0.95)',
+          backdropFilter: 'blur(12px)',
+          border: mode === 'light'
+            ? `1px solid ${alphaFn(c.primary, 0.2)}`
+            : `1px solid ${alphaFn(c.primary, 0.3)}`,
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          backgroundImage: 'none',
+          backgroundColor: mode === 'light'
+            ? 'rgba(255, 248, 255, 0.9)'
+            : 'rgba(26, 29, 46, 0.9)',
+          backdropFilter: 'blur(10px)',
+        },
+      },
+    },
+    MuiFab: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+          boxShadow: `0 8px 24px ${alphaFn(c.glowColor, 0.4)}`,
+          '&:active': {
+            boxShadow: `0 4px 12px ${alphaFn(c.glowColor, 0.5)}`,
+          },
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 10,
+        },
+      },
+    },
+    MuiLink: {
+      styleOverrides: {
+        root: {
+          color: c.primary,
+          '&:hover': {
+            color: c.accent,
+          },
+          '&:visited': {
+            color: mode === 'light' ? '#7c3aed' : '#d8b4ff',
+          },
+        },
+      },
+    },
+  }),
+  dialogPaper: {
+    borderRadius: '20px',
+  },
+});
