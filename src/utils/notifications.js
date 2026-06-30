@@ -66,3 +66,49 @@ export const buildNotificationKey = (bubbleId, targetTime) => `${bubbleId}:${tar
  * Prefix matching every dedup key that belongs to a bubble.
  */
 export const notificationKeyPrefix = (bubbleId) => `${bubbleId}:`;
+
+/**
+ * Whether the edit dialog should show the "stop pulsing" button.
+ * Returns true if the bubble is active with a valid recurrence and is currently
+ * inside a notification window, overdue, or flagged sticky.
+ *
+ * @param {Object} bubble - The bubble to check
+ * @param {number} now - Current time in ms
+ * @param {Set} stickyPulseIds - Set of bubble IDs that are sticky-pulsing
+ * @returns {boolean} true if the stop button should show
+ */
+export function shouldShowStopPulsing(bubble, now, stickyPulseIds) {
+    try {
+        if (!bubble || bubble.status !== 'active') return false;
+
+        const rec = bubble.recurrence;
+        const every = rec && typeof rec === 'object' ? Number(rec.every) : NaN;
+        if (!Number.isFinite(every) || every < 1) return false;
+
+        // Check if inside notification window or overdue
+        if (bubble.dueDate) {
+            const parsedDue = parseLocalDateTime(bubble.dueDate);
+            if (!parsedDue) return false;
+            const due = parsedDue.getTime();
+
+            // Check notification windows
+            if (Array.isArray(bubble.notifications) && bubble.notifications.length > 0) {
+                for (const notif of bubble.notifications) {
+                    const offsetMs = getOffsetMs(notif);
+                    const targetTime = due - offsetMs;
+                    if (Number.isFinite(targetTime) && now >= targetTime && now < due) return true;
+                }
+            }
+
+            // Check if overdue
+            if (now >= due) return true;
+        }
+
+        // Check sticky flag
+        if (bubble.overdueSticky || stickyPulseIds.has(bubble.id)) return true;
+
+        return false;
+    } catch (_) {
+        return false;
+    }
+}

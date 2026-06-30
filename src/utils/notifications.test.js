@@ -5,7 +5,8 @@ import {
     getDueNotifications,
     getActiveNotification,
     buildNotificationKey,
-    notificationKeyPrefix
+    notificationKeyPrefix,
+    shouldShowStopPulsing
 } from './notifications';
 
 // Build a local naive ISO string ("YYYY-MM-DDTHH:mm:ss") from a Date so the
@@ -121,5 +122,109 @@ describe('dedup keys', () => {
         const prefix = notificationKeyPrefix('abc');
         expect(prefix).toBe('abc:');
         expect(buildNotificationKey('abc', 1234).startsWith(prefix)).toBe(true);
+    });
+});
+
+describe('shouldShowStopPulsing', () => {
+    const stickyIds = new Set();
+
+    it('returns false for non-active bubble', () => {
+        const bubble = { status: 'done', recurrence: { every: 1 } };
+        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
+    });
+
+    it('returns false when no recurrence', () => {
+        const bubble = { status: 'active', dueDate: localIso(new Date()) };
+        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
+    });
+
+    it('returns false when recurrence.every < 1', () => {
+        const bubble = { status: 'active', recurrence: { every: 0 } };
+        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
+    });
+
+    it('returns true when overdue', () => {
+        const past = new Date(2020, 0, 1, 0, 0, 0);
+        const bubble = {
+            status: 'active',
+            dueDate: localIso(past),
+            recurrence: { every: 1 }
+        };
+        const now = new Date(2026, 0, 1).getTime();
+        expect(shouldShowStopPulsing(bubble, now, stickyIds)).toBe(true);
+    });
+
+    it('returns true inside a notification window', () => {
+        const due = new Date(2026, 5, 14, 12, 0, 0);
+        const now = due.getTime() - 5 * 60 * 1000; // 5 min before due
+        const bubble = {
+            status: 'active',
+            id: 'test-bubble',
+            dueDate: localIso(due),
+            recurrence: { every: 1 },
+            notifications: ['10m'] // target = due - 10m, now is due - 5m => inside window
+        };
+        expect(shouldShowStopPulsing(bubble, now, stickyIds)).toBe(true);
+    });
+
+    it('returns false when not yet in notification window', () => {
+        const due = new Date(2026, 5, 14, 12, 0, 0);
+        const now = due.getTime() - 15 * 60 * 1000; // 15 min before due
+        const bubble = {
+            status: 'active',
+            id: 'test-bubble',
+            dueDate: localIso(due),
+            recurrence: { every: 1 },
+            notifications: ['10m'] // target = due - 10m, now < target => not yet matured
+        };
+        expect(shouldShowStopPulsing(bubble, now, stickyIds)).toBe(false);
+    });
+
+    it('returns true when sticky id is present', () => {
+        const future = new Date(2030, 0, 1, 0, 0, 0);
+        const bubble = {
+            id: 'sticky-bubble',
+            status: 'active',
+            dueDate: localIso(future),
+            recurrence: { every: 1 }
+        };
+        const stickyWithId = new Set(['sticky-bubble']);
+        expect(shouldShowStopPulsing(bubble, Date.now(), stickyWithId)).toBe(true);
+    });
+
+    it('returns true when overdueSticky flag is set', () => {
+        const future = new Date(2030, 0, 1, 0, 0, 0);
+        const bubble = {
+            status: 'active',
+            dueDate: localIso(future),
+            recurrence: { every: 1 },
+            overdueSticky: true
+        };
+        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(true);
+    });
+
+    it('returns false for well-formed but not-yet-due, no sticky', () => {
+        const future = new Date(2030, 0, 1, 0, 0, 0);
+        const bubble = {
+            status: 'active',
+            dueDate: localIso(future),
+            recurrence: { every: 1 },
+            notifications: ['10m']
+        };
+        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
+    });
+
+    it('returns false on invalid dueDate', () => {
+        const bubble = {
+            status: 'active',
+            dueDate: 'not-a-date',
+            recurrence: { every: 1 }
+        };
+        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
+    });
+
+    it('returns false on exception and catches errors gracefully', () => {
+        const bubble = null;
+        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
     });
 });
