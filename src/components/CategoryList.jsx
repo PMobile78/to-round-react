@@ -133,7 +133,7 @@ export default function CategoryList({
                     sx={{
                         padding: '16px 20px',
                         cursor: 'pointer',
-                        borderLeft: selectedCategory === 'no-tags' ? '4px solid #3B7DED' : '4px solid transparent',
+                        borderLeft: selectedCategory === 'no-tags' ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
                         backgroundColor: selectedCategory === 'no-tags'
                             ? theme.palette.action.hover
                             : 'transparent',
@@ -180,7 +180,7 @@ export default function CategoryList({
                     sx={{
                         padding: '16px 20px',
                         cursor: 'pointer',
-                        borderLeft: selectedCategory === 'planned-tasks' ? '4px solid #3B7DED' : '4px solid transparent',
+                        borderLeft: selectedCategory === 'planned-tasks' ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
                         backgroundColor: selectedCategory === 'planned-tasks'
                             ? theme.palette.action.hover
                             : 'transparent',
@@ -259,7 +259,7 @@ export default function CategoryList({
                             sx={{
                                 padding: '16px 16px 16px 0px',
                                 cursor: 'pointer',
-                                borderLeft: selectedCategory === tag.id ? '4px solid #3B7DED' : '4px solid transparent',
+                                borderLeft: selectedCategory === tag.id ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
                                 backgroundColor: selectedCategory === tag.id
                                     ? theme.palette.action.hover
                                     : 'transparent',
@@ -382,7 +382,7 @@ export default function CategoryList({
                                 onDragOver={onDragOver ? onDragOver(index) : undefined}
                                 onDrop={onDrop ? onDrop(index) : undefined}
                                 sx={{
-                                    border: '1px solid #E0E0E0',
+                                    border: `1px solid ${theme.palette.divider}`,
                                     borderRadius: 2,
                                     marginBottom: 1,
                                     padding: 2,
@@ -406,7 +406,7 @@ export default function CategoryList({
                                             height: 24,
                                             borderRadius: '50%',
                                             backgroundColor: tag.color,
-                                            border: '2px solid #E0E0E0'
+                                            border: `2px solid ${theme.palette.divider}`
                                         }} />
                                     )}
                                     <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>

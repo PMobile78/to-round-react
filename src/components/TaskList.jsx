@@ -584,14 +584,14 @@ const TaskList = ({
                                             </Typography>
                                             {task.updatedAt && task.updatedAt !== task.createdAt && (
                                                 <Typography variant="caption" sx={{
-                                                    color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                                                    color: 'text.secondary'
                                                 }}>
                                                     {t('bubbles.updatedAt')}: {formatDate(task.updatedAt)}
                                                 </Typography>
                                             )}
                                             {task.deletedAt && (
                                                 <Typography variant="caption" sx={{
-                                                    color: themeMode === 'light' ? 'text.secondary' : '#aaaaaa'
+                                                    color: 'text.secondary'
                                                 }}>
                                                     {t('bubbles.deletedAt')}: {formatDate(task.deletedAt)}
                                                 </Typography>

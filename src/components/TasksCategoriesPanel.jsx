@@ -114,7 +114,7 @@ const TasksCategoriesPanel = ({
 
             {/* Разделитель для настроек */}
             <Divider sx={{
-                backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
+                backgroundColor: theme.palette.divider,
                 margin: '16px 20px'
             }} />
 
@@ -133,12 +133,12 @@ const TasksCategoriesPanel = ({
                         padding: '16px 20px',
                         cursor: 'pointer',
                         '&:hover': {
-                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                            backgroundColor: theme.palette.action.hover
                         }
                     }}
                 >
                     <ListItemIcon sx={{ minWidth: 40 }}>
-                        <Edit sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        <Edit sx={{ color: 'text.secondary' }} />
                     </ListItemIcon>
                     <ListItemText
                         primary={t('bubbles.manageTags')}
