@@ -75,9 +75,9 @@ const TaskActionButtons = ({
         const Icon = metadata.icon;
         const handler = handlers[metadata.handler];
 
-        const onClick = actionKey === 'done' || actionKey === 'delete' || actionKey === 'permanentDelete'
-            ? () => handler(task.id)
-            : () => handler(task);
+        const onClick = actionKey === 'edit'
+            ? () => handler(task)
+            : () => handler(task.id);
 
         return (
             <IconButton
