@@ -9,8 +9,10 @@ import {
     Box,
     Divider,
     MenuItem,
-    Chip
+    Chip,
+    useTheme
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
     LabelOutlined,
     AllInclusive,
@@ -22,18 +24,18 @@ import { useTranslation } from 'react-i18next';
 
 // Shared helper: render category row content (icon/color + name + count)
 // Used across all three variants to eliminate duplication
-function renderRowContent(item, themeMode, getCount, t, includeColorBox = false) {
+function renderRowContent(item, theme, getCount, t, includeColorBox = false) {
     const count = getCount ? getCount(item.id) : 0;
     const isSpecial = ['all', 'no-tags', 'planned-tasks'].includes(item.id);
 
     // Determine icon/color for special categories
     let icon = null;
     if (item.id === 'all') {
-        icon = <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />;
+        icon = <AllInclusive sx={{ color: theme.palette.text.secondary }} />;
     } else if (item.id === 'no-tags') {
-        icon = <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />;
+        icon = <LabelOutlined sx={{ color: theme.palette.text.secondary }} />;
     } else if (item.id === 'planned-tasks') {
-        icon = <LocalOffer sx={{ color: '#FF9800' }} />;
+        icon = <LocalOffer sx={{ color: theme.palette.warning.main }} />;
     } else if (item.color) {
         icon = <LabelOutlined sx={{ color: item.color }} />;
     }
@@ -44,7 +46,7 @@ function renderRowContent(item, themeMode, getCount, t, includeColorBox = false)
         if (item.id === 'no-tags') {
             colorBox = <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: 'grey.400', border: '1px solid', borderColor: 'divider', mr: 1 }} />;
         } else if (item.id === 'planned-tasks') {
-            colorBox = <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: '#FF9800', border: '1px solid', borderColor: 'divider', mr: 1 }} />;
+            colorBox = <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: theme.palette.warning.main, border: '1px solid', borderColor: 'divider', mr: 1 }} />;
         } else if (item.color) {
             colorBox = <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: item.color, border: '1px solid', borderColor: 'divider', mr: 1 }} />;
         }
@@ -71,6 +73,7 @@ export default function CategoryList({
     getBubbleCountByTag = (tagId) => bubbleCounts[tagId] || 0
 }) {
     const { t } = useTranslation();
+    const theme = useTheme();
 
     // Helper for sidebar variant
     if (variant === 'sidebar') {
@@ -83,29 +86,29 @@ export default function CategoryList({
                     sx={{
                         padding: '16px 20px',
                         cursor: 'pointer',
-                        borderLeft: selectedCategory === 'all' ? '4px solid #3B7DED' : '4px solid transparent',
+                        borderLeft: selectedCategory === 'all' ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
                         backgroundColor: selectedCategory === 'all'
-                            ? (themeMode === 'light' ? '#F8F9FA' : '#333333')
+                            ? theme.palette.action.hover
                             : 'transparent',
                         '&:hover': {
-                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                            backgroundColor: theme.palette.action.hover
                         },
                         '&.Mui-selected': {
-                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333',
+                            backgroundColor: theme.palette.action.hover,
                             '&:hover': {
-                                backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                                backgroundColor: theme.palette.action.hover
                             }
                         }
                     }}
                 >
                     <Box sx={{ width: 4 }} />
                     <ListItemIcon sx={{ minWidth: 40 }}>
-                        {renderRowContent({ id: 'all' }, themeMode, null, t).icon}
+                        {renderRowContent({ id: 'all' }, theme, null, t).icon}
                     </ListItemIcon>
                     <ListItemText
                         primary={t('categories.allCategories')}
                         primaryTypographyProps={{
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            color: 'text.primary',
                             fontWeight: 500,
                             noWrap: true
                         }}
@@ -113,7 +116,7 @@ export default function CategoryList({
                     <Typography
                         variant="caption"
                         sx={{
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            color: 'text.primary',
                             fontWeight: 'bold',
                             fontSize: '12px',
                             backgroundColor: 'transparent'
@@ -132,27 +135,27 @@ export default function CategoryList({
                         cursor: 'pointer',
                         borderLeft: selectedCategory === 'no-tags' ? '4px solid #3B7DED' : '4px solid transparent',
                         backgroundColor: selectedCategory === 'no-tags'
-                            ? (themeMode === 'light' ? '#F8F9FA' : '#333333')
+                            ? theme.palette.action.hover
                             : 'transparent',
                         '&:hover': {
-                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                            backgroundColor: theme.palette.action.hover
                         },
                         '&.Mui-selected': {
-                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333',
+                            backgroundColor: theme.palette.action.hover,
                             '&:hover': {
-                                backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                                backgroundColor: theme.palette.action.hover
                             }
                         }
                     }}
                 >
                     <Box sx={{ width: 4 }} />
                     <ListItemIcon sx={{ minWidth: 40 }}>
-                        {renderRowContent({ id: 'no-tags' }, themeMode, null, t).icon}
+                        {renderRowContent({ id: 'no-tags' }, theme, null, t).icon}
                     </ListItemIcon>
                     <ListItemText
                         primary={t('bubbles.noTags')}
                         primaryTypographyProps={{
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            color: 'text.primary',
                             fontWeight: 500,
                             noWrap: true
                         }}
@@ -160,7 +163,7 @@ export default function CategoryList({
                     <Typography
                         variant="caption"
                         sx={{
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            color: 'text.primary',
                             fontWeight: 'bold',
                             fontSize: '12px',
                             backgroundColor: 'transparent'
@@ -179,27 +182,27 @@ export default function CategoryList({
                         cursor: 'pointer',
                         borderLeft: selectedCategory === 'planned-tasks' ? '4px solid #3B7DED' : '4px solid transparent',
                         backgroundColor: selectedCategory === 'planned-tasks'
-                            ? (themeMode === 'light' ? '#F8F9FA' : '#333333')
+                            ? theme.palette.action.hover
                             : 'transparent',
                         '&:hover': {
-                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                            backgroundColor: theme.palette.action.hover
                         },
                         '&.Mui-selected': {
-                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333',
+                            backgroundColor: theme.palette.action.hover,
                             '&:hover': {
-                                backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                                backgroundColor: theme.palette.action.hover
                             }
                         }
                     }}
                 >
                     <Box sx={{ width: 4 }} />
                     <ListItemIcon sx={{ minWidth: 40 }}>
-                        {renderRowContent({ id: 'planned-tasks' }, themeMode, null, t).icon}
+                        {renderRowContent({ id: 'planned-tasks' }, theme, null, t).icon}
                     </ListItemIcon>
                     <ListItemText
                         primary={t('bubbles.postponedTasks')}
                         primaryTypographyProps={{
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            color: 'text.primary',
                             fontWeight: 500,
                             noWrap: true
                         }}
@@ -207,7 +210,7 @@ export default function CategoryList({
                     <Typography
                         variant="caption"
                         sx={{
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            color: 'text.primary',
                             fontWeight: 'bold',
                             fontSize: '12px',
                             backgroundColor: 'transparent'
@@ -220,8 +223,8 @@ export default function CategoryList({
                 <Divider
                     textAlign="left"
                     sx={{
-                        borderColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
-                        color: themeMode === 'light' ? '#757575' : '#aaaaaa',
+                        borderColor: 'divider',
+                        color: 'text.secondary',
                         mx: 2,
                         my: 1.5
                     }}
@@ -233,10 +236,10 @@ export default function CategoryList({
                             gap: 1,
                             px: 1,
                             borderRadius: 1,
-                            bgcolor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 30, 0.95)'
+                            bgcolor: alpha(theme.palette.background.paper, 0.95)
                         }}
                     >
-                        <LabelOutlined sx={{ fontSize: 18, color: themeMode === 'light' ? '#9E9E9E' : '#888888' }} />
+                        <LabelOutlined sx={{ fontSize: 18, color: theme.palette.grey[500] }} />
                         <Typography variant="overline" sx={{ letterSpacing: 1 }}>
                             {t('bubbles.tags', { defaultValue: 'Tags' })}
                         </Typography>
@@ -258,15 +261,15 @@ export default function CategoryList({
                                 cursor: 'pointer',
                                 borderLeft: selectedCategory === tag.id ? '4px solid #3B7DED' : '4px solid transparent',
                                 backgroundColor: selectedCategory === tag.id
-                                    ? (themeMode === 'light' ? '#F8F9FA' : '#333333')
+                                    ? theme.palette.action.hover
                                     : 'transparent',
                                 '&:hover': {
-                                    backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                                    backgroundColor: theme.palette.action.hover
                                 },
                                 '&.Mui-selected': {
-                                    backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333',
+                                    backgroundColor: theme.palette.action.hover,
                                     '&:hover': {
-                                        backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                                        backgroundColor: theme.palette.action.hover
                                     }
                                 },
                                 '& .drag-handle': {
@@ -282,18 +285,18 @@ export default function CategoryList({
                                 <DragIndicator
                                     className="drag-handle"
                                     sx={{
-                                        color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
+                                        color: 'text.secondary',
                                         cursor: 'grab'
                                     }}
                                 />
                             )}
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                {renderRowContent(tag, themeMode, getBubbleCountByTag, t).icon}
+                                {renderRowContent(tag, theme, getBubbleCountByTag, t).icon}
                             </ListItemIcon>
                             <ListItemText
                                 primary={tag.name}
                                 primaryTypographyProps={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                    color: 'text.primary',
                                     fontWeight: 500,
                                     noWrap: true
                                 }}
@@ -301,20 +304,20 @@ export default function CategoryList({
                             <Typography
                                 variant="caption"
                                 sx={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                    color: 'text.primary',
                                     fontWeight: 'bold',
                                     fontSize: '12px',
                                     backgroundColor: 'transparent',
                                     ml: 'auto'
                                 }}
                             >
-                                {renderRowContent(tag, themeMode, getBubbleCountByTag, t).count}
+                                {renderRowContent(tag, theme, getBubbleCountByTag, t).count}
                             </Typography>
                             {renderRowExtra && renderRowExtra(tag)}
                         </ListItemButton>
                         {index < tags.length - 1 && (
                             <Divider sx={{
-                                backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
+                                backgroundColor: theme.palette.divider,
                                 margin: '0 20px'
                             }} />
                         )}
@@ -334,30 +337,30 @@ export default function CategoryList({
                     { id: 'no-tags', name: t('bubbles.noTags'), count: bubbles.filter(b => b.status === 'active' && !b.tagId).length },
                     { id: 'planned-tasks', name: t('bubbles.postponedTasks'), count: plannedTasksCount }
                 ].map(item => {
-                    const { colorBox } = renderRowContent(item, themeMode, null, t, true);
+                    const { colorBox } = renderRowContent(item, theme, null, t, true);
                     return (
                         <MenuItem key={item.id} value={item.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, padding: '12px 16px' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
                                 {colorBox}
-                                <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <Typography variant="body2" sx={{ color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {item.name}
                                 </Typography>
                             </Box>
-                            <Chip label={item.count} size="small" sx={{ flexShrink: 0, backgroundColor: 'transparent', color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 'bold', fontSize: '12px', border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}` }} />
+                            <Chip label={item.count} size="small" sx={{ flexShrink: 0, backgroundColor: 'transparent', color: 'text.primary', fontWeight: 'bold', fontSize: '12px', border: `1px solid ${theme.palette.divider}` }} />
                         </MenuItem>
                     );
                 })}
                 {tags.map(tag => {
-                    const { colorBox, count } = renderRowContent(tag, themeMode, getBubbleCountByTag, t, true);
+                    const { colorBox, count } = renderRowContent(tag, theme, getBubbleCountByTag, t, true);
                     return (
                         <MenuItem key={tag.id} value={tag.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, padding: '12px 16px' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
                                 {colorBox}
-                                <Typography variant="body2" title={tag.name} sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <Typography variant="body2" title={tag.name} sx={{ color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {tag.name}
                                 </Typography>
                             </Box>
-                            <Chip label={count} size="small" sx={{ flexShrink: 0, backgroundColor: 'transparent', color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 'bold', fontSize: '12px', border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}` }} />
+                            <Chip label={count} size="small" sx={{ flexShrink: 0, backgroundColor: 'transparent', color: 'text.primary', fontWeight: 'bold', fontSize: '12px', border: `1px solid ${theme.palette.divider}` }} />
                         </MenuItem>
                     );
                 })}
@@ -393,7 +396,7 @@ export default function CategoryList({
                                     '&:hover .drag-handle': {
                                         opacity: 1
                                     },
-                                    backgroundColor: draggedIndex === index ? (themeMode === 'light' ? '#F8F9FA' : '#2a2a2a') : 'transparent'
+                                    backgroundColor: draggedIndex === index ? theme.palette.action.hover : 'transparent'
                                 }}
                             >
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
@@ -419,14 +422,14 @@ export default function CategoryList({
                                         </Typography>
                                         {!deleting && (
                                             <Typography variant="body2" color="text.secondary">
-                                                {renderRowContent(tag, themeMode, getBubbleCountByTag, t).count} {renderRowContent(tag, themeMode, getBubbleCountByTag, t).count === 1 ? t('bubbles.bubble') : t('bubbles.bubbles')}
+                                                {renderRowContent(tag, theme, getBubbleCountByTag, t).count} {renderRowContent(tag, theme, getBubbleCountByTag, t).count === 1 ? t('bubbles.bubble') : t('bubbles.bubbles')}
                                             </Typography>
                                         )}
                                     </Box>
                                     <Box sx={{ display: 'flex', gap: 1, flexShrink: 0, alignItems: 'center' }}>
                                         {renderRowExtra && renderRowExtra(tag)}
                                         {!deleting && onDragStart && (
-                                            <DragIndicator className="drag-handle" sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa', ml: 0.5, cursor: 'grab' }} />
+                                            <DragIndicator className="drag-handle" sx={{ color: 'text.secondary', ml: 0.5, cursor: 'grab' }} />
                                         )}
                                     </Box>
                                 </Box>
