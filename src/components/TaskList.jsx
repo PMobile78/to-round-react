@@ -21,17 +21,16 @@ import {
 import {
     CheckCircle,
     DeleteOutlined,
-    Edit,
     LocalOffer,
-    Restore,
     ArrowUpward,
     ArrowDownward,
-    FilterList // добавил иконку фильтра
+    FilterList // добавил иконку фільтра
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 import { FilterMenu } from './FilterMenu';
 import SearchField from './SearchField';
+import TaskActionButtons from './TaskActionButtons';
 import useSearch from '../hooks/useSearch';
 import HtmlRenderer from './HtmlRenderer';
 import { stripHtml } from '../utils/stripHtml';
@@ -613,120 +612,15 @@ const TaskList = ({
                                     </Box>
 
                                     {/* Actions */}
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                                        {task.status === BUBBLE_STATUS.ACTIVE && (
-                                            <>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleEditTask(task)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.editBubble')}
-                                                >
-                                                    <Edit />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleMarkTaskAsDone(task.id)}
-                                                    sx={{ color: 'success.main' }}
-                                                    title={t('bubbles.markAsDone')}
-                                                >
-                                                    <CheckCircle />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleDeleteTask(task.id)}
-                                                    sx={{ color: 'error.main' }}
-                                                    title={t('bubbles.deleteBubble')}
-                                                >
-                                                    <DeleteOutlined />
-                                                </IconButton>
-                                            </>
-                                        )}
-                                        {task.status === BUBBLE_STATUS.DONE && (
-                                            <>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleEditTask(task)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.editBubble')}
-                                                >
-                                                    <Edit />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleRestoreBubble(task.id)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.restoreBubble')}
-                                                >
-                                                    <Restore />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleDeleteTask(task.id)}
-                                                    sx={{ color: 'error.main' }}
-                                                    title={t('bubbles.deleteBubble')}
-                                                >
-                                                    <DeleteOutlined />
-                                                </IconButton>
-                                            </>
-                                        )}
-                                        {task.status === BUBBLE_STATUS.DELETED && (
-                                            <>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleEditTask(task)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.editBubble')}
-                                                >
-                                                    <Edit />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleRestoreBubble(task.id)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.restoreBubble')}
-                                                >
-                                                    <Restore />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handlePermanentDeleteTask(task.id)}
-                                                    sx={{ color: 'error.main' }}
-                                                    title={t('bubbles.permanentDelete')}
-                                                >
-                                                    <DeleteOutlined />
-                                                </IconButton>
-                                            </>
-                                        )}
-                                        {task.status === BUBBLE_STATUS.POSTPONE && (
-                                            <>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleEditTask(task)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.editBubble')}
-                                                >
-                                                    <Edit />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleRestoreBubble(task.id)}
-                                                    sx={{ color: 'primary.main' }}
-                                                    title={t('bubbles.restoreBubble')}
-                                                >
-                                                    <Restore />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleDeleteTask(task.id)}
-                                                    sx={{ color: 'error.main' }}
-                                                    title={t('bubbles.deleteBubble')}
-                                                >
-                                                    <DeleteOutlined />
-                                                </IconButton>
-                                            </>
-                                        )}
-                                    </Box>
+                                    <TaskActionButtons
+                                        task={task}
+                                        t={t}
+                                        onEdit={handleEditTask}
+                                        onMarkDone={handleMarkTaskAsDone}
+                                        onDelete={handleDeleteTask}
+                                        onRestore={handleRestoreBubble}
+                                        onPermanentDelete={handlePermanentDeleteTask}
+                                    />
                                 </Box>
                             </ListItem>
                         );
