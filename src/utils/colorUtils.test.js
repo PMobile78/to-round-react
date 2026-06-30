@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { withAlpha } from './colorUtils';
+import { withAlpha, hexToRgba } from './colorUtils';
 
 describe('withAlpha', () => {
     it('converts 6-digit hex to rgba', () => {
@@ -22,5 +22,50 @@ describe('withAlpha', () => {
     it('returns non-string input unchanged', () => {
         expect(withAlpha(null, 0.1)).toBe(null);
         expect(withAlpha(undefined, 0.1)).toBe(undefined);
+    });
+});
+
+describe('hexToRgba', () => {
+    it('converts 6-digit hex to rgba', () => {
+        expect(hexToRgba('#000000', 0.5)).toBe('rgba(0, 0, 0, 0.5)');
+    });
+
+    it('works without leading #', () => {
+        expect(hexToRgba('ffffff', 1)).toBe('rgba(255, 255, 255, 1)');
+    });
+
+    it('uses default alpha of 1', () => {
+        expect(hexToRgba('#ff0000')).toBe('rgba(255, 0, 0, 1)');
+    });
+
+    it('is case-insensitive', () => {
+        expect(hexToRgba('#FF00FF', 0.8)).toBe('rgba(255, 0, 255, 0.8)');
+    });
+
+    it('returns null for 3-digit hex', () => {
+        expect(hexToRgba('#fff')).toBe(null);
+    });
+
+    it('returns null for named colors', () => {
+        expect(hexToRgba('red')).toBe(null);
+        expect(hexToRgba('transparent')).toBe(null);
+    });
+
+    it('returns null for empty string', () => {
+        expect(hexToRgba('')).toBe(null);
+    });
+
+    it('returns null for null or undefined', () => {
+        expect(hexToRgba(null)).toBe(null);
+        expect(hexToRgba(undefined)).toBe(null);
+    });
+
+    it('returns null for invalid hex', () => {
+        expect(hexToRgba('#gggggg')).toBe(null);
+        expect(hexToRgba('#12345')).toBe(null);
+    });
+
+    it('returns null for rgb() strings', () => {
+        expect(hexToRgba('rgb(255, 0, 0)')).toBe(null);
     });
 });
