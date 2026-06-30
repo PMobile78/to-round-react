@@ -1,10 +1,12 @@
 import React from 'react';
-import { IconButton, Tooltip } from '@mui/material';
+import { IconButton, Tooltip, useTheme } from '@mui/material';
 import { LightMode, DarkMode, SettingsSuggest } from '@mui/icons-material';
+import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 const ThemeToggle = ({ themeMode, actualTheme, toggleTheme, size = 'medium', sx = {} }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
 
     // Определяем следующую тему для tooltip
     const getNextThemeKey = () => {
@@ -20,32 +22,16 @@ const ThemeToggle = ({ themeMode, actualTheme, toggleTheme, size = 'medium', sx 
         return <SettingsSuggest />; // system
     };
 
-    // Определяем цвета на основе актуальной темы (что видит пользователь)
-    const getThemeColors = () => {
-        const isActuallyLight = actualTheme === 'light';
-        return {
-            color: isActuallyLight ? '#3B7DED' : 'white',
-            backgroundColor: isActuallyLight
-                ? 'rgba(59, 125, 237, 0.15)'
-                : 'rgba(255, 255, 255, 0.2)',
-            hoverColor: isActuallyLight
-                ? 'rgba(59, 125, 237, 0.25)'
-                : 'rgba(255, 255, 255, 0.3)'
-        };
-    };
-
-    const colors = getThemeColors();
-
     return (
         <Tooltip title={t(`theme.${getNextThemeKey()}`)}>
             <IconButton
                 onClick={toggleTheme}
                 size={size}
                 sx={{
-                    color: colors.color,
-                    backgroundColor: colors.backgroundColor,
+                    color: theme.palette.primary.main,
+                    backgroundColor: alpha(theme.palette.primary.main, 0.15),
                     '&:hover': {
-                        backgroundColor: colors.hoverColor
+                        backgroundColor: alpha(theme.palette.primary.main, 0.25)
                     },
                     ...sx
                 }}
