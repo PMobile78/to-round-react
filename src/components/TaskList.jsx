@@ -171,7 +171,6 @@ const TaskList = ({
 
     // Memoized status icons
     const getStatusIcon = useCallback((status) => {
-        const theme = useTheme();
         switch (status) {
             case BUBBLE_STATUS.DONE:
                 return <CheckCircle sx={{ color: theme.palette.success.main }} />;
@@ -182,11 +181,10 @@ const TaskList = ({
             default:
                 return <CheckCircle sx={{ color: theme.palette.info.main }} />;
         }
-    }, []);
+    }, [theme]);
 
     // Memoized status colors
     const getStatusColor = useCallback((status) => {
-        const theme = useTheme();
         switch (status) {
             case BUBBLE_STATUS.DONE:
                 return alpha(theme.palette.success.main, 0.12);
@@ -197,7 +195,7 @@ const TaskList = ({
             default:
                 return 'transparent'; // Transparent background for active tasks
         }
-    }, []);
+    }, [theme]);
 
     // Memoized task count calculation
     const getTasksCountByStatus = useCallback((status) => {
