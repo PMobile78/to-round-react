@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getCurrentUser } from './authService';
+import { lsGet, lsSet } from '../utils/storage';
 import logger from '../utils/logger';
 
 // Get user ID for document creation
@@ -110,7 +111,7 @@ export const saveBubblesToFirestore = async (bubblesData) => {
             // Fallback to localStorage with user-specific key
             const userId = currentUser.uid;
             const bubblesForStorage = bubblesData.map(serializeBubble);
-            localStorage.setItem(`bubbles_${userId}`, JSON.stringify(bubblesForStorage));
+            lsSet(`bubbles_${userId}`, bubblesForStorage);
         } catch (localStorageError) {
             logger.error('localStorage fallback also failed:', localStorageError);
         }
@@ -142,15 +143,15 @@ export const loadBubblesFromFirestore = async () => {
             return legacy;
         }
         // Fallback to localStorage with user-specific key
-        const stored = localStorage.getItem(`bubbles_${userId}`);
-        return stored ? JSON.parse(stored) : [];
+        const stored = lsGet(`bubbles_${userId}`);
+        return stored || [];
     } catch (error) {
         logger.error('Error loading bubbles from Firestore:', error);
         // Fallback to localStorage with user-specific key
         const uid = getCurrentUser()?.uid;
         if (!uid) return [];
-        const stored = localStorage.getItem(`bubbles_${uid}`);
-        return stored ? JSON.parse(stored) : [];
+        const stored = lsGet(`bubbles_${uid}`);
+        return stored || [];
     }
 };
 
@@ -324,7 +325,7 @@ export const saveTagsToFirestore = async (tagsData) => {
         // Fallback to localStorage with user-specific key
         const uid = getCurrentUser()?.uid;
         if (!uid) return;
-        localStorage.setItem(`tags_${uid}`, JSON.stringify(tagsData));
+        lsSet(`tags_${uid}`, tagsData);
     }
 };
 
@@ -377,15 +378,15 @@ export const loadTagsFromFirestore = async () => {
             return data.tags || [];
         }
         // Fallback to localStorage with user-specific key
-        const stored = localStorage.getItem(`tags_${userId}`);
-        return stored ? JSON.parse(stored) : [];
+        const stored = lsGet(`tags_${userId}`);
+        return stored || [];
     } catch (error) {
         logger.error('Error loading tags from Firestore:', error);
         // Fallback to localStorage with user-specific key
         const uid = getCurrentUser()?.uid;
         if (!uid) return [];
-        const stored = localStorage.getItem(`tags_${uid}`);
-        return stored ? JSON.parse(stored) : [];
+        const stored = lsGet(`tags_${uid}`);
+        return stored || [];
     }
 };
 

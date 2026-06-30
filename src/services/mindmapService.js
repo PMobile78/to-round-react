@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getCurrentUser } from './authService';
+import { lsGet, lsSet } from '../utils/storage';
 import logger from '../utils/logger';
 
 const MINDMAPS_COLLECTION = 'user-mindmaps';
@@ -84,8 +85,8 @@ const lsKey = (uid) => `mindmaps_${uid}`;
 
 const loadFromLocal = (uid) => {
     try {
-        const stored = localStorage.getItem(lsKey(uid));
-        return stored ? JSON.parse(stored) : [];
+        const stored = lsGet(lsKey(uid));
+        return stored || [];
     } catch (e) {
         logger.error('Failed to parse local mindmaps', e);
         return [];
@@ -94,7 +95,7 @@ const loadFromLocal = (uid) => {
 
 const saveToLocal = (uid, maps) => {
     try {
-        localStorage.setItem(lsKey(uid), JSON.stringify(maps));
+        lsSet(lsKey(uid), maps);
     } catch (e) {
         logger.error('Failed to save local mindmaps', e);
     }
