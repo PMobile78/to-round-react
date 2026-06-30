@@ -91,6 +91,16 @@ export const buildDesign = (config) => (mode) => {
     ? config.headerStrip.sx(c, mode, alpha)
     : config.headerStrip.sx;
 
+  // Build defaultStroke based on whether it's a function or static value
+  const defaultStroke = typeof config.bubble.defaultStroke === 'function'
+    ? config.bubble.defaultStroke(c, mode)
+    : (config.bubble.defaultStroke || c.primary);
+
+  // Build labelShadow based on whether it's a function or static value
+  const labelShadow = typeof config.bubble.labelShadow === 'function'
+    ? config.bubble.labelShadow(mode)
+    : (config.bubble.labelShadow !== undefined ? config.bubble.labelShadow : false);
+
   return {
     palette: {
       mode,
@@ -136,14 +146,16 @@ export const buildDesign = (config) => (mode) => {
       bubble: {
         strokeWidth: config.bubble.strokeWidth,
         highlightStrokeWidth: config.bubble.highlightStrokeWidth,
-        defaultStroke: config.bubble.defaultStroke || c.primary,
+        defaultStroke,
         fill: bubbleFill,
         effect: config.bubble.effect,
-        effectParams: config.bubble.effectParams || null,
+        effectParams: typeof config.bubble.effectParams === 'function'
+          ? config.bubble.effectParams(c, mode)
+          : (config.bubble.effectParams || null),
         label: {
           weight: config.bubble.labelWeight || 500,
           color: c.textPrimary,
-          shadow: config.bubble.labelShadow !== undefined ? config.bubble.labelShadow : false,
+          shadow: labelShadow,
         },
       },
       canvasBackground: c.bubbleView,
