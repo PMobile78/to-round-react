@@ -12,6 +12,8 @@ import {
 } from '@mui/material';
 import { Language, Check } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { lsSet } from '../utils/storage';
+import { LS } from '../utils/storageKeys';
 
 const LanguageSelector = ({ themeMode = 'light', sx = {} }) => {
     const { i18n, t } = useTranslation();
@@ -45,7 +47,7 @@ const LanguageSelector = ({ themeMode = 'light', sx = {} }) => {
 
     const handleLanguageChange = (languageCode) => {
         i18n.changeLanguage(languageCode);
-        localStorage.setItem('i18nextLng', languageCode);
+        lsSet(LS.I18N_LNG, languageCode);
         handleClose();
     };
 
