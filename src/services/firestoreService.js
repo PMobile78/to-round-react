@@ -127,21 +127,6 @@ export const loadBubblesFromFirestore = async () => {
         const normalized = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         if (normalized.length > 0) return normalized;
 
-        // Fallback to old array-based doc
-        const oldDocRef = doc(db, BUBBLES_COLLECTION, userId);
-        const docSnap = await getDoc(oldDocRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            const legacy = Array.isArray(data.bubbles) ? data.bubbles : [];
-            if (legacy.length > 0) {
-                // One-time migrate to subcollection (best-effort)
-                try {
-                    await saveBubblesToFirestore(legacy);
-                    await setDoc(oldDocRef, { migratedToSubcollection: true, updatedAt: serverTimestamp(), userId }, { merge: true });
-                } catch (_) { /* ignore migration errors */ }
-            }
-            return legacy;
-        }
         // Fallback to localStorage with user-specific key
         const stored = lsGet(`bubbles_${userId}`);
         return stored || [];
@@ -401,19 +386,10 @@ export const subscribeToBubblesUpdates = (callback) => {
             querySnap.forEach(d => list.push({ id: d.id, ...d.data() }));
             callback(list);
         }, (err) => {
-            logger.warn('Subcollection onSnapshot error, falling back to legacy doc listener', err);
-            currentUnsub?.();  // close the primary (may already be closed by Firebase)
-            const legacyRef = doc(db, BUBBLES_COLLECTION, userId);
-            currentUnsub = onSnapshot(legacyRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    callback(data.bubbles || []);
-                } else {
-                    callback([]);
-                }
-            });
+            logger.error('Subcollection onSnapshot error', err);
+            callback([]);
         });
-        return () => currentUnsub?.();  // always calls whatever is current
+        return () => currentUnsub?.();
     } catch (error) {
         logger.error('Error setting up bubbles listener:', error);
         return () => { };
