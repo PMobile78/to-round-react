@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { modern } from '../modern';
 import { classic } from '../classic';
+import { clay } from '../clay';
+import { aurora } from '../aurora';
+import { brutalist } from '../brutalist';
 
 describe('Design themes', () => {
   describe('modern design', () => {
@@ -125,6 +128,73 @@ describe('Design themes', () => {
       const modernDark = modern('dark');
 
       expect(modernLight.custom.canvasBackground).not.toBe(modernDark.custom.canvasBackground);
+    });
+  });
+
+  describe('all designs contract (structure and key properties)', () => {
+    const designs = [
+      { name: 'classic', fn: classic },
+      { name: 'modern', fn: modern },
+      { name: 'clay', fn: clay },
+      { name: 'aurora', fn: aurora },
+      { name: 'brutalist', fn: brutalist },
+    ];
+    const modes = ['light', 'dark'];
+
+    designs.forEach(({ name, fn }) => {
+      modes.forEach((mode) => {
+        it(`${name} (${mode}) should have all required top-level keys`, () => {
+          const theme = fn(mode);
+          expect(theme).toHaveProperty('palette');
+          expect(theme).toHaveProperty('typography');
+          expect(theme).toHaveProperty('shape');
+          expect(theme).toHaveProperty('components');
+          expect(theme).toHaveProperty('custom');
+          expect(theme.palette.mode).toBe(mode);
+        });
+
+        it(`${name} (${mode}) custom block should have all required fields`, () => {
+          const theme = fn(mode);
+          const custom = theme.custom;
+          expect(custom).toHaveProperty('design', name);
+          expect(custom).toHaveProperty('bubble');
+          expect(custom.bubble).toHaveProperty('strokeWidth');
+          expect(custom.bubble).toHaveProperty('highlightStrokeWidth');
+          expect(custom.bubble).toHaveProperty('defaultStroke');
+          expect(custom.bubble).toHaveProperty('fill');
+          expect(custom.bubble.fill).toHaveProperty('tagAlpha');
+          expect(custom.bubble.fill).toHaveProperty('defaultFill');
+          expect(custom.bubble).toHaveProperty('effect');
+          expect(custom.bubble).toHaveProperty('effectParams');
+          expect(custom.bubble).toHaveProperty('label');
+          expect(custom).toHaveProperty('canvasBackground');
+          expect(custom).toHaveProperty('headerStrip');
+          expect(custom).toHaveProperty('backdrop');
+          expect(custom).toHaveProperty('buttonStyles');
+          expect(custom).toHaveProperty('outlinedButtonStyles');
+          expect(custom).toHaveProperty('dialogPaper');
+        });
+
+        it(`${name} (${mode}) should have shape.borderRadius`, () => {
+          const theme = fn(mode);
+          expect(typeof theme.shape.borderRadius).toBe('number');
+        });
+
+        it(`${name} (${mode}) should have palette.primary.main defined`, () => {
+          const theme = fn(mode);
+          expect(theme.palette.primary.main).toBeDefined();
+          expect(typeof theme.palette.primary.main).toBe('string');
+        });
+
+        it(`${name} (${mode}) should have defined bubble effect and effectParams`, () => {
+          const theme = fn(mode);
+          expect(theme.custom.bubble.effect).toBeDefined();
+          // effectParams can be null or an object
+          if (theme.custom.bubble.effectParams !== null) {
+            expect(typeof theme.custom.bubble.effectParams).toBe('object');
+          }
+        });
+      });
     });
   });
 });
