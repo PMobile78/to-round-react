@@ -6,6 +6,7 @@ import {
     updateBubbleFields
 } from '../services/firestoreService';
 import logger from '../utils/logger';
+import { applyBubbleFill } from '../utils/bubbleStyle';
 import {
     COLOR_PALETTE,
     getNextAvailableColor as getNextAvailableColorPure,
@@ -163,9 +164,8 @@ export function useTags({ user, bubbles, pageDeps }) {
             setBubbles(prev => prev.map(bubble => {
                 if (bubble.tagId === tagId) {
                     affectedIds.add(bubble.id);
-                    // Сбрасываем цвет пузыря на светло-серый и обновляем fillStyle
-                    bubble.body.render.strokeStyle = '#B0B0B0';
-                    bubble.body.render.fillStyle = getBubbleFillStyle(null);
+                    // Reset bubble color to no-tag style
+                    applyBubbleFill(bubble, { tagColor: null, stroke: '#B0B0B0' }, getBubbleFillStyle);
                     return { ...bubble, tagId: null };
                 }
                 return bubble;
