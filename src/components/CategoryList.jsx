@@ -20,6 +20,39 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
+// Shared helper: render category row content (icon/color + name + count)
+// Used across all three variants to eliminate duplication
+function renderRowContent(item, themeMode, getCount, t, includeColorBox = false) {
+    const count = getCount ? getCount(item.id) : 0;
+    const isSpecial = ['all', 'no-tags', 'planned-tasks'].includes(item.id);
+
+    // Determine icon/color for special categories
+    let icon = null;
+    if (item.id === 'all') {
+        icon = <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />;
+    } else if (item.id === 'no-tags') {
+        icon = <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />;
+    } else if (item.id === 'planned-tasks') {
+        icon = <LocalOffer sx={{ color: '#FF9800' }} />;
+    } else if (item.color) {
+        icon = <LabelOutlined sx={{ color: item.color }} />;
+    }
+
+    // For dropdown/dialog: use colored box instead of icon
+    let colorBox = null;
+    if (includeColorBox) {
+        if (item.id === 'no-tags') {
+            colorBox = <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: 'grey.400', border: '1px solid', borderColor: 'divider', mr: 1 }} />;
+        } else if (item.id === 'planned-tasks') {
+            colorBox = <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: '#FF9800', border: '1px solid', borderColor: 'divider', mr: 1 }} />;
+        } else if (item.color) {
+            colorBox = <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: item.color, border: '1px solid', borderColor: 'divider', mr: 1 }} />;
+        }
+    }
+
+    return { icon, colorBox, count };
+}
+
 export default function CategoryList({
     tags,
     selectedCategory,
@@ -34,16 +67,12 @@ export default function CategoryList({
     onDrop,
     draggedIndex,
     renderRowExtra,
-    isItemDeleting = () => false, // function(tag) => boolean
+    isItemDeleting = () => false,
     getBubbleCountByTag = (tagId) => bubbleCounts[tagId] || 0
 }) {
     const { t } = useTranslation();
 
-    const getBubbleCount = (categoryId) => {
-        return bubbleCounts[categoryId] || 0;
-    };
-
-    // For sidebar variant - render ListItemButton
+    // Helper for sidebar variant
     if (variant === 'sidebar') {
         return (
             <List sx={{ padding: 0 }}>
@@ -71,7 +100,7 @@ export default function CategoryList({
                 >
                     <Box sx={{ width: 4 }} />
                     <ListItemIcon sx={{ minWidth: 40 }}>
-                        <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        {renderRowContent({ id: 'all' }, themeMode, null, t).icon}
                     </ListItemIcon>
                     <ListItemText
                         primary={t('categories.allCategories')}
@@ -94,7 +123,7 @@ export default function CategoryList({
                     </Typography>
                 </ListItemButton>
 
-                {/* No tags category */}
+                {/* No tags */}
                 <ListItemButton
                     onClick={() => onCategorySelect('no-tags')}
                     selected={selectedCategory === 'no-tags'}
@@ -118,7 +147,7 @@ export default function CategoryList({
                 >
                     <Box sx={{ width: 4 }} />
                     <ListItemIcon sx={{ minWidth: 40 }}>
-                        <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        {renderRowContent({ id: 'no-tags' }, themeMode, null, t).icon}
                     </ListItemIcon>
                     <ListItemText
                         primary={t('bubbles.noTags')}
@@ -165,7 +194,7 @@ export default function CategoryList({
                 >
                     <Box sx={{ width: 4 }} />
                     <ListItemIcon sx={{ minWidth: 40 }}>
-                        <LocalOffer sx={{ color: '#FF9800' }} />
+                        {renderRowContent({ id: 'planned-tasks' }, themeMode, null, t).icon}
                     </ListItemIcon>
                     <ListItemText
                         primary={t('bubbles.postponedTasks')}
@@ -214,7 +243,7 @@ export default function CategoryList({
                     </Box>
                 </Divider>
 
-                {/* Tag rows */}
+                {/* Tag rows - using shared renderRowContent */}
                 {tags.map((tag, index) => (
                     <React.Fragment key={tag.id}>
                         <ListItemButton
@@ -259,7 +288,7 @@ export default function CategoryList({
                                 />
                             )}
                             <ListItemIcon sx={{ minWidth: 40 }}>
-                                <LabelOutlined sx={{ color: tag.color }} />
+                                {renderRowContent(tag, themeMode, getBubbleCountByTag, t).icon}
                             </ListItemIcon>
                             <ListItemText
                                 primary={tag.name}
@@ -279,7 +308,7 @@ export default function CategoryList({
                                     ml: 'auto'
                                 }}
                             >
-                                {getBubbleCount(tag.id)}
+                                {renderRowContent(tag, themeMode, getBubbleCountByTag, t).count}
                             </Typography>
                             {renderRowExtra && renderRowExtra(tag)}
                         </ListItemButton>
@@ -295,163 +324,48 @@ export default function CategoryList({
         );
     }
 
-    // For dropdown variant - render MenuItem elements
+    // Dropdown variant
     if (variant === 'dropdown') {
         return (
             <>
-                <MenuItem
-                    value="all"
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: 1,
-                        padding: '12px 16px'
-                    }}
-                >
-                    <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        flex: 1,
-                        minWidth: 0
-                    }}>
-                        <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa', fontSize: 20, flexShrink: 0 }} />
-                        <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {t('categories.allCategories')}
-                        </Typography>
-                    </Box>
-                    <Chip
-                        label={bubbles.filter(b => b.status === 'active').length}
-                        size="small"
-                        sx={{
-                            flexShrink: 0,
-                            backgroundColor: 'transparent',
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                            fontWeight: 'bold',
-                            fontSize: '12px',
-                            border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}`
-                        }}
-                    />
-                </MenuItem>
-                <MenuItem
-                    value="no-tags"
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: 1,
-                        padding: '12px 16px'
-                    }}
-                >
-                    <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        flex: 1,
-                        minWidth: 0
-                    }}>
-                        <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa', fontSize: 20, flexShrink: 0 }} />
-                        <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {t('bubbles.noTags')}
-                        </Typography>
-                    </Box>
-                    <Chip
-                        label={bubbles.filter(b => b.status === 'active' && !b.tagId).length}
-                        size="small"
-                        sx={{
-                            flexShrink: 0,
-                            backgroundColor: 'transparent',
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                            fontWeight: 'bold',
-                            fontSize: '12px',
-                            border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}`
-                        }}
-                    />
-                </MenuItem>
-                <MenuItem
-                    value="planned-tasks"
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: 1,
-                        padding: '12px 16px'
-                    }}
-                >
-                    <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        flex: 1,
-                        minWidth: 0
-                    }}>
-                        <LocalOffer sx={{ color: '#FF9800', fontSize: 20, flexShrink: 0 }} />
-                        <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {t('bubbles.postponedTasks')}
-                        </Typography>
-                    </Box>
-                    <Chip
-                        label={plannedTasksCount}
-                        size="small"
-                        sx={{
-                            flexShrink: 0,
-                            backgroundColor: 'transparent',
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                            fontWeight: 'bold',
-                            fontSize: '12px',
-                            border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}`
-                        }}
-                    />
-                </MenuItem>
-                {tags.map(tag => (
-                    <MenuItem
-                        key={tag.id}
-                        value={tag.id}
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: 1,
-                            padding: '12px 16px'
-                        }}
-                    >
-                        <Box sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            flex: 1,
-                            minWidth: 0
-                        }}>
-                            <LabelOutlined sx={{ color: tag.color, fontSize: 20, flexShrink: 0 }} />
-                            <Typography variant="body2" title={tag.name} sx={{
-                                color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                            }}>
-                                {tag.name}
-                            </Typography>
-                        </Box>
-                        <Chip
-                            label={getBubbleCount(tag.id)}
-                            size="small"
-                            sx={{
-                                flexShrink: 0,
-                                backgroundColor: 'transparent',
-                                color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                                fontWeight: 'bold',
-                                fontSize: '12px',
-                                border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}`
-                            }}
-                        />
-                    </MenuItem>
-                ))}
+                {/* All, no-tags, planned-tasks */}
+                {[
+                    { id: 'all', name: t('categories.allCategories'), count: bubbles.filter(b => b.status === 'active').length },
+                    { id: 'no-tags', name: t('bubbles.noTags'), count: bubbles.filter(b => b.status === 'active' && !b.tagId).length },
+                    { id: 'planned-tasks', name: t('bubbles.postponedTasks'), count: plannedTasksCount }
+                ].map(item => {
+                    const { colorBox } = renderRowContent(item, themeMode, null, t, true);
+                    return (
+                        <MenuItem key={item.id} value={item.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, padding: '12px 16px' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
+                                {colorBox}
+                                <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {item.name}
+                                </Typography>
+                            </Box>
+                            <Chip label={item.count} size="small" sx={{ flexShrink: 0, backgroundColor: 'transparent', color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 'bold', fontSize: '12px', border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}` }} />
+                        </MenuItem>
+                    );
+                })}
+                {tags.map(tag => {
+                    const { colorBox, count } = renderRowContent(tag, themeMode, getBubbleCountByTag, t, true);
+                    return (
+                        <MenuItem key={tag.id} value={tag.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, padding: '12px 16px' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
+                                {colorBox}
+                                <Typography variant="body2" title={tag.name} sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {tag.name}
+                                </Typography>
+                            </Box>
+                            <Chip label={count} size="small" sx={{ flexShrink: 0, backgroundColor: 'transparent', color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 'bold', fontSize: '12px', border: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#666666'}` }} />
+                        </MenuItem>
+                    );
+                })}
             </>
         );
     }
 
-    // For dialog variant - render ListItem elements (for tag management dialog)
+    // Dialog variant
     if (variant === 'dialog') {
         return (
             <List sx={{ padding: 0, marginTop: 3 }}>
@@ -505,7 +419,7 @@ export default function CategoryList({
                                         </Typography>
                                         {!deleting && (
                                             <Typography variant="body2" color="text.secondary">
-                                                {getBubbleCountByTag(tag.id)} {getBubbleCountByTag(tag.id) === 1 ? t('bubbles.bubble') : t('bubbles.bubbles')}
+                                                {renderRowContent(tag, themeMode, getBubbleCountByTag, t).count} {renderRowContent(tag, themeMode, getBubbleCountByTag, t).count === 1 ? t('bubbles.bubble') : t('bubbles.bubbles')}
                                             </Typography>
                                         )}
                                     </Box>
