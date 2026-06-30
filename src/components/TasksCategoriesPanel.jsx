@@ -4,6 +4,7 @@ import {
     Box,
     Paper,
     IconButton,
+    useTheme,
 } from '@mui/material';
 import {
     CloseOutlined,
@@ -26,6 +27,7 @@ const TasksCategoriesPanel = ({
     plannedTasksCount = 0,
 }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
 
     // Используем теги как категории
     const allCategories = tags;
@@ -61,8 +63,8 @@ const TasksCategoriesPanel = ({
                 top: 0,
                 height: '100vh',
                 width: 320,
-                color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
-                borderRight: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#333333'}`,
+                color: 'text.primary',
+                borderRight: `1px solid ${theme.palette.divider}`,
                 zIndex: 1200,
                 display: open ? 'block' : 'none',
                 overflowY: 'auto'
@@ -74,7 +76,7 @@ const TasksCategoriesPanel = ({
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '16px 20px',
-                borderBottom: `1px solid ${themeMode === 'light' ? '#E0E0E0' : '#333333'}`
+                borderBottom: `1px solid ${theme.palette.divider}`
             }}>
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                     {t('bubbles.taskCategories')}
@@ -83,9 +85,9 @@ const TasksCategoriesPanel = ({
                     <IconButton
                         onClick={onClose}
                         sx={{
-                            color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa',
+                            color: 'text.secondary',
                             '&:hover': {
-                                backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                                backgroundColor: theme.palette.action.hover
                             }
                         }}
                     >
@@ -112,7 +114,7 @@ const TasksCategoriesPanel = ({
 
             {/* Разделитель для настроек */}
             <Divider sx={{
-                backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333',
+                backgroundColor: theme.palette.divider,
                 margin: '16px 20px'
             }} />
 
@@ -131,17 +133,17 @@ const TasksCategoriesPanel = ({
                         padding: '16px 20px',
                         cursor: 'pointer',
                         '&:hover': {
-                            backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333'
+                            backgroundColor: theme.palette.action.hover
                         }
                     }}
                 >
                     <ListItemIcon sx={{ minWidth: 40 }}>
-                        <Edit sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        <Edit sx={{ color: 'text.secondary' }} />
                     </ListItemIcon>
                     <ListItemText
                         primary={t('bubbles.manageTags')}
                         primaryTypographyProps={{
-                            color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                            color: 'text.primary',
                             fontWeight: 500
                         }}
                     />

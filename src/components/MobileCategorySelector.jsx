@@ -5,7 +5,9 @@ import {
     FormControl,
     Typography,
     ListSubheader,
+    useTheme,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { LabelOutlined, AllInclusive, LocalOffer } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { BUBBLE_STATUS } from '../services/firestoreService';
@@ -44,6 +46,7 @@ const MobileCategorySelector = ({
     plannedTasksCount = 0,
 }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
 
     const getBubbleCount = (categoryId) => {
         if (categoryId === 'all') {
@@ -82,13 +85,13 @@ const MobileCategorySelector = ({
     const getSelectedCategoryIcon = () => {
         if (!selectedCategory) return null;
         if (selectedCategory === 'all') {
-            return <AllInclusive sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />;
+            return <AllInclusive sx={{ color: 'text.secondary' }} />;
         }
         if (selectedCategory === 'no-tags') {
-            return <LabelOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />;
+            return <LabelOutlined sx={{ color: 'text.secondary' }} />;
         }
         if (selectedCategory === 'planned-tasks') {
-            return <LocalOffer sx={{ color: '#FF9800' }} />;
+            return <LocalOffer sx={{ color: theme.palette.warning.main }} />;
         }
         const category = tags.find(tag => tag.id === selectedCategory);
         return category ? (
@@ -125,7 +128,7 @@ const MobileCategorySelector = ({
                                 variant="body2"
                                 title={fullName}
                                 sx={{
-                                    color: themeMode === 'light' ? '#2C3E50' : '#ffffff',
+                                    color: 'text.primary',
                                     fontSize: '14px',
                                     flex: 1,
                                     ...ellipsisLabelSx,
@@ -137,14 +140,12 @@ const MobileCategorySelector = ({
                     );
                 }}
                 sx={{
-                    backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(52, 73, 94, 0.95)',
+                    backgroundColor: alpha(theme.palette.background.paper, 0.95),
                     backdropFilter: 'blur(15px)',
-                    border: `1px solid ${themeMode === 'light' ? 'rgba(224, 224, 224, 0.9)' : 'rgba(102, 102, 102, 0.9)'}`,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.9)}`,
                     borderRadius: 3,
                     height: 40,
-                    boxShadow: themeMode === 'light'
-                        ? '0 4px 12px rgba(0, 0, 0, 0.1)'
-                        : '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    boxShadow: theme.shadows[4],
                     '& .MuiSelect-select': {
                         display: 'flex',
                         alignItems: 'center',
@@ -163,10 +164,8 @@ const MobileCategorySelector = ({
                         border: 'none'
                     },
                     '&:hover': {
-                        backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(52, 73, 94, 1)',
-                        boxShadow: themeMode === 'light'
-                            ? '0 6px 16px rgba(0, 0, 0, 0.15)'
-                            : '0 6px 16px rgba(0, 0, 0, 0.4)'
+                        backgroundColor: theme.palette.background.paper,
+                        boxShadow: theme.shadows[8]
                     }
                 }}
             >
