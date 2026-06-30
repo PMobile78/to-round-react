@@ -1,10 +1,9 @@
 import React from 'react';
-import EditBubbleDialog from './EditBubbleDialog';
+import BubbleDialog from './BubbleDialog';
 import TagEditorDialog from './TagEditorDialog';
 import MainMenuDrawer from './MainMenuDrawer';
 import AboutDialog from './AboutDialog';
 import TaskFilterDrawer from './TaskFilterDrawer';
-import CreateBubbleDialog from './CreateBubbleDialog';
 import TasksCategoriesDialog from './TasksCategoriesDialog';
 import FontSettingsDialog from './FontSettingsDialog';
 import AppearanceDialog from './AppearanceDialog';
@@ -20,7 +19,7 @@ import { saveTagsToFirestore } from '../services/firestoreService';
  * Extracted from BubblesPage.jsx (Task A of #64): ~13 dialogs/drawers were pure
  * props wiring at the bottom of the page's JSX. This component holds no business
  * logic — every handler/state value is supplied by BubblesPage. The two
- * EditBubbleDialog helpers that carry logic (onStopPulsing / showStopPulsing)
+ * BubbleDialog helpers that carry logic (onStopPulsing / showStopPulsing)
  * stay in BubblesPage and arrive here as plain props.
  */
 const BubblesDialogs = ({
@@ -171,7 +170,8 @@ const BubblesDialogs = ({
     return (
         <>
             {/* Диалог редактирования */}
-            <EditBubbleDialog
+            <BubbleDialog
+                mode="edit"
                 open={editDialog}
                 onClose={handleCloseDialog}
                 t={t}
@@ -268,7 +268,8 @@ const BubblesDialogs = ({
             />
 
             {/* Диалог создания нового пузыря */}
-            <CreateBubbleDialog
+            <BubbleDialog
+                mode="create"
                 open={createDialog}
                 onClose={() => setCreateDialog(false)}
                 t={t}
