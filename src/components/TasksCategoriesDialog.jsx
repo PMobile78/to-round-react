@@ -8,8 +8,10 @@ import {
     Typography,
     Button,
     IconButton,
-    List
+    List,
+    useTheme
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { Add, CloseOutlined, DeleteOutlined, Edit, Category } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { reorderArray } from '../utils/reorderArray';
@@ -33,6 +35,7 @@ const TasksCategoriesDialog = ({
     onReorderTags
 }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
     const [draggedIndex, setDraggedIndex] = useState(null);
 
     const handleDragStart = (index) => (event) => {
@@ -149,7 +152,7 @@ const TasksCategoriesDialog = ({
             {!isMobile && (
                 <Box
                     sx={{
-                        borderTop: themeMode === 'light' ? '1px solid #E0E0E0' : '1px solid #333333',
+                        borderTop: `1px solid ${theme.palette.divider}`,
                         padding: 3,
                         textAlign: 'center',
                         backgroundColor: 'transparent'
@@ -165,12 +168,8 @@ const TasksCategoriesDialog = ({
                         sx={{
                             backgroundColor: 'transparent',
                             color: canCreateMoreTags()
-                                ? themeMode === 'light'
-                                    ? '#757575'
-                                    : '#aaaaaa'
-                                : themeMode === 'light'
-                                    ? '#B0B0B0'
-                                    : '#666666',
+                                ? 'text.secondary'
+                                : 'action.disabled',
                             borderRadius: 2,
                             padding: '12px 24px',
                             textTransform: 'none',
@@ -180,19 +179,13 @@ const TasksCategoriesDialog = ({
                             border: 'none',
                             '&:hover': {
                                 backgroundColor: canCreateMoreTags()
-                                    ? themeMode === 'light'
-                                        ? 'rgba(117, 117, 117, 0.08)'
-                                        : 'rgba(255, 255, 255, 0.1)'
+                                    ? alpha(theme.palette.text.secondary, 0.08)
                                     : 'transparent'
                             },
                             '& .MuiButton-startIcon': {
                                 color: canCreateMoreTags()
-                                    ? themeMode === 'light'
-                                        ? '#757575'
-                                        : '#aaaaaa'
-                                    : themeMode === 'light'
-                                        ? '#B0B0B0'
-                                        : '#666666',
+                                    ? 'text.secondary'
+                                    : 'action.disabled',
                                 marginRight: 1.5,
                                 fontSize: '20px'
                             }
@@ -223,12 +216,8 @@ const TasksCategoriesDialog = ({
                         sx={{
                             backgroundColor: 'transparent',
                             color: canCreateMoreTags()
-                                ? themeMode === 'light'
-                                    ? '#757575'
-                                    : '#aaaaaa'
-                                : themeMode === 'light'
-                                    ? '#B0B0B0'
-                                    : '#666666',
+                                ? 'text.secondary'
+                                : 'action.disabled',
                             borderRadius: 2,
                             padding: '12px 24px',
                             textTransform: 'none',
@@ -238,19 +227,13 @@ const TasksCategoriesDialog = ({
                             border: 'none',
                             '&:hover': {
                                 backgroundColor: canCreateMoreTags()
-                                    ? themeMode === 'light'
-                                        ? 'rgba(117, 117, 117, 0.08)'
-                                        : 'rgba(255, 255, 255, 0.1)'
+                                    ? alpha(theme.palette.text.secondary, 0.08)
                                     : 'transparent'
                             },
                             '& .MuiButton-startIcon': {
                                 color: canCreateMoreTags()
-                                    ? themeMode === 'light'
-                                        ? '#757575'
-                                        : '#aaaaaa'
-                                    : themeMode === 'light'
-                                        ? '#B0B0B0'
-                                        : '#666666',
+                                    ? 'text.secondary'
+                                    : 'action.disabled',
                                 marginRight: 1.5,
                                 fontSize: '20px'
                             }
