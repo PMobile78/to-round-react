@@ -1,10 +1,6 @@
 name: CI & Deploy
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
     inputs:
       version_bump:
@@ -48,6 +44,9 @@ jobs:
 
     - name: Install functions dependencies
       run: cd functions && npm ci
+
+    - name: Run lint
+      run: npm run lint
 
     - name: Run tests
       run: |
