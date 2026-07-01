@@ -9,6 +9,7 @@ import {
 } from '../services/firestoreService';
 import logger from '../utils/logger';
 import { applyBubbleFill } from '../utils/bubbleStyle';
+import { useBubblesStore } from '../state/BubblesStore';
 import {
     COLOR_PALETTE,
     getNextAvailableColor as getNextAvailableColorPure,
@@ -23,13 +24,17 @@ import {
  * (1) setTags, (2) reconcile filter tags, (3) recolor bubbles. Only (1) lives
  * here; (2)+(3) stay in BubblesPage as a separate effect keyed on `[tags]`.
  *
- * `pageDeps` is a ref carrying page-owned callbacks the tag handlers need at
- * call-time — `setBubbles`, `setFilterTags`, `setListFilterTags`,
- * `getBubbleFillStyle`. It is a ref (not plain params)
- * to avoid a useTags <-> useBubbleFilters render-order cycle: `setFilterTags`
- * comes from useBubbleFilters, which needs `tags` produced here.
+ * Cross-hook deps the tag handlers need at call-time — `setBubbles`,
+ * `setFilterTags`, `setListFilterTags`, `getBubbleFillStyle` — are read from
+ * BubblesStore: `setBubbles` is a store setter; the filter setters and
+ * getBubbleFillStyle are published via register() by useBubbleFilters,
+ * useListFilters and BubblesPage respectively. Reading them from the store
+ * (instead of plain params) still avoids the useTags <-> useBubbleFilters
+ * render-order cycle: `setFilterTags` comes from useBubbleFilters, which needs
+ * `tags` produced here.
  */
-export function useTags({ user, bubbles, pageDeps }) {
+export function useTags({ user, bubbles }) {
+    const { setBubbles, registered } = useBubblesStore();
     const [tags, setTags] = useState([]);
     const tagsRef = useRef(tags);
     useEffect(() => { tagsRef.current = tags; }, [tags]);
@@ -91,7 +96,7 @@ export function useTags({ user, bubbles, pageDeps }) {
     };
 
     const handleSaveTag = () => {
-        const { setFilterTags, setListFilterTags } = pageDeps.current;
+        const { setFilterTags, setListFilterTags } = registered;
         // Проверяем, что цвет доступен (если это новый тег или изменился цвет)
         if (!editingTag && !isColorAvailable(tagColor)) {
             return; // Цвет уже занят
@@ -143,7 +148,7 @@ export function useTags({ user, bubbles, pageDeps }) {
     };
 
     const handleDeleteTag = (tagId) => {
-        const { setBubbles, getBubbleFillStyle } = pageDeps.current;
+        const { getBubbleFillStyle } = registered;
         // Добавляем тег в состояние удаления
         setDeletingTags(prev => new Set([...prev, tagId]));
 
