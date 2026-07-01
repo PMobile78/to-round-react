@@ -20,7 +20,7 @@ The per-plan TODO statuses below are superseded by this outcome.
 - `010a` **DONE** (merged to `main`): `BubblesStore` foundation + 3 of 5 ref-bridges removed.
 - `010b` **DONE** (merged to `main`): `useTags` reads `setBubbles` + `setFilterTags`/`setListFilterTags`/`getBubbleFillStyle` from the store via `register()`; `tagPageDepsRef` removed.
 - `010c` **DONE** (merged to `main`): `useBubbleCrud` reads shared domain (tags/selectedTagId/selectedCategory/getBubbleFillStyle) from the store and takes page-local UI values (canvasSize + create/edit notification state) as explicit handler args. `crudDepsRef` removed — **all 5 ref bridges gone** (`grep -rn "pageDeps|DepsRef|crudDeps" src` empty).
-- `010d` **IN PROGRESS** (local `main`): collapse `BubblesDialogs` forwarder. Stages A–E done (prop count 126→82); F/G/H remain (target <40). See the plan's Progress section + the `010d-in-progress` project memory.
+- `010d` **IN PROGRESS** (local `main`): collapse `BubblesDialogs` forwarder. Stages A–G done (prop count 126→48); H remains (target <40). See the plan's Progress section + the `010d-in-progress` project memory.
 
 ## Execution order & status
 
@@ -35,7 +35,7 @@ The per-plan TODO statuses below are superseded by this outcome.
 | [007](007-decompose-richtexteditor.md) | Decompose RichTextEditor.jsx | P3 | M | MED | — | A | TODO |
 | [008](008-remove-legacy-bubbles-array.md) | Remove legacy bubbles[] dual-schema | P2 | M | MED | — (Step 0 gate) | C | TODO |
 | [009](009-robustness-import-atomicity-and-hex-guard.md) | Atomic JSON import + safe shadow-color parse | P1 | S | LOW | — | B | TODO |
-| [010](010-bubbles-store-context.md) | Bubbles/tags store (remove 5 ref-bridges + 130-prop forwarder) | P1 | L | HIGH | 001, 002, 003, 009 | B | IN PROGRESS (010a–c done; 010d stages A–E done, props 126→82, F/G/H left) |
+| [010](010-bubbles-store-context.md) | Bubbles/tags store (remove 5 ref-bridges + 130-prop forwarder) | P1 | L | HIGH | 001, 002, 003, 009 | B | IN PROGRESS (010a–c done; 010d stages A–G done, props 126→48, H left) |
 
 Status values: `TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rationale)`.
 
