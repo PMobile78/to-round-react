@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { lsGet, lsSet } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
 import { getBubblesByStatus } from '../services/firestoreService';
@@ -87,7 +87,14 @@ export function countBubblesByTagForListView({ bubbles, tags, listFilter, listSe
 }
 
 export function useListFilters({ tags }) {
-    const { register, listFilter, listSearchQuery } = useBubblesStore();
+    const { register, bubbles, listFilter, listSearchQuery } = useBubblesStore();
+    const storeDataRef = useRef({ bubbles, listFilter, listSearchQuery });
+
+    // Keep ref up-to-date with store values
+    useEffect(() => {
+        storeDataRef.current = { bubbles, listFilter, listSearchQuery };
+    }, [bubbles, listFilter, listSearchQuery]);
+
     const [listFilterTags, setListFilterTags] = useState(() =>
         lsGet(LS.LIST_FILTER_TAGS, [])
     ); // Массив ID выбранных тегов для фильтрации в списке
@@ -154,23 +161,22 @@ export function useListFilters({ tags }) {
         return isAllListTagsSelected(tags, listFilterTags, listShowNoTag);
     }, [tags, listFilterTags, listShowNoTag]);
 
-    // All deps come from the store or local state. `bubbles`, `listFilter`,
-    // and `listSearchQuery` come from the store. Consumers of this callback
-    // are not memoized, so a stable identity is safe.
+    // All deps come from the store (via ref) or local state. Consumers of this
+    // callback are not memoized, so a stable identity is safe.
     const getBubbleCountByTagForListView = useCallback((tagId) => {
-        const { bubbles } = useBubblesStore();
+        const { bubbles, listFilter, listSearchQuery } = storeDataRef.current;
         return countBubblesByTagForListView({
             bubbles,
             tags,
             listFilter,
             listSearchQuery
         }, tagId);
-    }, [tags, listFilter, listSearchQuery]);
+    }, [tags]);
 
     // Function for filtering bubbles for list view (supports all statuses).
-    // All deps come from the store or local state.
+    // Deps from store (via ref) or local state.
     const getFilteredBubblesForList = useCallback(() => {
-        const { bubbles } = useBubblesStore();
+        const { bubbles, listFilter } = storeDataRef.current;
         return filterBubblesForList({
             bubbles,
             tags,
@@ -178,7 +184,7 @@ export function useListFilters({ tags }) {
             listFilterTags,
             listShowNoTag
         });
-    }, [tags, listFilter, listFilterTags, listShowNoTag]);
+    }, [tags, listFilterTags, listShowNoTag]);
 
     return {
         listFilterTags,

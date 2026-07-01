@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { lsGet, lsSet } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
 import { BUBBLE_STATUS } from '../services/firestoreService';
@@ -56,7 +56,14 @@ export function countBubblesByTagForBubblesView({ bubbles, tags, searchFoundBubb
 }
 
 export function useBubbleFilters({ tags }) {
-    const { register, searchFoundBubbles, debouncedSearchQuery } = useBubblesStore();
+    const { register, bubbles, searchFoundBubbles, debouncedSearchQuery } = useBubblesStore();
+    const storeDataRef = useRef({ bubbles, searchFoundBubbles, debouncedSearchQuery });
+
+    // Keep ref up-to-date with store values
+    useEffect(() => {
+        storeDataRef.current = { bubbles, searchFoundBubbles, debouncedSearchQuery };
+    }, [bubbles, searchFoundBubbles, debouncedSearchQuery]);
+
     const [filterTags, setFilterTags] = useState(() =>
         lsGet(LS.FILTER_TAGS, [])
     ); // Массив ID выбранных тегов для фильтрации
@@ -295,18 +302,18 @@ export function useBubbleFilters({ tags }) {
         return isAllTagsSelected(tags, filterTags, showNoTag);
     }, [tags, filterTags, showNoTag]);
 
-    // Count bubbles by tag for the bubbles view. All deps come from the store or
-    // local state. Consumers of this callback are not memoized, so a stable identity
+    // Count bubbles by tag for the bubbles view. All deps come from the store (via ref)
+    // or local state. Consumers of this callback are not memoized, so a stable identity
     // here is safe.
     const getBubbleCountByTagForBubblesView = useCallback((tagId) => {
-        const { bubbles } = useBubblesStore();
+        const { bubbles, searchFoundBubbles, debouncedSearchQuery } = storeDataRef.current;
         return countBubblesByTagForBubblesView({
             bubbles,
             tags,
             searchFoundBubbles,
             debouncedSearchQuery
         }, tagId);
-    }, [tags, searchFoundBubbles, debouncedSearchQuery]);
+    }, [tags]);
 
     return {
         filterTags,
