@@ -72,11 +72,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     // Bubble CRUD + dialog state extracted into useBubbleCrud (Task 5/6 of #38).
     // Called early because it owns selectedBubble/editDialog, which liveEditRef,
-    // useMatterEngine and useBubbleNotifications all consume. crudDeps bridges
-    // values its handlers need at call-time that are defined later (tags,
-    // selectedTagId, selectedCategory, getBubbleFillStyle, canvasSize and the
-    // notification state) — kept fresh each render below.
-    const crudDepsRef = useRef({});
+    // useMatterEngine and useBubbleNotifications all consume. Values defined by
+    // later hooks reach its handlers via the store (shared domain) or explicit
+    // call-time args (page-local UI) — see the hook's doc comment.
     const {
         createDialog,
         setCreateDialog,
@@ -100,7 +98,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         handleCloseDialog,
         clearAllBubbles,
         handleToggleEditUseRichText
-    } = useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile, deps: crudDepsRef });
+    } = useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile });
 
     // Live mirror of edit-dialog state for the Matter mount-effect subscription
     // (its closure captures editDialog/selectedBubble once and stays stale).
@@ -339,26 +337,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // useBubbleNotifications); supply them explicitly at the call site.
     const handleOpenCreateDialog = () => openCreateDialog({ setDueDate, setCreateNotifications });
 
-    // Keep the bridge to useBubbleCrud fresh: its handlers read these at call-time.
-    crudDepsRef.current = {
-        tags,
-        selectedTagId,
-        setSelectedTagId,
-        selectedCategory,
-        getBubbleFillStyle,
-        canvasSize,
-        dueDate,
-        setDueDate,
-        createNotifications,
-        setCreateNotifications,
-        createRecurrence,
-        editDueDate,
-        setEditDueDate,
-        editNotifications,
-        editRecurrence,
-        manuallyStoppedPulsingRef
-    };
-
     // Physics engine — initialised once on mount via hook
     useMatterEngine({
         canvasRef,
@@ -503,7 +481,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // Matter.js world sync (getFilteredBubbles + the world-fill / visibility-highlight
     // effects + the useSearch wiring + foundBubblesIds) now lives in useBubbleWorld
     // (Task E of #69). All inputs are page state defined above, so the hook takes plain
-    // values — no pageDeps ref bridge needed (unlike useBubbleFilters / useListFilters).
+    // values — no store registration or ref bridge needed.
     const {
         getFilteredBubbles,
         searchFoundBubbles,

@@ -13,8 +13,7 @@ import { selectVisibleBubbles, computeBubbleSearchRender } from '../utils/bubble
  * foundBubblesIds + query sync).
  *
  * All inputs are page-owned state already defined before the world-sync logic, so
- * (unlike useBubbleFilters / useListFilters / useBubbleImportExport) no pageDeps
- * ref bridge is needed; plain values are passed in.
+ * the hook takes plain values — no store registration or ref bridge is needed.
  */
 export function useBubbleWorld({
     engineRef,

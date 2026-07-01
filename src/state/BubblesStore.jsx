@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 /**
  * BubblesStore Context
  *
- * Central store for bubbles and tags state, replacing pageDepsRef bridges.
+ * Central store for bubbles and tags state, replacing the old page-owned ref bridges.
  * Hooks can register themselves to make their setters/callbacks available
  * to other hooks without creating circular dependencies.
  */

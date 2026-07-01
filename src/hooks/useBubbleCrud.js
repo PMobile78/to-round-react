@@ -20,13 +20,14 @@ import { useBubblesStore } from '../state/BubblesStore';
  * lives in useMatterEngine).
  *
  * `bubbles`/`setBubbles` and the Matter refs stay owned by BubblesPage and are
- * passed in directly. `deps` is a ref bridging values the handlers need at
- * call-time that are defined *after* this hook runs (it owns selectedBubble/
- * editDialog, which useMatterEngine and useBubbleNotifications consume, so it
- * must run early) or that come from those later hooks — tags, selectedTagId,
- * selectedCategory, getBubbleFillStyle, canvasSize and the notification state.
+ * passed in directly. This hook runs early (it owns selectedBubble/editDialog,
+ * which useMatterEngine and useBubbleNotifications consume), so values defined by
+ * later hooks are not plain props: shared domain values (tags, selectedTagId,
+ * selectedCategory, getBubbleFillStyle) are read from BubblesStore at call-time,
+ * and page-local UI values (canvasSize + the create/edit notification state) are
+ * passed as explicit handler arguments by BubblesPage.
  */
-export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile, deps }) {
+export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile }) {
     const { registered } = useBubblesStore();
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [editDialog, setEditDialog] = useState(false);
