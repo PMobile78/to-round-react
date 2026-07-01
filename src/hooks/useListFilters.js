@@ -86,8 +86,8 @@ export function countBubblesByTagForListView({ bubbles, tags, listFilter, listSe
     return searchFilteredBubbles.length;
 }
 
-export function useListFilters({ tags, pageDeps }) {
-    const { register } = useBubblesStore();
+export function useListFilters({ tags }) {
+    const { register, listFilter, listSearchQuery } = useBubblesStore();
     const [listFilterTags, setListFilterTags] = useState(() =>
         lsGet(LS.LIST_FILTER_TAGS, [])
     ); // Массив ID выбранных тегов для фильтрации в списке
@@ -154,34 +154,31 @@ export function useListFilters({ tags, pageDeps }) {
         return isAllListTagsSelected(tags, listFilterTags, listShowNoTag);
     }, [tags, listFilterTags, listShowNoTag]);
 
-    // `listFilter` and `listSearchQuery` are defined *after* this hook
-    // runs in BubblesPage, so they are read at call-time from the pageDeps bridge
-    // ref. `bubbles` and `tags` come from the store. Consumers of this callback
+    // All deps come from the store or local state. `bubbles`, `listFilter`,
+    // and `listSearchQuery` come from the store. Consumers of this callback
     // are not memoized, so a stable identity is safe.
     const getBubbleCountByTagForListView = useCallback((tagId) => {
         const { bubbles } = useBubblesStore();
-        const deps = (pageDeps && pageDeps.current) || {};
         return countBubblesByTagForListView({
             bubbles,
             tags,
-            listFilter: deps.listFilter,
-            listSearchQuery: deps.listSearchQuery
+            listFilter,
+            listSearchQuery
         }, tagId);
-    }, [tags, pageDeps]);
+    }, [tags, listFilter, listSearchQuery]);
 
-    // Function for filtering bubbles for list view (supports all statuses). Reads
-    // `listFilter` from the pageDeps bridge at call-time; `bubbles` comes from store.
+    // Function for filtering bubbles for list view (supports all statuses).
+    // All deps come from the store or local state.
     const getFilteredBubblesForList = useCallback(() => {
         const { bubbles } = useBubblesStore();
-        const deps = (pageDeps && pageDeps.current) || {};
         return filterBubblesForList({
             bubbles,
             tags,
-            listFilter: deps.listFilter,
+            listFilter,
             listFilterTags,
             listShowNoTag
         });
-    }, [tags, listFilterTags, listShowNoTag, pageDeps]);
+    }, [tags, listFilter, listFilterTags, listShowNoTag]);
 
     return {
         listFilterTags,

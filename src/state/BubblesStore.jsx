@@ -19,6 +19,14 @@ export function BubblesStoreProvider({ children }) {
     const [bubbles, setBubbles] = useState([]);
     const [tags, setTags] = useState([]);
 
+    // Search state for bubbles view
+    const [searchFoundBubbles, setSearchFoundBubbles] = useState([]);
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+    // Filter state for list view
+    const [listFilter, setListFilter] = useState('all');
+    const [listSearchQuery, setListSearchQuery] = useState('');
+
     // Registered callbacks from hooks (e.g., setFilterTags, setListFilterTags, etc.)
     const [registered, setRegistered] = useState({});
 
@@ -31,6 +39,14 @@ export function BubblesStoreProvider({ children }) {
         setBubbles,
         tags,
         setTags,
+        searchFoundBubbles,
+        setSearchFoundBubbles,
+        debouncedSearchQuery,
+        setDebouncedSearchQuery,
+        listFilter,
+        setListFilter,
+        listSearchQuery,
+        setListSearchQuery,
         register,
         registered,
     };

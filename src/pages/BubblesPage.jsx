@@ -60,7 +60,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const engineRef = useRef(null);
     const renderRef = useRef(null);
     const wallsRef = useRef([]);
-    const { bubbles, setBubbles } = useBubblesStore();
+    const {
+        bubbles,
+        setBubbles,
+        setSearchFoundBubbles: storeSetSearchFoundBubbles,
+        setDebouncedSearchQuery: storeSetDebouncedSearchQuery,
+        setListFilter: storeSetListFilter,
+        setListSearchQuery: storeSetListSearchQuery
+    } = useBubblesStore();
 
     // Bubble CRUD + dialog state extracted into useBubbleCrud (Task 5/6 of #38).
     // Called early because it owns selectedBubble/editDialog, which liveEditRef,
@@ -135,9 +142,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     } = useTags({ user, bubbles, pageDeps: tagPageDepsRef });
 
     // Filter / category state extracted into hook.
-    // filterPageDepsRef bridges deps the bubbles-view count callback needs but that
-    // are defined *after* this call (bubbles + search state); read at call-time.
-    const filterPageDepsRef = useRef({});
+    // All deps now come from BubblesStore.
     const {
         filterTags,
         setFilterTags,
@@ -157,13 +162,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         selectAllFilters,
         isAllSelected,
         getBubbleCountByTagForBubblesView,
-    } = useBubbleFilters({ tags, pageDeps: filterPageDepsRef });
+    } = useBubbleFilters({ tags });
 
     // List-view filter / count state extracted into useListFilters (Task C of #67).
-    // listFilterPageDepsRef bridges deps the list count/filter callbacks need but
-    // that are defined *after* this call (bubbles + listFilter + list search); read
-    // at call-time.
-    const listFilterPageDepsRef = useRef({});
+    // All deps now come from BubblesStore.
     const {
         listFilterTags,
         setListFilterTags,
@@ -175,7 +177,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         selectAllListFilters,
         isAllListFiltersSelected,
         getBubbleCountByTagForListView,
-    } = useListFilters({ tags, pageDeps: listFilterPageDepsRef });
+    } = useListFilters({ tags });
 
     // JSON import/export handlers extracted into useBubbleImportExport (Task D of #68).
     // Now uses BubblesStore directly for bubbles/tags state.
@@ -502,21 +504,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         theme,
     });
 
-    // Keep the bridge to useBubbleFilters fresh: getBubbleCountByTagForBubblesView
-    // reads these at call-time (defined after the hook runs). bubbles now comes
-    // from BubblesStore.
-    filterPageDepsRef.current = {
-        searchFoundBubbles,
-        debouncedSearchQuery: debouncedBubblesSearchQuery
-    };
+    // Sync search/list state to BubblesStore so hooks can read them
+    useEffect(() => {
+        storeSetSearchFoundBubbles(searchFoundBubbles);
+    }, [searchFoundBubbles, storeSetSearchFoundBubbles]);
 
-    // Keep the bridge to useListFilters fresh: getBubbleCountByTagForListView /
-    // getFilteredBubblesForList read these at call-time (defined after the hook runs).
-    // bubbles now comes from BubblesStore.
-    listFilterPageDepsRef.current = {
-        listFilter,
-        listSearchQuery
-    };
+    useEffect(() => {
+        storeSetDebouncedSearchQuery(debouncedBubblesSearchQuery);
+    }, [debouncedBubblesSearchQuery, storeSetDebouncedSearchQuery]);
+
+    useEffect(() => {
+        storeSetListFilter(listFilter);
+    }, [listFilter, storeSetListFilter]);
+
+    useEffect(() => {
+        storeSetListSearchQuery(listSearchQuery);
+    }, [listSearchQuery, storeSetListSearchQuery]);
 
     // foundBubblesIds + the search-state sync effect + the visibility/highlight effect
     // now live in useBubbleWorld (Task E of #69); foundBubblesIds is returned above.
@@ -528,8 +531,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // handleToggleEditUseRichText + the open-bubble deep-link listener) live in
     // useBubbleCrud (Task 5/6 of #38).
 
-    // getFilteredBubblesForList now lives in useListFilters (Task C of #67); its
-    // late-bound deps (bubbles + listFilter) are fed via listFilterPageDepsRef below.
+    // getFilteredBubblesForList now lives in useListFilters (Task C of #67).
 
     // Tag dialog/CRUD + color helpers live in useTags (Task 2/6 of #38).
 
@@ -539,11 +541,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     // List-view filter callbacks (handleListTagFilterChange, handleListNoTagFilterChange,
     // clearAllListFilters, selectAllListFilters, isAllListFiltersSelected) and
-    // getBubbleCountByTagForListView now live in useListFilters (Task C of #67);
-    // their late-bound deps are fed via listFilterPageDepsRef below.
+    // getBubbleCountByTagForListView now live in useListFilters (Task C of #67).
 
-    // getBubbleCountByTagForBubblesView now lives in useBubbleFilters (Task B of #66);
-    // its late-bound deps are fed via filterPageDepsRef below.
+    // getBubbleCountByTagForBubblesView now lives in useBubbleFilters (Task B of #66).
 
     // Функции для работы с категориями (тегами)
     const getCategoryBubbleCounts = () => {

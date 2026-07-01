@@ -55,8 +55,8 @@ export function countBubblesByTagForBubblesView({ bubbles, tags, searchFoundBubb
     return bubblesForCount.filter((bubble) => bubble.tagId === tagId).length;
 }
 
-export function useBubbleFilters({ tags, pageDeps }) {
-    const { register } = useBubblesStore();
+export function useBubbleFilters({ tags }) {
+    const { register, searchFoundBubbles, debouncedSearchQuery } = useBubblesStore();
     const [filterTags, setFilterTags] = useState(() =>
         lsGet(LS.FILTER_TAGS, [])
     ); // Массив ID выбранных тегов для фильтрации
@@ -295,20 +295,18 @@ export function useBubbleFilters({ tags, pageDeps }) {
         return isAllTagsSelected(tags, filterTags, showNoTag);
     }, [tags, filterTags, showNoTag]);
 
-    // Count bubbles by tag for the bubbles view. `bubbles` comes from the store;
-    // `searchFoundBubbles` and `debouncedSearchQuery` are defined *after* this hook
-    // runs in BubblesPage, so they are read at call-time from the pageDeps bridge ref.
-    // Consumers of this callback are not memoized, so a stable identity here is safe.
+    // Count bubbles by tag for the bubbles view. All deps come from the store or
+    // local state. Consumers of this callback are not memoized, so a stable identity
+    // here is safe.
     const getBubbleCountByTagForBubblesView = useCallback((tagId) => {
         const { bubbles } = useBubblesStore();
-        const deps = (pageDeps && pageDeps.current) || {};
         return countBubblesByTagForBubblesView({
             bubbles,
             tags,
-            searchFoundBubbles: deps.searchFoundBubbles || [],
-            debouncedSearchQuery: deps.debouncedSearchQuery
+            searchFoundBubbles,
+            debouncedSearchQuery
         }, tagId);
-    }, [tags, pageDeps]);
+    }, [tags, searchFoundBubbles, debouncedSearchQuery]);
 
     return {
         filterTags,
