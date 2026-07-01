@@ -90,13 +90,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setCreateRecurrence,
         editRecurrence,
         setEditRecurrence,
-        notifDialogOpen,
-        setNotifDialogOpen,
-        notifValue,
-        setNotifValue,
-        bubbleSize,
-        setBubbleSize,
-        editBubbleSize,
         setEditBubbleSize,
     } = useBubblesStore();
 
@@ -245,7 +238,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // Константа скорости падения пузырей (максимальная скорость)
     const dropSpeed = 1.0;
 
-    // bubbleSize/editBubbleSize now live in useBubbleCrud (Task 5/6 of #38).
+    // bubbleSize/editBubbleSize now live in the BubblesStore (Stage E of 010d;
+    // originally moved out of BubblesPage into useBubbleCrud in Task 5/6 of #38).
 
     // Function to get button styles based on theme
     const getButtonStyles = () => {
@@ -913,23 +907,12 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 selectedBubble={selectedBubble}
                 setSelectedBubble={setSelectedBubble}
                 setEditDialog={setEditDialog}
-                editDueDate={editDueDate}
-                setEditDueDate={setEditDueDate}
-                notifDialogOpen={notifDialogOpen}
-                setNotifDialogOpen={setNotifDialogOpen}
-                notifValue={notifValue}
-                setNotifValue={setNotifValue}
-                editNotifications={editNotifications}
-                setEditNotifications={setEditNotifications}
                 handleDeleteNotification={handleDeleteNotification}
-                editBubbleSize={editBubbleSize}
-                setEditBubbleSize={setEditBubbleSize}
                 handleDeleteBubble={handleDeleteBubble}
                 handleMarkAsDone={handleMarkAsDone}
                 handleSaveBubble={(payload) => handleSaveBubble({ ...payload, editDueDate, editNotifications, editRecurrence, manuallyStoppedPulsingRef, setEditDueDate })}
                 onStopPulsing={handleStopPulsing}
                 showStopPulsing={editDialogShowStopPulsing}
-                editRecurrence={editRecurrence}
                 handleSetEditRecurrence={handleSetEditRecurrence}
                 useRichTextEdit={useRichTextEdit}
                 handleToggleEditUseRichText={handleToggleEditUseRichText}
@@ -970,15 +953,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 setFilterDrawerOpen={setFilterDrawerOpen}
                 createDialog={createDialog}
                 setCreateDialog={setCreateDialog}
-                dueDate={dueDate}
-                setDueDate={setDueDate}
-                createNotifications={createNotifications}
-                setCreateNotifications={setCreateNotifications}
-                createRecurrence={createRecurrence}
                 handleSetCreateRecurrence={handleSetCreateRecurrence}
                 handleDeleteCreateNotification={handleDeleteCreateNotification}
-                bubbleSize={bubbleSize}
-                setBubbleSize={setBubbleSize}
                 createNewBubble={(payload) => createNewBubble({ ...payload, canvasSize, dueDate, createNotifications, createRecurrence, setDueDate })}
                 useRichTextCreate={useRichTextCreate}
                 setUseRichTextCreate={setUseRichTextCreate}
