@@ -12,6 +12,7 @@ import LogoutConfirmDialog from './LogoutConfirmDialog';
 import TaskListDrawer from './ListViewDrawer';
 import { isOverdue } from '../utils/notifications';
 import { saveTagsToFirestore } from '../services/firestoreService';
+import { useBubblesStore } from '../state/BubblesStore';
 
 /**
  * Presentational container for all of BubblesPage's dialogs and drawers.
@@ -28,8 +29,6 @@ const BubblesDialogs = ({
     isSmallScreen,
     themeMode,
     getDialogPaperStyles,
-    tags,
-    setTags,
     bubbles,
     setBubbles,
     // Edit bubble dialog
@@ -167,6 +166,7 @@ const BubblesDialogs = ({
     getBubbleCountByTagForListView,
     isAllListFiltersSelected,
 }) => {
+    const { tags, setTags } = useBubblesStore();
     return (
         <>
             {/* Диалог редактирования */}

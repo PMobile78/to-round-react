@@ -28,7 +28,7 @@ import { useBubblesStore } from '../state/BubblesStore';
  * passed as explicit handler arguments by BubblesPage.
  */
 export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile }) {
-    const { registered } = useBubblesStore();
+    const { registered, tags } = useBubblesStore();
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [editDialog, setEditDialog] = useState(false);
     const [selectedBubble, setSelectedBubble] = useState(null);
@@ -40,7 +40,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Bubble creation function
     const createBubble = (x, y, radius, tagId = null) => {
-        const { tags, getBubbleFillStyle } = registered;
+        const { getBubbleFillStyle } = registered;
         let strokeColor = '#B0B0B0'; // light gray color by default
         let tagColor = null;
 
@@ -78,7 +78,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Function for opening create bubble dialog
     const openCreateDialog = ({ setDueDate, setCreateNotifications }) => {
-        const { selectedCategory, tags, setSelectedTagId } = registered;
+        const { selectedCategory, setSelectedTagId } = registered;
         const categoryReserved = new Set(['all', 'no-tags', 'planned-tasks']);
         const tagFromPanel =
             selectedCategory &&
@@ -132,7 +132,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Save bubble changes
     const handleSaveBubble = ({ title, description, editDueDate, editNotifications, editRecurrence, manuallyStoppedPulsingRef, setEditDueDate }) => {
-        const { getBubbleFillStyle, selectedTagId, tags } = registered;
+        const { getBubbleFillStyle, selectedTagId } = registered;
         if (!title.trim()) return;
         if (selectedBubble && engineRef.current) {
             // Сначала обновляем физическое тело
@@ -240,7 +240,6 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Mark bubble as done
     const handleMarkAsDone = async () => {
-        const { tags } = registered;
         if (selectedBubble && engineRef.current) {
             try {
                 // Анимация лопания с брызгами и звуком

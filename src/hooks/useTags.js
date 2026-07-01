@@ -34,8 +34,7 @@ import {
  * `tags` produced here.
  */
 export function useTags({ user, bubbles }) {
-    const { setBubbles, registered } = useBubblesStore();
-    const [tags, setTags] = useState([]);
+    const { setBubbles, registered, tags, setTags } = useBubblesStore();
     const tagsRef = useRef(tags);
     useEffect(() => { tagsRef.current = tags; }, [tags]);
     const [selectedTagId, setSelectedTagId] = useState('');

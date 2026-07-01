@@ -288,8 +288,8 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // them. Re-registers only when a value changes (each is referentially stable
     // between unrelated renders), so there is no render loop.
     useEffect(() => {
-        register({ tags, selectedTagId, setSelectedTagId, selectedCategory });
-    }, [tags, selectedTagId, setSelectedTagId, selectedCategory, register]);
+        register({ selectedTagId, setSelectedTagId, selectedCategory });
+    }, [selectedTagId, setSelectedTagId, selectedCategory, register]);
 
     // Function to get canvas dimensions depending on screen size
     // Размер канваса вычисляется через утилиту, учитывая панель категорий
@@ -922,8 +922,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 isSmallScreen={isSmallScreen}
                 themeMode={themeMode}
                 getDialogPaperStyles={getDialogPaperStyles}
-                tags={tags}
-                setTags={setTags}
                 bubbles={bubbles}
                 setBubbles={setBubbles}
                 editDialog={editDialog}
