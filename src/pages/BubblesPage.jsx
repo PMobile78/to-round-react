@@ -503,17 +503,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     });
 
     // Keep the bridge to useBubbleFilters fresh: getBubbleCountByTagForBubblesView
-    // reads these at call-time (defined after the hook runs).
+    // reads these at call-time (defined after the hook runs). bubbles now comes
+    // from BubblesStore.
     filterPageDepsRef.current = {
-        bubbles,
         searchFoundBubbles,
         debouncedSearchQuery: debouncedBubblesSearchQuery
     };
 
     // Keep the bridge to useListFilters fresh: getBubbleCountByTagForListView /
     // getFilteredBubblesForList read these at call-time (defined after the hook runs).
+    // bubbles now comes from BubblesStore.
     listFilterPageDepsRef.current = {
-        bubbles,
         listFilter,
         listSearchQuery
     };
