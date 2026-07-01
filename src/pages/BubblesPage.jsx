@@ -284,6 +284,15 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         register({ getBubbleFillStyle: (...args) => getBubbleFillStyleRef.current(...args) });
     }, [register]);
 
+    // Register shared domain values that useBubbleCrud reads at call-time. It runs
+    // before useTags/useBubbleFilters (it owns selectedBubble/editDialog those
+    // hooks' consumers need), so these can't be plain props — the store bridges
+    // them. Re-registers only when a value changes (each is referentially stable
+    // between unrelated renders), so there is no render loop.
+    useEffect(() => {
+        register({ tags, selectedTagId, setSelectedTagId, selectedCategory });
+    }, [tags, selectedTagId, setSelectedTagId, selectedCategory, register]);
+
     // Function to get canvas dimensions depending on screen size
     // Размер канваса вычисляется через утилиту, учитывая панель категорий
     const getCanvasSize = () => computeCanvasSize({ isMobile, categoriesPanelEnabled });
