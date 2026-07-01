@@ -58,6 +58,29 @@ export function BubblesStoreProvider({ children }) {
     const [bubbleSize, setBubbleSize] = useState(45);              // create-form bubble size
     const [editBubbleSize, setEditBubbleSize] = useState(45);      // edit-form bubble size
 
+    // Dialog open-flags + settings values (migrated from BubblesPage in Stage F of
+    // 010d). Page-level UI state the dialogs now read from the store instead of via
+    // forwarded props. Persisted values keep their original lsGet initializers.
+    const [menuDrawerOpen, setMenuDrawerOpen] = useState(false);
+    const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+    const [fontSettingsDialog, setFontSettingsDialog] = useState(false);
+    const [appearanceDialogOpen, setAppearanceDialogOpen] = useState(false);
+    const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+    const [logoutDialog, setLogoutDialog] = useState(false);
+    const [listViewDialog, setListViewDialog] = useState(false);
+    const [aboutOpen, setAboutOpen] = useState(false);
+    const [fontSize, setFontSize] = useState(() => {
+        const savedFontSize = lsGetString(LS.FONT_SIZE);
+        return savedFontSize ? parseInt(savedFontSize) : 8;
+    });
+    const [bubbleBackgroundEnabled, setBubbleBackgroundEnabled] = useState(() => {
+        const saved = lsGetString(LS.BACKGROUND_ENABLED);
+        return saved === null ? true : saved === 'true';
+    });
+    const [mainView, setMainView] = useState(() => {
+        return lsGetString(LS.MAIN_VIEW) === 'tasks' ? 'tasks' : 'bubbles';
+    });
+
     // Registered callbacks from hooks (e.g., setListFilterTags, etc.)
     const [registered, setRegistered] = useState({});
 
@@ -140,6 +163,28 @@ export function BubblesStoreProvider({ children }) {
         setBubbleSize,
         editBubbleSize,
         setEditBubbleSize,
+        menuDrawerOpen,
+        setMenuDrawerOpen,
+        filterDrawerOpen,
+        setFilterDrawerOpen,
+        fontSettingsDialog,
+        setFontSettingsDialog,
+        appearanceDialogOpen,
+        setAppearanceDialogOpen,
+        changePasswordOpen,
+        setChangePasswordOpen,
+        logoutDialog,
+        setLogoutDialog,
+        listViewDialog,
+        setListViewDialog,
+        aboutOpen,
+        setAboutOpen,
+        fontSize,
+        setFontSize,
+        bubbleBackgroundEnabled,
+        setBubbleBackgroundEnabled,
+        mainView,
+        setMainView,
         register,
         registered,
         isAllSelected,

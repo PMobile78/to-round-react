@@ -91,6 +91,18 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         editRecurrence,
         setEditRecurrence,
         setEditBubbleSize,
+        // Dialog open-flags + settings values — migrated into the store in Stage F
+        // of 010d; consumed here by header buttons and the page-local handlers.
+        setMenuDrawerOpen,
+        setFilterDrawerOpen,
+        setLogoutDialog,
+        setListViewDialog,
+        bubbleBackgroundEnabled,
+        setBubbleBackgroundEnabled,
+        mainView,
+        setMainView,
+        fontSize,
+        setFontSize,
     } = useBubblesStore();
 
     // Bubble CRUD + dialog state extracted into useBubbleCrud (Task 5/6 of #38).
@@ -195,31 +207,16 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         handleImportJson,
     } = useBubbleImportExport();
 
-    const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
-    const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false); // Состояние панели категорий
     const [categoriesDialog, setCategoriesDialog] = useState(false); // Диалог управления категориями
-    const [fontSettingsDialog, setFontSettingsDialog] = useState(false); // Диалог настроек шрифта
-    const [appearanceDialogOpen, setAppearanceDialogOpen] = useState(false); // Диалог оформления
-    const [changePasswordOpen, setChangePasswordOpen] = useState(false); // Диалог смены пароля
-    const [fontSize, setFontSize] = useState(() => {
-        const savedFontSize = lsGetString(LS.FONT_SIZE);
-        return savedFontSize ? parseInt(savedFontSize) : 8;
-    }); // Размер шрифта для надписей в пузырях
-    const [logoutDialog, setLogoutDialog] = useState(false); // Диалог подтверждения выхода
-    const [listViewDialog, setListViewDialog] = useState(false); // Диалог списка задач
+    // Dialog open-flags (filter/menu/font/appearance/change-password/logout/list-view)
+    // + fontSize now live in BubblesStore (Stage F of 010d).
 
     const [showInstructions, setShowInstructions] = useState(() => {
         const saved = lsGetString(LS.SHOW_INSTRUCTIONS);
         return saved === null ? true : saved === 'true';
     }); // Показывать ли подсказки инструкций
-    const [bubbleBackgroundEnabled, setBubbleBackgroundEnabled] = useState(() => {
-        const saved = lsGetString(LS.BACKGROUND_ENABLED);
-        return saved === null ? true : saved === 'true';
-    }); // Включен ли фон пузырей
-    const [mainView, setMainView] = useState(() => {
-        return lsGetString(LS.MAIN_VIEW) === 'tasks' ? 'tasks' : 'bubbles';
-    }); // Режим главного окна: 'bubbles' (canvas) | 'tasks' (список задач)
+    // bubbleBackgroundEnabled + mainView now live in BubblesStore (Stage F of 010d).
 
     // Состояние поиска для Bubbles View
     const [bubblesSearchQuery, setBubblesSearchQuery] = useState('');
@@ -642,7 +639,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     // Notification dialog/create state + language-reset effect now live in
     // useBubbleNotifications (Task 4/6 of #38).
-    const [aboutOpen, setAboutOpen] = useState(false);
+    // aboutOpen now lives in BubblesStore (Stage F of 010d).
 
     // Stable callbacks for recurrence setters
     const handleSetCreateRecurrence = useCallback((value) => {
@@ -929,28 +926,17 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 isColorAvailable={isColorAvailable}
                 canCreateMoreTags={canCreateMoreTags}
                 handleSaveTag={handleSaveTag}
-                menuDrawerOpen={menuDrawerOpen}
-                setMenuDrawerOpen={setMenuDrawerOpen}
                 themeToggleProps={themeToggleProps}
                 toggleTheme={toggleTheme}
-                bubbleBackgroundEnabled={bubbleBackgroundEnabled}
                 handleToggleBubbleBackground={handleToggleBubbleBackground}
-                mainView={mainView}
                 handleToggleMainView={handleToggleMainView}
                 categoriesPanelEnabled={categoriesPanelEnabled}
                 handleToggleCategoriesPanel={handleToggleCategoriesPanel}
                 setCategoriesDialog={setCategoriesDialog}
-                setFontSettingsDialog={setFontSettingsDialog}
-                setAppearanceDialogOpen={setAppearanceDialogOpen}
-                setChangePasswordOpen={setChangePasswordOpen}
                 onOpenMindMap={onOpenMindMap}
-                setAboutOpen={setAboutOpen}
                 handleLogout={handleLogout}
                 handleExportJson={handleExportJson}
                 handleImportJson={handleImportJson}
-                aboutOpen={aboutOpen}
-                filterDrawerOpen={filterDrawerOpen}
-                setFilterDrawerOpen={setFilterDrawerOpen}
                 createDialog={createDialog}
                 setCreateDialog={setCreateDialog}
                 handleSetCreateRecurrence={handleSetCreateRecurrence}
@@ -962,21 +948,13 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 deletingTags={deletingTags}
                 handleUndoDeleteTag={handleUndoDeleteTag}
                 getBubbleCountByTag={getBubbleCountByTag}
-                fontSettingsDialog={fontSettingsDialog}
-                fontSize={fontSize}
                 handleFontSizeChange={handleFontSizeChange}
-                appearanceDialogOpen={appearanceDialogOpen}
                 themeModeState={themeModeState}
                 setThemeMode={setThemeMode}
                 design={design}
                 setDesign={setDesign}
                 designs={designs}
-                changePasswordOpen={changePasswordOpen}
-                logoutDialog={logoutDialog}
-                setLogoutDialog={setLogoutDialog}
                 confirmLogout={confirmLogout}
-                listViewDialog={listViewDialog}
-                setListViewDialog={setListViewDialog}
             />
 
             {/* Панель категорий - только для десктопа */}

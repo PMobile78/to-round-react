@@ -62,30 +62,17 @@ const BubblesDialogs = ({
     canCreateMoreTags,
     handleSaveTag,
     // Main menu drawer
-    menuDrawerOpen,
-    setMenuDrawerOpen,
     themeToggleProps,
     toggleTheme,
-    bubbleBackgroundEnabled,
     handleToggleBubbleBackground,
-    mainView,
     handleToggleMainView,
     categoriesPanelEnabled,
     handleToggleCategoriesPanel,
     setCategoriesDialog,
-    setFontSettingsDialog,
-    setAppearanceDialogOpen,
-    setChangePasswordOpen,
     onOpenMindMap,
-    setAboutOpen,
     handleLogout,
     handleExportJson,
     handleImportJson,
-    // About dialog
-    aboutOpen,
-    // Filter drawer (bubbles view)
-    filterDrawerOpen,
-    setFilterDrawerOpen,
     // Create bubble dialog
     createDialog,
     setCreateDialog,
@@ -100,25 +87,15 @@ const BubblesDialogs = ({
     handleUndoDeleteTag,
     getBubbleCountByTag,
     // Font settings dialog
-    fontSettingsDialog,
-    fontSize,
     handleFontSizeChange,
     // Appearance dialog
-    appearanceDialogOpen,
     themeModeState,
     setThemeMode,
     design,
     setDesign,
     designs,
-    // Change password dialog
-    changePasswordOpen,
     // Logout confirm dialog
-    logoutDialog,
-    setLogoutDialog,
     confirmLogout,
-    // Task list drawer
-    listViewDialog,
-    setListViewDialog,
 }) => {
     const {
         tags,
@@ -165,6 +142,27 @@ const BubblesDialogs = ({
         setBubbleSize,
         editBubbleSize,
         setEditBubbleSize,
+        // Dialog open-flags + settings values — read from the store (Stage F of
+        // 010d) instead of via forwarded props.
+        menuDrawerOpen,
+        setMenuDrawerOpen,
+        filterDrawerOpen,
+        setFilterDrawerOpen,
+        fontSettingsDialog,
+        setFontSettingsDialog,
+        appearanceDialogOpen,
+        setAppearanceDialogOpen,
+        changePasswordOpen,
+        setChangePasswordOpen,
+        logoutDialog,
+        setLogoutDialog,
+        listViewDialog,
+        setListViewDialog,
+        aboutOpen,
+        setAboutOpen,
+        fontSize,
+        bubbleBackgroundEnabled,
+        mainView,
     } = useBubblesStore();
     return (
         <>
