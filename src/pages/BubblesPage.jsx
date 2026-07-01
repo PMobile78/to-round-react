@@ -50,7 +50,7 @@ import {
 import { useBubblesStore } from '../state/BubblesStore';
 
 
-const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMindMap, themeModeState, setThemeMode, design, setDesign, designs }) => {
+const BubblesPage = ({ user, themeMode }) => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md')); // 768px and below
@@ -926,14 +926,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 isColorAvailable={isColorAvailable}
                 canCreateMoreTags={canCreateMoreTags}
                 handleSaveTag={handleSaveTag}
-                themeToggleProps={themeToggleProps}
-                toggleTheme={toggleTheme}
                 handleToggleBubbleBackground={handleToggleBubbleBackground}
                 handleToggleMainView={handleToggleMainView}
                 categoriesPanelEnabled={categoriesPanelEnabled}
                 handleToggleCategoriesPanel={handleToggleCategoriesPanel}
                 setCategoriesDialog={setCategoriesDialog}
-                onOpenMindMap={onOpenMindMap}
                 handleLogout={handleLogout}
                 handleExportJson={handleExportJson}
                 handleImportJson={handleImportJson}
@@ -949,11 +946,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 handleUndoDeleteTag={handleUndoDeleteTag}
                 getBubbleCountByTag={getBubbleCountByTag}
                 handleFontSizeChange={handleFontSizeChange}
-                themeModeState={themeModeState}
-                setThemeMode={setThemeMode}
-                design={design}
-                setDesign={setDesign}
-                designs={designs}
                 confirmLogout={confirmLogout}
             />
 

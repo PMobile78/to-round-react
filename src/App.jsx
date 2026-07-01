@@ -77,18 +77,19 @@ function App() {
                         />
                     </React.Suspense>
                 ) : (
-                    <BubblesStoreProvider>
+                    <BubblesStoreProvider
+                        themeModeState={themeMode}
+                        setThemeMode={setThemeMode}
+                        design={design}
+                        setDesign={setDesign}
+                        designs={designs}
+                        toggleTheme={toggleTheme}
+                        themeToggleProps={{ themeMode, actualTheme }}
+                        onOpenMindMap={() => navigate('mindmap')}
+                    >
                         <BubblesPage
                             user={user}
                             themeMode={actualTheme}
-                            toggleTheme={toggleTheme}
-                            themeToggleProps={{ themeMode, actualTheme }}
-                            onOpenMindMap={() => navigate('mindmap')}
-                            themeModeState={themeMode}
-                            setThemeMode={setThemeMode}
-                            design={design}
-                            setDesign={setDesign}
-                            designs={designs}
                         />
                     </BubblesStoreProvider>
                 )

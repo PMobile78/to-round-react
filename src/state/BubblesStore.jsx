@@ -19,7 +19,19 @@ const BubblesStoreContext = createContext(null);
  * Provides bubbles/setBubbles and tags/setTags state, plus a register() method
  * for hooks to publish setters/callbacks for cross-hook consumption.
  */
-export function BubblesStoreProvider({ children }) {
+export function BubblesStoreProvider({
+    children,
+    // Theme/design controls owned by useThemeMode in App, threaded through the
+    // provider so the dialogs can read them from the store (Stage F2 of 010d).
+    themeModeState,
+    setThemeMode,
+    design,
+    setDesign,
+    designs,
+    toggleTheme,
+    themeToggleProps,
+    onOpenMindMap,
+}) {
     const [bubbles, setBubbles] = useState([]);
     const [tags, setTags] = useState([]);
     // Currently selected tag id for the create/edit bubble dialog
@@ -185,6 +197,15 @@ export function BubblesStoreProvider({ children }) {
         setBubbleBackgroundEnabled,
         mainView,
         setMainView,
+        // Theme/design controls (Stage F2 of 010d) — passed into the provider by App.
+        themeModeState,
+        setThemeMode,
+        design,
+        setDesign,
+        designs,
+        toggleTheme,
+        themeToggleProps,
+        onOpenMindMap,
         register,
         registered,
         isAllSelected,

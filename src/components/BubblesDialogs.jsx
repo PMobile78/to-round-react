@@ -62,14 +62,11 @@ const BubblesDialogs = ({
     canCreateMoreTags,
     handleSaveTag,
     // Main menu drawer
-    themeToggleProps,
-    toggleTheme,
     handleToggleBubbleBackground,
     handleToggleMainView,
     categoriesPanelEnabled,
     handleToggleCategoriesPanel,
     setCategoriesDialog,
-    onOpenMindMap,
     handleLogout,
     handleExportJson,
     handleImportJson,
@@ -88,12 +85,6 @@ const BubblesDialogs = ({
     getBubbleCountByTag,
     // Font settings dialog
     handleFontSizeChange,
-    // Appearance dialog
-    themeModeState,
-    setThemeMode,
-    design,
-    setDesign,
-    designs,
     // Logout confirm dialog
     confirmLogout,
 }) => {
@@ -163,6 +154,15 @@ const BubblesDialogs = ({
         fontSize,
         bubbleBackgroundEnabled,
         mainView,
+        // Theme/design controls — read from the store (Stage F2 of 010d).
+        themeModeState,
+        setThemeMode,
+        design,
+        setDesign,
+        designs,
+        toggleTheme,
+        themeToggleProps,
+        onOpenMindMap,
     } = useBubblesStore();
     return (
         <>
