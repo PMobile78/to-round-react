@@ -94,8 +94,8 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
     };
 
     // Function for creating a new bubble
-    const createNewBubble = ({ title, description }) => {
-        const { canvasSize, selectedTagId, dueDate, createNotifications, createRecurrence, setSelectedTagId, setDueDate } = deps.current;
+    const createNewBubble = ({ title, description, canvasSize, dueDate, createNotifications, createRecurrence, setDueDate }) => {
+        const { selectedTagId, setSelectedTagId } = registered;
         if (!engineRef.current || !renderRef.current || !title.trim()) {
             return;
         }

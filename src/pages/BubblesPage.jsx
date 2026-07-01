@@ -1029,7 +1029,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 handleDeleteCreateNotification={handleDeleteCreateNotification}
                 bubbleSize={bubbleSize}
                 setBubbleSize={setBubbleSize}
-                createNewBubble={createNewBubble}
+                createNewBubble={(payload) => createNewBubble({ ...payload, canvasSize, dueDate, createNotifications, createRecurrence, setDueDate })}
                 useRichTextCreate={useRichTextCreate}
                 setUseRichTextCreate={setUseRichTextCreate}
                 categoriesDialog={categoriesDialog}
