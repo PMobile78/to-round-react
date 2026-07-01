@@ -178,13 +178,11 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     } = useListFilters({ tags, pageDeps: listFilterPageDepsRef });
 
     // JSON import/export handlers extracted into useBubbleImportExport (Task D of #68).
-    // importExportPageDepsRef bridges the page-owned `bubbles` + `tags` the export
-    // builder reads at call-time (refreshed below), keeping a stable handler identity.
-    const importExportPageDepsRef = useRef({});
+    // Now uses BubblesStore directly for bubbles/tags state.
     const {
         handleExportJson,
         handleImportJson,
-    } = useBubbleImportExport({ pageDeps: importExportPageDepsRef, setBubbles, setTags });
+    } = useBubbleImportExport();
 
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
@@ -518,13 +516,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         bubbles,
         listFilter,
         listSearchQuery
-    };
-
-    // Keep the bridge to useBubbleImportExport fresh: handleExportJson reads
-    // bubbles + tags at call-time (export builder).
-    importExportPageDepsRef.current = {
-        bubbles,
-        tags
     };
 
     // foundBubblesIds + the search-state sync effect + the visibility/highlight effect
