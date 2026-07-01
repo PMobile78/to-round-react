@@ -968,7 +968,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 setEditBubbleSize={setEditBubbleSize}
                 handleDeleteBubble={handleDeleteBubble}
                 handleMarkAsDone={handleMarkAsDone}
-                handleSaveBubble={handleSaveBubble}
+                handleSaveBubble={(payload) => handleSaveBubble({ ...payload, editDueDate, editNotifications, editRecurrence, manuallyStoppedPulsingRef, setEditDueDate })}
                 onStopPulsing={handleStopPulsing}
                 showStopPulsing={editDialogShowStopPulsing}
                 editRecurrence={editRecurrence}

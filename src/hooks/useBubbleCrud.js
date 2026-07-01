@@ -130,8 +130,8 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
     };
 
     // Save bubble changes
-    const handleSaveBubble = ({ title, description }) => {
-        const { getBubbleFillStyle, selectedTagId, tags, editDueDate, manuallyStoppedPulsingRef, editNotifications, editRecurrence, setEditDueDate } = deps.current;
+    const handleSaveBubble = ({ title, description, editDueDate, editNotifications, editRecurrence, manuallyStoppedPulsingRef, setEditDueDate }) => {
+        const { getBubbleFillStyle, selectedTagId, tags } = registered;
         if (!title.trim()) return;
         if (selectedBubble && engineRef.current) {
             // Сначала обновляем физическое тело
