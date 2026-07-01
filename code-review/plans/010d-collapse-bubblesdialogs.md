@@ -7,7 +7,7 @@
 ## Status
 - **Priority**: P1 · **Effort**: M · **Risk**: MED · **Depends on**: 010a, 010b, 010c · **Category**: tech-debt
 - **Planned at**: commit `000ca27`, 2026-06-30
-- **Progress (2026-07-01)**: IN PROGRESS on local `main` — call-site prop count **126 → 82** (target `<40`), `BubblesPage.jsx` 1027 → 1006. Staged store migrations A–E done; F/G/H remain.
+- **Progress (2026-07-01)**: IN PROGRESS on local `main` — call-site prop count **126 → 55** (target `<40`), `BubblesPage.jsx` 1027 → 976. Staged store migrations A–F done; G/H remain (ahead of the original per-stage estimate).
 
 ## Progress — staged execution (A–H)
 
@@ -22,20 +22,33 @@ not a new `BubblesUiStore` (that split stays the optional post-010d follow-up in
 | C | bubble-view filters + derived | `13625d5` | 126→118 |
 | D | list-view filters/sort | `928a0b6` | 118→100 |
 | E | create/edit form + notification state | `58c9f5b`, `7be358c` | 100→82 |
-| F | dialog open-flags + settings/theme | _todo_ | ~82→~60 |
-| G | shared context (t/isMobile/themeMode/bubbles); dialogs call hooks directly | _todo_ | ~60→~53 |
-| H | tag-editor state | _todo_ | ~53→~39 |
+| F1 | dialog open-flags + settings values | `eb65d79` | 82→63 |
+| F2 | theme/design controls (App→provider) | `d7499fb` | 63→55 |
+| G | shared context (t/isMobile/themeMode/bubbles); dialogs call hooks directly | _todo_ | ~55→~48 |
+| H | tag-editor state | _todo_ | ~48→~34 |
 
 **Stage-E note (the risk that wasn't):** the create/edit form state lived *inside*
 `useBubbleNotifications` next to the rAF pulse loop, but the loop reads `bubble.dueDate`
 (a bubble property) + refs, never the form state — so extracting it (its `useState` + return
 fields only) left the pulse loop and its refs untouched.
 
-**Remaining 82-prop map:** context (5: t/isMobile/isSmallScreen/themeMode/getDialogPaperStyles → G) ·
-data (3: bubbles/setBubbles/getBubbleCountByTag → cheap wins) · menu/settings/theme (~36 → F) ·
-tag-editor (~17 → H) · bubble create/edit flags+handlers (~21: flags→store, handlers stay
-page-local per STOP condition). `<40` is reachable but tight — the last ~15–20 page-local
-handlers may need the `register()` bridge, else the honest floor is ~42–45.
+**Stage-F note (theme came from App, not the page):** the 8 theme/design controls
+(themeModeState/setThemeMode/design/setDesign/designs/toggleTheme/themeToggleProps/onOpenMindMap)
+were pure pass-through props threaded App → BubblesPage → BubblesDialogs. F2 fed them straight
+into `<BubblesStoreProvider>` (App still owns the single `useThemeMode` instance; the store just
+re-exposes them via context) and BubblesPage's signature shrank to `{ user, themeMode }`.
+`themeMode` (ambient, used by the page's own render) stays a prop → G. Open-flag/settings
+migration (F1) followed the E pattern exactly (live store fields + lsGet initializers; no
+derived/register churn, so no TDZ risk).
+
+**Remaining 55-prop map (after F):** context (5: t/isMobile/isSmallScreen/themeMode/getDialogPaperStyles → G) ·
+data (3: bubbles/setBubbles/getBubbleCountByTag → cheap wins / G) · tag-editor (~17 → H) ·
+bubble create/edit flags+handlers (~21: flags→store, handlers stay page-local per STOP
+condition) · page-local menu/settings handlers kept as props in F (~9: handleToggleBubbleBackground/
+handleToggleMainView/handleToggleCategoriesPanel/handleLogout/confirmLogout/handleFontSizeChange/
+handleExportJson/handleImportJson/setCategoriesDialog — register() or stay). `<40` is reachable
+but tight — the last ~15–20 page-local handlers may need the `register()` bridge, else the honest
+floor is ~42–45.
 
 ## Why this matters
 `BubblesDialogs` receives ~123 individual props and forwards them to ~10 child dialogs — an identity/pass-through abstraction. With shared state in the store (010a-c), the dialogs can read `bubbles`/`tags`/setters/`getBubbleFillStyle` directly, shrinking the forwarder dramatically.
