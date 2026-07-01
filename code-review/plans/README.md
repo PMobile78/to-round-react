@@ -19,7 +19,7 @@ The per-plan TODO statuses below are superseded by this outcome.
 ### 010 split — sub-plan status
 - `010a` **DONE** (merged to `main`): `BubblesStore` foundation + 3 of 5 ref-bridges removed.
 - `010b` **DONE** (merged to `main`): `useTags` reads `setBubbles` + `setFilterTags`/`setListFilterTags`/`getBubbleFillStyle` from the store via `register()`; `tagPageDepsRef` removed.
-- `010c` **TODO**: migrate `useBubbleCrud`, remove `crudDepsRef`.
+- `010c` **DONE** (merged to `main`): `useBubbleCrud` reads shared domain (tags/selectedTagId/selectedCategory/getBubbleFillStyle) from the store and takes page-local UI values (canvasSize + create/edit notification state) as explicit handler args. `crudDepsRef` removed — **all 5 ref bridges gone** (`grep -rn "pageDeps|DepsRef|crudDeps" src` empty).
 - `010d` **TODO**: collapse `BubblesDialogs` forwarder.
 
 ## Execution order & status
@@ -35,7 +35,7 @@ The per-plan TODO statuses below are superseded by this outcome.
 | [007](007-decompose-richtexteditor.md) | Decompose RichTextEditor.jsx | P3 | M | MED | — | A | TODO |
 | [008](008-remove-legacy-bubbles-array.md) | Remove legacy bubbles[] dual-schema | P2 | M | MED | — (Step 0 gate) | C | TODO |
 | [009](009-robustness-import-atomicity-and-hex-guard.md) | Atomic JSON import + safe shadow-color parse | P1 | S | LOW | — | B | TODO |
-| [010](010-bubbles-store-context.md) | Bubbles/tags store (remove 5 ref-bridges + 130-prop forwarder) | P1 | L | HIGH | 001, 002, 003, 009 | B | IN PROGRESS (010a, 010b done) |
+| [010](010-bubbles-store-context.md) | Bubbles/tags store (remove 5 ref-bridges + 130-prop forwarder) | P1 | L | HIGH | 001, 002, 003, 009 | B | IN PROGRESS (010a–010c done; 010d left) |
 
 Status values: `TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rationale)`.
 
