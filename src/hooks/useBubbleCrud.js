@@ -28,15 +28,22 @@ import { useBubblesStore } from '../state/BubblesStore';
  * passed as explicit handler arguments by BubblesPage.
  */
 export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile }) {
-    const { registered, tags, selectedTagId, setSelectedTagId } = useBubblesStore();
+    const {
+        registered,
+        tags,
+        selectedTagId,
+        setSelectedTagId,
+        bubbleSize,
+        setBubbleSize,
+        editBubbleSize,
+        setEditBubbleSize,
+    } = useBubblesStore();
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [editDialog, setEditDialog] = useState(false);
     const [selectedBubble, setSelectedBubble] = useState(null);
     // Режим редактора для создания и редактирования
     const [useRichTextCreate, setUseRichTextCreate] = useState(false);
     const [useRichTextEdit, setUseRichTextEdit] = useState(false);
-    const [bubbleSize, setBubbleSize] = useState(45); // Размер по умолчанию
-    const [editBubbleSize, setEditBubbleSize] = useState(45); // Размер при редактировании
 
     // Bubble creation function
     const createBubble = (x, y, radius, tagId = null) => {
@@ -404,10 +411,6 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         setUseRichTextCreate,
         useRichTextEdit,
         setUseRichTextEdit,
-        bubbleSize,
-        setBubbleSize,
-        editBubbleSize,
-        setEditBubbleSize,
         createBubble,
         openCreateDialog,
         createNewBubble,

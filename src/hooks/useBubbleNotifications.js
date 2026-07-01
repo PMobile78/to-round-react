@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import Matter from 'matter-js';
 import { useTheme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -42,27 +42,13 @@ export function useBubbleNotifications({
     const theme = useTheme();
     const overdueColor = alpha(theme.palette.error.main, 0.5);
 
-    const [dueDate, setDueDate] = useState(null); // Для создания
-    const [editDueDate, setEditDueDate] = useState(null); // Для редактирования
-
     // Refs for overdue/sticky pulse tracking
     const stickyPulseRef = useRef(new Set()); // keep pulsing after repeat-every reschedule
     const lastDueRef = useRef(new Map());
     const manuallyStoppedPulsingRef = useRef(new Set()); // задачи, которые пользователь остановил вручную
 
-    // Edit dialog notification/recurrence state
-    const [editNotifications, setEditNotifications] = useState([]); // для редактирования
-    const [editRecurrence, setEditRecurrence] = useState(null);
-
     const notifiedBubblesRef = useRef(new Set());
     const notifiedBubbleNotificationsRef = useRef(new Set()); // bubbleId:idx
-
-    // Состояния для диалога уведомлений
-    const [notifDialogOpen, setNotifDialogOpen] = useState(false);
-    const [notifValue, setNotifValue] = useState(null);
-
-    const [createNotifications, setCreateNotifications] = useState([]); // для создания
-    const [createRecurrence, setCreateRecurrence] = useState(null); // { every, unit }
 
     // Keep pulsing even if editor opened; stop only by explicit Stop button
 
@@ -265,22 +251,6 @@ export function useBubbleNotifications({
     }, [i18nLanguage]);
 
     return {
-        dueDate,
-        setDueDate,
-        editDueDate,
-        setEditDueDate,
-        editNotifications,
-        setEditNotifications,
-        editRecurrence,
-        setEditRecurrence,
-        createNotifications,
-        setCreateNotifications,
-        createRecurrence,
-        setCreateRecurrence,
-        notifDialogOpen,
-        setNotifDialogOpen,
-        notifValue,
-        setNotifValue,
         stickyPulseRef,
         lastDueRef,
         manuallyStoppedPulsingRef,

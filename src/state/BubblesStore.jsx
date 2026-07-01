@@ -43,6 +43,21 @@ export function BubblesStoreProvider({ children }) {
     const [listFilterTags, setListFilterTags] = useState(() => lsGet(LS.LIST_FILTER_TAGS, []));
     const [listShowNoTag, setListShowNoTag] = useState(() => lsGet(LS.LIST_SHOW_NO_TAG, true));
 
+    // Form state for the create/edit bubble dialogs (migrated from
+    // useBubbleNotifications + useBubbleCrud in Stage E of 010d). The rAF pulse
+    // loop and its refs stay in useBubbleNotifications — only this dialog UI state
+    // moved here so the dialogs can read it from the store instead of via props.
+    const [dueDate, setDueDate] = useState(null);              // create-form due date
+    const [editDueDate, setEditDueDate] = useState(null);      // edit-form due date
+    const [createNotifications, setCreateNotifications] = useState([]);
+    const [editNotifications, setEditNotifications] = useState([]);
+    const [createRecurrence, setCreateRecurrence] = useState(null);
+    const [editRecurrence, setEditRecurrence] = useState(null);
+    const [notifDialogOpen, setNotifDialogOpen] = useState(false); // shared create+edit notif sub-dialog
+    const [notifValue, setNotifValue] = useState(null);            // shared create+edit
+    const [bubbleSize, setBubbleSize] = useState(45);              // create-form bubble size
+    const [editBubbleSize, setEditBubbleSize] = useState(45);      // edit-form bubble size
+
     // Registered callbacks from hooks (e.g., setListFilterTags, etc.)
     const [registered, setRegistered] = useState({});
 
@@ -105,6 +120,26 @@ export function BubblesStoreProvider({ children }) {
         setListFilterTags,
         listShowNoTag,
         setListShowNoTag,
+        dueDate,
+        setDueDate,
+        editDueDate,
+        setEditDueDate,
+        createNotifications,
+        setCreateNotifications,
+        editNotifications,
+        setEditNotifications,
+        createRecurrence,
+        setCreateRecurrence,
+        editRecurrence,
+        setEditRecurrence,
+        notifDialogOpen,
+        setNotifDialogOpen,
+        notifValue,
+        setNotifValue,
+        bubbleSize,
+        setBubbleSize,
+        editBubbleSize,
+        setEditBubbleSize,
         register,
         registered,
         isAllSelected,

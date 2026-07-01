@@ -75,6 +75,29 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setListSortBy,
         listSortOrder,
         setListSortOrder,
+        // Form state (create/edit bubble dialogs) — migrated into the store in
+        // Stage E of 010d; consumed here by the form handlers, the save/create
+        // wrappers, and passed through to useMatterEngine.
+        dueDate,
+        setDueDate,
+        editDueDate,
+        setEditDueDate,
+        createNotifications,
+        setCreateNotifications,
+        editNotifications,
+        setEditNotifications,
+        createRecurrence,
+        setCreateRecurrence,
+        editRecurrence,
+        setEditRecurrence,
+        notifDialogOpen,
+        setNotifDialogOpen,
+        notifValue,
+        setNotifValue,
+        bubbleSize,
+        setBubbleSize,
+        editBubbleSize,
+        setEditBubbleSize,
     } = useBubblesStore();
 
     // Bubble CRUD + dialog state extracted into useBubbleCrud (Task 5/6 of #38).
@@ -93,10 +116,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setUseRichTextCreate,
         useRichTextEdit,
         setUseRichTextEdit,
-        bubbleSize,
-        setBubbleSize,
-        editBubbleSize,
-        setEditBubbleSize,
         openCreateDialog,
         createNewBubble,
         handleSaveBubble,
@@ -286,26 +305,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
 
 
-    // Notification + overdue-pulse state, refs and the rAF pulse loop
-    // extracted into useBubbleNotifications (Task 4/6 of #38). Declared here so
-    // useMatterEngine and the dialogs below can consume the state/refs.
+    // Overdue-pulse refs and the rAF pulse loop live in useBubbleNotifications
+    // (Task 4/6 of #38). The create/edit form state it used to own moved to the
+    // BubblesStore in Stage E of 010d; only the refs are consumed here.
     const {
-        dueDate,
-        setDueDate,
-        editDueDate,
-        setEditDueDate,
-        editNotifications,
-        setEditNotifications,
-        editRecurrence,
-        setEditRecurrence,
-        createNotifications,
-        setCreateNotifications,
-        createRecurrence,
-        setCreateRecurrence,
-        notifDialogOpen,
-        setNotifDialogOpen,
-        notifValue,
-        setNotifValue,
         stickyPulseRef,
         lastDueRef,
         manuallyStoppedPulsingRef,
