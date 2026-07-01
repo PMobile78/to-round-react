@@ -102,7 +102,7 @@ The service worker (`public/sw.js`) is generated from env vars by `scripts/gener
 ## Active refactor context
 
 Refactor history is tracked in `docs/superpowers/`. Key standing conventions:
-- `BubblesPage.jsx` is a ~3000-line god-component — new behaviour extracts to `hooks/` and `components/`
+- `BubblesPage.jsx` is a large god-component (~1000 lines, down from ~3000 via the ongoing 010 store refactor) — new behaviour extracts to `hooks/` and `components/`
 - `HtmlRenderer.jsx` uses DOMPurify — any HTML rendering must go through it
 - `firestore.rules` is now in the repo and must be kept in sync with `firebase.json` (`"firestore": { "rules": "firestore.rules" }`)
 - Window/panel/header backgrounds come from the MUI theme (`hooks/useThemeMode.js`), never hardcoded hex/rgba. Wrap a standalone panel in `<Paper>` with no explicit `backgroundColor` (e.g. `TasksCategoriesPanel`, list-as-main-screen `Paper elevation={16}`); a window header (`DialogTitle` / header `Box`) must **not** set its own `backgroundColor` — it inherits the window's Paper background. Header text uses `text.primary`, not `'white'`. Dialog body bg comes from `getDialogPaperStyles()` (`rgba(...,0.95)`).
