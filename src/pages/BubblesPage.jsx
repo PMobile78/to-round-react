@@ -47,6 +47,7 @@ import { applyBubbleFill } from '../utils/bubbleStyle';
 import {
     readBubbleViewPlannedTasksFromLS
 } from '../utils/bubbleData';
+import { useBubblesStore } from '../state/BubblesStore';
 
 
 const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMindMap, themeModeState, setThemeMode, design, setDesign, designs }) => {
@@ -59,7 +60,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const engineRef = useRef(null);
     const renderRef = useRef(null);
     const wallsRef = useRef([]);
-    const [bubbles, setBubbles] = useState([]);
+    const { bubbles, setBubbles } = useBubblesStore();
 
     // Bubble CRUD + dialog state extracted into useBubbleCrud (Task 5/6 of #38).
     // Called early because it owns selectedBubble/editDialog, which liveEditRef,
