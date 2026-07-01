@@ -19,10 +19,12 @@ vi.mock('firebase/firestore', () => ({
 
 import {
     toggleTagInFilter,
-    isAllListTagsSelected,
     filterBubblesForList,
-    countBubblesByTagForListView
 } from '../useListFilters';
+import {
+    isAllListTagsSelected,
+    countBubblesByTagForListView
+} from '../../utils/listVisibility';
 
 const tag = (id) => ({ id, name: id, color: '#000' });
 const bubble = (id, tagId, status = 'active', extra = {}) => ({ id, tagId, status, ...extra });

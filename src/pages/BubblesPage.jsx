@@ -67,8 +67,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         register,
         setSearchFoundBubbles: storeSetSearchFoundBubbles,
         setDebouncedSearchQuery: storeSetDebouncedSearchQuery,
-        setListFilter: storeSetListFilter,
-        setListSearchQuery: storeSetListSearchQuery
+        listFilter,
+        setListFilter,
+        listSearchQuery,
+        setListSearchQuery,
+        listSortBy,
+        setListSortBy,
+        listSortOrder,
+        setListSortOrder,
     } = useBubblesStore();
 
     // Bubble CRUD + dialog state extracted into useBubbleCrud (Task 5/6 of #38).
@@ -190,17 +196,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     }); // Размер шрифта для надписей в пузырях
     const [logoutDialog, setLogoutDialog] = useState(false); // Диалог подтверждения выхода
     const [listViewDialog, setListViewDialog] = useState(false); // Диалог списка задач
-    const [listFilter, setListFilter] = useState('active'); // 'active', 'done', 'postpone', 'deleted'
-    const [listSortBy, setListSortBy] = useState(() => {
-        const saved = lsGetString(LS.LIST_SORT_BY);
-        return saved ? saved : 'updatedAt';
-    }); // 'createdAt', 'updatedAt', 'title', 'tag'
-    const [listSortOrder, setListSortOrder] = useState(() => {
-        const saved = lsGetString(LS.LIST_SORT_ORDER);
-        return saved ? saved : 'desc';
-    }); // 'asc', 'desc'
-    // listFilterTags / listShowNoTag state now live in useListFilters (Task C of #67).
-    const [listSearchQuery, setListSearchQuery] = useState(''); // Поисковый запрос для списка задач
 
     const [showInstructions, setShowInstructions] = useState(() => {
         const saved = lsGetString(LS.SHOW_INSTRUCTIONS);
@@ -500,14 +495,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     useEffect(() => {
         storeSetDebouncedSearchQuery(debouncedBubblesSearchQuery);
     }, [debouncedBubblesSearchQuery, storeSetDebouncedSearchQuery]);
-
-    useEffect(() => {
-        storeSetListFilter(listFilter);
-    }, [listFilter, storeSetListFilter]);
-
-    useEffect(() => {
-        storeSetListSearchQuery(listSearchQuery);
-    }, [listSearchQuery, storeSetListSearchQuery]);
 
     // foundBubblesIds + the search-state sync effect + the visibility/highlight effect
     // now live in useBubbleWorld (Task E of #69); foundBubblesIds is returned above.
@@ -1011,24 +998,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 confirmLogout={confirmLogout}
                 listViewDialog={listViewDialog}
                 setListViewDialog={setListViewDialog}
-                listFilter={listFilter}
-                setListFilter={setListFilter}
-                listSortBy={listSortBy}
-                setListSortBy={setListSortBy}
-                listSortOrder={listSortOrder}
-                setListSortOrder={setListSortOrder}
-                listFilterTags={listFilterTags}
-                setListFilterTags={setListFilterTags}
-                listShowNoTag={listShowNoTag}
-                setListShowNoTag={setListShowNoTag}
-                listSearchQuery={listSearchQuery}
-                setListSearchQuery={setListSearchQuery}
-                handleListTagFilterChange={handleListTagFilterChange}
-                handleListNoTagFilterChange={handleListNoTagFilterChange}
-                clearAllListFilters={clearAllListFilters}
-                selectAllListFilters={selectAllListFilters}
-                getBubbleCountByTagForListView={getBubbleCountByTagForListView}
-                isAllListFiltersSelected={isAllListFiltersSelected}
             />
 
             {/* Панель категорий - только для десктопа */}

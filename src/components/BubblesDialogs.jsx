@@ -137,26 +137,32 @@ const BubblesDialogs = ({
     // Task list drawer
     listViewDialog,
     setListViewDialog,
-    listFilter,
-    setListFilter,
-    listSortBy,
-    setListSortBy,
-    listSortOrder,
-    setListSortOrder,
-    listFilterTags,
-    setListFilterTags,
-    listShowNoTag,
-    setListShowNoTag,
-    listSearchQuery,
-    setListSearchQuery,
-    handleListTagFilterChange,
-    handleListNoTagFilterChange,
-    clearAllListFilters,
-    selectAllListFilters,
-    getBubbleCountByTagForListView,
-    isAllListFiltersSelected,
 }) => {
-    const { tags, setTags, selectedTagId, setSelectedTagId, filterTags, showNoTag, isAllSelected, getBubbleCountByTagForBubblesView, registered } = useBubblesStore();
+    const {
+        tags,
+        setTags,
+        selectedTagId,
+        setSelectedTagId,
+        filterTags,
+        showNoTag,
+        isAllSelected,
+        getBubbleCountByTagForBubblesView,
+        registered,
+        listFilter,
+        setListFilter,
+        listSearchQuery,
+        setListSearchQuery,
+        listSortBy,
+        setListSortBy,
+        listSortOrder,
+        setListSortOrder,
+        listFilterTags,
+        setListFilterTags,
+        listShowNoTag,
+        setListShowNoTag,
+        isAllListFiltersSelected,
+        getBubbleCountByTagForListView,
+    } = useBubblesStore();
     return (
         <>
             {/* Диалог редактирования */}
@@ -385,10 +391,10 @@ const BubblesDialogs = ({
                 setSelectedBubble={setSelectedBubble}
                 setSelectedTagId={setSelectedTagId}
                 setEditDialog={setEditDialog}
-                handleListTagFilterChange={handleListTagFilterChange}
-                handleListNoTagFilterChange={handleListNoTagFilterChange}
-                clearAllListFilters={clearAllListFilters}
-                selectAllListFilters={selectAllListFilters}
+                handleListTagFilterChange={registered.handleListTagFilterChange}
+                handleListNoTagFilterChange={registered.handleListNoTagFilterChange}
+                clearAllListFilters={registered.clearAllListFilters}
+                selectAllListFilters={registered.selectAllListFilters}
                 getBubbleCountByTagForListView={getBubbleCountByTagForListView}
                 isAllListFiltersSelected={isAllListFiltersSelected()}
                 onOpenFilterMenu={() => setFilterDrawerOpen(true)}

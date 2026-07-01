@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { lsGet } from '../utils/storage';
+import { lsGet, lsGetString } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
 import { isAllTagsSelected, countBubblesByTagForBubblesView } from '../utils/bubbleVisibility';
+import { isAllListTagsSelected, countBubblesByTagForListView } from '../utils/listVisibility';
 
 /**
  * BubblesStore Context
@@ -35,8 +36,12 @@ export function BubblesStoreProvider({ children }) {
     const [showNoTag, setShowNoTag] = useState(() => lsGet(LS.SHOW_NO_TAG, true));
 
     // Filter state for list view
-    const [listFilter, setListFilter] = useState('all');
+    const [listFilter, setListFilter] = useState('active');
     const [listSearchQuery, setListSearchQuery] = useState('');
+    const [listSortBy, setListSortBy] = useState(() => lsGetString(LS.LIST_SORT_BY) || 'updatedAt');
+    const [listSortOrder, setListSortOrder] = useState(() => lsGetString(LS.LIST_SORT_ORDER) || 'desc');
+    const [listFilterTags, setListFilterTags] = useState(() => lsGet(LS.LIST_FILTER_TAGS, []));
+    const [listShowNoTag, setListShowNoTag] = useState(() => lsGet(LS.LIST_SHOW_NO_TAG, true));
 
     // Registered callbacks from hooks (e.g., setListFilterTags, etc.)
     const [registered, setRegistered] = useState({});
@@ -61,6 +66,18 @@ export function BubblesStoreProvider({ children }) {
         [bubbles, tags, searchFoundBubbles, debouncedSearchQuery]
     );
 
+    const isAllListFiltersSelected = useCallback(
+        () => isAllListTagsSelected(tags, listFilterTags, listShowNoTag),
+        [tags, listFilterTags, listShowNoTag]
+    );
+
+    const getBubbleCountByTagForListView = useCallback(
+        (tagId) => countBubblesByTagForListView(
+            { bubbles, tags, listFilter, listSearchQuery }, tagId
+        ),
+        [bubbles, tags, listFilter, listSearchQuery]
+    );
+
     const value = {
         bubbles,
         setBubbles,
@@ -80,10 +97,20 @@ export function BubblesStoreProvider({ children }) {
         setListFilter,
         listSearchQuery,
         setListSearchQuery,
+        listSortBy,
+        setListSortBy,
+        listSortOrder,
+        setListSortOrder,
+        listFilterTags,
+        setListFilterTags,
+        listShowNoTag,
+        setListShowNoTag,
         register,
         registered,
         isAllSelected,
         getBubbleCountByTagForBubblesView,
+        isAllListFiltersSelected,
+        getBubbleCountByTagForListView,
     };
 
     return (
