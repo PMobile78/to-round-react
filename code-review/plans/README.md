@@ -20,7 +20,7 @@ The per-plan TODO statuses below are superseded by this outcome.
 - `010a` **DONE** (merged to `main`): `BubblesStore` foundation + 3 of 5 ref-bridges removed.
 - `010b` **DONE** (merged to `main`): `useTags` reads `setBubbles` + `setFilterTags`/`setListFilterTags`/`getBubbleFillStyle` from the store via `register()`; `tagPageDepsRef` removed.
 - `010c` **DONE** (merged to `main`): `useBubbleCrud` reads shared domain (tags/selectedTagId/selectedCategory/getBubbleFillStyle) from the store and takes page-local UI values (canvasSize + create/edit notification state) as explicit handler args. `crudDepsRef` removed — **all 5 ref bridges gone** (`grep -rn "pageDeps|DepsRef|crudDeps" src` empty).
-- `010d` **IN PROGRESS** (local `main`): collapse `BubblesDialogs` forwarder. Stages A–G done (prop count 126→48); H remains (target <40). See the plan's Progress section + the `010d-in-progress` project memory.
+- `010d` **DONE** (local `main`, not pushed): collapsed the `BubblesDialogs` forwarder. Stages A–H complete — call-site prop count **126 → 35** (target <40 met), `BubblesPage.jsx` 1027 → 944. This completes the **010 capstone**: all 5 ref-bridges gone + forwarder collapsed + page shrunk. Optional follow-up: split `BubblesStore` into data + `BubblesUiStore`. See the plan's Progress section.
 
 ## Execution order & status
 
@@ -35,7 +35,7 @@ The per-plan TODO statuses below are superseded by this outcome.
 | [007](007-decompose-richtexteditor.md) | Decompose RichTextEditor.jsx | P3 | M | MED | — | A | TODO |
 | [008](008-remove-legacy-bubbles-array.md) | Remove legacy bubbles[] dual-schema | P2 | M | MED | — (Step 0 gate) | C | TODO |
 | [009](009-robustness-import-atomicity-and-hex-guard.md) | Atomic JSON import + safe shadow-color parse | P1 | S | LOW | — | B | TODO |
-| [010](010-bubbles-store-context.md) | Bubbles/tags store (remove 5 ref-bridges + 130-prop forwarder) | P1 | L | HIGH | 001, 002, 003, 009 | B | IN PROGRESS (010a–c done; 010d stages A–G done, props 126→48, H left) |
+| [010](010-bubbles-store-context.md) | Bubbles/tags store (remove 5 ref-bridges + 130-prop forwarder) | P1 | L | HIGH | 001, 002, 003, 009 | B | DONE (010a–d complete; 5 bridges gone + forwarder 126→35 props; local `main`, not pushed) |
 
 Status values: `TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (rationale)`.
 

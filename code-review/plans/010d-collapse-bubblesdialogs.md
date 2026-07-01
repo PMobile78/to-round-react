@@ -7,7 +7,7 @@
 ## Status
 - **Priority**: P1 · **Effort**: M · **Risk**: MED · **Depends on**: 010a, 010b, 010c · **Category**: tech-debt
 - **Planned at**: commit `000ca27`, 2026-06-30
-- **Progress (2026-07-01)**: IN PROGRESS on local `main` — call-site prop count **126 → 48** (target `<40`), `BubblesPage.jsx` 1027 → 965. Staged store migrations A–G done; H remains (ahead of the original per-stage estimate).
+- **Progress (2026-07-01)**: ✅ **DONE** on local `main` — call-site prop count **126 → 35** (target `<40` met), `BubblesPage.jsx` 1027 → 944. Staged store migrations A–H complete; the 010 capstone (5 ref-bridges gone + forwarder collapsed + page shrunk) is finished.
 
 ## Progress — staged execution (A–H)
 
@@ -25,7 +25,7 @@ not a new `BubblesUiStore` (that split stays the optional post-010d follow-up in
 | F1 | dialog open-flags + settings values | `eb65d79` | 82→63 |
 | F2 | theme/design controls (App→provider) | `d7499fb` | 63→55 |
 | G | shared context (t/isMobile/themeMode/bubbles); dialogs call hooks directly | `7adc64f` | 55→48 |
-| H | tag-editor state + getBubbleCountByTag | _todo_ | ~48→~33 |
+| H | tag-editor state + getBubbleCountByTag (store-computed) | `f7185ae` | 48→35 |
 
 **Stage-E note (the risk that wasn't):** the create/edit form state lived *inside*
 `useBubbleNotifications` next to the rAF pulse loop, but the loop reads `bubble.dueDate`
@@ -58,6 +58,19 @@ handleToggleBubbleBackground/handleToggleMainView/handleToggleCategoriesPanel/ha
 handleFontSizeChange/handleExportJson/handleImportJson). `<40` is reachable but tight — the last ~15–20
 page-local handlers may need the `register()` bridge, else the honest floor is ~42–45.
 
+**Stage-H note (tags into the store, handlers stay props):** the 18-prop tag-editor +
+categories group split 13 clean-moving (tagDialog/tagName/tagColor/editingTag/deletingTags/
+categoriesDialog state + the COLOR_PALETTE constant + store-computed isColorAvailable/
+canCreateMoreTags/getBubbleCountByTag) vs 5 handlers. Moving just the 13 took the call site
+48 → 35 — under target *without* touching the handlers, so the honest-floor/register()
+dilemma dissolved and there was no TDZ risk on the final stage. The 5 tag handlers stay as
+useTags→BubblesPage props (they now read the migrated setters from the store).
+getBubbleCountByTag became a store-computed sibling of the two filter counts via a new pure
+`countActiveBubblesByTag` helper (unit-tested); its identical body left useTags, taking the
+orphaned `bubbles` param + `BUBBLE_STATUS`/`COLOR_PALETTE` imports with it. No new
+BubblesUiStore — everything landed in the existing BubblesStore (that split stays the
+optional post-010d follow-up).
+
 ## Why this matters
 `BubblesDialogs` receives ~123 individual props and forwards them to ~10 child dialogs — an identity/pass-through abstraction. With shared state in the store (010a-c), the dialogs can read `bubbles`/`tags`/setters/`getBubbleFillStyle` directly, shrinking the forwarder dramatically.
 
@@ -81,11 +94,11 @@ Same as 010a.
 4. **Verify**: prop count at the call site `< 40` (was ~123). `npm test` + `npm run lint` + `npm run build` green. Smoke: open each dialog (create, edit, tag, filters, font, appearance, about, change-password, logout, list view, categories) — all open and function.
 
 ## Done criteria
-- [ ] `<BubblesDialogs>` call-site prop count `< 40` (count the `name=` lines)
-- [ ] `BubblesDialogs.jsx` no longer forwards shared bubble/tag state it can read from the store
-- [ ] `BubblesPage.jsx` is meaningfully smaller (target: under 800 lines combined with 010a-c)
-- [ ] `npm test` + `npm run lint` + `npm run build` exit 0
-- [ ] `code-review/plans/README.md` row updated
+- [x] `<BubblesDialogs>` call-site prop count `< 40` — **35** (was ~123 / 126)
+- [x] `BubblesDialogs.jsx` no longer forwards shared bubble/tag state it can read from the store
+- [x] `BubblesPage.jsx` is meaningfully smaller — 1027 → **944** (forwarder fully collapsed; the aspirational <800-combined target not reached)
+- [x] `npm test` (303) + `npm run lint` + `npm run build` exit 0
+- [x] `code-review/plans/README.md` row updated
 
 ## STOP conditions
 - Any dialog stops opening or loses data → revert that dialog's change, report.
