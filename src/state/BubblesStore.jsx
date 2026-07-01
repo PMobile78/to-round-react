@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { lsGet } from '../utils/storage';
+import { LS } from '../utils/storageKeys';
+import { isAllTagsSelected, countBubblesByTagForBubblesView } from '../utils/bubbleVisibility';
 
 /**
  * BubblesStore Context
@@ -27,16 +30,36 @@ export function BubblesStoreProvider({ children }) {
     const [searchFoundBubbles, setSearchFoundBubbles] = useState([]);
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
+    // Filter state for bubbles view
+    const [filterTags, setFilterTags] = useState(() => lsGet(LS.FILTER_TAGS, []));
+    const [showNoTag, setShowNoTag] = useState(() => lsGet(LS.SHOW_NO_TAG, true));
+
     // Filter state for list view
     const [listFilter, setListFilter] = useState('all');
     const [listSearchQuery, setListSearchQuery] = useState('');
 
-    // Registered callbacks from hooks (e.g., setFilterTags, setListFilterTags, etc.)
+    // Registered callbacks from hooks (e.g., setListFilterTags, etc.)
     const [registered, setRegistered] = useState({});
 
     const register = useCallback((callbacks) => {
         setRegistered((prev) => ({ ...prev, ...callbacks }));
     }, []);
+
+    // Store-computed derived values (pure functions of store state).
+    // These must be available on first render (not via register() which populates via effect),
+    // so they are defined inline here.
+    const isAllSelected = useCallback(
+        () => isAllTagsSelected(tags, filterTags, showNoTag),
+        [tags, filterTags, showNoTag]
+    );
+
+    const getBubbleCountByTagForBubblesView = useCallback(
+        (tagId) => countBubblesByTagForBubblesView(
+            { bubbles, tags, searchFoundBubbles, debouncedSearchQuery },
+            tagId
+        ),
+        [bubbles, tags, searchFoundBubbles, debouncedSearchQuery]
+    );
 
     const value = {
         bubbles,
@@ -45,6 +68,10 @@ export function BubblesStoreProvider({ children }) {
         setTags,
         selectedTagId,
         setSelectedTagId,
+        filterTags,
+        setFilterTags,
+        showNoTag,
+        setShowNoTag,
         searchFoundBubbles,
         setSearchFoundBubbles,
         debouncedSearchQuery,
@@ -55,6 +82,8 @@ export function BubblesStoreProvider({ children }) {
         setListSearchQuery,
         register,
         registered,
+        isAllSelected,
+        getBubbleCountByTagForBubblesView,
     };
 
     return (

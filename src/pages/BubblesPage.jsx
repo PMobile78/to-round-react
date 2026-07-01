@@ -152,12 +152,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         setCategoriesPanelEnabled,
         handleCategorySelect,
         handleToggleCategoriesPanel,
-        handleTagFilterChange,
-        handleNoTagFilterChange,
-        clearAllFilters,
-        selectAllFilters,
         isAllSelected,
-        getBubbleCountByTagForBubblesView,
     } = useBubbleFilters({ tags });
 
     // List-view filter / count state extracted into useListFilters (Task C of #67).
@@ -983,14 +978,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 aboutOpen={aboutOpen}
                 filterDrawerOpen={filterDrawerOpen}
                 setFilterDrawerOpen={setFilterDrawerOpen}
-                filterTags={filterTags}
-                showNoTag={showNoTag}
-                handleNoTagFilterChange={handleNoTagFilterChange}
-                handleTagFilterChange={handleTagFilterChange}
-                selectAllFilters={selectAllFilters}
-                clearAllFilters={clearAllFilters}
-                isAllSelected={isAllSelected}
-                getBubbleCountByTagForBubblesView={getBubbleCountByTagForBubblesView}
                 createDialog={createDialog}
                 setCreateDialog={setCreateDialog}
                 dueDate={dueDate}

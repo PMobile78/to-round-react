@@ -97,14 +97,6 @@ const BubblesDialogs = ({
     // Filter drawer (bubbles view)
     filterDrawerOpen,
     setFilterDrawerOpen,
-    filterTags,
-    showNoTag,
-    handleNoTagFilterChange,
-    handleTagFilterChange,
-    selectAllFilters,
-    clearAllFilters,
-    isAllSelected,
-    getBubbleCountByTagForBubblesView,
     // Create bubble dialog
     createDialog,
     setCreateDialog,
@@ -164,7 +156,7 @@ const BubblesDialogs = ({
     getBubbleCountByTagForListView,
     isAllListFiltersSelected,
 }) => {
-    const { tags, setTags, selectedTagId, setSelectedTagId } = useBubblesStore();
+    const { tags, setTags, selectedTagId, setSelectedTagId, filterTags, showNoTag, isAllSelected, getBubbleCountByTagForBubblesView, registered } = useBubblesStore();
     return (
         <>
             {/* Диалог редактирования */}
@@ -257,10 +249,10 @@ const BubblesDialogs = ({
                 tags={tags}
                 filterTags={filterTags}
                 showNoTag={showNoTag}
-                onToggleNoTag={handleNoTagFilterChange}
-                onToggleTag={handleTagFilterChange}
-                onSelectAll={selectAllFilters}
-                onClearAll={clearAllFilters}
+                onToggleNoTag={registered.handleNoTagFilterChange}
+                onToggleTag={registered.handleTagFilterChange}
+                onSelectAll={registered.selectAllFilters}
+                onClearAll={registered.clearAllFilters}
                 isAllSelected={isAllSelected()}
                 getBubbleCountByTagForBubblesView={getBubbleCountByTagForBubblesView}
             />

@@ -35,7 +35,7 @@ import {
  * `tags` produced here.
  */
 export function useTags({ user, bubbles }) {
-    const { setBubbles, registered, tags, setTags } = useBubblesStore();
+    const { setBubbles, registered, tags, setTags, setFilterTags } = useBubblesStore();
     const tagsRef = useRef(tags);
     useEffect(() => { tagsRef.current = tags; }, [tags]);
     const [tagDialog, setTagDialog] = useState(false);
@@ -100,7 +100,7 @@ export function useTags({ user, bubbles }) {
     };
 
     const handleSaveTag = () => {
-        const { setFilterTags, setListFilterTags } = registered;
+        const { setListFilterTags } = registered;
         // Проверяем, что цвет доступен (если это новый тег или изменился цвет)
         if (!editingTag && !isColorAvailable(tagColor)) {
             return; // Цвет уже занят

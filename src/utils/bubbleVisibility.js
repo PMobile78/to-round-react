@@ -9,6 +9,34 @@ import { BUBBLE_STATUS } from '../services/firestoreService';
 const NO_TAG_GREY = '#B0B0B0';
 
 /**
+ * Pure helper: true when every tag is selected and "no tag" bubbles are shown.
+ */
+export function isAllTagsSelected(tags, filterTags, showNoTag) {
+    return tags.length > 0 && filterTags.length === tags.length && showNoTag;
+}
+
+/**
+ * Pure helper: count active (or search-found) bubbles for a tag in bubbles-view.
+ * Always reflects the total count for the tag, independent of the active filters,
+ * but honours the current search query when one is present. `tagId === null`
+ * counts bubbles without a tag (or whose tag was deleted).
+ */
+export function countBubblesByTagForBubblesView({ bubbles, tags, searchFoundBubbles, debouncedSearchQuery }, tagId) {
+    const bubblesForCount = debouncedSearchQuery && debouncedSearchQuery.trim()
+        ? searchFoundBubbles
+        : bubbles.filter((bubble) => bubble.status === BUBBLE_STATUS.ACTIVE);
+
+    if (tagId === null) {
+        return bubblesForCount.filter((bubble) => {
+            if (!bubble.tagId) return true;
+            const tagExists = tags.find((t) => t.id === bubble.tagId);
+            return !tagExists; // include bubbles whose tag was deleted
+        }).length;
+    }
+    return bubblesForCount.filter((bubble) => bubble.tagId === tagId).length;
+}
+
+/**
  * Pure: the set of bubbles that must be present in the physics world.
  * Mirrors the original `getFilteredBubbles` memo exactly:
  *   - only ACTIVE bubbles,
