@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { lsGet, lsGetString } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
-import { isAllTagsSelected, countBubblesByTagForBubblesView } from '../utils/bubbleVisibility';
+import { isAllTagsSelected, countBubblesByTagForBubblesView, countActiveBubblesByTag } from '../utils/bubbleVisibility';
 import { isAllListTagsSelected, countBubblesByTagForListView } from '../utils/listVisibility';
+import { isColorAvailable as isColorAvailablePure, canCreateMoreTags as canCreateMoreTagsPure } from '../hooks/tagColors';
 
 /**
  * BubblesStore Context
@@ -93,6 +94,16 @@ export function BubblesStoreProvider({
         return lsGetString(LS.MAIN_VIEW) === 'tasks' ? 'tasks' : 'bubbles';
     });
 
+    // Tag-editor + categories dialog state (migrated from useTags/BubblesPage in
+    // Stage H of 010d). useTags still owns the tag handlers; they read these
+    // setters from the store, while the dialogs read the values from here.
+    const [tagDialog, setTagDialog] = useState(false);
+    const [tagName, setTagName] = useState('');
+    const [tagColor, setTagColor] = useState('#2f6bdb');
+    const [editingTag, setEditingTag] = useState(null);
+    const [deletingTags, setDeletingTags] = useState(new Set()); // tags mid soft-delete
+    const [categoriesDialog, setCategoriesDialog] = useState(false);
+
     // Registered callbacks from hooks (e.g., setListFilterTags, etc.)
     const [registered, setRegistered] = useState({});
 
@@ -126,6 +137,23 @@ export function BubblesStoreProvider({
             { bubbles, tags, listFilter, listSearchQuery }, tagId
         ),
         [bubbles, tags, listFilter, listSearchQuery]
+    );
+
+    // Tag-editor derived values (pure functions of tags/editingTag/bubbles),
+    // store-computed alongside their filter-count siblings above (Stage H of 010d).
+    const isColorAvailable = useCallback(
+        (color) => isColorAvailablePure(tags, color, editingTag),
+        [tags, editingTag]
+    );
+
+    const canCreateMoreTags = useCallback(
+        () => canCreateMoreTagsPure(tags),
+        [tags]
+    );
+
+    const getBubbleCountByTag = useCallback(
+        (tagId) => countActiveBubblesByTag(bubbles, tags, tagId),
+        [bubbles, tags]
     );
 
     const value = {
@@ -197,6 +225,19 @@ export function BubblesStoreProvider({
         setBubbleBackgroundEnabled,
         mainView,
         setMainView,
+        // Tag-editor + categories dialog state (Stage H of 010d).
+        tagDialog,
+        setTagDialog,
+        tagName,
+        setTagName,
+        tagColor,
+        setTagColor,
+        editingTag,
+        setEditingTag,
+        deletingTags,
+        setDeletingTags,
+        categoriesDialog,
+        setCategoriesDialog,
         // Theme/design controls (Stage F2 of 010d) — passed into the provider by App.
         themeModeState,
         setThemeMode,
@@ -212,6 +253,9 @@ export function BubblesStoreProvider({
         getBubbleCountByTagForBubblesView,
         isAllListFiltersSelected,
         getBubbleCountByTagForListView,
+        isColorAvailable,
+        canCreateMoreTags,
+        getBubbleCountByTag,
     };
 
     return (

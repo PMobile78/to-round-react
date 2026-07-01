@@ -5,14 +5,12 @@ import {
     subscribeToTagsUpdates,
     upsertTagInFirestore,
     deleteTagFromFirestore,
-    updateBubbleFields,
-    BUBBLE_STATUS
+    updateBubbleFields
 } from '../services/firestoreService';
 import logger from '../utils/logger';
 import { applyBubbleFill } from '../utils/bubbleStyle';
 import { useBubblesStore } from '../state/BubblesStore';
 import {
-    COLOR_PALETTE,
     getNextAvailableColor as getNextAvailableColorPure,
     isColorAvailable as isColorAvailablePure,
     canCreateMoreTags as canCreateMoreTagsPure
@@ -34,15 +32,16 @@ import {
  * render-order cycle: `setFilterTags` comes from useBubbleFilters, which needs
  * `tags` produced here.
  */
-export function useTags({ user, bubbles }) {
-    const { setBubbles, registered, tags, setTags, setFilterTags, setListFilterTags } = useBubblesStore();
+export function useTags({ user }) {
+    const {
+        setBubbles, registered, tags, setTags, setFilterTags, setListFilterTags,
+        // Tag-editor state migrated into the store (Stage H of 010d); the handlers
+        // below read/set it here instead of via local useState.
+        tagName, setTagName, tagColor, setTagColor, editingTag, setEditingTag,
+        setTagDialog, setDeletingTags,
+    } = useBubblesStore();
     const tagsRef = useRef(tags);
     useEffect(() => { tagsRef.current = tags; }, [tags]);
-    const [tagDialog, setTagDialog] = useState(false);
-    const [tagName, setTagName] = useState('');
-    const [tagColor, setTagColor] = useState('#2f6bdb');
-    const [editingTag, setEditingTag] = useState(null);
-    const [deletingTags, setDeletingTags] = useState(new Set()); // Теги в процессе удаления
     const [deleteTimers, setDeleteTimers] = useState(new Map()); // Таймеры удаления тегов
 
     // Real-time tags synchronization (wait for auth user).
@@ -63,24 +62,6 @@ export function useTags({ user, bubbles }) {
     const getNextAvailableColor = () => getNextAvailableColorPure(tags);
     const isColorAvailable = (color) => isColorAvailablePure(tags, color, editingTag);
     const canCreateMoreTags = () => canCreateMoreTagsPure(tags);
-
-    // Count ACTIVE bubbles by category (for the category management dialog).
-    // Excludes done/deleted bubbles so this matches the categories panel
-    // (getCategoryBubbleCounts) and the bubbles-view filter counts
-    // (getBubbleCountByTagForBubblesView); previously it counted every status,
-    // so the dialog count drifted above the panel (e.g. "11" vs "10").
-    const getBubbleCountByTag = (tagId) => {
-        const activeBubbles = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
-        if (tagId === null) {
-            // Count bubbles without tags or with deleted tags
-            return activeBubbles.filter(bubble => {
-                if (!bubble.tagId) return true;
-                const tagExists = tags.find(t => t.id === bubble.tagId);
-                return !tagExists; // Включаем пузыри с удаленными тегами
-            }).length;
-        }
-        return activeBubbles.filter(bubble => bubble.tagId === tagId).length;
-    };
 
     // Functions for working with tags
     const handleOpenTagDialog = (tag = null) => {
@@ -227,23 +208,12 @@ export function useTags({ user, bubbles }) {
         tags,
         setTags,
         tagsRef,
-        tagDialog,
-        tagName,
-        setTagName,
-        tagColor,
-        setTagColor,
-        editingTag,
-        deletingTags,
         deleteTimers,
         handleOpenTagDialog,
         handleSaveTag,
         handleDeleteTag,
         handleUndoDeleteTag,
         handleCloseTagDialog,
-        getBubbleCountByTag,
-        getNextAvailableColor,
-        isColorAvailable,
-        canCreateMoreTags,
-        COLOR_PALETTE
+        getNextAvailableColor
     };
 }

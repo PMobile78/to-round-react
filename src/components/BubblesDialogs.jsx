@@ -15,6 +15,7 @@ import TaskListDrawer from './ListViewDrawer';
 import { isOverdue } from '../utils/notifications';
 import { saveTagsToFirestore } from '../services/firestoreService';
 import { useBubblesStore } from '../state/BubblesStore';
+import { COLOR_PALETTE } from '../hooks/tagColors';
 
 /**
  * Presentational container for all of BubblesPage's dialogs and drawers.
@@ -45,23 +46,13 @@ const BubblesDialogs = ({
     handleOpenTagDialog,
     handleDeleteTag,
     // Tag editor dialog
-    tagDialog,
     handleCloseTagDialog,
-    COLOR_PALETTE,
-    editingTag,
-    tagName,
-    setTagName,
-    tagColor,
-    setTagColor,
-    isColorAvailable,
-    canCreateMoreTags,
     handleSaveTag,
     // Main menu drawer
     handleToggleBubbleBackground,
     handleToggleMainView,
     categoriesPanelEnabled,
     handleToggleCategoriesPanel,
-    setCategoriesDialog,
     handleLogout,
     handleExportJson,
     handleImportJson,
@@ -74,10 +65,7 @@ const BubblesDialogs = ({
     useRichTextCreate,
     setUseRichTextCreate,
     // Categories dialog
-    categoriesDialog,
-    deletingTags,
     handleUndoDeleteTag,
-    getBubbleCountByTag,
     // Font settings dialog
     handleFontSizeChange,
     // Logout confirm dialog
@@ -164,6 +152,19 @@ const BubblesDialogs = ({
         fontSize,
         bubbleBackgroundEnabled,
         mainView,
+        // Tag-editor + categories dialog state — read from the store (Stage H of 010d).
+        tagDialog,
+        tagName,
+        setTagName,
+        tagColor,
+        setTagColor,
+        editingTag,
+        deletingTags,
+        categoriesDialog,
+        setCategoriesDialog,
+        isColorAvailable,
+        canCreateMoreTags,
+        getBubbleCountByTag,
         // Theme/design controls — read from the store (Stage F2 of 010d).
         themeModeState,
         setThemeMode,

@@ -37,6 +37,25 @@ export function countBubblesByTagForBubblesView({ bubbles, tags, searchFoundBubb
 }
 
 /**
+ * Pure helper: count ACTIVE bubbles for a tag, for the category management
+ * dialog. Excludes done/deleted bubbles so this matches the categories panel
+ * (getCategoryBubbleCounts) and the bubbles-view filter counts. `tagId === null`
+ * counts bubbles without a tag (or whose tag was deleted).
+ */
+export function countActiveBubblesByTag(bubbles, tags, tagId) {
+    const activeBubbles = bubbles.filter((bubble) => bubble.status === BUBBLE_STATUS.ACTIVE);
+
+    if (tagId === null) {
+        return activeBubbles.filter((bubble) => {
+            if (!bubble.tagId) return true;
+            const tagExists = tags.find((t) => t.id === bubble.tagId);
+            return !tagExists; // include bubbles whose tag was deleted
+        }).length;
+    }
+    return activeBubbles.filter((bubble) => bubble.tagId === tagId).length;
+}
+
+/**
  * Pure: the set of bubbles that must be present in the physics world.
  * Mirrors the original `getFilteredBubbles` memo exactly:
  *   - only ACTIVE bubbles,

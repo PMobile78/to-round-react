@@ -16,7 +16,7 @@ vi.mock('firebase/firestore', () => ({
     serverTimestamp: () => ({})
 }));
 
-import { selectVisibleBubbles, computeBubbleSearchRender } from './bubbleVisibility';
+import { selectVisibleBubbles, computeBubbleSearchRender, countActiveBubblesByTag } from './bubbleVisibility';
 
 // --- helpers -----------------------------------------------------------------
 const tag = (id, color = '#123456') => ({ id, name: id, color });
@@ -25,6 +25,30 @@ const ids = (arr) => arr.map((b) => b.id).sort();
 
 const T1 = tag('t1', '#ff0000');
 const T2 = tag('t2', '#00ff00');
+
+describe('countActiveBubblesByTag', () => {
+    it('counts only ACTIVE bubbles for a given tag (excludes done/deleted)', () => {
+        const bubbles = [
+            bub('a', 'active', 't1'),
+            bub('b', 'active', 't1'),
+            bub('c', 'done', 't1'),
+            bub('d', 'deleted', 't1'),
+            bub('e', 'active', 't2'),
+        ];
+        expect(countActiveBubblesByTag(bubbles, [T1, T2], 't1')).toBe(2);
+        expect(countActiveBubblesByTag(bubbles, [T1, T2], 't2')).toBe(1);
+    });
+
+    it('tagId === null counts active untagged bubbles and bubbles whose tag was deleted', () => {
+        const bubbles = [
+            bub('a', 'active', null),   // untagged
+            bub('b', 'active', 'gone'), // tag no longer exists
+            bub('c', 'active', 't1'),   // tagged, existing
+            bub('d', 'done', null),     // untagged but not active
+        ];
+        expect(countActiveBubblesByTag(bubbles, [T1, T2], null)).toBe(2);
+    });
+});
 
 describe('selectVisibleBubbles', () => {
     it('returns only active bubbles (drops done/deleted/postpone) when all tags selected', () => {

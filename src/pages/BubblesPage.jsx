@@ -103,6 +103,9 @@ const BubblesPage = ({ user, themeMode }) => {
         setMainView,
         fontSize,
         setFontSize,
+        // categoriesDialog is store-owned as of Stage H of 010d; the page still
+        // opens it from the desktop categories panel below.
+        setCategoriesDialog,
     } = useBubblesStore();
 
     // Bubble CRUD + dialog state extracted into useBubbleCrud (Task 5/6 of #38).
@@ -147,25 +150,14 @@ const BubblesPage = ({ user, themeMode }) => {
         tags,
         setTags,
         tagsRef,
-        tagDialog,
-        tagName,
-        setTagName,
-        tagColor,
-        setTagColor,
-        editingTag,
-        deletingTags,
         deleteTimers,
         handleOpenTagDialog,
         handleSaveTag,
         handleDeleteTag,
         handleUndoDeleteTag,
         handleCloseTagDialog,
-        getBubbleCountByTag,
         getNextAvailableColor,
-        isColorAvailable,
-        canCreateMoreTags,
-        COLOR_PALETTE
-    } = useTags({ user, bubbles });
+    } = useTags({ user });
 
     // Filter / category state extracted into hook.
     // All deps now come from BubblesStore.
@@ -208,7 +200,7 @@ const BubblesPage = ({ user, themeMode }) => {
     } = useBubbleImportExport();
 
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false); // Состояние панели категорий
-    const [categoriesDialog, setCategoriesDialog] = useState(false); // Диалог управления категориями
+    // categoriesDialog moved to BubblesStore (Stage H of 010d).
     // Dialog open-flags (filter/menu/font/appearance/change-password/logout/list-view)
     // + fontSize now live in BubblesStore (Stage F of 010d).
 
@@ -904,22 +896,12 @@ const BubblesPage = ({ user, themeMode }) => {
                 handleToggleEditUseRichText={handleToggleEditUseRichText}
                 handleOpenTagDialog={handleOpenTagDialog}
                 handleDeleteTag={handleDeleteTag}
-                tagDialog={tagDialog}
                 handleCloseTagDialog={handleCloseTagDialog}
-                COLOR_PALETTE={COLOR_PALETTE}
-                editingTag={editingTag}
-                tagName={tagName}
-                setTagName={setTagName}
-                tagColor={tagColor}
-                setTagColor={setTagColor}
-                isColorAvailable={isColorAvailable}
-                canCreateMoreTags={canCreateMoreTags}
                 handleSaveTag={handleSaveTag}
                 handleToggleBubbleBackground={handleToggleBubbleBackground}
                 handleToggleMainView={handleToggleMainView}
                 categoriesPanelEnabled={categoriesPanelEnabled}
                 handleToggleCategoriesPanel={handleToggleCategoriesPanel}
-                setCategoriesDialog={setCategoriesDialog}
                 handleLogout={handleLogout}
                 handleExportJson={handleExportJson}
                 handleImportJson={handleImportJson}
@@ -930,10 +912,7 @@ const BubblesPage = ({ user, themeMode }) => {
                 createNewBubble={(payload) => createNewBubble({ ...payload, canvasSize, dueDate, createNotifications, createRecurrence, setDueDate })}
                 useRichTextCreate={useRichTextCreate}
                 setUseRichTextCreate={setUseRichTextCreate}
-                categoriesDialog={categoriesDialog}
-                deletingTags={deletingTags}
                 handleUndoDeleteTag={handleUndoDeleteTag}
-                getBubbleCountByTag={getBubbleCountByTag}
                 handleFontSizeChange={handleFontSizeChange}
                 confirmLogout={confirmLogout}
             />
