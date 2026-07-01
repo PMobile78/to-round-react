@@ -63,6 +63,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const {
         bubbles,
         setBubbles,
+        register,
         setSearchFoundBubbles: storeSetSearchFoundBubbles,
         setDebouncedSearchQuery: storeSetDebouncedSearchQuery,
         setListFilter: storeSetListFilter,
@@ -272,6 +273,18 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         }
         return theme.custom?.bubble?.fill?.defaultFill ?? 'rgba(255, 255, 255, 0.06)';
     };
+
+    // Register a stable getBubbleFillStyle wrapper into the store so useTags can
+    // recolor bubbles when a tag is deleted. getBubbleFillStyle is intentionally
+    // NOT memoized (useBubbleNotifications relies on its per-render identity to
+    // re-subscribe its rAF loop), so we register a stable wrapper that reads the
+    // latest impl via a ref — keeping bubbleBackgroundEnabled/theme fresh without
+    // triggering a re-render loop.
+    const getBubbleFillStyleRef = useRef(getBubbleFillStyle);
+    getBubbleFillStyleRef.current = getBubbleFillStyle;
+    useEffect(() => {
+        register({ getBubbleFillStyle: (...args) => getBubbleFillStyleRef.current(...args) });
+    }, [register]);
 
     // Keep the bridge to useTags fresh: tag handlers read these at call-time.
     tagPageDepsRef.current = {
