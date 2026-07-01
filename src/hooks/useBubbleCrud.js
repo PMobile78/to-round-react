@@ -28,7 +28,7 @@ import { useBubblesStore } from '../state/BubblesStore';
  * passed as explicit handler arguments by BubblesPage.
  */
 export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile }) {
-    const { registered, tags } = useBubblesStore();
+    const { registered, tags, selectedTagId, setSelectedTagId } = useBubblesStore();
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [editDialog, setEditDialog] = useState(false);
     const [selectedBubble, setSelectedBubble] = useState(null);
@@ -78,7 +78,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Function for opening create bubble dialog
     const openCreateDialog = ({ setDueDate, setCreateNotifications }) => {
-        const { selectedCategory, setSelectedTagId } = registered;
+        const { selectedCategory } = registered;
         const categoryReserved = new Set(['all', 'no-tags', 'planned-tasks']);
         const tagFromPanel =
             selectedCategory &&
@@ -96,7 +96,6 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Function for creating a new bubble
     const createNewBubble = ({ title, description, canvasSize, dueDate, createNotifications, createRecurrence, setDueDate }) => {
-        const { selectedTagId, setSelectedTagId } = registered;
         if (!engineRef.current || !renderRef.current || !title.trim()) {
             return;
         }
@@ -132,7 +131,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Save bubble changes
     const handleSaveBubble = ({ title, description, editDueDate, editNotifications, editRecurrence, manuallyStoppedPulsingRef, setEditDueDate }) => {
-        const { getBubbleFillStyle, selectedTagId } = registered;
+        const { getBubbleFillStyle } = registered;
         if (!title.trim()) return;
         if (selectedBubble && engineRef.current) {
             // Сначала обновляем физическое тело
@@ -347,7 +346,6 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Close dialog without saving
     const handleCloseDialog = () => {
-        const { setSelectedTagId } = registered;
         setEditDialog(false);
         setSelectedBubble(null);
         setSelectedTagId('');

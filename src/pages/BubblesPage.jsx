@@ -63,6 +63,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const {
         bubbles,
         setBubbles,
+        setSelectedTagId,
         register,
         setSearchFoundBubbles: storeSetSearchFoundBubbles,
         setDebouncedSearchQuery: storeSetDebouncedSearchQuery,
@@ -116,8 +117,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         tags,
         setTags,
         tagsRef,
-        selectedTagId,
-        setSelectedTagId,
         tagDialog,
         tagName,
         setTagName,
@@ -282,14 +281,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         register({ getBubbleFillStyle: (...args) => getBubbleFillStyleRef.current(...args) });
     }, [register]);
 
-    // Register shared domain values that useBubbleCrud reads at call-time. It runs
-    // before useTags/useBubbleFilters (it owns selectedBubble/editDialog those
-    // hooks' consumers need), so these can't be plain props — the store bridges
-    // them. Re-registers only when a value changes (each is referentially stable
-    // between unrelated renders), so there is no render loop.
+    // Register selectedCategory (owned by the later useBubbleFilters hook) so
+    // useBubbleCrud can read it at call-time — useBubbleCrud runs first, so it
+    // can't be a plain prop. selectedTagId/setSelectedTagId now live in the store
+    // directly and no longer need this bridge. Re-registers only when
+    // selectedCategory changes, so there is no render loop.
     useEffect(() => {
-        register({ selectedTagId, setSelectedTagId, selectedCategory });
-    }, [selectedTagId, setSelectedTagId, selectedCategory, register]);
+        register({ selectedCategory });
+    }, [selectedCategory, register]);
 
     // Function to get canvas dimensions depending on screen size
     // Размер канваса вычисляется через утилиту, учитывая панель категорий
@@ -938,8 +937,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 editNotifications={editNotifications}
                 setEditNotifications={setEditNotifications}
                 handleDeleteNotification={handleDeleteNotification}
-                selectedTagId={selectedTagId}
-                setSelectedTagId={setSelectedTagId}
                 editBubbleSize={editBubbleSize}
                 setEditBubbleSize={setEditBubbleSize}
                 handleDeleteBubble={handleDeleteBubble}

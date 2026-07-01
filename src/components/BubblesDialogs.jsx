@@ -46,8 +46,6 @@ const BubblesDialogs = ({
     editNotifications,
     setEditNotifications,
     handleDeleteNotification,
-    selectedTagId,
-    setSelectedTagId,
     editBubbleSize,
     setEditBubbleSize,
     handleDeleteBubble,
@@ -166,7 +164,7 @@ const BubblesDialogs = ({
     getBubbleCountByTagForListView,
     isAllListFiltersSelected,
 }) => {
-    const { tags, setTags } = useBubblesStore();
+    const { tags, setTags, selectedTagId, setSelectedTagId } = useBubblesStore();
     return (
         <>
             {/* Диалог редактирования */}

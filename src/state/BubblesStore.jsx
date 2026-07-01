@@ -18,6 +18,10 @@ const BubblesStoreContext = createContext(null);
 export function BubblesStoreProvider({ children }) {
     const [bubbles, setBubbles] = useState([]);
     const [tags, setTags] = useState([]);
+    // Currently selected tag id for the create/edit bubble dialog
+    // (was owned by useTags; now a live store field so useBubbleCrud can read it
+    // directly instead of via the register() bridge).
+    const [selectedTagId, setSelectedTagId] = useState('');
 
     // Search state for bubbles view
     const [searchFoundBubbles, setSearchFoundBubbles] = useState([]);
@@ -39,6 +43,8 @@ export function BubblesStoreProvider({ children }) {
         setBubbles,
         tags,
         setTags,
+        selectedTagId,
+        setSelectedTagId,
         searchFoundBubbles,
         setSearchFoundBubbles,
         debouncedSearchQuery,

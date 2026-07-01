@@ -38,7 +38,6 @@ export function useTags({ user, bubbles }) {
     const { setBubbles, registered, tags, setTags } = useBubblesStore();
     const tagsRef = useRef(tags);
     useEffect(() => { tagsRef.current = tags; }, [tags]);
-    const [selectedTagId, setSelectedTagId] = useState('');
     const [tagDialog, setTagDialog] = useState(false);
     const [tagName, setTagName] = useState('');
     const [tagColor, setTagColor] = useState('#2f6bdb');
@@ -229,8 +228,6 @@ export function useTags({ user, bubbles }) {
         tags,
         setTags,
         tagsRef,
-        selectedTagId,
-        setSelectedTagId,
         tagDialog,
         tagName,
         setTagName,
