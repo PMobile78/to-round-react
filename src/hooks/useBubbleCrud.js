@@ -10,6 +10,7 @@ import {
 } from '../services/firestoreService';
 import logger from '../utils/logger';
 import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime } from '../utils/dateTime';
+import { useBubblesStore } from '../state/BubblesStore';
 
 /**
  * Bubble create/edit/delete/done CRUD + dialog state, extracted from
@@ -26,6 +27,7 @@ import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime } from '../uti
  * selectedCategory, getBubbleFillStyle, canvasSize and the notification state.
  */
 export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile, deps }) {
+    const { registered } = useBubblesStore();
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [editDialog, setEditDialog] = useState(false);
     const [selectedBubble, setSelectedBubble] = useState(null);
@@ -37,7 +39,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Bubble creation function
     const createBubble = (x, y, radius, tagId = null) => {
-        const { tags, getBubbleFillStyle } = deps.current;
+        const { tags, getBubbleFillStyle } = registered;
         let strokeColor = '#B0B0B0'; // light gray color by default
         let tagColor = null;
 
@@ -237,7 +239,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Mark bubble as done
     const handleMarkAsDone = async () => {
-        const { tags } = deps.current;
+        const { tags } = registered;
         if (selectedBubble && engineRef.current) {
             try {
                 // Анимация лопания с брызгами и звуком
@@ -345,7 +347,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
     // Close dialog without saving
     const handleCloseDialog = () => {
-        const { setSelectedTagId } = deps.current;
+        const { setSelectedTagId } = registered;
         setEditDialog(false);
         setSelectedBubble(null);
         setSelectedTagId('');
