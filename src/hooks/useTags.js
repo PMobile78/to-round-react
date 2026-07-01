@@ -5,7 +5,8 @@ import {
     subscribeToTagsUpdates,
     upsertTagInFirestore,
     deleteTagFromFirestore,
-    updateBubbleFields
+    updateBubbleFields,
+    BUBBLE_STATUS
 } from '../services/firestoreService';
 import logger from '../utils/logger';
 import { applyBubbleFill } from '../utils/bubbleStyle';
@@ -64,17 +65,22 @@ export function useTags({ user, bubbles }) {
     const isColorAvailable = (color) => isColorAvailablePure(tags, color, editingTag);
     const canCreateMoreTags = () => canCreateMoreTagsPure(tags);
 
-    // Function to count all bubbles by category (for category management dialog)
+    // Count ACTIVE bubbles by category (for the category management dialog).
+    // Excludes done/deleted bubbles so this matches the categories panel
+    // (getCategoryBubbleCounts) and the bubbles-view filter counts
+    // (getBubbleCountByTagForBubblesView); previously it counted every status,
+    // so the dialog count drifted above the panel (e.g. "11" vs "10").
     const getBubbleCountByTag = (tagId) => {
+        const activeBubbles = bubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
         if (tagId === null) {
             // Count bubbles without tags or with deleted tags
-            return bubbles.filter(bubble => {
+            return activeBubbles.filter(bubble => {
                 if (!bubble.tagId) return true;
                 const tagExists = tags.find(t => t.id === bubble.tagId);
                 return !tagExists; // Включаем пузыри с удаленными тегами
             }).length;
         }
-        return bubbles.filter(bubble => bubble.tagId === tagId).length;
+        return activeBubbles.filter(bubble => bubble.tagId === tagId).length;
     };
 
     // Functions for working with tags
