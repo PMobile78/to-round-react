@@ -335,6 +335,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         i18nLanguage: i18n.language
     });
 
+    // openCreateDialog needs the create-form setters (page-local, owned by
+    // useBubbleNotifications); supply them explicitly at the call site.
+    const handleOpenCreateDialog = () => openCreateDialog({ setDueDate, setCreateNotifications });
+
     // Keep the bridge to useBubbleCrud fresh: its handlers read these at call-time.
     crudDepsRef.current = {
         tags,
@@ -808,7 +812,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                     t={t}
                     getButtonStyles={getButtonStyles}
                     onOpenMenu={setMenuDrawerOpen}
-                    onAddBubble={openCreateDialog}
+                    onAddBubble={handleOpenCreateDialog}
                 />
             )}
 
@@ -846,7 +850,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                     getDefaultFabPosition={getDefaultFabPosition}
                     isDraggingFab={isDraggingFab}
                     suppressNextClickRef={suppressNextClickRef}
-                    onAddBubble={openCreateDialog}
+                    onAddBubble={handleOpenCreateDialog}
                 />
             )}
 
@@ -901,7 +905,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
                 <TasksFullScreenView
                     t={t}
                     onOpenMenu={setMenuDrawerOpen}
-                    onAddBubble={openCreateDialog}
+                    onAddBubble={handleOpenCreateDialog}
                     taskListProps={{
                         bubbles,
                         setBubbles,

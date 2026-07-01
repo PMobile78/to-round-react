@@ -76,8 +76,8 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
     };
 
     // Function for opening create bubble dialog
-    const openCreateDialog = () => {
-        const { selectedCategory, tags, setSelectedTagId, setDueDate, setCreateNotifications } = deps.current;
+    const openCreateDialog = ({ setDueDate, setCreateNotifications }) => {
+        const { selectedCategory, tags, setSelectedTagId } = registered;
         const categoryReserved = new Set(['all', 'no-tags', 'planned-tasks']);
         const tagFromPanel =
             selectedCategory &&
