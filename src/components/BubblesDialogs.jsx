@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { useTheme, useMediaQuery } from '@mui/material';
 import BubbleDialog from './BubbleDialog';
 import TagEditorDialog from './TagEditorDialog';
 import MainMenuDrawer from './MainMenuDrawer';
@@ -24,13 +26,6 @@ import { useBubblesStore } from '../state/BubblesStore';
  * stay in BubblesPage and arrive here as plain props.
  */
 const BubblesDialogs = ({
-    t,
-    isMobile,
-    isSmallScreen,
-    themeMode,
-    getDialogPaperStyles,
-    bubbles,
-    setBubbles,
     // Edit bubble dialog
     editDialog,
     handleCloseDialog,
@@ -88,7 +83,22 @@ const BubblesDialogs = ({
     // Logout confirm dialog
     confirmLogout,
 }) => {
+    // Ambient context read directly from hooks (Stage G of 010d) instead of via
+    // props from BubblesPage. themeMode is the resolved 'light'/'dark' from
+    // theme.palette.mode — NOT useThemeMode(), which would spin up a 2nd instance
+    // and desync from App's theme.
+    const { t } = useTranslation();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+    const themeMode = theme.palette.mode;
+    const getDialogPaperStyles = () => theme.custom?.dialogPaper || {
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+    };
     const {
+        bubbles,
+        setBubbles,
         tags,
         setTags,
         selectedTagId,

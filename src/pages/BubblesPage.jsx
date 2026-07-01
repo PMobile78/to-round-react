@@ -247,12 +247,8 @@ const BubblesPage = ({ user, themeMode }) => {
         return theme.custom?.outlinedButtonStyles || {};
     };
 
-    const getDialogPaperStyles = () => {
-        return theme.custom?.dialogPaper || {
-            backgroundColor: theme.palette.background.paper,
-            color: theme.palette.text.primary
-        };
-    };
+    // getDialogPaperStyles moved into BubblesDialogs (Stage G of 010d) — it was
+    // only forwarded to the dialogs, which now derive it from useTheme() directly.
 
     // Note: Functions moved to firestoreService.js for better organization
 
@@ -892,13 +888,6 @@ const BubblesPage = ({ user, themeMode }) => {
 
             {/* Все диалоги и дроверы (Task A of #64) */}
             <BubblesDialogs
-                t={t}
-                isMobile={isMobile}
-                isSmallScreen={isSmallScreen}
-                themeMode={themeMode}
-                getDialogPaperStyles={getDialogPaperStyles}
-                bubbles={bubbles}
-                setBubbles={setBubbles}
                 editDialog={editDialog}
                 handleCloseDialog={handleCloseDialog}
                 selectedBubble={selectedBubble}
