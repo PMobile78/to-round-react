@@ -111,11 +111,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
     // Tag state + behaviour extracted into useTags (Task 2/6 of #38).
-    // pageDeps bridges page-owned deps that are defined *after* this call or that
-    // would otherwise create a useTags <-> useBubbleFilters cycle (setFilterTags
-    // comes from useBubbleFilters, which itself needs `tags` from useTags).
-    // Tag handlers read pageDeps.current at call-time, so render order is fine.
-    const tagPageDepsRef = useRef({});
+    // Cross-hook deps (setBubbles, setFilterTags, setListFilterTags,
+    // getBubbleFillStyle) now come from BubblesStore, so no page-owned ref bridge
+    // is needed.
     const {
         tags,
         setTags,
@@ -140,7 +138,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         isColorAvailable,
         canCreateMoreTags,
         COLOR_PALETTE
-    } = useTags({ user, bubbles, pageDeps: tagPageDepsRef });
+    } = useTags({ user, bubbles });
 
     // Filter / category state extracted into hook.
     // All deps now come from BubblesStore.
@@ -285,14 +283,6 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     useEffect(() => {
         register({ getBubbleFillStyle: (...args) => getBubbleFillStyleRef.current(...args) });
     }, [register]);
-
-    // Keep the bridge to useTags fresh: tag handlers read these at call-time.
-    tagPageDepsRef.current = {
-        setBubbles,
-        setFilterTags,
-        setListFilterTags,
-        getBubbleFillStyle
-    };
 
     // Function to get canvas dimensions depending on screen size
     // Размер канваса вычисляется через утилиту, учитывая панель категорий
