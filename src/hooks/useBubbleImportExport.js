@@ -3,6 +3,7 @@ import { saveBubblesToFirestore, saveTagsToFirestore } from '../services/firesto
 import { exportJsonFile } from '../utils/exportJson';
 import logger from '../utils/logger';
 import { buildExportData, buildExportFilename, parseImportData } from '../utils/bubbleJson';
+import { useBubblesStore } from '../state/BubblesStore';
 
 /**
  * JSON import/export handlers extracted from BubblesPage (Task D of #68 / #64).
@@ -11,21 +12,20 @@ import { buildExportData, buildExportFilename, parseImportData } from '../utils/
  * this hook keeps only the thin side effects — file download, Firestore writes,
  * state setters and the page reload.
  *
- * `bubbles` and `tags` are read at call-time from the pageDeps bridge ref (they
- * are page-owned state); `setBubbles` / `setTags` are passed in. This mirrors the
- * ref-bridge technique used by useBubbleFilters / useListFilters.
+ * `bubbles` and `tags` are read from the BubblesStore; `setBubbles` / `setTags`
+ * are obtained from the store as well.
  */
-export function useBubbleImportExport({ pageDeps, setBubbles, setTags }) {
-    // Export current data to JSON. Reads bubbles + tags from the pageDeps bridge at
-    // call-time; consumers of this callback are not memoized, so a stable identity
-    // here is safe.
+export function useBubbleImportExport() {
+    const { bubbles, tags, setBubbles, setTags } = useBubblesStore();
+
+    // Export current data to JSON. Reads bubbles + tags from the BubblesStore.
+    // Consumers of this callback are not memoized, so a stable identity here is safe.
     const handleExportJson = useCallback(() => {
-        const deps = (pageDeps && pageDeps.current) || {};
         const now = new Date();
-        const data = buildExportData({ bubbles: deps.bubbles || [], tags: deps.tags || [] }, now);
+        const data = buildExportData({ bubbles, tags }, now);
         const filename = buildExportFilename(now);
         exportJsonFile(data, filename);
-    }, [pageDeps]);
+    }, [bubbles, tags]);
 
     // Import data from JSON (replace existing)
     const handleImportJson = useCallback(async (data) => {

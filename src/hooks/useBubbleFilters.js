@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { lsGet, lsSet } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
 import { BUBBLE_STATUS } from '../services/firestoreService';
+import { useBubblesStore } from '../state/BubblesStore';
 
 function readBubbleViewPlannedTasksFromLS() {
     return lsGet(LS.PLANNED_TASKS_ONLY, false) === true;
@@ -54,7 +55,15 @@ export function countBubblesByTagForBubblesView({ bubbles, tags, searchFoundBubb
     return bubblesForCount.filter((bubble) => bubble.tagId === tagId).length;
 }
 
-export function useBubbleFilters({ tags, pageDeps }) {
+export function useBubbleFilters({ tags }) {
+    const { register, bubbles, searchFoundBubbles, debouncedSearchQuery } = useBubblesStore();
+    const storeDataRef = useRef({ bubbles, searchFoundBubbles, debouncedSearchQuery });
+
+    // Keep ref up-to-date with store values
+    useEffect(() => {
+        storeDataRef.current = { bubbles, searchFoundBubbles, debouncedSearchQuery };
+    }, [bubbles, searchFoundBubbles, debouncedSearchQuery]);
+
     const [filterTags, setFilterTags] = useState(() =>
         lsGet(LS.FILTER_TAGS, [])
     ); // Массив ID выбранных тегов для фильтрации
@@ -97,6 +106,12 @@ export function useBubbleFilters({ tags, pageDeps }) {
     const [categoriesPanelEnabled, setCategoriesPanelEnabled] = useState(() =>
         lsGet(LS.CATEGORIES_PANEL_ENABLED, false)
     ); // Постоянное отображение панели категорий
+
+    // Register setFilterTags into the store for other hooks (e.g., useTags)
+    // to access when managing tags.
+    useEffect(() => {
+        register({ setFilterTags });
+    }, [setFilterTags, register]);
 
     // Синхронизация selectedCategory с фильтрами после загрузки тегов
     useEffect(() => {
@@ -287,19 +302,18 @@ export function useBubbleFilters({ tags, pageDeps }) {
         return isAllTagsSelected(tags, filterTags, showNoTag);
     }, [tags, filterTags, showNoTag]);
 
-    // Count bubbles by tag for the bubbles view. `bubbles` and the current search
-    // state are defined *after* this hook runs in BubblesPage, so they are read at
-    // call-time from the pageDeps bridge ref. Consumers of this callback are not
-    // memoized, so a stable identity here is safe.
+    // Count bubbles by tag for the bubbles view. All deps come from the store (via ref)
+    // or local state. Consumers of this callback are not memoized, so a stable identity
+    // here is safe.
     const getBubbleCountByTagForBubblesView = useCallback((tagId) => {
-        const deps = (pageDeps && pageDeps.current) || {};
+        const { bubbles, searchFoundBubbles, debouncedSearchQuery } = storeDataRef.current;
         return countBubblesByTagForBubblesView({
-            bubbles: deps.bubbles || [],
+            bubbles,
             tags,
-            searchFoundBubbles: deps.searchFoundBubbles || [],
-            debouncedSearchQuery: deps.debouncedSearchQuery
+            searchFoundBubbles,
+            debouncedSearchQuery
         }, tagId);
-    }, [tags, pageDeps]);
+    }, [tags]);
 
     return {
         filterTags,

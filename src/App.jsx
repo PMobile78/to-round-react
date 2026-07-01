@@ -7,6 +7,7 @@ const MindMapPage = React.lazy(() => import('./pages/MindMapPage'));
 import AuthForm from './components/AuthForm';
 import { onAuthStateChange } from './services/authService';
 import { useThemeMode } from './hooks/useThemeMode';
+import { BubblesStoreProvider } from './state/BubblesStore';
 
 // Hash-based routing so the screen survives F5 and works on GitHub Pages.
 const getScreenFromHash = () => (window.location.hash === '#/mindmap' ? 'mindmap' : 'main');
@@ -76,18 +77,20 @@ function App() {
                         />
                     </React.Suspense>
                 ) : (
-                    <BubblesPage
-                        user={user}
-                        themeMode={actualTheme}
-                        toggleTheme={toggleTheme}
-                        themeToggleProps={{ themeMode, actualTheme }}
-                        onOpenMindMap={() => navigate('mindmap')}
-                        themeModeState={themeMode}
-                        setThemeMode={setThemeMode}
-                        design={design}
-                        setDesign={setDesign}
-                        designs={designs}
-                    />
+                    <BubblesStoreProvider>
+                        <BubblesPage
+                            user={user}
+                            themeMode={actualTheme}
+                            toggleTheme={toggleTheme}
+                            themeToggleProps={{ themeMode, actualTheme }}
+                            onOpenMindMap={() => navigate('mindmap')}
+                            themeModeState={themeMode}
+                            setThemeMode={setThemeMode}
+                            design={design}
+                            setDesign={setDesign}
+                            designs={designs}
+                        />
+                    </BubblesStoreProvider>
                 )
             ) : (
                 <AuthForm

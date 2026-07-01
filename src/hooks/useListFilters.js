@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { lsGet, lsSet } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
 import { getBubblesByStatus } from '../services/firestoreService';
 import { stripHtml } from '../utils/stripHtml';
 import { toggleTagInFilter } from './useBubbleFilters';
+import { useBubblesStore } from '../state/BubblesStore';
 
 // Re-export the shared pure toggle helper so list-view consumers/tests can import
 // it from here too (symmetry with useBubbleFilters).
@@ -85,7 +86,15 @@ export function countBubblesByTagForListView({ bubbles, tags, listFilter, listSe
     return searchFilteredBubbles.length;
 }
 
-export function useListFilters({ tags, pageDeps }) {
+export function useListFilters({ tags }) {
+    const { register, bubbles, listFilter, listSearchQuery } = useBubblesStore();
+    const storeDataRef = useRef({ bubbles, listFilter, listSearchQuery });
+
+    // Keep ref up-to-date with store values
+    useEffect(() => {
+        storeDataRef.current = { bubbles, listFilter, listSearchQuery };
+    }, [bubbles, listFilter, listSearchQuery]);
+
     const [listFilterTags, setListFilterTags] = useState(() =>
         lsGet(LS.LIST_FILTER_TAGS, [])
     ); // Массив ID выбранных тегов для фильтрации в списке
@@ -93,6 +102,12 @@ export function useListFilters({ tags, pageDeps }) {
     const [listShowNoTag, setListShowNoTag] = useState(() =>
         lsGet(LS.LIST_SHOW_NO_TAG, true)
     ); // Показывать ли задачи без тегов в списке
+
+    // Register setListFilterTags into the store for other hooks (e.g., useTags)
+    // to access when managing tags.
+    useEffect(() => {
+        register({ setListFilterTags });
+    }, [setListFilterTags, register]);
 
     // Инициализация настроек фильтра списка задач после загрузки тегов
     useEffect(() => {
@@ -146,32 +161,30 @@ export function useListFilters({ tags, pageDeps }) {
         return isAllListTagsSelected(tags, listFilterTags, listShowNoTag);
     }, [tags, listFilterTags, listShowNoTag]);
 
-    // `bubbles`, `listFilter` and `listSearchQuery` are defined *after* this hook
-    // runs in BubblesPage, so they are read at call-time from the pageDeps bridge
-    // ref. Consumers of this callback are not memoized, so a stable identity is safe.
+    // All deps come from the store (via ref) or local state. Consumers of this
+    // callback are not memoized, so a stable identity is safe.
     const getBubbleCountByTagForListView = useCallback((tagId) => {
-        const deps = (pageDeps && pageDeps.current) || {};
+        const { bubbles, listFilter, listSearchQuery } = storeDataRef.current;
         return countBubblesByTagForListView({
-            bubbles: deps.bubbles || [],
+            bubbles,
             tags,
-            listFilter: deps.listFilter,
-            listSearchQuery: deps.listSearchQuery
+            listFilter,
+            listSearchQuery
         }, tagId);
-    }, [tags, pageDeps]);
+    }, [tags]);
 
-    // Function for filtering bubbles for list view (supports all statuses). Reads
-    // `bubbles`/`listFilter` from the pageDeps bridge at call-time (same reasoning
-    // as getBubbleCountByTagForListView above).
+    // Function for filtering bubbles for list view (supports all statuses).
+    // Deps from store (via ref) or local state.
     const getFilteredBubblesForList = useCallback(() => {
-        const deps = (pageDeps && pageDeps.current) || {};
+        const { bubbles, listFilter } = storeDataRef.current;
         return filterBubblesForList({
-            bubbles: deps.bubbles || [],
+            bubbles,
             tags,
-            listFilter: deps.listFilter,
+            listFilter,
             listFilterTags,
             listShowNoTag
         });
-    }, [tags, listFilterTags, listShowNoTag, pageDeps]);
+    }, [tags, listFilterTags, listShowNoTag]);
 
     return {
         listFilterTags,

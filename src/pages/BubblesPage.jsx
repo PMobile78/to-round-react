@@ -47,6 +47,7 @@ import { applyBubbleFill } from '../utils/bubbleStyle';
 import {
     readBubbleViewPlannedTasksFromLS
 } from '../utils/bubbleData';
+import { useBubblesStore } from '../state/BubblesStore';
 
 
 const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMindMap, themeModeState, setThemeMode, design, setDesign, designs }) => {
@@ -59,7 +60,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     const engineRef = useRef(null);
     const renderRef = useRef(null);
     const wallsRef = useRef([]);
-    const [bubbles, setBubbles] = useState([]);
+    const {
+        bubbles,
+        setBubbles,
+        setSearchFoundBubbles: storeSetSearchFoundBubbles,
+        setDebouncedSearchQuery: storeSetDebouncedSearchQuery,
+        setListFilter: storeSetListFilter,
+        setListSearchQuery: storeSetListSearchQuery
+    } = useBubblesStore();
 
     // Bubble CRUD + dialog state extracted into useBubbleCrud (Task 5/6 of #38).
     // Called early because it owns selectedBubble/editDialog, which liveEditRef,
@@ -134,9 +142,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     } = useTags({ user, bubbles, pageDeps: tagPageDepsRef });
 
     // Filter / category state extracted into hook.
-    // filterPageDepsRef bridges deps the bubbles-view count callback needs but that
-    // are defined *after* this call (bubbles + search state); read at call-time.
-    const filterPageDepsRef = useRef({});
+    // All deps now come from BubblesStore.
     const {
         filterTags,
         setFilterTags,
@@ -156,13 +162,10 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         selectAllFilters,
         isAllSelected,
         getBubbleCountByTagForBubblesView,
-    } = useBubbleFilters({ tags, pageDeps: filterPageDepsRef });
+    } = useBubbleFilters({ tags });
 
     // List-view filter / count state extracted into useListFilters (Task C of #67).
-    // listFilterPageDepsRef bridges deps the list count/filter callbacks need but
-    // that are defined *after* this call (bubbles + listFilter + list search); read
-    // at call-time.
-    const listFilterPageDepsRef = useRef({});
+    // All deps now come from BubblesStore.
     const {
         listFilterTags,
         setListFilterTags,
@@ -174,16 +177,14 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         selectAllListFilters,
         isAllListFiltersSelected,
         getBubbleCountByTagForListView,
-    } = useListFilters({ tags, pageDeps: listFilterPageDepsRef });
+    } = useListFilters({ tags });
 
     // JSON import/export handlers extracted into useBubbleImportExport (Task D of #68).
-    // importExportPageDepsRef bridges the page-owned `bubbles` + `tags` the export
-    // builder reads at call-time (refreshed below), keeping a stable handler identity.
-    const importExportPageDepsRef = useRef({});
+    // Now uses BubblesStore directly for bubbles/tags state.
     const {
         handleExportJson,
         handleImportJson,
-    } = useBubbleImportExport({ pageDeps: importExportPageDepsRef, setBubbles, setTags });
+    } = useBubbleImportExport();
 
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false); // Состояние бокового меню фильтров
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false); // Состояние левого бокового меню
@@ -503,28 +504,22 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
         theme,
     });
 
-    // Keep the bridge to useBubbleFilters fresh: getBubbleCountByTagForBubblesView
-    // reads these at call-time (defined after the hook runs).
-    filterPageDepsRef.current = {
-        bubbles,
-        searchFoundBubbles,
-        debouncedSearchQuery: debouncedBubblesSearchQuery
-    };
+    // Sync search/list state to BubblesStore so hooks can read them
+    useEffect(() => {
+        storeSetSearchFoundBubbles(searchFoundBubbles);
+    }, [searchFoundBubbles, storeSetSearchFoundBubbles]);
 
-    // Keep the bridge to useListFilters fresh: getBubbleCountByTagForListView /
-    // getFilteredBubblesForList read these at call-time (defined after the hook runs).
-    listFilterPageDepsRef.current = {
-        bubbles,
-        listFilter,
-        listSearchQuery
-    };
+    useEffect(() => {
+        storeSetDebouncedSearchQuery(debouncedBubblesSearchQuery);
+    }, [debouncedBubblesSearchQuery, storeSetDebouncedSearchQuery]);
 
-    // Keep the bridge to useBubbleImportExport fresh: handleExportJson reads
-    // bubbles + tags at call-time (export builder).
-    importExportPageDepsRef.current = {
-        bubbles,
-        tags
-    };
+    useEffect(() => {
+        storeSetListFilter(listFilter);
+    }, [listFilter, storeSetListFilter]);
+
+    useEffect(() => {
+        storeSetListSearchQuery(listSearchQuery);
+    }, [listSearchQuery, storeSetListSearchQuery]);
 
     // foundBubblesIds + the search-state sync effect + the visibility/highlight effect
     // now live in useBubbleWorld (Task E of #69); foundBubblesIds is returned above.
@@ -536,8 +531,7 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
     // handleToggleEditUseRichText + the open-bubble deep-link listener) live in
     // useBubbleCrud (Task 5/6 of #38).
 
-    // getFilteredBubblesForList now lives in useListFilters (Task C of #67); its
-    // late-bound deps (bubbles + listFilter) are fed via listFilterPageDepsRef below.
+    // getFilteredBubblesForList now lives in useListFilters (Task C of #67).
 
     // Tag dialog/CRUD + color helpers live in useTags (Task 2/6 of #38).
 
@@ -547,11 +541,9 @@ const BubblesPage = ({ user, themeMode, toggleTheme, themeToggleProps, onOpenMin
 
     // List-view filter callbacks (handleListTagFilterChange, handleListNoTagFilterChange,
     // clearAllListFilters, selectAllListFilters, isAllListFiltersSelected) and
-    // getBubbleCountByTagForListView now live in useListFilters (Task C of #67);
-    // their late-bound deps are fed via listFilterPageDepsRef below.
+    // getBubbleCountByTagForListView now live in useListFilters (Task C of #67).
 
-    // getBubbleCountByTagForBubblesView now lives in useBubbleFilters (Task B of #66);
-    // its late-bound deps are fed via filterPageDepsRef below.
+    // getBubbleCountByTagForBubblesView now lives in useBubbleFilters (Task B of #66).
 
     // Функции для работы с категориями (тегами)
     const getCategoryBubbleCounts = () => {
