@@ -3,6 +3,7 @@ import { lsGet, lsGetString } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
 import { isAllTagsSelected, countBubblesByTagForBubblesView } from '../utils/bubbleVisibility';
 import { isAllListTagsSelected, countBubblesByTagForListView } from '../utils/listVisibility';
+import { isColorAvailable as isColorAvailablePure } from '../hooks/tagColors';
 import { useBubblesData } from './BubblesDataStore';
 
 /**
@@ -128,6 +129,12 @@ export function BubblesUiProvider({
         [bubbles, tags, listFilter, listSearchQuery]
     );
 
+    // Tag-editor derived value (depends on tags and editingTag, which are in UI store).
+    const isColorAvailable = useCallback(
+        (color) => isColorAvailablePure(tags, color, editingTag),
+        [tags, editingTag]
+    );
+
     const value = {
         selectedTagId,
         setSelectedTagId,
@@ -220,6 +227,7 @@ export function BubblesUiProvider({
         getBubbleCountByTagForBubblesView,
         isAllListFiltersSelected,
         getBubbleCountByTagForListView,
+        isColorAvailable,
     };
 
     return (

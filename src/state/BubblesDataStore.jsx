@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { countActiveBubblesByTag } from '../utils/bubbleVisibility';
-import { isColorAvailable as isColorAvailablePure, canCreateMoreTags as canCreateMoreTagsPure } from '../hooks/tagColors';
+import { canCreateMoreTags as canCreateMoreTagsPure } from '../hooks/tagColors';
 
 /**
  * BubblesDataContext
@@ -20,11 +20,6 @@ export function BubblesDataProvider({ children }) {
     const [tags, setTags] = useState([]);
 
     // Data-only computed values (pure functions of bubbles/tags only).
-    const isColorAvailable = useCallback(
-        (color) => isColorAvailablePure(tags, color, null),
-        [tags]
-    );
-
     const canCreateMoreTags = useCallback(
         () => canCreateMoreTagsPure(tags),
         [tags]
@@ -41,7 +36,6 @@ export function BubblesDataProvider({ children }) {
         tags,
         setTags,
         getBubbleCountByTag,
-        isColorAvailable,
         canCreateMoreTags,
     };
 

@@ -90,13 +90,13 @@ const BubblesDialogs = ({
         setBubbles,
         tags,
         setTags,
-        isColorAvailable,
         canCreateMoreTags,
         getBubbleCountByTag,
     } = useBubblesData();
     const {
         selectedTagId,
         setSelectedTagId,
+        isColorAvailable,
         filterTags,
         showNoTag,
         isAllSelected,
