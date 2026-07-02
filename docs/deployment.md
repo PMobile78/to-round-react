@@ -1,12 +1,14 @@
 # Деплой и версионирование
 
 Фронтенд деплоится на **GitHub Pages** через GitHub Actions **вручную** — кнопкой
-«Run workflow» (триггер `workflow_dispatch`). Пуш и PR в `main`/`master` деплой **не**
-запускают, а только прогоняют тесты. Cloud Functions деплоятся отдельно и вручную —
+«Run workflow» (триггер `workflow_dispatch`). Пуш и PR в `main`/`master` **ничего не
+запускают** (ни тестов, ни деплоя): тесты и линт выполняются только внутри деплой-флоу.
+Cloud Functions деплоятся отдельно и вручную —
 см. [notifications.md → Эксплуатация](notifications.md#эксплуатация).
 
-Workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml).
-Прод: <https://pmobile78.github.io/to-round-react>.
+Workflows: [`.github/workflows/deploy-prod.yml`](../.github/workflows/deploy-prod.yml)
+(деплой) вызывает переиспользуемый [`.github/workflows/test.yml`](../.github/workflows/test.yml)
+(тесты + линт). Прод: <https://pmobile78.github.io/to-round-react>.
 
 ## Однократная настройка
 
@@ -36,20 +38,25 @@ Workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml).
 
 ## Как работает деплой
 
-Workflow `CI & Deploy` состоит из **двух** job (`ubuntu-latest`):
+Workflow `Deploy Prod` (`.github/workflows/deploy-prod.yml`, только `workflow_dispatch`)
+состоит из двух джобов: `test` (вызывает переиспользуемый workflow) и `build-and-deploy`.
 
-### Job `test` — на пуш/PR в `main`/`master` и при ручном запуске
+### Джоб `test` → переиспользуемый `test.yml`
 
-1. **Checkout** + **Setup Node.js 22** с кешем npm.
-2. **Install** — `npm ci --legacy-peer-deps --prefer-offline --no-audit` (+ зависимости `functions/`).
-3. **Run tests** — `npm test` и `npm run test:functions --if-present`.
+`deploy-prod.yml` вызывает `uses: ./.github/workflows/test.yml` — переиспользуемый workflow
+(`on: workflow_call`) с **двумя параллельными** job (`ubuntu-latest`); в графе Actions они
+видны как `test / test` и `test / lint`:
 
-Этот job **не трогает GitHub Pages**, поэтому пуши и PR не дёргают защищённое окружение
-`github-pages` и не падают на его protection rule.
+- **`test`** — Checkout + Node 22 (кеш npm) + `npm ci --legacy-peer-deps` (+ зависимости
+  `functions/`) → **`npm test`** и **`npm run test:functions --if-present`**.
+- **`lint`** — Checkout + Node 22 + `npm ci --legacy-peer-deps` → **`npm run lint`** (eslint).
 
-### Job `deploy` — только ручной запуск (`workflow_dispatch`)
+Оба job read-only (`permissions: contents: read`) и GitHub Pages не трогают.
 
-Запускается с условием `needs: test` (тесты должны пройти) и `if: github.event_name == 'workflow_dispatch'`:
+### Джоб `build-and-deploy` — `needs: test`
+
+Стартует, только если `test` (оба параллельных job) зелёный, т.е. линт и тесты — обязательный
+барьер перед выкладкой:
 
 1. **Checkout** + **Setup Node.js 22** + **Install**.
 2. **Bump version** — `npm run version:${{ inputs.version_bump }}` (уровень выбирается при запуске:
@@ -62,8 +69,8 @@ Workflow `CI & Deploy` состоит из **двух** job (`ubuntu-latest`):
 
 ### Как запустить деплой
 
-**Actions → workflow «CI & Deploy» → Run workflow → ветка `main` → уровень версии → Run.**
-Из терминала: `gh workflow run "CI & Deploy" --ref main -f version_bump=patch`.
+**Actions → workflow «Deploy Prod» → Run workflow → ветка `main` → уровень версии → Run.**
+Из терминала: `gh workflow run "Deploy Prod" --ref main -f version_bump=patch`.
 
 > ⚠️ Запускать **только с ветки `main`** (поле «Use workflow from»): окружение `github-pages`
 > protection rule разрешает деплой лишь с `main`/`master`; с другой ветки запуск будет отклонён.
@@ -104,8 +111,8 @@ npm run version:major   # 1.0.0 → 2.0.0
 - **`ERESOLVE` при установке** — конфликт peer-зависимостей; workflow уже ставит с
   `--legacy-peer-deps`, локально используйте тот же флаг.
 - **Service worker не сгенерировался** — проверьте шаг `Generate Service Worker` в логах Actions.
-- **Деплой не запускается на пуш** — так и задумано: деплой только ручной (`Run workflow`).
-  На пуш/PR работает лишь job `test`.
+- **На пуш/PR ничего не запускается** — так и задумано: push/PR-триггеры убраны; тесты, линт
+  и деплой идут только через ручной `Run workflow` («Deploy Prod»).
 - **`Branch ... is not allowed to deploy to github-pages`** — workflow запущен не с `main`/`master`.
   Перезапустите «Run workflow», выбрав ветку `main`.
 - **Деплой не запустился вручную** — в **Settings → Pages** источник должен быть `GitHub Actions`;
