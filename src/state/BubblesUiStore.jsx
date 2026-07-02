@@ -1,29 +1,28 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { lsGet, lsGetString } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
-import { isAllTagsSelected, countBubblesByTagForBubblesView, countActiveBubblesByTag } from '../utils/bubbleVisibility';
+import { isAllTagsSelected, countBubblesByTagForBubblesView } from '../utils/bubbleVisibility';
 import { isAllListTagsSelected, countBubblesByTagForListView } from '../utils/listVisibility';
-import { isColorAvailable as isColorAvailablePure, canCreateMoreTags as canCreateMoreTagsPure } from '../hooks/tagColors';
+import { useBubblesData } from './BubblesDataStore';
 
 /**
- * BubblesStore Context
+ * BubblesUiContext
  *
- * Central store for bubbles and tags state, replacing the old page-owned ref bridges.
- * Hooks can register themselves to make their setters/callbacks available
- * to other hooks without creating circular dependencies.
+ * Central store for bubbles/tags view state (dialogs, filters, form state, etc.).
+ * Composed with BubblesDataContext via useBubblesData() to compute derived values
+ * that mix UI state and data.
  */
-const BubblesStoreContext = createContext(null);
+const BubblesUiContext = createContext(null);
 
 /**
- * BubblesStoreProvider
+ * BubblesUiProvider
  *
- * Provides bubbles/setBubbles and tags/setTags state, plus a register() method
- * for hooks to publish setters/callbacks for cross-hook consumption.
+ * Provides all UI state (dialogs, filters, forms) plus register/registered mechanism
+ * for cross-hook communication. Theme/design props pass through from App.
  */
-export function BubblesStoreProvider({
+export function BubblesUiProvider({
     children,
-    // Theme/design controls owned by useThemeMode in App, threaded through the
-    // provider so the dialogs can read them from the store (Stage F2 of 010d).
+    // Theme/design controls owned by useThemeMode in App
     themeModeState,
     setThemeMode,
     design,
@@ -33,11 +32,10 @@ export function BubblesStoreProvider({
     themeToggleProps,
     onOpenMindMap,
 }) {
-    const [bubbles, setBubbles] = useState([]);
-    const [tags, setTags] = useState([]);
+    // Acquire data-layer state for computing mixed derived values
+    const { bubbles, tags } = useBubblesData();
+
     // Currently selected tag id for the create/edit bubble dialog
-    // (was owned by useTags; now a live store field so useBubbleCrud can read it
-    // directly instead of via the register() bridge).
     const [selectedTagId, setSelectedTagId] = useState('');
 
     // Search state for bubbles view
@@ -56,10 +54,7 @@ export function BubblesStoreProvider({
     const [listFilterTags, setListFilterTags] = useState(() => lsGet(LS.LIST_FILTER_TAGS, []));
     const [listShowNoTag, setListShowNoTag] = useState(() => lsGet(LS.LIST_SHOW_NO_TAG, true));
 
-    // Form state for the create/edit bubble dialogs (migrated from
-    // useBubbleNotifications + useBubbleCrud in Stage E of 010d). The rAF pulse
-    // loop and its refs stay in useBubbleNotifications — only this dialog UI state
-    // moved here so the dialogs can read it from the store instead of via props.
+    // Form state for the create/edit bubble dialogs
     const [dueDate, setDueDate] = useState(null);              // create-form due date
     const [editDueDate, setEditDueDate] = useState(null);      // edit-form due date
     const [createNotifications, setCreateNotifications] = useState([]);
@@ -71,9 +66,7 @@ export function BubblesStoreProvider({
     const [bubbleSize, setBubbleSize] = useState(45);              // create-form bubble size
     const [editBubbleSize, setEditBubbleSize] = useState(45);      // edit-form bubble size
 
-    // Dialog open-flags + settings values (migrated from BubblesPage in Stage F of
-    // 010d). Page-level UI state the dialogs now read from the store instead of via
-    // forwarded props. Persisted values keep their original lsGet initializers.
+    // Dialog open-flags + settings values
     const [menuDrawerOpen, setMenuDrawerOpen] = useState(false);
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [fontSettingsDialog, setFontSettingsDialog] = useState(false);
@@ -94,9 +87,7 @@ export function BubblesStoreProvider({
         return lsGetString(LS.MAIN_VIEW) === 'tasks' ? 'tasks' : 'bubbles';
     });
 
-    // Tag-editor + categories dialog state (migrated from useTags/BubblesPage in
-    // Stage H of 010d). useTags still owns the tag handlers; they read these
-    // setters from the store, while the dialogs read the values from here.
+    // Tag-editor + categories dialog state
     const [tagDialog, setTagDialog] = useState(false);
     const [tagName, setTagName] = useState('');
     const [tagColor, setTagColor] = useState('#2f6bdb');
@@ -104,16 +95,14 @@ export function BubblesStoreProvider({
     const [deletingTags, setDeletingTags] = useState(new Set()); // tags mid soft-delete
     const [categoriesDialog, setCategoriesDialog] = useState(false);
 
-    // Registered callbacks from hooks (e.g., setListFilterTags, etc.)
+    // Registered callbacks from hooks
     const [registered, setRegistered] = useState({});
 
     const register = useCallback((callbacks) => {
         setRegistered((prev) => ({ ...prev, ...callbacks }));
     }, []);
 
-    // Store-computed derived values (pure functions of store state).
-    // These must be available on first render (not via register() which populates via effect),
-    // so they are defined inline here.
+    // Mixed derived values (read both UI state and data).
     const isAllSelected = useCallback(
         () => isAllTagsSelected(tags, filterTags, showNoTag),
         [tags, filterTags, showNoTag]
@@ -139,28 +128,7 @@ export function BubblesStoreProvider({
         [bubbles, tags, listFilter, listSearchQuery]
     );
 
-    // Tag-editor derived values (pure functions of tags/editingTag/bubbles),
-    // store-computed alongside their filter-count siblings above (Stage H of 010d).
-    const isColorAvailable = useCallback(
-        (color) => isColorAvailablePure(tags, color, editingTag),
-        [tags, editingTag]
-    );
-
-    const canCreateMoreTags = useCallback(
-        () => canCreateMoreTagsPure(tags),
-        [tags]
-    );
-
-    const getBubbleCountByTag = useCallback(
-        (tagId) => countActiveBubblesByTag(bubbles, tags, tagId),
-        [bubbles, tags]
-    );
-
     const value = {
-        bubbles,
-        setBubbles,
-        tags,
-        setTags,
         selectedTagId,
         setSelectedTagId,
         filterTags,
@@ -225,7 +193,6 @@ export function BubblesStoreProvider({
         setBubbleBackgroundEnabled,
         mainView,
         setMainView,
-        // Tag-editor + categories dialog state (Stage H of 010d).
         tagDialog,
         setTagDialog,
         tagName,
@@ -238,7 +205,7 @@ export function BubblesStoreProvider({
         setDeletingTags,
         categoriesDialog,
         setCategoriesDialog,
-        // Theme/design controls (Stage F2 of 010d) — passed into the provider by App.
+        // Theme/design controls
         themeModeState,
         setThemeMode,
         design,
@@ -253,28 +220,25 @@ export function BubblesStoreProvider({
         getBubbleCountByTagForBubblesView,
         isAllListFiltersSelected,
         getBubbleCountByTagForListView,
-        isColorAvailable,
-        canCreateMoreTags,
-        getBubbleCountByTag,
     };
 
     return (
-        <BubblesStoreContext.Provider value={value}>
+        <BubblesUiContext.Provider value={value}>
             {children}
-        </BubblesStoreContext.Provider>
+        </BubblesUiContext.Provider>
     );
 }
 
 /**
- * useBubblesStore
+ * useBubblesUi
  *
- * Hook to access the BubblesStore context.
- * Throws if used outside a BubblesStoreProvider.
+ * Hook to access the BubblesUiContext.
+ * Throws if used outside a BubblesUiProvider.
  */
-export function useBubblesStore() {
-    const context = useContext(BubblesStoreContext);
+export function useBubblesUi() {
+    const context = useContext(BubblesUiContext);
     if (!context) {
-        throw new Error('useBubblesStore must be used within a BubblesStoreProvider');
+        throw new Error('useBubblesUi must be used within a BubblesUiProvider');
     }
     return context;
 }

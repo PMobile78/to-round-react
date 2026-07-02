@@ -14,7 +14,8 @@ import LogoutConfirmDialog from './LogoutConfirmDialog';
 import TaskListDrawer from './ListViewDrawer';
 import { isOverdue } from '../utils/notifications';
 import { saveTagsToFirestore } from '../services/firestoreService';
-import { useBubblesStore } from '../state/BubblesStore';
+import { useBubblesData } from '../state/BubblesDataStore';
+import { useBubblesUi } from '../state/BubblesUiStore';
 import { COLOR_PALETTE } from '../hooks/tagColors';
 
 /**
@@ -89,6 +90,11 @@ const BubblesDialogs = ({
         setBubbles,
         tags,
         setTags,
+        isColorAvailable,
+        canCreateMoreTags,
+        getBubbleCountByTag,
+    } = useBubblesData();
+    const {
         selectedTagId,
         setSelectedTagId,
         filterTags,
@@ -162,9 +168,6 @@ const BubblesDialogs = ({
         deletingTags,
         categoriesDialog,
         setCategoriesDialog,
-        isColorAvailable,
-        canCreateMoreTags,
-        getBubbleCountByTag,
         // Theme/design controls — read from the store (Stage F2 of 010d).
         themeModeState,
         setThemeMode,
@@ -174,7 +177,7 @@ const BubblesDialogs = ({
         toggleTheme,
         themeToggleProps,
         onOpenMindMap,
-    } = useBubblesStore();
+    } = useBubblesUi();
     return (
         <>
             {/* Диалог редактирования */}

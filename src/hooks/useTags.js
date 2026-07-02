@@ -9,7 +9,8 @@ import {
 } from '../services/firestoreService';
 import logger from '../utils/logger';
 import { applyBubbleFill } from '../utils/bubbleStyle';
-import { useBubblesStore } from '../state/BubblesStore';
+import { useBubblesData } from '../state/BubblesDataStore';
+import { useBubblesUi } from '../state/BubblesUiStore';
 import {
     getNextAvailableColor as getNextAvailableColorPure,
     isColorAvailable as isColorAvailablePure,
@@ -34,12 +35,15 @@ import {
  */
 export function useTags({ user }) {
     const {
-        setBubbles, registered, tags, setTags, setFilterTags, setListFilterTags,
+        setBubbles, tags, setTags
+    } = useBubblesData();
+    const {
+        registered, setFilterTags, setListFilterTags,
         // Tag-editor state migrated into the store (Stage H of 010d); the handlers
         // below read/set it here instead of via local useState.
         tagName, setTagName, tagColor, setTagColor, editingTag, setEditingTag,
         setTagDialog, setDeletingTags,
-    } = useBubblesStore();
+    } = useBubblesUi();
     const tagsRef = useRef(tags);
     useEffect(() => { tagsRef.current = tags; }, [tags]);
     const [deleteTimers, setDeleteTimers] = useState(new Map()); // Таймеры удаления тегов

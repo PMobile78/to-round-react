@@ -3,7 +3,7 @@ import { saveBubblesToFirestore, saveTagsToFirestore } from '../services/firesto
 import { exportJsonFile } from '../utils/exportJson';
 import logger from '../utils/logger';
 import { buildExportData, buildExportFilename, parseImportData } from '../utils/bubbleJson';
-import { useBubblesStore } from '../state/BubblesStore';
+import { useBubblesData } from '../state/BubblesDataStore';
 
 /**
  * JSON import/export handlers extracted from BubblesPage (Task D of #68 / #64).
@@ -16,7 +16,7 @@ import { useBubblesStore } from '../state/BubblesStore';
  * are obtained from the store as well.
  */
 export function useBubbleImportExport() {
-    const { bubbles, tags, setBubbles, setTags } = useBubblesStore();
+    const { bubbles, tags, setBubbles, setTags } = useBubblesData();
 
     // Export current data to JSON. Reads bubbles + tags from the BubblesStore.
     // Consumers of this callback are not memoized, so a stable identity here is safe.

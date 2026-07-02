@@ -7,7 +7,8 @@ const MindMapPage = React.lazy(() => import('./pages/MindMapPage'));
 import AuthForm from './components/AuthForm';
 import { onAuthStateChange } from './services/authService';
 import { useThemeMode } from './hooks/useThemeMode';
-import { BubblesStoreProvider } from './state/BubblesStore';
+import { BubblesDataProvider } from './state/BubblesDataStore';
+import { BubblesUiProvider } from './state/BubblesUiStore';
 
 // Hash-based routing so the screen survives F5 and works on GitHub Pages.
 const getScreenFromHash = () => (window.location.hash === '#/mindmap' ? 'mindmap' : 'main');
@@ -77,21 +78,23 @@ function App() {
                         />
                     </React.Suspense>
                 ) : (
-                    <BubblesStoreProvider
-                        themeModeState={themeMode}
-                        setThemeMode={setThemeMode}
-                        design={design}
-                        setDesign={setDesign}
-                        designs={designs}
-                        toggleTheme={toggleTheme}
-                        themeToggleProps={{ themeMode, actualTheme }}
-                        onOpenMindMap={() => navigate('mindmap')}
-                    >
-                        <BubblesPage
-                            user={user}
-                            themeMode={actualTheme}
-                        />
-                    </BubblesStoreProvider>
+                    <BubblesDataProvider>
+                        <BubblesUiProvider
+                            themeModeState={themeMode}
+                            setThemeMode={setThemeMode}
+                            design={design}
+                            setDesign={setDesign}
+                            designs={designs}
+                            toggleTheme={toggleTheme}
+                            themeToggleProps={{ themeMode, actualTheme }}
+                            onOpenMindMap={() => navigate('mindmap')}
+                        >
+                            <BubblesPage
+                                user={user}
+                                themeMode={actualTheme}
+                            />
+                        </BubblesUiProvider>
+                    </BubblesDataProvider>
                 )
             ) : (
                 <AuthForm

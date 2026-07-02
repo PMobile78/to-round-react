@@ -10,7 +10,8 @@ import {
 } from '../services/firestoreService';
 import logger from '../utils/logger';
 import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime } from '../utils/dateTime';
-import { useBubblesStore } from '../state/BubblesStore';
+import { useBubblesData } from '../state/BubblesDataStore';
+import { useBubblesUi } from '../state/BubblesUiStore';
 
 /**
  * Bubble create/edit/delete/done CRUD + dialog state, extracted from
@@ -28,16 +29,16 @@ import { useBubblesStore } from '../state/BubblesStore';
  * passed as explicit handler arguments by BubblesPage.
  */
 export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile }) {
+    const { tags } = useBubblesData();
     const {
         registered,
-        tags,
         selectedTagId,
         setSelectedTagId,
         bubbleSize,
         setBubbleSize,
         editBubbleSize,
         setEditBubbleSize,
-    } = useBubblesStore();
+    } = useBubblesUi();
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [editDialog, setEditDialog] = useState(false);
     const [selectedBubble, setSelectedBubble] = useState(null);

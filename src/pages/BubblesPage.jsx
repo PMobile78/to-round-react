@@ -47,7 +47,8 @@ import { applyBubbleFill } from '../utils/bubbleStyle';
 import {
     readBubbleViewPlannedTasksFromLS
 } from '../utils/bubbleData';
-import { useBubblesStore } from '../state/BubblesStore';
+import { useBubblesData } from '../state/BubblesDataStore';
+import { useBubblesUi } from '../state/BubblesUiStore';
 
 
 const BubblesPage = ({ user, themeMode }) => {
@@ -60,9 +61,8 @@ const BubblesPage = ({ user, themeMode }) => {
     const engineRef = useRef(null);
     const renderRef = useRef(null);
     const wallsRef = useRef([]);
+    const { bubbles, setBubbles } = useBubblesData();
     const {
-        bubbles,
-        setBubbles,
         setSelectedTagId,
         register,
         setSearchFoundBubbles: storeSetSearchFoundBubbles,
@@ -106,7 +106,7 @@ const BubblesPage = ({ user, themeMode }) => {
         // categoriesDialog is store-owned as of Stage H of 010d; the page still
         // opens it from the desktop categories panel below.
         setCategoriesDialog,
-    } = useBubblesStore();
+    } = useBubblesUi();
 
     // Bubble CRUD + dialog state extracted into useBubbleCrud (Task 5/6 of #38).
     // Called early because it owns selectedBubble/editDialog, which liveEditRef,

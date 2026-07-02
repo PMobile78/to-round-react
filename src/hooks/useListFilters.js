@@ -3,7 +3,8 @@ import { lsGet, lsSet } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
 import { getBubblesByStatus } from '../services/firestoreService';
 import { toggleTagInFilter } from './useBubbleFilters';
-import { useBubblesStore } from '../state/BubblesStore';
+import { useBubblesData } from '../state/BubblesDataStore';
+import { useBubblesUi } from '../state/BubblesUiStore';
 
 // Re-export the shared pure toggle helper so list-view consumers/tests can import
 // it from here too (symmetry with useBubbleFilters).
@@ -41,9 +42,9 @@ export function filterBubblesForList({ bubbles, tags, listFilter, listFilterTags
 }
 
 export function useListFilters({ tags }) {
+    const { bubbles } = useBubblesData();
     const {
         register,
-        bubbles,
         listFilter,
         listSearchQuery,
         listFilterTags,
@@ -52,7 +53,7 @@ export function useListFilters({ tags }) {
         setListShowNoTag,
         isAllListFiltersSelected,
         getBubbleCountByTagForListView,
-    } = useBubblesStore();
+    } = useBubblesUi();
     const storeDataRef = useRef({ bubbles, listFilter, listSearchQuery });
 
     // Keep ref up-to-date with store values

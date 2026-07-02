@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { lsGet, lsSet } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
-import { useBubblesStore } from '../state/BubblesStore';
+import { useBubblesUi } from '../state/BubblesUiStore';
 
 function readBubbleViewPlannedTasksFromLS() {
     return lsGet(LS.PLANNED_TASKS_ONLY, false) === true;
@@ -31,7 +31,7 @@ export function reconcileStaleFilterTags(tags, filterTags) {
 }
 
 export function useBubbleFilters({ tags }) {
-    const { register, filterTags, setFilterTags, showNoTag, setShowNoTag, isAllSelected, getBubbleCountByTagForBubblesView } = useBubblesStore();
+    const { register, filterTags, setFilterTags, showNoTag, setShowNoTag, isAllSelected, getBubbleCountByTagForBubblesView } = useBubblesUi();
 
     const [bubbleViewPlannedTasksOnly, setBubbleViewPlannedTasksOnly] = useState(readBubbleViewPlannedTasksFromLS);
 
