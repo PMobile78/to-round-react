@@ -311,6 +311,13 @@ const TaskList = ({
     const tasks = sortedAndFilteredTasks;
     const isEmpty = tasks.length === 0;
 
+    const statusTabs = [
+        { key: 'active', label: t('bubbles.activeTasks'), count: getTasksCountByStatus('active') },
+        { key: 'done', label: t('bubbles.doneTasks'), count: getTasksCountByStatus('done') },
+        { key: 'deleted', label: t('bubbles.deletedTasks'), count: getTasksCountByStatus('deleted') },
+        { key: 'postpone', label: t('bubbles.postponedTasks'), count: getTasksCountByStatus('postpone') },
+    ];
+
     return (
         <Box sx={{
             padding: 2,
@@ -421,28 +428,38 @@ const TaskList = ({
                 flexWrap: 'wrap',
                 gap: 1
             }}>
-                {[
-                    { key: 'active', label: t('bubbles.activeTasks'), count: getTasksCountByStatus('active') },
-                    { key: 'done', label: t('bubbles.doneTasks'), count: getTasksCountByStatus('done') },
-                    { key: 'deleted', label: t('bubbles.deletedTasks'), count: getTasksCountByStatus('deleted') },
-                    { key: 'postpone', label: t('bubbles.postponedTasks'), count: getTasksCountByStatus('postpone') },
-                ].map(tab => (
-                    <Button
-                        key={tab.key}
-                        variant={listFilter === tab.key ? 'contained' : 'outlined'}
-                        onClick={() => setListFilter(tab.key)}
-                        sx={{
-                            borderRadius: 20,
-                            paddingX: 2,
-                            paddingY: 1,
-                            textTransform: 'none',
-                            minWidth: 'auto',
-                            fontSize: isMobile ? '0.8rem' : '0.9rem',
-                        }}
-                    >
-                        {tab.label} ({tab.count})
-                    </Button>
-                ))}
+                {isMobile ? (
+                    <FormControl fullWidth size="small">
+                        <Select
+                            value={listFilter}
+                            onChange={(e) => setListFilter(e.target.value)}
+                        >
+                            {statusTabs.map(tab => (
+                                <MenuItem key={tab.key} value={tab.key}>
+                                    {tab.label} ({tab.count})
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                ) : (
+                    statusTabs.map(tab => (
+                        <Button
+                            key={tab.key}
+                            variant={listFilter === tab.key ? 'contained' : 'outlined'}
+                            onClick={() => setListFilter(tab.key)}
+                            sx={{
+                                borderRadius: 20,
+                                paddingX: 2,
+                                paddingY: 1,
+                                textTransform: 'none',
+                                minWidth: 'auto',
+                                fontSize: isMobile ? '0.8rem' : '0.9rem',
+                            }}
+                        >
+                            {tab.label} ({tab.count})
+                        </Button>
+                    ))
+                )}
             </Box>
 
             {/* Warning for deleted tasks */}
