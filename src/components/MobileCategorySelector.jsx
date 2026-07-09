@@ -11,7 +11,7 @@ import { alpha } from '@mui/material/styles';
 import { LabelOutlined, AllInclusive, LocalOffer } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { BUBBLE_STATUS } from '../services/firestoreService';
-import CategoryList from './CategoryList';
+import { buildCategoryDropdownItems } from './CategoryList';
 
 const ellipsisLabelSx = {
     overflow: 'hidden',
@@ -169,16 +169,14 @@ const MobileCategorySelector = ({
                     }
                 }}
             >
-                <CategoryList
-                    tags={tags}
-                    selectedCategory={selectedCategory}
-                    onCategorySelect={onCategorySelect}
-                    bubbleCounts={bubbleCounts}
-                    plannedTasksCount={plannedTasksCount}
-                    bubbles={bubbles}
-                    themeMode={themeMode}
-                    variant="dropdown"
-                />
+                {buildCategoryDropdownItems({
+                    tags,
+                    bubbles,
+                    plannedTasksCount,
+                    theme,
+                    t,
+                    getBubbleCountByTag: (tagId) => bubbleCounts[tagId] || 0,
+                })}
             </Select>
         </FormControl>
     );
