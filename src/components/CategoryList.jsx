@@ -105,7 +105,7 @@ export default function CategoryList({
     plannedTasksCount = 0,
     bubbles = [],
     themeMode = 'light',
-    variant = 'sidebar', // 'sidebar', 'dialog', 'dropdown'
+    variant = 'sidebar', // 'sidebar', 'dialog'
     onDragStart,
     onDragOver,
     onDrop,

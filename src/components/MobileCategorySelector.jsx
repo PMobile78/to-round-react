@@ -10,7 +10,6 @@ import {
 import { alpha } from '@mui/material/styles';
 import { LabelOutlined, AllInclusive, LocalOffer } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { BUBBLE_STATUS } from '../services/firestoreService';
 import { buildCategoryDropdownItems } from './CategoryList';
 
 const ellipsisLabelSx = {
@@ -40,26 +39,12 @@ const MobileCategorySelector = ({
     tags,
     selectedCategory,
     onCategorySelect,
-    themeMode,
     bubbleCounts = {},
     bubbles = [],
     plannedTasksCount = 0,
 }) => {
     const { t } = useTranslation();
     const theme = useTheme();
-
-    const getBubbleCount = (categoryId) => {
-        if (categoryId === 'all') {
-            return Object.values(bubbleCounts).reduce((sum, count) => sum + count, 0);
-        }
-        if (categoryId === 'no-tags') {
-            return bubbles.filter((b) => b.status === BUBBLE_STATUS.ACTIVE && !b.tagId).length;
-        }
-        if (categoryId === 'planned-tasks') {
-            return plannedTasksCount;
-        }
-        return bubbleCounts[categoryId] || 0;
-    };
 
     const handleChange = (event) => {
         const value = event.target.value;
