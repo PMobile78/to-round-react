@@ -40,7 +40,6 @@ export function useBubbleImportExport() {
             setTags(importedTags);
             setBubbles(importedBubbles);
 
-            // TODO: replace with proper React state + Matter.js reinit to avoid full page reload.
             // Imported bubbles are plain objects without Matter.js .body references; the physics
             // engine initialisation useEffect runs only once on mount, so a reload is required
             // to reattach physics bodies to the freshly imported bubbles.

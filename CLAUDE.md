@@ -99,10 +99,10 @@ The service worker (`public/sw.js`) is generated from env vars by `scripts/gener
 
 `.github/workflows/deploy-prod.yml` (**manual `workflow_dispatch` only** — push/PR trigger nothing) has two jobs: `test`, which calls the reusable `.github/workflows/test.yml` (`workflow_call`) running **two parallel jobs** — `test` (vitest + `test:functions`) and `lint` (eslint) — and `build-and-deploy` (`needs: test`). The deploy job bumps the version at the chosen level (`patch`/`minor`/`major` input, default `patch`), commits the bump with `[skip ci]`, builds, and deploys to GitHub Pages. Must be run from `main`/`master` (github-pages environment protection rule). The current version in `package.json` is the source of truth. See [docs/deployment.md](docs/deployment.md).
 
-## Active refactor context
+## Standing implementation conventions
 
-Refactor history is tracked in `docs/superpowers/`. Key standing conventions:
-- `BubblesPage.jsx` is a large god-component (~1000 lines, down from ~3000 via the ongoing 010 store refactor) — new behaviour extracts to `hooks/` and `components/`
+Project work is tracked in [GitHub Issues](https://github.com/PMobile78/to-round-react/issues). Key standing conventions:
+- `BubblesPage.jsx` is a large component (~1000 lines) — new behaviour extracts to `hooks/` and `components/`
 - `HtmlRenderer.jsx` uses DOMPurify — any HTML rendering must go through it
 - `firestore.rules` is now in the repo and must be kept in sync with `firebase.json` (`"firestore": { "rules": "firestore.rules" }`)
 - Window/panel/header backgrounds come from the MUI theme (`hooks/useThemeMode.js`), never hardcoded hex/rgba. Wrap a standalone panel in `<Paper>` with no explicit `backgroundColor` (e.g. `TasksCategoriesPanel`, list-as-main-screen `Paper elevation={16}`); a window header (`DialogTitle` / header `Box`) must **not** set its own `backgroundColor` — it inherits the window's Paper background. Header text uses `text.primary`, not `'white'`. Dialog body bg comes from `getDialogPaperStyles()` (`rgba(...,0.95)`).
