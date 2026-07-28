@@ -8,7 +8,7 @@
 |---|---|
 | [environment.md](environment.md) | Переменные окружения, файлы `.env`, конфигурация и её валидация |
 | [firebase.md](firebase.md) | Firebase: аутентификация, модель данных Firestore, правила доступа |
-| [deployment.md](deployment.md) | Деплой на GitHub Pages (GitHub Actions) и управление версиями |
+| [deployment.md](deployment.md) | Ручной деплой на GitHub Pages через GitHub Actions и управление версиями |
 | [favicon.md](favicon.md) | Набор иконок и web-манифест |
 
 ## Как устроены фичи

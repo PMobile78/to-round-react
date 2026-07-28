@@ -34,7 +34,7 @@ export const auth = getAuth(app);
 - `resetPassword(email)` — письмо для сброса пароля;
 - `onAuthStateChange(cb)` — подписка на состояние входа.
 
-`src/App.js` подписывается на `onAuthStateChanged` и рендерит `AuthForm` для гостя или
+`src/App.jsx` подписывается на `onAuthStateChanged` и рендерит `AuthForm` для гостя или
 `BubblesPage` для вошедшего пользователя. В Firebase Console включите провайдер
 **Email/Password** (Authentication → Sign-in method).
 

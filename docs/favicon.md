@@ -2,7 +2,7 @@
 
 В проекте используется современный минимальный набор иконок (вывод
 [RealFaviconGenerator](https://realfavicongenerator.net/)). Файлы уже лежат в `public/`
-и подключаются через `public/index.html` и `public/site.webmanifest`.
+и подключаются через корневой `index.html` и `public/site.webmanifest`.
 
 ## Текущий набор (`public/`)
 
@@ -24,7 +24,7 @@ PWA-установка работает за счёт `site.webmanifest` и ик
 1. Подготовьте исходное изображение (бренд — пузырь 🫧, градиент `#667eea → #764ba2`).
 2. Прогоните через [RealFaviconGenerator](https://realfavicongenerator.net/).
 3. Положите полученные файлы в `public/`, сохранив имена выше.
-4. Если имена/набор изменились — обновите ссылки в `public/index.html` и
+4. Если имена/набор изменились — обновите ссылки в корневом `index.html` и
    `public/site.webmanifest`.
 
 > Для maskable-иконок оставляйте ~20% отступа от краёв (safe zone).

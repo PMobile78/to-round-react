@@ -20,7 +20,7 @@
 ## Стек
 
 React (Vite 8) · Firebase (Auth, Firestore, Cloud Functions Gen2, FCM) ·
-Matter.js · MUI v5 · TipTap · i18next · date-fns · DOMPurify ·
+Matter.js · MUI v7 · TipTap · i18next · date-fns · DOMPurify ·
 @xyflow/react + mind-elixir + dagre (mind maps).
 
 ## Быстрый старт
@@ -39,20 +39,22 @@ npm start                      # генерирует service worker и подн
 ## Структура проекта
 
 ```
+index.html              # корневая точка входа Vite
 src/
-  App.js                 # корень: слушатель Firebase Auth → AuthForm | BubblesPage
+  index.jsx              # точка входа React DOM
+  App.jsx                # корень: слушатель Firebase Auth → AuthForm | BubblesPage
   firebase.js            # инициализация Firebase SDK (конфиг из utils/config.js)
   firebaseMessaging.js   # FCM: запрос разрешения, токен, foreground-обработчик
   i18n.js                # инициализация i18next (en + uk)
-  pages/                 # BubblesPage.js (главный экран), MindMapPage.js
+  pages/                 # BubblesPage.jsx (главный экран), MindMapPage.jsx
   services/              # authService, firestoreService, mindmapService
   hooks/                 # useMatterEngine, useBubbleFilters, useThemeMode, …
-  components/            # диалоги, drawer-ы, редакторы, селекторы
+  components/            # React-компоненты (.jsx): диалоги, drawer-ы, редакторы, селекторы
   locales/en|uk/         # translation.json
   utils/                 # config, logger, storage, physicsUtils, reorderArray
 scripts/                 # generate-sw.js, version-bump.js
 functions/               # Cloud Functions Gen2 (планировщик уведомлений)
-public/                  # index.html, сгенерированный sw.js, иконки, манифест
+public/                  # сгенерированный sw.js, иконки, манифест
 ```
 
 ## Документация
@@ -70,15 +72,15 @@ public/                  # index.html, сгенерированный sw.js, и�
 
 ## Деплой
 
-Пуш в `main`/`master` запускает GitHub Actions, который собирает приложение и
-публикует его на GitHub Pages. Подробности и список GitHub Secrets —
-в [docs/deployment.md](docs/deployment.md).
+Деплой запускается только вручную: **Actions → Deploy Prod → Run workflow**
+(`workflow_dispatch`). Пуши и PR в `main`/`master` не запускают ни тесты, ни деплой.
+Подробности и список GitHub Secrets — в [docs/deployment.md](docs/deployment.md).
 
 ## Тесты
 
 ```bash
 npm test                          # тесты фронтенда (vitest)
-node functions/test-next-notify.js  # unit-тесты чистых функций планировщика
+npm run test:functions             # unit-тесты чистых функций планировщика
 ```
 
 ## Лицензия

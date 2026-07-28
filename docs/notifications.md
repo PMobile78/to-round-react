@@ -32,7 +32,7 @@
 
 | Область | Файл |
 |---|---|
-| Холст, пульсация, сохранение пузыря | `src/pages/BubblesPage.js` |
+| Холст, пульсация, сохранение пузыря | `src/pages/BubblesPage.jsx` |
 | Сохранение в Firestore, сброс полей при «выполнено» | `src/services/firestoreService.js` |
 | Напоминания, просрочка FCM, перенос `dueDate`, `nextNotifyAt` | `functions/index.js` |
 
@@ -349,7 +349,7 @@ firebase emulators:start --only functions,firestore
 2. Меняете правила `recurrence` — обновите `computeNextDueDate` / `computeNextWeeklyDueDate`
    и тесты (перенос через полночь, DST).
 3. Добавляете поле документа задачи — не забудьте `saveBubblesToFirestore` и маппинг при
-   загрузке (`BubblesPage.js` / `firestoreService.js`). Если поле влияет на сроки/напоминания,
+   загрузке (`BubblesPage.jsx` / `firestoreService.js`). Если поле влияет на сроки/напоминания,
    учтите его в `computeNextNotifyAt` и в списке `significantChanged`.
 
 ## Ключевые файлы
@@ -357,5 +357,5 @@ firebase emulators:start --only functions,firestore
 - `functions/index.js` — вся серверная логика (триггер, scheduled-функция, чистые функции).
 - `functions/test-next-notify.js` — unit-тесты (`computeNextNotifyAt`, `pickReminderToSend`, `significantChanged`).
 - `firestore.indexes.json` — composite index.
-- `src/pages/BubblesPage.js` — клиентская пульсация и сохранение пузыря.
+- `src/pages/BubblesPage.jsx` — клиентская пульсация и сохранение пузыря.
 - `src/services/firestoreService.js` — сохранение и сброс полей при «выполнено».
