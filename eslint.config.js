@@ -1,3 +1,4 @@
+import js from '@eslint/js';
 import reactHooks from 'eslint-plugin-react-hooks';
 
 export default [
@@ -27,14 +28,43 @@ export default [
                 FileReader: 'readonly',
                 URLSearchParams: 'readonly',
                 CustomEvent: 'readonly',
+                Blob: 'readonly',
+                URL: 'readonly',
+                DOMParser: 'readonly',
+                ResizeObserver: 'readonly',
+                prompt: 'readonly',
                 crypto: 'readonly',
                 console: 'readonly',
             },
         },
         plugins: { 'react-hooks': reactHooks },
         rules: {
+            ...js.configs.recommended.rules,
+            'no-unused-vars': 'off',
             'react-hooks/rules-of-hooks': 'error',
             'react-hooks/exhaustive-deps': 'off',
+        },
+    },
+    {
+        files: ['functions/**/*.js'],
+        languageOptions: {
+            ecmaVersion: 2022,
+            sourceType: 'commonjs',
+            globals: {
+                require: 'readonly',
+                module: 'readonly',
+                process: 'readonly',
+                console: 'readonly',
+                Buffer: 'readonly',
+                setTimeout: 'readonly',
+                clearTimeout: 'readonly',
+                setInterval: 'readonly',
+                clearInterval: 'readonly',
+            },
+        },
+        rules: {
+            ...js.configs.recommended.rules,
+            'no-unused-vars': 'off',
         },
     },
 ];

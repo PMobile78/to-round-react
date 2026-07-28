@@ -208,7 +208,7 @@ export function useMatterEngine({
 
                         if (newDue && Number.isFinite(newDue)) lastDueRef.current.set(id, newDue);
                     });
-                } catch (_) { }
+                } catch { /* Ignore malformed remote pulse state. */ }
 
                 // If edit dialog is open for a selected bubble, reflect live updates.
                 // Read live values via ref — editDialog/selectedBubble captured in this
@@ -238,7 +238,7 @@ export function useMatterEngine({
                 const mergedIds = new Set(merged.map(b => String(b.id)));
                 prev.forEach(b => {
                     if (b.body && !mergedIds.has(String(b.id))) {
-                        try { World.remove(engine.world, b.body); } catch (_) { }
+                        try { World.remove(engine.world, b.body); } catch { /* Body may already be removed. */ }
                     }
                 });
 

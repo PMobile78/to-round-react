@@ -5,6 +5,7 @@
         "node": "22"
     },
     "scripts": {
+        "test": "TZ=UTC node test-next-notify.js && TZ=UTC node test-tz.js",
         "lint": "eslint .",
         "serve": "firebase emulators:start --only functions",
         "shell": "firebase functions:shell",

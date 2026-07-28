@@ -138,12 +138,13 @@ const TaskList = ({
                     aValue = (a.title || '').toLowerCase();
                     bValue = (b.title || '').toLowerCase();
                     break;
-                case 'tag':
+                case 'tag': {
                     const aTag = a.tagId ? tags.find(t => t.id === a.tagId) : null;
                     const bTag = b.tagId ? tags.find(t => t.id === b.tagId) : null;
                     aValue = aTag ? aTag.name.toLowerCase() : '';
                     bValue = bTag ? bTag.name.toLowerCase() : '';
                     break;
+                }
                 case 'updatedAt':
                     aValue = new Date(a.updatedAt || a.createdAt);
                     bValue = new Date(b.updatedAt || b.createdAt);
@@ -634,4 +635,4 @@ const TaskList = ({
     );
 };
 
-export default TaskList; 
+export default TaskList;

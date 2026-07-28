@@ -97,7 +97,7 @@ export default function BubbleDialogForm(props) {
                     useRichText={useRichText}
                     onToggleRichText={(enabled) => {
                         onToggleUseRichText?.(enabled);
-                        try { lsSet(LS.USE_RICH_TEXT, enabled); } catch (_) { }
+                        try { lsSet(LS.USE_RICH_TEXT, enabled); } catch { /* localStorage may be unavailable */ }
                     }}
                     t={t}
                 />

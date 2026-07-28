@@ -39,7 +39,7 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register(swPath).then(function (registration) {
             // Initialize FCM after SW is ready and process deep links
             initMessagingAndSaveToken();
-            try { updateMessagingTokenLanguage(i18n.language); } catch (e) { }
+            try { updateMessagingTokenLanguage(i18n.language); } catch { /* Messaging may be unavailable. */ }
             handleDeepLink();
         }, function (err) {
             logger.error('[SW] Registration failed:', err);
@@ -65,10 +65,10 @@ try {
         if (user) {
             try {
                 await initMessagingAndSaveToken();
-            } catch (e) { }
+            } catch { /* Messaging may be unavailable. */ }
             try {
                 await updateMessagingTokenLanguage(i18n.language);
-            } catch (e) { }
+            } catch { /* Messaging may be unavailable. */ }
         }
     });
 } catch (e) {

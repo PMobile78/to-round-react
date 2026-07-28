@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 // Run: TZ=UTC node functions/test-next-notify.js
 const { _test } = require('./index.js');
 const { computeNextNotifyAt } = _test;

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 const admin = require('firebase-admin');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
@@ -543,5 +542,4 @@ exports.scheduleDueDateNotifications = onSchedule({
 
 // Exposed for local testing only (functions/test-tz.js)
 exports._test = { parseLocalDateTime, formatLocalDateTime, computeNextDueDate, computeNextFutureDueDate, isBubbleOverdue, computeNextNotifyAt, pickReminderToSend, significantChanged };
-
 

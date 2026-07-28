@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 // Local TZ verification: run with `TZ=UTC node test-tz.js` to emulate Cloud Functions runtime
 const { _test } = require('./index.js');
 const { parseLocalDateTime, formatLocalDateTime, computeNextFutureDueDate, isBubbleOverdue } = _test;

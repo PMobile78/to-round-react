@@ -31,9 +31,7 @@ jobs:
       run: cd functions && npm ci
 
     - name: Run tests
-      run: |
-        npm test
-        npm run test:functions --if-present
+      run: npm run test:all
 
   lint:
     runs-on: ubuntu-latest
@@ -56,4 +54,4 @@ jobs:
         npm ci --legacy-peer-deps --prefer-offline --no-audit
 
     - name: Run lint
-      run: npm run lint
+      run: npm run lint:all
