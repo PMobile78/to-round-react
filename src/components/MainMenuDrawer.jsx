@@ -65,12 +65,13 @@ const MainMenuDrawer = ({
                     onImportJson && onImportJson(parsed);
                 } catch (e) {
                     logger.error('Invalid JSON file', e);
-                    // optionally, show UI feedback in future
+                    window.alert(t('bubbles.importInvalidJson'));
                 }
             };
             reader.readAsText(file);
         } catch (e) {
             logger.error('Failed to import JSON', e);
+            window.alert(t('bubbles.importFailed'));
         }
     };
 
@@ -342,5 +343,4 @@ const MainMenuDrawer = ({
 };
 
 export default MainMenuDrawer;
-
 

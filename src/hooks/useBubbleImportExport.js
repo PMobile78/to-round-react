@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { saveBubblesToFirestore, saveTagsToFirestore } from '../services/firestoreService';
 import { exportJsonFile } from '../utils/exportJson';
 import logger from '../utils/logger';
@@ -16,6 +17,7 @@ import { useBubblesData } from '../state/BubblesDataStore';
  * are obtained from the store as well.
  */
 export function useBubbleImportExport() {
+    const { t } = useTranslation();
     const { bubbles, tags, setBubbles, setTags } = useBubblesData();
 
     // Export current data to JSON. Reads bubbles + tags from the BubblesStore.
@@ -29,9 +31,26 @@ export function useBubbleImportExport() {
 
     // Import data from JSON (replace existing)
     const handleImportJson = useCallback(async (data) => {
-        try {
-            const { importedTags, importedBubbles } = parseImportData(data);
+        let importedTags;
+        let importedBubbles;
 
+        try {
+            ({ importedTags, importedBubbles } = parseImportData(data));
+        } catch (e) {
+            logger.error('Invalid backup file', e);
+            window.alert(t('bubbles.importInvalid'));
+            return;
+        }
+
+        const confirmed = window.confirm(t('bubbles.importConfirm', {
+            importBubbles: importedBubbles.length,
+            importTags: importedTags.length,
+            deleteBubbles: bubbles.length,
+            deleteTags: tags.length,
+        }));
+        if (!confirmed) return;
+
+        try {
             await Promise.all([
                 saveTagsToFirestore(importedTags),
                 saveBubblesToFirestore(importedBubbles),
@@ -46,9 +65,10 @@ export function useBubbleImportExport() {
             window.location.reload();
         } catch (e) {
             logger.error('Import JSON failed', e);
+            window.alert(t('bubbles.importFailed'));
             // state untouched on failure
         }
-    }, [setTags, setBubbles]);
+    }, [bubbles.length, tags.length, setTags, setBubbles, t]);
 
     return { handleExportJson, handleImportJson };
 }

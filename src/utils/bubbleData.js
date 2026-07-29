@@ -82,7 +82,8 @@ export const sanitizeBubblesForExport = (bubblesData) => {
         recurrence: bubble.recurrence || null,
         overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
         overdueAt: toIsoOrNull(bubble.overdueAt),
-        overduePulseSuppressed: typeof bubble.overduePulseSuppressed === 'boolean' ? bubble.overduePulseSuppressed : false
+        overduePulseSuppressed: typeof bubble.overduePulseSuppressed === 'boolean' ? bubble.overduePulseSuppressed : false,
+        useRichText: typeof bubble.useRichText === 'boolean' ? bubble.useRichText : false
     }));
 };
 

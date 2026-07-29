@@ -40,29 +40,40 @@ describe('buildExportData', () => {
 });
 
 describe('parseImportData', () => {
-    it('returns empty arrays when tags/bubbles are missing or not arrays', () => {
-        expect(parseImportData(null)).toEqual({ importedTags: [], importedBubbles: [] });
-        expect(parseImportData({})).toEqual({ importedTags: [], importedBubbles: [] });
-        expect(parseImportData({ tags: 'x', bubbles: 5 })).toEqual({ importedTags: [], importedBubbles: [] });
+    it.each([
+        null,
+        [],
+        {},
+        { version: EXPORT_VERSION, bubbles: [] },
+        { version: EXPORT_VERSION, tags: [] },
+        { version: EXPORT_VERSION, tags: 'x', bubbles: [] },
+        { version: EXPORT_VERSION, tags: [], bubbles: 5 },
+        { version: 999, tags: [], bubbles: [] },
+    ])('rejects an invalid backup envelope', (data) => {
+        expect(() => parseImportData(data)).toThrow();
     });
 
-    it('sanitizes and drops invalid tags / bubbles (no id, null)', () => {
+    it('rejects malformed tags and bubbles instead of dropping them', () => {
         const data = {
+            version: EXPORT_VERSION,
             tags: [{ id: 't1', name: 'Work', color: '#f00' }, { name: 'no id' }, null],
             bubbles: [{ id: 'b1', title: 'A' }, { title: 'no id' }, null]
         };
-        const { importedTags, importedBubbles } = parseImportData(data);
-        expect(importedTags.map((t) => t.id)).toEqual(['t1']);
-        expect(importedBubbles.map((b) => b.id)).toEqual(['b1']);
+        expect(() => parseImportData(data)).toThrow('malformed records');
+    });
+
+    it('accepts an intentionally empty backup', () => {
+        expect(parseImportData({
+            version: EXPORT_VERSION,
+            tags: [],
+            bubbles: [],
+        })).toEqual({ importedTags: [], importedBubbles: [] });
     });
 });
 
 describe('export -> import round-trip', () => {
     it('preserves tags and a fully-specified bubble through a build/parse cycle', () => {
         const tags = [{ id: 't1', name: 'Work', color: '#ff0000' }];
-        // A fixed point of sanitizeBubblesForExport -> sanitizeBubble: useRichText
-        // defaults to false, which the export shape drops and the import shape
-        // re-adds as false, so the round-trip is lossless here.
         const bubble = {
             id: 'b1',
             radius: 50,
@@ -82,7 +93,7 @@ describe('export -> import round-trip', () => {
             overdueSticky: false,
             overdueAt: null,
             overduePulseSuppressed: false,
-            useRichText: false
+            useRichText: true
         };
 
         const data = buildExportData({ bubbles: [bubble], tags }, new Date('2026-06-15T00:00:00.000Z'));

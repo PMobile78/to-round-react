@@ -149,6 +149,10 @@
         "custom": "Custom...",
         "exportJson": "Export JSON",
         "importJson": "Import JSON",
+        "importConfirm": "Import {{importBubbles}} tasks and {{importTags}} categories? This will delete {{deleteBubbles}} current tasks and {{deleteTags}} current categories.",
+        "importInvalid": "This backup is invalid or unsupported. Nothing was changed.",
+        "importInvalidJson": "This file is not valid JSON. Nothing was changed.",
+        "importFailed": "The backup could not be imported.",
         "reload": "Reload"
     },
     "mindmap": {

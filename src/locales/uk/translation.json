@@ -150,6 +150,10 @@
         "custom": "Власне...",
         "exportJson": "Експорт JSON",
         "importJson": "Імпорт JSON",
+        "importConfirm": "Імпортувати {{importBubbles}} завдань і {{importTags}} категорій? Це видалить {{deleteBubbles}} поточних завдань і {{deleteTags}} поточних категорій.",
+        "importInvalid": "Ця резервна копія недійсна або не підтримується. Нічого не змінено.",
+        "importInvalidJson": "Цей файл не є коректним JSON. Нічого не змінено.",
+        "importFailed": "Не вдалося імпортувати резервну копію.",
         "reload": "Перезавантажити"
     },
     "mindmap": {

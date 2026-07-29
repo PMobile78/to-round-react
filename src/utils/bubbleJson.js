@@ -24,14 +24,24 @@ export const buildExportData = ({ bubbles, tags }, date = new Date()) => ({
     tags
 });
 
-// Pure: map raw imported `data` -> { importedTags, importedBubbles }, dropping
-// anything that fails sanitization.
+// Pure: validate the backup envelope and map its records to the sanitized
+// import shape. Invalid backups fail closed before any handler side effects.
 export const parseImportData = (data) => {
-    const importedTags = Array.isArray(data?.tags)
-        ? data.tags.map(sanitizeTag).filter(Boolean)
-        : [];
-    const importedBubbles = Array.isArray(data?.bubbles)
-        ? data.bubbles.map(sanitizeBubble).filter(Boolean)
-        : [];
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new Error('Backup payload must be an object');
+    }
+    if (data.version !== EXPORT_VERSION) {
+        throw new Error('Unsupported backup version');
+    }
+    if (!Array.isArray(data.tags) || !Array.isArray(data.bubbles)) {
+        throw new Error('Backup must contain bubbles and tags arrays');
+    }
+
+    const importedTags = data.tags.map(sanitizeTag);
+    const importedBubbles = data.bubbles.map(sanitizeBubble);
+    if (importedTags.some((tag) => !tag) || importedBubbles.some((bubble) => !bubble)) {
+        throw new Error('Backup contains malformed records');
+    }
+
     return { importedTags, importedBubbles };
 };
