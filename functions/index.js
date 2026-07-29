@@ -1,12 +1,14 @@
-const admin = require('firebase-admin');
+const { initializeApp } = require('firebase-admin/app');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
-const { Timestamp, FieldValue } = require('firebase-admin/firestore');
+const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
+const { getMessaging } = require('firebase-admin/messaging');
 const { isAfter, addMinutes, subMinutes, addHours, addDays, addWeeks, addMonths } = require('date-fns');
 const { TZDate } = require('@date-fns/tz');
 
-admin.initializeApp();
-const db = admin.firestore();
+initializeApp();
+const db = getFirestore();
+const messaging = getMessaging();
 const HOMEPAGE_URL = 'https://pmobile78.github.io/to-round-react';
 const en = require('./locales/notifications.en.json');
 const uk = require('./locales/notifications.uk.json');
@@ -91,7 +93,7 @@ async function sendFcmToUser(userId, payload, tokens) {
     for (const { id, token, language } of tokens) {
         try {
             const { title, body } = buildTextsPerLang(language, type, minutesBefore, bubbleTitle);
-            await admin.messaging().send({
+            await messaging.send({
                 token,
                 data: Object.assign({}, payload.data || {}, { title, body }),
                 webpush: {
@@ -250,7 +252,7 @@ function computeMinutesBefore(notif) {
 async function claimNotificationKey(key) {
     const ref = db.collection('notification-sent').doc(key);
     try {
-        await ref.create({ sentAt: admin.firestore.FieldValue.serverTimestamp() });
+        await ref.create({ sentAt: FieldValue.serverTimestamp() });
         return true;
     } catch (e) {
         if (e && (e.code === 6 || String(e.code).toUpperCase().includes('ALREADY_EXISTS'))) return false;
