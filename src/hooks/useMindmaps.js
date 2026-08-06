@@ -6,6 +6,7 @@ import {
     BRANCH_COLORS
 } from '../services/mindmapService';
 import { lsGet, lsSet } from '../utils/storage';
+import logger from '../utils/logger';
 
 const LAST_MAP_KEY = 'mindmap-last-open-id';
 
@@ -148,10 +149,19 @@ export const useMindmaps = () => {
         return map;
     }, [persistNow]);
 
-    const removeMap = useCallback((mapId) => {
-        setMaps((prev) => prev.filter((m) => m.id !== mapId));
-        setCurrentMapId((cur) => (cur === mapId ? null : cur));
-        deleteMindmap(mapId);
+    const removeMap = useCallback(async (mapId) => {
+        const timers = saveTimers.current;
+        if (timers.has(mapId)) {
+            clearTimeout(timers.get(mapId));
+            timers.delete(mapId);
+        }
+        try {
+            await deleteMindmap(mapId);
+            setMaps((prev) => prev.filter((m) => m.id !== mapId));
+            setCurrentMapId((cur) => (cur === mapId ? null : cur));
+        } catch (error) {
+            logger.error('Error deleting mindmap:', error);
+        }
     }, []);
 
     const updateMap = useCallback((mapId, updater) => {

@@ -217,8 +217,7 @@ export const upsertBubble = async (bubble) => {
 };
 
 // Point-wise update fields of single bubble
-export const updateBubbleFields = async (bubbleId, fields) => {
-    const userId = getUserDocumentId();
+export const updateBubbleFields = async (bubbleId, fields, userId = getUserDocumentId()) => {
     const ref = doc(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION, String(bubbleId));
     await updateDoc(ref, fields);
 };
@@ -340,8 +339,7 @@ export const upsertTagInFirestore = async (tag) => {
 };
 
 // Remove a single tag by id atomically. Returns the resulting tags array.
-export const deleteTagFromFirestore = async (tagId) => {
-    const userId = getUserDocumentId();
+export const deleteTagFromFirestore = async (tagId, userId = getUserDocumentId()) => {
     const tagsRef = doc(db, TAGS_COLLECTION, userId);
     return runTransaction(db, async (transaction) => {
         const snap = await transaction.get(tagsRef);

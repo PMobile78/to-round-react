@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { lsSet } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
 import {
@@ -46,7 +46,15 @@ export function useTags({ user }) {
     } = useBubblesUi();
     const tagsRef = useRef(tags);
     useEffect(() => { tagsRef.current = tags; }, [tags]);
-    const [deleteTimers, setDeleteTimers] = useState(new Map()); // Таймеры удаления тегов
+    const userUid = user?.uid ?? null;
+    const userUidRef = useRef(userUid);
+    userUidRef.current = userUid;
+    const deleteTimers = useRef(new Map()); // Таймеры удаления тегов
+
+    useEffect(() => () => {
+        deleteTimers.current.forEach(({ timer }) => clearTimeout(timer));
+        deleteTimers.current.clear();
+    }, [userUid]);
 
     // Real-time tags synchronization (wait for auth user).
     // Only setTags lives here; filter reconciliation + bubble recolor stay in
@@ -136,23 +144,33 @@ export function useTags({ user }) {
     };
 
     const handleDeleteTag = (tagId) => {
+        const initiatingUid = userUid;
+        if (!initiatingUid) return;
         const { getBubbleFillStyle } = registered;
+        const existing = deleteTimers.current.get(tagId);
+        if (existing) clearTimeout(existing.timer);
         // Добавляем тег в состояние удаления
         setDeletingTags(prev => new Set([...prev, tagId]));
 
         // Создаем таймер и сохраняем его
         const timer = setTimeout(() => {
+            const pending = deleteTimers.current.get(tagId);
+            if (!pending || pending.timer !== timer) return;
+            deleteTimers.current.delete(tagId);
+
             setDeletingTags(prev => {
                 const newSet = new Set(prev);
                 newSet.delete(tagId);
                 return newSet;
             });
 
+            if (userUidRef.current !== pending.uid) return;
+
             const updatedTags = tagsRef.current.filter(tag => tag.id !== tagId);
             setTags(updatedTags);
             // Transactional single-tag delete: reads fresh server state so a tag
             // added/edited on another device is not overwritten by a stale array.
-            deleteTagFromFirestore(tagId).catch(e => logger.error('Error deleting tag:', e));
+            deleteTagFromFirestore(tagId, pending.uid).catch(e => logger.error('Error deleting tag:', e));
 
             // Удаляем ссылки на этот тег из пузырей
             const affectedIds = new Set();
@@ -166,19 +184,12 @@ export function useTags({ user }) {
                 return bubble;
             }));
             affectedIds.forEach(id =>
-                updateBubbleFields(id, { tagId: null }).catch(e => logger.error('Error clearing tag from bubble:', e))
+                updateBubbleFields(id, { tagId: null }, pending.uid).catch(e => logger.error('Error clearing tag from bubble:', e))
             );
-
-            // Удаляем таймер из Map
-            setDeleteTimers(prev => {
-                const newMap = new Map(prev);
-                newMap.delete(tagId);
-                return newMap;
-            });
         }, 7000);
 
         // Сохраняем таймер
-        setDeleteTimers(prev => new Map(prev).set(tagId, timer));
+        deleteTimers.current.set(tagId, { timer, uid: initiatingUid });
     };
 
     const handleCloseTagDialog = () => {
@@ -190,14 +201,10 @@ export function useTags({ user }) {
 
     const handleUndoDeleteTag = (tagId) => {
         // Очищаем таймер удаления
-        const timer = deleteTimers.get(tagId);
-        if (timer) {
-            clearTimeout(timer);
-            setDeleteTimers(prev => {
-                const newMap = new Map(prev);
-                newMap.delete(tagId);
-                return newMap;
-            });
+        const pending = deleteTimers.current.get(tagId);
+        if (pending) {
+            clearTimeout(pending.timer);
+            deleteTimers.current.delete(tagId);
         }
 
         // Убираем тег из состояния удаления
@@ -212,7 +219,7 @@ export function useTags({ user }) {
         tags,
         setTags,
         tagsRef,
-        deleteTimers,
+        deleteTimers: deleteTimers.current,
         handleOpenTagDialog,
         handleSaveTag,
         handleDeleteTag,
