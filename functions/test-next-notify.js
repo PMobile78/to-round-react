@@ -36,8 +36,14 @@ check('status != active → null',
     computeNextNotifyAt(mk({ status: 'done' }), new Date('2026-06-07T10:00:00Z')), null);
 check('нет dueDate → null',
     computeNextNotifyAt(mk({ dueDate: null }), new Date('2026-06-07T10:00:00Z')), null);
-check('нет notifications → overdue moment (due)',
+check('нет notifications, Kyiv wall-clock → 12:00Z',
     iso(computeNextNotifyAt(mk({ notifications: [] }), new Date('2026-06-07T10:00:00Z'))), '2026-06-07T12:00:00.000Z');
+check('один wall-clock в London → 14:00Z',
+    iso(computeNextNotifyAt(mk({ tz: 'Europe/London', notifications: [] }), new Date('2026-06-07T10:00:00Z'))), '2026-06-07T14:00:00.000Z');
+check('без tz → fallback на timezone сервера (UTC в тестах)',
+    iso(computeNextNotifyAt(mk({ tz: undefined, notifications: [] }), new Date('2026-06-07T10:00:00Z'))), '2026-06-07T15:00:00.000Z');
+check('невалидная tz → fallback на timezone сервера (UTC в тестах)',
+    iso(computeNextNotifyAt(mk({ tz: 'Invalid/Zone', notifications: [] }), new Date('2026-06-07T10:00:00Z'))), '2026-06-07T15:00:00.000Z');
 
 const { pickReminderToSend } = _test;
 const pick = (b, now) => pickReminderToSend(b, now);
@@ -50,12 +56,18 @@ check('reminder: ни один не наступил → null',
     pick(mk(), new Date('2026-06-07T10:00:00Z')), null);
 
 const { significantChanged } = _test;
-const base = { dueDate: '2026-06-07T15:00:00', notifications: [{ minutesBefore: 10 }], status: 'active', recurrence: null };
+const base = { dueDate: '2026-06-07T15:00:00', tz: 'Europe/Kyiv', notifications: [{ minutesBefore: 10 }], status: 'active', recurrence: null };
 
 check('значимые поля не менялись → false',
     significantChanged(base, { ...base }), false);
 check('изменился dueDate → true',
     significantChanged(base, { ...base, dueDate: '2026-06-08T15:00:00' }), true);
+check('изменилась только tz → true',
+    significantChanged(base, { ...base, tz: 'Europe/London' }), true);
+check('tz добавилась → true',
+    significantChanged({ ...base, tz: undefined }, base), true);
+check('tz удалилась → true',
+    significantChanged(base, { ...base, tz: undefined }), true);
 check('изменился только updatedAt → false',
     significantChanged({ ...base, updatedAt: 1 }, { ...base, updatedAt: 2 }), false);
 check('изменился nextNotifyAt → false (не значимое)',

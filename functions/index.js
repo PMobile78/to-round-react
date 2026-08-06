@@ -129,6 +129,7 @@ function isBubbleOverdue(bubble) {
 // Функция для парсинга локального времени из строки
 // tz — IANA-зона пользователя (bubble.tz). Если задана, строка без часового пояса
 // интерпретируется в этой зоне; иначе — как локальное время сервера (legacy, UTC).
+// Невалидная IANA-зона использует тот же server-timezone fallback.
 function parseLocalDateTime(dateString, tz) {
     if (!dateString) return null;
     try {
@@ -146,7 +147,8 @@ function parseLocalDateTime(dateString, tz) {
         if (tz) {
             // TZDate: instant корректен для зоны пользователя; арифметика date-fns
             // (addDays/addMonths) над TZDate остаётся календарно-корректной в этой зоне
-            return new TZDate(year, month - 1, day, hours, minutes, seconds, tz);
+            const zonedDate = new TZDate(year, month - 1, day, hours, minutes, seconds, tz);
+            if (Number.isFinite(zonedDate.getTime())) return zonedDate;
         }
         // Legacy: Date объект в локальном времени сервера
         return new Date(year, month - 1, day, hours, minutes, seconds);
@@ -362,7 +364,7 @@ function pickReminderToSend(bubble, now) {
     return best;
 }
 
-const SIGNIFICANT_FIELDS = ['dueDate', 'notifications', 'status', 'recurrence'];
+const SIGNIFICANT_FIELDS = ['dueDate', 'tz', 'notifications', 'status', 'recurrence'];
 
 // Менялись ли поля, влияющие на nextNotifyAt (гард от рекурсии триггера).
 function significantChanged(before, after) {
@@ -544,4 +546,3 @@ exports.scheduleDueDateNotifications = onSchedule({
 
 // Exposed for local testing only (functions/test-tz.js)
 exports._test = { parseLocalDateTime, formatLocalDateTime, computeNextDueDate, computeNextFutureDueDate, isBubbleOverdue, computeNextNotifyAt, pickReminderToSend, significantChanged };
-
