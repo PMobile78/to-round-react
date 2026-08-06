@@ -11,9 +11,38 @@ import logger from './utils/logger';
 
 // VAPID Key from configuration
 const VAPID_KEY = config.firebase.vapidKey;
+let foregroundMessageUnsubscribe = null;
+
+function setupForegroundMessageListener(messaging) {
+    if (foregroundMessageUnsubscribe) return;
+
+    // Foreground message handler — показываем через Service Worker, чтобы клик открывал URL
+    foregroundMessageUnsubscribe = onMessage(messaging, async (payload) => {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const title = payload?.notification?.title || payload?.data?.title || 'Уведомление';
+            const body = payload?.notification?.body || payload?.data?.body || '';
+            const icon = payload?.notification?.icon || '/icons/icon-192x192.png';
+            await registration.showNotification(title, {
+                body,
+                icon,
+                data: payload?.data || {}
+            });
+        } catch (e) {
+            // ignore
+        }
+    });
+}
+
+export function teardownForegroundMessageListener() {
+    if (!foregroundMessageUnsubscribe) return;
+    foregroundMessageUnsubscribe();
+    foregroundMessageUnsubscribe = null;
+}
 
 // Remove this device's FCM token (Firestore doc + invalidate token) on logout
 export async function removeCurrentToken() {
+    teardownForegroundMessageListener();
     try {
         const supported = await isSupported();
         if (!supported) return;
@@ -49,23 +78,7 @@ export async function initMessagingAndSaveToken() {
         const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: await navigator.serviceWorker.ready });
 
         await saveToken(token);
-
-        // Foreground message handler — показываем через Service Worker, чтобы клик открывал URL
-        onMessage(messaging, async (payload) => {
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                const title = payload?.notification?.title || payload?.data?.title || 'Уведомление';
-                const body = payload?.notification?.body || payload?.data?.body || '';
-                const icon = payload?.notification?.icon || '/icons/icon-192x192.png';
-                await registration.showNotification(title, {
-                    body,
-                    icon,
-                    data: payload?.data || {}
-                });
-            } catch (e) {
-                // ignore
-            }
-        });
+        setupForegroundMessageListener(messaging);
 
         return token;
     } catch (e) {
@@ -131,5 +144,4 @@ export async function updateMessagingTokenLanguage(language) {
         // ignore
     }
 }
-
 
