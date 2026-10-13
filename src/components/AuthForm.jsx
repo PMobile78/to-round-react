@@ -21,7 +21,7 @@ import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
 
 const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -63,6 +63,27 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
             setTimeout(() => {
                 onLoginSuccess(result.user);
             }, 1000);
+        } else {
+            setError(result.error);
+        }
+
+        setLoading(false);
+    };
+
+    const handleForgotPassword = async () => {
+        setError('');
+        setSuccess('');
+        if (!email) {
+            setError(t('auth.enterEmail'));
+            return;
+        }
+
+        setLoading(true);
+
+        const result = await resetPassword(email, i18n.resolvedLanguage);
+
+        if (result.success) {
+            setSuccess(t('auth.resetEmailSent'));
         } else {
             setError(result.error);
         }
@@ -237,6 +258,11 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                         >
                             {loading ? <CircularProgress size={24} color="inherit" /> : t('auth.loginButton')}
                         </Button>
+                        <Box sx={{ textAlign: 'center' }}>
+                            <Button variant="text" onClick={handleForgotPassword} disabled={loading}>
+                                {t('auth.forgotPassword')}
+                            </Button>
+                        </Box>
                     </Box>
                 )}
 

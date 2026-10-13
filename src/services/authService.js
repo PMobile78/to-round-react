@@ -89,10 +89,12 @@ export const logoutUser = async () => {
     }
 };
 
-// Password reset
-export const resetPassword = async (email) => {
+// Password reset email in the given UI language, with a "Continue" link back to the app.
+// The app's domain must be listed in Firebase Auth → Settings → Authorized domains.
+export const resetPassword = async (email, languageCode) => {
     try {
-        await sendPasswordResetEmail(auth, email);
+        auth.languageCode = languageCode;
+        await sendPasswordResetEmail(auth, email, { url: `${window.location.origin}${import.meta.env.BASE_URL}` });
         return { success: true };
     } catch (error) {
         logger.error('Error sending password reset email:', error);

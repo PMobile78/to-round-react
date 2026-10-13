@@ -31,12 +31,15 @@ export const auth = getAuth(app);
 - `createUser(email, password, displayName?)` — регистрация (+ `updateProfile` для имени);
 - `loginUser(email, password)` — вход;
 - `logoutUser()` — выход (чистит локальные данные пользователя);
-- `resetPassword(email)` — письмо для сброса пароля;
+- `resetPassword(email, languageCode)` — письмо для сброса пароля на языке интерфейса со ссылкой
+  «Continue» обратно в приложение;
 - `onAuthStateChange(cb)` — подписка на состояние входа.
 
 `src/App.jsx` подписывается на `onAuthStateChanged` и рендерит `AuthForm` для гостя или
 `BubblesPage` для вошедшего пользователя. В Firebase Console включите провайдер
-**Email/Password** (Authentication → Sign-in method).
+**Email/Password** (Authentication → Sign-in method) и добавьте домен прода `pmobile78.github.io`
+в Authentication → Settings → **Authorized domains**: без него Firebase отклонит письмо сброса
+пароля с `auth/unauthorized-continue-uri` (`localhost` там есть по умолчанию).
 
 ## Модель данных Firestore
 
