@@ -3,7 +3,7 @@ import React from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetPassword } from '../services/authService';
+import { loginUser, resetPassword } from '../services/authService';
 import AuthForm from './AuthForm';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -24,18 +24,22 @@ describe('AuthForm forgot password', () => {
     let container;
     let root;
 
-    const typeEmail = (value) => {
-        const input = container.querySelector('input[type="email"]');
+    const typeInto = (selector, value) => {
+        const input = container.querySelector(selector);
         const setNativeValue = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
         act(() => {
             setNativeValue.call(input, value);
             input.dispatchEvent(new window.Event('input', { bubbles: true }));
         });
     };
+    const typeEmail = (value) => typeInto('input[type="email"]', value);
+
+    const forgotPasswordButton = () => Array.from(container.querySelectorAll('button'))
+        .find((el) => el.textContent === 'auth.forgotPassword');
+    const signInButton = () => container.querySelector('button[type="submit"]');
 
     const clickForgotPassword = async () => {
-        const button = Array.from(container.querySelectorAll('button'))
-            .find((el) => el.textContent === 'auth.forgotPassword');
+        const button = forgotPasswordButton();
         expect(button, 'forgot password button').toBeDefined();
         await act(async () => button.click());
     };
@@ -115,5 +119,29 @@ describe('AuthForm forgot password', () => {
         await act(async () => finishFirstRequest({ success: true }));
         await clickForgotPassword();
         expect(resetPassword).toHaveBeenCalledTimes(2);
+    });
+
+    it('shows sending progress on the reset button, not on Sign In', async () => {
+        resetPassword.mockReturnValue(new Promise(() => {}));
+        typeEmail('user@example.com');
+
+        await clickForgotPassword();
+
+        expect(forgotPasswordButton().querySelector('[role="progressbar"]')).not.toBeNull();
+        expect(signInButton().textContent).toBe('auth.loginButton');
+    });
+
+    it('clears the reset confirmation when the next login attempt fails', async () => {
+        resetPassword.mockResolvedValue({ success: true });
+        loginUser.mockResolvedValue({ success: false, error: 'Incorrect password.' });
+        typeEmail('user@example.com');
+        await clickForgotPassword();
+        expect(alertTexts('Success')).toEqual(['auth.resetEmailSent']);
+
+        typeInto('input[type="password"]', 'wrong-password');
+        await act(async () => signInButton().click());
+
+        expect(alertTexts('Success')).toEqual([]);
+        expect(alertTexts('Error')).toEqual(['Incorrect password.']);
     });
 });

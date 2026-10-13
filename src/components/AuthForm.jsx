@@ -35,6 +35,7 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    const [resetLoading, setResetLoading] = useState(false);
 
     const handleTabChange = (event, newValue) => {
         setTabValue(newValue);
@@ -48,6 +49,7 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        setSuccess('');
         if (!email || !password) {
             setError(t('auth.fillAllFields'));
             return;
@@ -78,7 +80,7 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
             return;
         }
 
-        setLoading(true);
+        setResetLoading(true);
 
         const result = await resetPassword(email, i18n.resolvedLanguage);
 
@@ -88,7 +90,7 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
             setError(result.error);
         }
 
-        setLoading(false);
+        setResetLoading(false);
     };
 
     const handleRegister = async (e) => {
@@ -259,7 +261,7 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                             {loading ? <CircularProgress size={24} color="inherit" /> : t('auth.loginButton')}
                         </Button>
                         <Box sx={{ textAlign: 'center' }}>
-                            <Button variant="text" onClick={handleForgotPassword} disabled={loading}>
+                            <Button variant="text" onClick={handleForgotPassword} disabled={loading} loading={resetLoading}>
                                 {t('auth.forgotPassword')}
                             </Button>
                         </Box>
