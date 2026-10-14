@@ -47,9 +47,9 @@ Workflow `Deploy Prod` (`.github/workflows/deploy-prod.yml`, только `workf
 (`on: workflow_call`) с **двумя параллельными** job (`ubuntu-latest`); в графе Actions они
 видны как `test / test` и `test / lint`:
 
-- **`test`** — Checkout + Node 22 (кеш npm) + `npm ci --legacy-peer-deps` (+ зависимости
+- **`test`** — Checkout + Node 24 (кеш npm) + `npm ci --legacy-peer-deps` (+ зависимости
   `functions/`) → **`npm test`** и **`npm run test:functions --if-present`**.
-- **`lint`** — Checkout + Node 22 + `npm ci --legacy-peer-deps` → **`npm run lint`** (eslint).
+- **`lint`** — Checkout + Node 24 + `npm ci --legacy-peer-deps` → **`npm run lint`** (eslint).
 
 Оба job read-only (`permissions: contents: read`) и GitHub Pages не трогают.
 
