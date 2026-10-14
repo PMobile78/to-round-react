@@ -3,7 +3,8 @@ import {
     formatLocalDateTime,
     getUserTimeZone,
     parseLocalDateTime,
-    getOffsetMs
+    getOffsetMs,
+    formatBuildTime
 } from './dateTime';
 
 describe('formatLocalDateTime', () => {
@@ -174,5 +175,26 @@ describe('round-trip: formatLocalDateTime -> parseLocalDateTime', () => {
         expect(parsed.getHours()).toBe(9);
         expect(parsed.getMinutes()).toBe(5);
         expect(parsed.getSeconds()).toBe(3);
+    });
+});
+
+describe('formatBuildTime', () => {
+    it('shows the build moment in local time as DD.MM.YYYY HH:mm', () => {
+        const iso = new Date(2026, 9, 14, 22, 15).toISOString(); // Oct 14, 2026, 22:15 local
+        expect(formatBuildTime(iso)).toBe('14.10.2026 22:15');
+    });
+
+    it('pads day, month, hours and minutes with zeros', () => {
+        const iso = new Date(2026, 0, 5, 7, 3).toISOString(); // Jan 5, 2026, 07:03 local
+        expect(formatBuildTime(iso)).toBe('05.01.2026 07:03');
+    });
+
+    it('returns "-" when there is no build time (local dev build)', () => {
+        expect(formatBuildTime(undefined)).toBe('-');
+        expect(formatBuildTime('')).toBe('-');
+    });
+
+    it('returns "-" for a value that is not a date', () => {
+        expect(formatBuildTime('not-a-date')).toBe('-');
     });
 });
