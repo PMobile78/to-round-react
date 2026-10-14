@@ -1,0 +1,20 @@
+{
+  "toInstant": [
+    { "name": "new-york-winter", "local": "2026-01-15T09:00", "tz": "America/New_York", "instant": "2026-01-15T14:00:00.000Z" },
+    { "name": "new-york-summer", "local": "2026-07-01T09:00", "tz": "America/New_York", "instant": "2026-07-01T13:00:00.000Z" },
+    { "name": "new-york-spring-gap-shifts-forward", "local": "2026-03-08T02:30", "tz": "America/New_York", "instant": "2026-03-08T07:30:00.000Z" },
+    { "name": "new-york-fall-overlap-takes-earlier-offset", "local": "2026-11-01T01:30", "tz": "America/New_York", "instant": "2026-11-01T05:30:00.000Z" },
+    { "name": "berlin-spring-gap-shifts-forward", "local": "2026-03-29T02:30", "tz": "Europe/Berlin", "instant": "2026-03-29T01:30:00.000Z" },
+    { "name": "berlin-fall-overlap-takes-earlier-offset", "local": "2026-10-25T02:30", "tz": "Europe/Berlin", "instant": "2026-10-25T00:30:00.000Z" },
+    { "name": "kolkata-half-hour-offset", "local": "2026-10-14T09:00", "tz": "Asia/Kolkata", "instant": "2026-10-14T03:30:00.000Z" },
+    { "name": "utc", "local": "2026-10-14T09:00", "tz": "UTC", "instant": "2026-10-14T09:00:00.000Z" },
+    { "name": "new-york-year-boundary", "local": "2026-12-31T23:59", "tz": "America/New_York", "instant": "2027-01-01T04:59:00.000Z" },
+    { "name": "berlin-leap-day", "local": "2028-02-29T12:00", "tz": "Europe/Berlin", "instant": "2028-02-29T11:00:00.000Z" }
+  ],
+  "toLocal": [
+    { "name": "new-york-first-pass-of-repeated-hour", "instant": "2026-11-01T05:30:00.000Z", "tz": "America/New_York", "local": "2026-11-01T01:30" },
+    { "name": "new-york-second-pass-of-repeated-hour", "instant": "2026-11-01T06:30:00.000Z", "tz": "America/New_York", "local": "2026-11-01T01:30" },
+    { "name": "berlin-after-spring-gap", "instant": "2026-03-29T01:30:00.000Z", "tz": "Europe/Berlin", "local": "2026-03-29T03:30" },
+    { "name": "kolkata", "instant": "2026-10-14T03:30:00.000Z", "tz": "Asia/Kolkata", "local": "2026-10-14T09:00" }
+  ]
+}
