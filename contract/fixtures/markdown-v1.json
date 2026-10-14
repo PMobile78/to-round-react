@@ -12,12 +12,14 @@
     { "name": "images-become-links-or-drop", "input": "<img src=\"https://example.com/cat.png\"><p>x</p><img src=\"data:image/png;base64,AAAA\">", "markdown": "[image](https://example.com/cat.png)\n\nx", "lossy": true },
     { "name": "markdown-syntax-in-text-is-escaped", "input": "<p># not heading, 1. not list, *stars* and [brackets] &amp;amp;</p>", "markdown": "\\# not heading, 1. not list, \\*stars\\* and \\[brackets\\] \\&amp;", "lossy": false },
     { "name": "inline-code", "input": "<p>use <code>npm ci</code> now</p>", "markdown": "use `npm ci` now", "lossy": false },
+    { "name": "trailing-hard-breaks-are-dropped", "input": "<p>text<br></p><p>more<br><br></p>", "markdown": "text\n\nmore", "lossy": false },
     { "name": "empty", "input": "", "markdown": "", "lossy": false }
   ],
   "plain": [
     { "name": "lines-become-hard-breaks", "input": "Buy:\nmilk\n\n- not a list\n1. not ordered\n# not heading", "markdown": "Buy:\\\nmilk\n\n\\- not a list\\\n1\\. not ordered\\\n\\# not heading" },
     { "name": "special-characters-escaped", "input": "a*b_c [x] <tag> ~tilde~ back\\slash", "markdown": "a\\*b\\_c \\[x\\] \\<tag\\> \\~tilde\\~ back\\\\slash" },
     { "name": "windows-newlines-and-outer-blank-lines", "input": "\r\n\r\nfirst\r\nsecond\r\n\r\n", "markdown": "first\\\nsecond" },
+    { "name": "indented-paragraph-start-is-not-code", "input": "intro\n\n    indented\n\tnext", "markdown": "intro\n\nindented\\\nnext" },
     { "name": "empty", "input": "", "markdown": "" }
   ]
 }

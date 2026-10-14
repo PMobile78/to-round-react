@@ -9,7 +9,8 @@ import {
 } from './schema';
 import { parseLocal, isValidTimeZone } from './time';
 
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+// 0-9 fraction digits: java.time Instant.toString() writes 6 or 9 when the value has micro/nanoseconds.
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z$/;
 const TASK_KEYS = ['id', 'title', 'description', 'categoryId', 'status', 'due', 'reminders', 'repeat',
     'radius', 'pulseMuted', 'createdAt', 'updatedAt', 'deletedAt'];
 

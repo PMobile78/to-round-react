@@ -24,6 +24,9 @@ const escapeLineStart = (line) => {
 
 const escapeLines = (text) => text.split('\n').map(escapeLineStart).join('\n');
 
+// A hard break at the very end of a block renders as a literal "\" in CommonMark.
+const dropTrailingBreaks = (text) => text.replace(/(?:\\\n\s*)+$/, '');
+
 const wrap = (inner, mark) => {
     const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(inner);
     return m[2] ? `${m[1]}${mark}${m[2]}${mark}${m[3]}` : inner;
@@ -104,7 +107,7 @@ const renderInline = (nodes, state) => {
 
 const paragraph = (el, state) => {
     if ((el.getAttribute('style') || '').includes('text-align')) state.lossy = true;
-    return escapeLines(renderInline(el.childNodes, state).trim());
+    return escapeLines(dropTrailingBreaks(renderInline(el.childNodes, state)).trim());
 };
 
 const indentRest = (text, marker) => {
@@ -153,7 +156,7 @@ function renderBlocks(nodes, state) {
     const blocks = [];
     let inlineRun = [];
     const flushInline = () => {
-        const text = escapeLines(renderInline(inlineRun, state).trim());
+        const text = escapeLines(dropTrailingBreaks(renderInline(inlineRun, state)).trim());
         if (text) blocks.push(text);
         inlineRun = [];
     };
@@ -218,11 +221,15 @@ export const htmlToMarkdown = (html) => {
     return { markdown: renderBlocks(doc.body.childNodes, state).join('\n\n').trim(), lossy: state.lossy };
 };
 
-/** Plain text -> Markdown that renders as the same text (line breaks kept as hard breaks). */
+/**
+ * Plain text -> Markdown that renders as the same text (line breaks kept as hard breaks).
+ * Lines are trimmed: CommonMark drops leading spaces in paragraphs anyway, and 4+ of them
+ * at the start of a paragraph would turn it into a code block.
+ */
 export const plainTextToMarkdown = (text) => (text || '')
     .replace(/\r\n?/g, '\n')
     .trim()
     .split(/\n{2,}/)
-    .map((para) => para.split('\n').map((line) => escapeLineStart(escapeInline(line.trimEnd()))).join('\\\n'))
+    .map((para) => para.split('\n').map((line) => escapeLineStart(escapeInline(line.trim()))).join('\\\n'))
     .filter(Boolean)
     .join('\n\n');
