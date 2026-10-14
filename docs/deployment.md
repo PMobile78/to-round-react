@@ -64,9 +64,8 @@ Workflow `Deploy Prod` (`.github/workflows/deploy-prod.yml`, только `workf
 3. **Commit version bump** — коммит `package.json` с `[skip ci]` и push.
 4. **Create `.env.production`** — из GitHub Secrets + `REACT_APP_NAME=To-Round`,
    `REACT_APP_VERSION=<bumped>`, `REACT_APP_BUILD_TIME=<время сборки, UTC>`,
-   `REACT_APP_GIT_SHA=<короткий хэш коммита>`, `REACT_APP_ENVIRONMENT=production`. Время и хэш
-   показывает окно «О программе» (строки `Deployed` и `Commit`): сборка идёт прямо перед
-   публикацией, так что это время деплоя.
+   `REACT_APP_ENVIRONMENT=production`. Время показывает окно «О программе» (строка `Deployed`):
+   сборка идёт прямо перед публикацией, так что это время деплоя.
 5. **Build** — `npm run build` (внутри сам генерирует service worker).
 6. **Setup Pages → Upload artifact** (`./build`) **→ Deploy**.
 
