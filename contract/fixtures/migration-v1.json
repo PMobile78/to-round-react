@@ -1,0 +1,99 @@
+{
+  "context": { "now": "2026-10-14T12:00:00.000Z", "timeZone": "Europe/Berlin", "language": "uk", "categoryIds": ["c1", "c2"] },
+  "tasks": [
+    {
+      "name": "minute-reminders-and-repeat-are-rounded-to-hours",
+      "v1": { "id": "a1", "title": " Pay bills ", "description": "line1\nline2", "useRichText": false, "tagId": "c1", "status": "active", "dueDate": "2026-10-15T09:00:00", "tz": "Europe/Kyiv", "notifications": ["15m", "1d", { "type": "custom", "value": 90, "unit": "minutes" }], "recurrence": { "every": 30, "unit": "minutes" }, "radius": 50, "overduePulseSuppressed": true, "overdueSticky": true, "overdueAt": "2026-10-13T09:00:00.000Z", "fillStyle": "rgba(0,0,0,0.1)", "strokeStyle": "#da3833", "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-10T19:30:00.000Z", "deletedAt": null },
+      "expected": { "id": "a1", "title": "Pay bills", "description": "line1\\\nline2", "categoryId": "c1", "status": "active", "due": { "local": "2026-10-15T09:00", "tz": "Europe/Kyiv" }, "reminders": [60, 120, 1440], "repeat": { "every": 1, "unit": "hours" }, "radius": 50, "pulseMuted": true, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-10T19:30:00.000Z", "deletedAt": null },
+      "notes": ["reminders-rounded", "repeat-rounded"]
+    },
+    {
+      "name": "rich-text-weekdays-postpone-and-defaults",
+      "v1": { "id": "a2", "title": "", "description": "<p><strong>Read</strong> book</p>", "useRichText": true, "tagId": "missing", "status": "postpone", "dueDate": "2026-10-14T18:30:00", "notifications": [], "recurrence": { "every": 1, "unit": "weeks", "weekDays": [0, 3] }, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z" },
+      "expected": { "id": "a2", "title": "Без назви", "description": "**Read** book", "categoryId": null, "status": "active", "due": { "local": "2026-10-14T18:30", "tz": "Europe/Berlin" }, "reminders": [], "repeat": { "every": 1, "unit": "weeks", "weekdays": [3, 7] }, "radius": 45, "pulseMuted": false, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z", "deletedAt": null },
+      "notes": ["status-postpone", "title-defaulted"]
+    },
+    {
+      "name": "monthly-repeat-gets-month-day",
+      "v1": { "id": "a3", "title": "Rent", "status": "done", "dueDate": "2026-01-31T09:00:00", "tz": "Europe/Berlin", "notifications": ["1h"], "recurrence": { "every": 1, "unit": "months" }, "radius": 45, "createdAt": "2026-01-01T08:00:00.000Z", "updatedAt": "2026-01-31T10:00:00.000Z" },
+      "expected": { "id": "a3", "title": "Rent", "description": "", "categoryId": null, "status": "done", "due": { "local": "2026-01-31T09:00", "tz": "Europe/Berlin" }, "reminders": [60], "repeat": { "every": 1, "unit": "months", "monthDay": 31 }, "radius": 45, "pulseMuted": false, "createdAt": "2026-01-01T08:00:00.000Z", "updatedAt": "2026-01-31T10:00:00.000Z", "deletedAt": null },
+      "notes": []
+    },
+    {
+      "name": "deleted-without-due-drops-reminders-and-repeat",
+      "v1": { "id": "a4", "title": "Trash", "status": "deleted", "dueDate": null, "notifications": ["1h"], "recurrence": { "every": 1, "unit": "days" }, "createdAt": "2026-08-01T08:00:00.000Z", "updatedAt": "2026-10-12T10:00:00.000Z", "deletedAt": "2026-10-12T10:00:00.000Z" },
+      "expected": { "id": "a4", "title": "Trash", "description": "", "categoryId": null, "status": "deleted", "due": null, "reminders": [], "repeat": null, "radius": 45, "pulseMuted": false, "createdAt": "2026-08-01T08:00:00.000Z", "updatedAt": "2026-10-12T10:00:00.000Z", "deletedAt": "2026-10-12T10:00:00.000Z" },
+      "notes": []
+    },
+    {
+      "name": "due-with-offset-is-converted-to-local",
+      "v1": { "id": "a5", "title": "Call", "tagId": "c2", "status": "active", "dueDate": "2026-10-15T07:00:00.000Z", "tz": "Europe/Berlin", "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z" },
+      "expected": { "id": "a5", "title": "Call", "description": "", "categoryId": "c2", "status": "active", "due": { "local": "2026-10-15T09:00", "tz": "Europe/Berlin" }, "reminders": [], "repeat": null, "radius": 45, "pulseMuted": false, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z", "deletedAt": null },
+      "notes": []
+    },
+    {
+      "name": "lossy-html-and-bad-timestamps",
+      "v1": { "id": "a6", "title": "Notes", "description": "<p><u>under</u> text</p>", "useRichText": true, "status": "active", "createdAt": "2027-01-01T00:00:00.000Z", "updatedAt": "garbage" },
+      "expected": { "id": "a6", "title": "Notes", "description": "under text", "categoryId": null, "status": "active", "due": null, "reminders": [], "repeat": null, "radius": 45, "pulseMuted": false, "createdAt": "2026-10-14T12:00:00.000Z", "updatedAt": "2026-10-14T12:00:00.000Z", "deletedAt": null },
+      "notes": ["formatting-lost", "timestamp-fixed"]
+    },
+    {
+      "name": "unparseable-due-is-dropped",
+      "v1": { "id": "a7", "title": "X", "status": "active", "dueDate": "not a date", "notifications": ["1h"], "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z" },
+      "expected": { "id": "a7", "title": "X", "description": "", "categoryId": null, "status": "active", "due": null, "reminders": [], "repeat": null, "radius": 45, "pulseMuted": false, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z", "deletedAt": null },
+      "notes": ["due-dropped"]
+    },
+    {
+      "name": "radius-is-clamped",
+      "v1": { "id": "a8", "title": "Big", "status": "active", "radius": 120, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z" },
+      "expected": { "id": "a8", "title": "Big", "description": "", "categoryId": null, "status": "active", "due": null, "reminders": [], "repeat": null, "radius": 80, "pulseMuted": false, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z", "deletedAt": null },
+      "notes": []
+    },
+    {
+      "name": "record-without-id-is-skipped",
+      "v1": { "title": "No id" },
+      "expected": null,
+      "notes": ["invalid-record"]
+    }
+  ],
+  "categories": {
+    "v1": [
+      { "id": "c1", "name": " Home ", "color": "#da3833" },
+      { "id": "c2", "name": "Work", "color": "#DA3833" },
+      { "id": "c3", "name": "Fun", "color": "#ee603c" },
+      { "id": "c4", "name": "Misc", "color": "#123456" },
+      { "name": "no id", "color": "#fd8b2b" }
+    ],
+    "expected": [
+      { "id": "c1", "name": "Home", "color": "#da3833", "order": 1 },
+      { "id": "c2", "name": "Work", "color": "#fd8b2b", "order": 2 },
+      { "id": "c3", "name": "Fun", "color": "#ee603c", "order": 3 },
+      { "id": "c4", "name": "Misc", "color": "#e9be00", "order": 4 }
+    ],
+    "notes": [
+      { "id": null, "code": "invalid-record" },
+      { "id": "c2", "code": "color-changed" },
+      { "id": "c4", "code": "color-changed" }
+    ]
+  },
+  "settings": [
+    {
+      "name": "empty-storage-uses-defaults-and-device-language",
+      "localStorage": {},
+      "deviceLanguage": "uk-UA",
+      "expected": { "themeMode": "system", "design": "classic", "language": "uk", "mainView": "bubbles", "labelFontSize": 8, "bubbleBackground": true, "showCategoriesPanel": false, "showInstructions": true, "bubbleFilter": { "categoryIds": null, "showUncategorized": true, "plannedOnly": false }, "listFilter": { "categoryIds": null, "showUncategorized": true }, "listSort": { "by": "updatedAt", "order": "desc" } }
+    },
+    {
+      "name": "legacy-values-are-mapped",
+      "localStorage": { "app-theme-mode": "\"dark\"", "app-design": "aurora", "i18nextLng": "ru", "bubbles-main-view": "tasks", "bubbles-font-size": "12", "bubbles-background-enabled": "false", "bubbles-categories-panel-enabled": "true", "bubbles-show-instructions": "false", "bubbles-filter-tags": "[\"c1\",\"c2\"]", "bubbles-show-no-tag": "false", "bubbles-planned-tasks-only": "true", "bubbles-list-filter-tags": "[]", "bubbles-list-show-no-tag": "true", "bubbles-list-sort-by": "tag", "bubbles-list-sort-order": "asc" },
+      "deviceLanguage": "en-US",
+      "expected": { "themeMode": "dark", "design": "aurora", "language": "en", "mainView": "list", "labelFontSize": 12, "bubbleBackground": false, "showCategoriesPanel": true, "showInstructions": false, "bubbleFilter": { "categoryIds": ["c1", "c2"], "showUncategorized": false, "plannedOnly": true }, "listFilter": { "categoryIds": [], "showUncategorized": true }, "listSort": { "by": "category", "order": "asc" } }
+    },
+    {
+      "name": "garbage-values-fall-back-to-defaults",
+      "localStorage": { "app-theme-mode": "blue", "app-design": "neon", "bubbles-font-size": "99", "bubbles-filter-tags": "not json", "bubbles-list-sort-by": "priority", "bubbles-list-sort-order": "up" },
+      "deviceLanguage": "de-DE",
+      "expected": { "themeMode": "system", "design": "classic", "language": "en", "mainView": "bubbles", "labelFontSize": 8, "bubbleBackground": true, "showCategoriesPanel": false, "showInstructions": true, "bubbleFilter": { "categoryIds": null, "showUncategorized": true, "plannedOnly": false }, "listFilter": { "categoryIds": null, "showUncategorized": true }, "listSort": { "by": "updatedAt", "order": "desc" } }
+    }
+  ]
+}
