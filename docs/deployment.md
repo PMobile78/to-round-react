@@ -47,8 +47,9 @@ Workflow `Deploy Prod` (`.github/workflows/deploy-prod.yml`, только `workf
 (`on: workflow_call`) с **двумя параллельными** job (`ubuntu-latest`); в графе Actions они
 видны как `test / test` и `test / lint`:
 
-- **`test`** — Checkout + Node 24 (кеш npm) + `npm ci --legacy-peer-deps` (+ зависимости
-  `functions/`) → **`npm test`** и **`npm run test:functions --if-present`**.
+- **`test`** — Checkout + Node 24 (кеш npm) + Java 21 и Firebase CLI 15 (для эмулятора Firestore) +
+  `npm ci --legacy-peer-deps` (+ зависимости `functions/`) → **`npm run test:all`**: `npm test`,
+  `npm run test:functions` и `npm run test:rules` (правила Firestore на эмуляторе).
 - **`lint`** — Checkout + Node 24 + `npm ci --legacy-peer-deps` → **`npm run lint`** (eslint).
 
 Оба job read-only (`permissions: contents: read`) и GitHub Pages не трогают.

@@ -63,21 +63,32 @@ collection group) — внутрь legacy-массива `bubbles[]` индек�
 Правила — в [`firestore.rules`](../firestore.rules), путь к ним прописан в
 [`firebase.json`](../firebase.json) (`firestore.rules`). Держите их синхронными.
 
-Модель — **доступ только владельцу + запрет по умолчанию**:
+В ветке этапа 0 правила уже описывают формат данных v2
+([спецификация](superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md), раздел 7);
+в прод они выходят вместе с переездом данных:
 
-```
-match /user-bubbles/{uid}/{document=**} {
-  allow read, write: if request.auth != null && request.auth.uid == uid;
-}
-// аналогично user-tags, user-mindmaps, user-fcm-tokens
-
-match /notification-sent/{document=**} { allow read, write: if false; }
-match /{document=**} { allow read, write: if false; }  // default deny
-```
+- `users/{uid}` и подколлекции `tasks`, `categories`, `devices` — только владелец, с проверкой
+  формата каждого документа: набор полей, типы, допустимые значения, `schemaVersion == 2`;
+- при создании время не может быть из будущего; при каждом изменении `updatedAt` ставит сервер
+  (`serverTimestamp()`), а `createdAt` не меняется;
+- служебные поля задачи `overdueAt` и `nextNotifyAt` клиенту менять нельзя — их пишет Cloud Functions;
+- документ пользователя удалить нельзя;
+- старые коллекции `user-bubbles`, `user-tags`, `user-fcm-tokens` — только чтение: они нужны для
+  переноса и отката;
+- `user-mindmaps` — владелец читает и пишет, как раньше;
+- `notification-sent` и все остальные пути закрыты.
 
 > ⚠️ Не используйте `allow read, write: if true` — это открывает базу всему интернету.
 > Коллекция `notification-sent` закрыта для клиента полностью: к ней обращается только
 > Cloud Functions через admin SDK, который правила обходит.
+
+### Тесты правил
+
+`npm run test:rules` поднимает эмулятор Firestore (`firebase emulators:exec`, порт 8180, проект
+`demo-to-round` без доступа к настоящей базе) и гоняет тесты из `firestore-tests/`. Нужны Java 21+
+и Firebase CLI 15+. Тесты переводят общие примеры из `contract/fixtures/` в форму Firestore и
+проверяют, что правила принимают каждую правильную запись и отклоняют неправильные. Команда входит
+в `npm run test:all` и `npm run verify`.
 
 ## FCM (push-токены)
 
@@ -98,6 +109,6 @@ match /{document=**} { allow read, write: if false; }  // default deny
 firebase emulators:start --only functions,firestore
 ```
 
-Для Firestore-эмулятора нужна Java. Эмулятор использует те же `firestore.rules` и
+Для Firestore-эмулятора нужна Java 21+; порт — 8180 (задан в `firebase.json`). Эмулятор использует те же `firestore.rules` и
 `firestore.indexes.json`. Нюансы запуска функций в эмуляторе —
 в [notifications.md → Локальный эмулятор](notifications.md#локальный-эмулятор).

@@ -10,6 +10,7 @@ Human-facing documentation lives in [`docs/`](docs/README.md) (setup, Firebase, 
 npm start              # dev server (also generates service worker)
 npm run build          # production build (also generates service worker)
 npm test               # run tests (vitest)
+npm run test:rules     # Firestore rules tests on the emulator (needs Java 21+ and Firebase CLI 15+)
 npm run preview        # serve production build locally
 npm run generate-sw    # generate public/sw.js from env vars only
 npm run deploy         # build + push to gh-pages branch
@@ -97,7 +98,7 @@ The service worker (`public/sw.js`) is generated from env vars by `scripts/gener
 
 ### CI / Version management
 
-`.github/workflows/deploy-prod.yml` (**manual `workflow_dispatch` only** — push/PR trigger nothing) has two jobs: `test`, which calls the reusable `.github/workflows/test.yml` (`workflow_call`) running **two parallel jobs** — `test` (vitest + `test:functions`) and `lint` (eslint) — and `build-and-deploy` (`needs: test`). The deploy job bumps the version at the chosen level (`patch`/`minor`/`major` input, default `patch`), commits the bump with `[skip ci]`, builds, and deploys to GitHub Pages. Must be run from `main`/`master` (github-pages environment protection rule). The current version in `package.json` is the source of truth. See [docs/deployment.md](docs/deployment.md).
+`.github/workflows/deploy-prod.yml` (**manual `workflow_dispatch` only** — push/PR trigger nothing) has two jobs: `test`, which calls the reusable `.github/workflows/test.yml` (`workflow_call`) running **two parallel jobs** — `test` (`npm run test:all`: vitest + `test:functions` + `test:rules` on the Firestore emulator; the job installs Java 21 and Firebase CLI 15) and `lint` (eslint) — and `build-and-deploy` (`needs: test`). The deploy job bumps the version at the chosen level (`patch`/`minor`/`major` input, default `patch`), commits the bump with `[skip ci]`, builds, and deploys to GitHub Pages. Must be run from `main`/`master` (github-pages environment protection rule). The current version in `package.json` is the source of truth. See [docs/deployment.md](docs/deployment.md).
 
 ## Standing implementation conventions
 

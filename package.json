@@ -11,7 +11,7 @@
     "test": "vitest run --passWithNoTests",
     "test:functions": "npm --prefix functions test",
     "test:rules": "firebase emulators:exec --only firestore --project demo-to-round \"vitest run --config vitest.rules.config.js\"",
-    "test:all": "npm test && npm run test:functions",
+    "test:all": "npm test && npm run test:functions && npm run test:rules",
     "lint": "eslint src",
     "lint:functions": "npm --prefix functions run lint",
     "lint:all": "npm run lint && npm run lint:functions",
