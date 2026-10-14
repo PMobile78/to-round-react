@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeBubble, sanitizeTag, toIsoOrNull } from './bubbleData';
+import { sanitizeBubble, sanitizeTag, toIsoOrNull, normalizeStoredBubble } from './bubbleData';
 
 describe('sanitizeBubble', () => {
     it('returns null for non-object / falsy input', () => {
@@ -76,6 +76,36 @@ describe('sanitizeBubble', () => {
         const b = sanitizeBubble({ id: 'a', __proto__hack: 1, body: {}, evil: 'x' });
         expect(b.evil).toBeUndefined();
         expect(b.body).toBeUndefined();
+    });
+});
+
+describe('normalizeStoredBubble', () => {
+    // A bubble document as serializeBubble persists it (Firestore doc / localStorage fallback),
+    // every field set to a non-default value.
+    const stored = {
+        id: 'b1',
+        radius: 72,
+        title: 'Plan',
+        description: '<p><strong>rich</strong> text</p>',
+        fillStyle: 'rgba(233, 30, 99, 0.2)',
+        strokeStyle: '#e91e63',
+        tagId: 'tag1',
+        status: 'deleted',
+        createdAt: '2026-10-01T08:00:00.000Z',
+        updatedAt: '2026-10-02T08:00:00.000Z',
+        deletedAt: '2026-10-03T08:00:00.000Z',
+        dueDate: '2026-11-01T09:30:00',
+        tz: 'Europe/Kyiv',
+        notifications: ['10m', '1h'],
+        recurrence: { every: 1, unit: 'days' },
+        overdueSticky: true,
+        overdueAt: '2026-11-01T09:31:00.000Z',
+        overduePulseSuppressed: true,
+        useRichText: true,
+    };
+
+    it('keeps every persisted field across a reload, including useRichText and tz', () => {
+        expect(normalizeStoredBubble(stored)).toEqual(stored);
     });
 });
 
