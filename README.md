@@ -25,7 +25,7 @@ Matter.js · MUI v7 · TipTap · i18next · date-fns · DOMPurify ·
 
 ## Быстрый старт
 
-Требуется Node 22+ (CI собирает на Node 22; Cloud Functions — на Node 22).
+Требуется Node 24.12+ (этого требует Firebase JS SDK 13; CI собирает на Node 24; Cloud Functions — на Node 22).
 
 ```bash
 npm ci --legacy-peer-deps      # из-за peer-конфликтов всегда с этим флагом
