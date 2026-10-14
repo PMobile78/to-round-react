@@ -1,6 +1,91 @@
 rules_version = '2';
+
+// Data contract v2: docs/superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md (sections 3 and 7).
+// Element-level checks of `reminders` and of category id lists are done by the clients and the server.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Firestore-safe id: 1..128 chars, no "/".
+    function isId(v) {
+      return v is string && v.size() > 0 && v.size() <= 128 && !v.matches('.*/.*');
+    }
+
+    function isNonBlankString(v, max) {
+      return v is string && v.size() > 0 && v.size() <= max && v.matches('(?s).*\\S.*');
+    }
+
+    function hasExactly(d, required, optional) {
+      return d.keys().hasAll(required) && d.keys().hasOnly(required.concat(optional));
+    }
+
+    // Create may carry historical times (migration, import), never future ones.
+    function validCreateTimes(d) {
+      return d.createdAt is timestamp && d.createdAt <= request.time
+        && d.updatedAt is timestamp && d.updatedAt <= request.time;
+    }
+
+    // Every client update stamps updatedAt with the server time and keeps createdAt.
+    function validUpdateTimes(d, old) {
+      return d.updatedAt == request.time && d.createdAt == old.createdAt;
+    }
+
+    // ---------- users/{uid}: settings and migration marker ----------
+
+    function validCategoryFilter(f, keys) {
+      return f is map && hasExactly(f, keys, [])
+        && (f.categoryIds == null || (f.categoryIds is list && f.categoryIds.size() <= 100))
+        && f.showUncategorized is bool;
+    }
+
+    function validSettings(s) {
+      return s is map
+        && hasExactly(s, ['themeMode', 'design', 'language', 'mainView', 'labelFontSize', 'bubbleBackground',
+          'showCategoriesPanel', 'showInstructions', 'bubbleFilter', 'listFilter', 'listSort'], [])
+        && s.themeMode in ['light', 'dark', 'system']
+        && s.design in ['classic', 'modern', 'aurora', 'brutalist', 'clay']
+        && s.language in ['en', 'uk']
+        && s.mainView in ['bubbles', 'list']
+        && s.labelFontSize is int && s.labelFontSize >= 8 && s.labelFontSize <= 20
+        && s.bubbleBackground is bool && s.showCategoriesPanel is bool && s.showInstructions is bool
+        && validCategoryFilter(s.bubbleFilter, ['categoryIds', 'showUncategorized', 'plannedOnly'])
+        && s.bubbleFilter.plannedOnly is bool
+        && validCategoryFilter(s.listFilter, ['categoryIds', 'showUncategorized'])
+        && s.listSort is map && hasExactly(s.listSort, ['by', 'order'], [])
+        && s.listSort.by in ['createdAt', 'updatedAt', 'title', 'category']
+        && s.listSort.order in ['asc', 'desc'];
+    }
+
+    function validMigration(m) {
+      return m is map && hasExactly(m, ['fromV1At', 'tasks', 'categories'], [])
+        && m.fromV1At is timestamp
+        && m.tasks is int && m.tasks >= 0
+        && m.categories is int && m.categories >= 0;
+    }
+
+    function validUserDoc(d) {
+      return hasExactly(d, ['schemaVersion', 'settings', 'createdAt', 'updatedAt'], ['migration'])
+        && d.schemaVersion == 2
+        && validSettings(d.settings)
+        && (!('migration' in d) || validMigration(d.migration));
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validUserDoc(request.resource.data)
+        && validCreateTimes(request.resource.data);
+      allow update: if isOwner(uid) && validUserDoc(request.resource.data)
+        && validUpdateTimes(request.resource.data, resource.data);
+      allow delete: if false;
+    }
+
+    // User mind maps: owner-only access (unchanged in stage 0).
+    match /user-mindmaps/{uid}/{document=**} {
+      allow read, write: if isOwner(uid);
+    }
 
     // User bubbles: owner-only access
     match /user-bubbles/{uid}/{document=**} {
@@ -12,23 +97,17 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // User mind maps: owner-only access
-    match /user-mindmaps/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-
     // User FCM tokens: owner-only access
     match /user-fcm-tokens/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Notification sent: Cloud Functions access only (admin SDK bypasses these rules)
+    // Notification dedup keys: Cloud Functions only (admin SDK bypasses these rules).
     match /notification-sent/{document=**} {
-      // Cloud Functions access only (admin SDK bypasses these rules)
       allow read, write: if false;
     }
 
-    // Default deny: all other paths are denied
+    // Default deny: all other paths are denied.
     match /{document=**} {
       allow read, write: if false;
     }
