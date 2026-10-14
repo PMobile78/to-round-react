@@ -1,0 +1,23 @@
+{
+  "html": [
+    { "name": "basic-marks", "input": "<p>Hello <strong>bold</strong>, <em>italic</em> and <s>gone</s>.</p>", "markdown": "Hello **bold**, *italic* and ~~gone~~.", "lossy": false },
+    { "name": "paragraphs-and-hard-break", "input": "<p>line one<br>line two</p><p></p><p>second para</p>", "markdown": "line one\\\nline two\n\nsecond para", "lossy": false },
+    { "name": "bullet-and-nested", "input": "<ul><li><p>one</p></li><li><p>two</p><ul><li><p>two.a</p></li></ul></li></ul>", "markdown": "- one\n- two\n  - two.a", "lossy": false },
+    { "name": "ordered-with-start", "input": "<ol start=\"3\"><li><p>third</p></li><li><p>fourth</p></li></ol>", "markdown": "3. third\n4. fourth", "lossy": false },
+    { "name": "task-list", "input": "<ul data-type=\"taskList\"><li data-checked=\"true\" data-type=\"taskItem\"><label><input type=\"checkbox\" checked=\"checked\"><span></span></label><div><p>bought milk</p></div></li><li data-checked=\"false\" data-type=\"taskItem\"><label><input type=\"checkbox\"><span></span></label><div><p>call mom</p></div></li></ul>", "markdown": "- [x] bought milk\n- [ ] call mom", "lossy": false },
+    { "name": "links-safe-and-unsafe", "input": "<p><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"https://example.com/a b\">site</a> and <a href=\"javascript:alert(1)\">bad</a></p>", "markdown": "[site](<https://example.com/a b>) and bad", "lossy": true },
+    { "name": "heading-quote-code-rule", "input": "<h2>Title</h2><blockquote><p>quoted</p></blockquote><pre><code class=\"language-js\">const a = 1;\n</code></pre><hr><p>after</p>", "markdown": "## Title\n\n> quoted\n\n```js\nconst a = 1;\n```\n\n---\n\nafter", "lossy": false },
+    { "name": "underline-colour-highlight-alignment", "input": "<p style=\"text-align: center\"><u>under</u> <span style=\"color: #ff0000\">red</span> <mark data-color=\"#ffff00\" style=\"background-color: #ffff00; color: inherit\">hi</mark></p>", "markdown": "under red hi", "lossy": true },
+    { "name": "table-becomes-text", "input": "<table><tbody><tr><th><p>Name</p></th><th><p>Qty</p></th></tr><tr><td><p>Apples</p></td><td><p>3</p></td></tr></tbody></table>", "markdown": "Name · Qty\n\nApples · 3", "lossy": true },
+    { "name": "images-become-links-or-drop", "input": "<img src=\"https://example.com/cat.png\"><p>x</p><img src=\"data:image/png;base64,AAAA\">", "markdown": "[image](https://example.com/cat.png)\n\nx", "lossy": true },
+    { "name": "markdown-syntax-in-text-is-escaped", "input": "<p># not heading, 1. not list, *stars* and [brackets] &amp;amp;</p>", "markdown": "\\# not heading, 1. not list, \\*stars\\* and \\[brackets\\] \\&amp;", "lossy": false },
+    { "name": "inline-code", "input": "<p>use <code>npm ci</code> now</p>", "markdown": "use `npm ci` now", "lossy": false },
+    { "name": "empty", "input": "", "markdown": "", "lossy": false }
+  ],
+  "plain": [
+    { "name": "lines-become-hard-breaks", "input": "Buy:\nmilk\n\n- not a list\n1. not ordered\n# not heading", "markdown": "Buy:\\\nmilk\n\n\\- not a list\\\n1\\. not ordered\\\n\\# not heading" },
+    { "name": "special-characters-escaped", "input": "a*b_c [x] <tag> ~tilde~ back\\slash", "markdown": "a\\*b\\_c \\[x\\] \\<tag\\> \\~tilde\\~ back\\\\slash" },
+    { "name": "windows-newlines-and-outer-blank-lines", "input": "\r\n\r\nfirst\r\nsecond\r\n\r\n", "markdown": "first\\\nsecond" },
+    { "name": "empty", "input": "", "markdown": "" }
+  ]
+}
