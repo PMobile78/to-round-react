@@ -37,4 +37,10 @@ describe('AboutDialog deploy time', () => {
         renderAbout();
         expect(document.body.textContent).toContain('Deployed: -');
     });
+
+    it('does not show a Commit line', () => {
+        vi.stubEnv('REACT_APP_GIT_SHA', 'abc1234');
+        renderAbout();
+        expect(document.body.textContent).not.toContain('Commit');
+    });
 });

@@ -29,7 +29,6 @@ export default function AboutDialog({ open, onClose, t }) {
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Typography variant="body2">Version: {APP_VERSION}</Typography>
                     <Typography variant="body2">Deployed: {formatBuildTime(import.meta.env.REACT_APP_BUILD_TIME)}</Typography>
-                    <Typography variant="body2">Commit: {import.meta.env.REACT_APP_GIT_SHA || '-'}</Typography>
                     {memoryInfo && (
                         <Box sx={{ mt: 1 }}>
                             <Typography variant="body2">
