@@ -6,14 +6,14 @@
 
 **Architecture:** Правила пишутся по одному типу документа за задачу, каждая — после падающих тестов. Тесты живут в `firestore-tests/`, запускаются отдельным конфигом Vitest внутри `firebase emulators:exec` и используют `@firebase/rules-unit-testing`. Общие примеры из `contract/fixtures/` переводятся в форму Firestore (время → `Timestamp`, плюс `schemaVersion` и служебные поля): правила обязаны принимать каждую правильную запись контракта. Деплоя нет — правила выходят в прод при переезде (подплан 0.7).
 
-**Tech Stack:** Firestore Security Rules v2, Firebase CLI 15 (`emulators:exec`), эмулятор Firestore (Java 21+), `@firebase/rules-unit-testing` 4.0.1 с firebase 11, Vitest 4.
+**Tech Stack:** Firestore Security Rules v2, Firebase CLI 15 (`emulators:exec`), эмулятор Firestore (Java 21+), `@firebase/rules-unit-testing` 6.0.0 с firebase 13 (Node 24.12+), Vitest 4.
 
 **Spec:** [docs/superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md](../specs/2026-10-14-stage-0-data-contract-v2-design.md) — разделы 3, 6 (индексы), 7, 11. Обзор подпланов — [2026-10-14-stage-0-overview.md](2026-10-14-stage-0-overview.md). Предыдущий подплан — [0.1](2026-10-14-stage-0-1-contract-core.md) (из его финального ревью: примеры устройств переехали сюда).
 
 ## Global Constraints
 
 - Ветка `stage-0-data-contract-v2`, в `main` не коммитить. Ничего не деплоить (`firebase deploy` не запускать): новые правила отключают запись в старые коллекции, а прод-веб пока пишет туда.
-- Единственная новая зависимость — `@firebase/rules-unit-testing@^4.0.1` (devDependency). Версии 5.x и 6.x требуют firebase 12/13 и Node 24.12+, а у веба firebase 11 и Node 22 в CI. Ставить с `--legacy-peer-deps`, как всё в проекте.
+- Единственная новая зависимость — `@firebase/rules-unit-testing@^6.0.0` (devDependency): версия для firebase 13, нужен Node 24.12+. Веб переведён на firebase 13, а CI — на Node 24 в `main` (коммит `a908b81`, влит в ветку). Ставить с `--legacy-peer-deps`, как всё в проекте. После установки в `package.json` меняется только `devDependencies`: npm умеет молча переписать `react`/`react-dom` в `dependencies` на диапазон из `peerDependencies` (`>=16.8.0`) — такую правку откатить.
 - Эмулятор Firestore: порт **8180** (8080 на машине разработчика занят), проект **`demo-to-round`** (префикс `demo-` — без доступа к настоящей базе и без входа в аккаунт).
 - Для `npm run test:rules` нужны Java 21+ и Firebase CLI 15+ (локально уже есть JDK 25 и Firebase CLI 15.22).
 - Формат документов — раздел 3 спецификации. Документы задач, категорий и пользователя содержат `schemaVersion == 2`, документ устройства — нет.
@@ -39,7 +39,7 @@
 | `firestore.indexes.json` | индексы collectionGroup `tasks` для функций (подплан 0.3) |
 | `firebase.json` | (изменение) настройки эмулятора Firestore |
 | `vitest.rules.config.js` | конфиг Vitest только для тестов правил |
-| `vite.config.js` | (изменение) обычный `npm test` не трогает `firestore-tests/` |
+| `vite.config.js` | (изменение) обычный `npm test` не трогает `firestore-tests/` и копии репозитория в `.claude/` |
 | `firestore-tests/helpers.js` | стенд эмулятора и перевод примеров контракта в форму Firestore |
 | `firestore-tests/users.rules.test.js` | документ пользователя и настройки |
 | `firestore-tests/tasks.rules.test.js` | задачи |
@@ -73,8 +73,8 @@
 
 - [ ] **Step 1: Поставить библиотеку тестов правил**
 
-Run: `npm install --save-dev @firebase/rules-unit-testing@^4.0.1 --legacy-peer-deps`
-Expected: npm сообщает `added … packages`; в `devDependencies` файла `package.json` появилась строка `"@firebase/rules-unit-testing": "^4.0.1"`.
+Run: `npm install --save-dev @firebase/rules-unit-testing@^6.0.0 --legacy-peer-deps`, затем `git diff package.json`
+Expected: npm сообщает `added … packages`; diff — одна новая строка `"@firebase/rules-unit-testing": "^6.0.0"` в `devDependencies` и больше ничего. Если npm переписал `react`/`react-dom` в `dependencies` на `">=16.8.0"`, вернуть `"^19.1.0"` (в `peerDependencies` диапазон `>=16.8.0` остаётся).
 
 - [ ] **Step 2: Добавить скрипт `test:rules` в `package.json`**
 
@@ -166,7 +166,8 @@ export default defineConfig({
     },
     test: {
         // Firestore rules tests need the emulator: they run only through `npm run test:rules`.
-        exclude: [...configDefaults.exclude, 'firestore-tests/**'],
+        // Agent worktrees under .claude/ hold copies of the repo tests: never collect them.
+        exclude: [...configDefaults.exclude, 'firestore-tests/**', '.claude/**'],
     },
 });
 ```
@@ -464,8 +465,8 @@ Expected: PASS — `Tests  15 passed (15)`.
 
 - [ ] **Step 11: Обычные тесты не подхватывают тесты правил**
 
-Run: `npm test`
-Expected: PASS — `Tests  460 passed (460)`, столько же, сколько до плана; файлов из `firestore-tests/` в выводе нет.
+Run: `npm test`, затем `npx vitest list --filesOnly | grep -c -e firestore-tests -e '\.claude/'`
+Expected: PASS — `Tests  460 passed (460)`, только тесты `src/` (до плана `npm test` насчитывал больше, если в `.claude/worktrees/` лежали копии репозитория); вторая команда печатает `0`.
 
 - [ ] **Step 12: Сборка не сломалась из-за импорта `vitest/config`**
 
@@ -1202,7 +1203,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v5
       with:
-        node-version: '22'
+        node-version: '24'
         cache: 'npm'
 
     - name: Setup Java (Firestore emulator)
@@ -1237,7 +1238,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v5
       with:
-        node-version: '22'
+        node-version: '24'
         cache: 'npm'
 
     - name: Clear npm cache
@@ -1282,14 +1283,14 @@ running **two parallel jobs** — `test` (`npm run test:all`: vitest + `test:fun
 Заменить пункт
 
 ```markdown
-- **`test`** — Checkout + Node 22 (кеш npm) + `npm ci --legacy-peer-deps` (+ зависимости
+- **`test`** — Checkout + Node 24 (кеш npm) + `npm ci --legacy-peer-deps` (+ зависимости
   `functions/`) → **`npm test`** и **`npm run test:functions --if-present`**.
 ```
 
 на
 
 ```markdown
-- **`test`** — Checkout + Node 22 (кеш npm) + Java 21 и Firebase CLI 15 (для эмулятора Firestore) +
+- **`test`** — Checkout + Node 24 (кеш npm) + Java 21 и Firebase CLI 15 (для эмулятора Firestore) +
   `npm ci --legacy-peer-deps` (+ зависимости `functions/`) → **`npm run test:all`**: `npm test`,
   `npm run test:functions` и `npm run test:rules` (правила Firestore на эмуляторе).
 ```
