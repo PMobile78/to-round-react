@@ -3,13 +3,10 @@
  * No React / Firestore / DOM — safe to unit-test directly.
  */
 
-// My palette
-export const COLOR_PALETTE = [
-    '#da3833', '#ee603c', '#fd8b2b', '#e9be00', '#b7be00',
-    '#7db44e', '#46a549', '#00a47a', '#34c09d', '#007771',
-    '#00a5cf', '#0089b5', '#005ea4', '#6179cf', '#434d82',
-    '#b14dd1', '#c04097', '#f25e6a', '#4d697e', '#86a49c'
-];
+import { PALETTE } from '../contract/schema';
+
+// Category palette is shared with the Android app: contract/palette.json.
+export const COLOR_PALETTE = PALETTE;
 
 export const getUsedColors = (tags) => {
     return (tags || []).map(tag => tag.color);

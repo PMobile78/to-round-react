@@ -1,0 +1,13 @@
+{
+  "valid": [
+    { "name": "basic", "value": { "id": "k3j9x0abc", "name": "Дом", "color": "#da3833", "order": 1 } },
+    { "name": "fractional-order", "value": { "id": "c2", "name": "Work", "color": "#86a49c", "order": 1.5 } }
+  ],
+  "invalid": [
+    { "name": "colour-outside-palette", "value": { "id": "c1", "name": "Home", "color": "#123456", "order": 1 } },
+    { "name": "blank-name", "value": { "id": "c1", "name": " ", "color": "#da3833", "order": 1 } },
+    { "name": "order-as-string", "value": { "id": "c1", "name": "Home", "color": "#da3833", "order": "1" } },
+    { "name": "missing-id", "value": { "name": "Home", "color": "#da3833", "order": 1 } },
+    { "name": "unknown-field", "value": { "id": "c1", "name": "Home", "color": "#da3833", "order": 1, "userId": "u1" } }
+  ]
+}
