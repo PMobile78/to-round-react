@@ -102,3 +102,18 @@ describe('users/{uid}/tasks: lifecycle and access', () => {
         await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), `users/${OWNER}/tasks/t1`)));
     });
 });
+
+describe('users/{uid}/tasks: migration re-run and import', () => {
+    it('rejects re-writing an existing task with setDoc: a migration re-run skips existing ids', async () => {
+        await seed(env, `users/${OWNER}/tasks/t1`, baseTask());
+        await assertFails(setDoc(taskRef('t1'), baseTask()));
+    });
+
+    it('replaces an existing task on import with updateDoc of the client fields', async () => {
+        await seed(env, `users/${OWNER}/tasks/t1`, baseTask({ title: 'Old', overdueAt: LATER, nextNotifyAt: LATER }));
+        const fromBackup = { ...baseTask({ title: 'From backup', description: 'restored' }), updatedAt: serverTimestamp() };
+        delete fromBackup.createdAt;
+        delete fromBackup.overdueAt;
+        await assertSucceeds(updateDoc(taskRef('t1'), fromBackup));
+    });
+});

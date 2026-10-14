@@ -503,7 +503,8 @@ EOF
   - создание: все поля раздела 3.1, `schemaVersion: 2`, `overdueAt: null`, без `nextNotifyAt`, `createdAt`/`updatedAt` — `serverTimestamp()`. При переносе и импорте можно исходное время, если оно не позже текущего;
   - изменение: `updateDoc` только с изменёнными полями и `updatedAt: serverTimestamp()`;
   - в корзину: `{ status: 'deleted', deletedAt: serverTimestamp(), updatedAt: serverTimestamp() }`;
-  - удаление навсегда: `deleteDoc`.
+  - удаление навсегда: `deleteDoc`;
+  - повторный перенос и импорт (дополнено по итогам финального ревью): `setDoc` поверх существующей задачи правила отклоняют (тест «rejects re-writing an existing task with setDoc…»). Повторный перенос пропускает существующие id; импорт обновляет существующие `updateDoc` без `createdAt`, `overdueAt`, `nextNotifyAt` и с `updatedAt: serverTimestamp()`, недостающие создаёт с исходными датами, лишние удаляет `deleteDoc` (спецификация, разделы 3, 9.1, 10).
 
 - [ ] **Step 1: Написать падающий тест `firestore-tests/tasks.rules.test.js`**
 
@@ -719,7 +720,7 @@ EOF
 - Consumes (задача 1): `OTHER`, `OWNER`, `categoryFromFixture`, `deviceFromFixture`, `seed`, `setupRulesEnv`; `contract/fixtures/categories.json` и `contract/palette.json` (план 0.1).
 - Produces:
   - `contract/fixtures/devices.json` — `{ valid: [{ name, value }], invalid: [{ name, value }] }`, где `value` = `{ id, platform, fcmToken, notificationsEnabled, createdAt, updatedAt }`, время — ISO-строки;
-  - контракт записи для подплана 0.4. Категория: `{ schemaVersion: 2, name, color, order, createdAt, updatedAt }`, перестановка — `updateDoc(ref, { order, updatedAt: serverTimestamp() })`. Устройство: `{ platform, fcmToken, notificationsEnabled, createdAt, updatedAt }` без `schemaVersion`, при выходе — `deleteDoc`.
+  - контракт записи для подплана 0.4. Категория: `{ schemaVersion: 2, name, color, order, createdAt, updatedAt }`, перестановка — `updateDoc(ref, { order, updatedAt: serverTimestamp() })`. Устройство: `{ platform, fcmToken, notificationsEnabled, createdAt, updatedAt }` без `schemaVersion`, при выходе — `deleteDoc`. Регистрация при входе (дополнено по итогам финального ревью): документ есть — `updateDoc(ref, { fcmToken, updatedAt: serverTimestamp() })`; нет — `setDoc` со всеми полями, `notificationsEnabled: true`, `createdAt`/`updatedAt` = `serverTimestamp()`; `setDoc` поверх существующего правила отклоняют (тесты «registration on sign-in»).
 
 - [ ] **Step 1: Создать примеры `contract/fixtures/devices.json`**
 

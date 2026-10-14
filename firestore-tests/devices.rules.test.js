@@ -46,3 +46,16 @@ describe('users/{uid}/devices: updates and access', () => {
         await assertSucceeds(deleteDoc(deviceRef(id)));
     });
 });
+
+describe('users/{uid}/devices: registration on sign-in', () => {
+    it('registers a new device with server timestamps', async () => {
+        const [id, data] = webDevice();
+        await assertSucceeds(setDoc(deviceRef(id), { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+    });
+
+    it('rejects re-registering an existing device with setDoc: it must be updated', async () => {
+        const [id, data] = webDevice();
+        await seed(env, `users/${OWNER}/devices/${id}`, data);
+        await assertFails(setDoc(deviceRef(id), { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+    });
+});

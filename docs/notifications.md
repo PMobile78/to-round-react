@@ -260,6 +260,10 @@ Cloud Functions и индексы деплоятся **вручную** (`fireba
 
 ### Деплой (порядок критичен)
 
+> ⚠️ Из ветки `stage-0-data-contract-v2` до переезда (подплан 0.7) `firebase deploy` не запускать:
+> там правила Firestore уже под формат v2 и закрывают для записи коллекции, в которые пишет прод-веб.
+> Деплой функций и индексов — только из `main`.
+
 1. `firebase deploy --only firestore:indexes` — дождаться статуса **Enabled**
    (Console → Firestore → Indexes).
 2. `firebase deploy --only functions:maintainNextNotifyAt` — первый Gen2-деплой может
