@@ -1,0 +1,13 @@
+{
+  "valid": [
+    { "name": "web-with-token", "value": { "id": "fid-web-1", "platform": "web", "fcmToken": "token-abc", "notificationsEnabled": true, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z" } },
+    { "name": "android-without-permission", "value": { "id": "fid-android-1", "platform": "android", "fcmToken": null, "notificationsEnabled": false, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-02T08:00:00.000Z" } }
+  ],
+  "invalid": [
+    { "name": "unknown-platform", "value": { "id": "fid-1", "platform": "ios", "fcmToken": null, "notificationsEnabled": true, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z" } },
+    { "name": "empty-token", "value": { "id": "fid-1", "platform": "web", "fcmToken": "", "notificationsEnabled": true, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z" } },
+    { "name": "enabled-as-string", "value": { "id": "fid-1", "platform": "web", "fcmToken": null, "notificationsEnabled": "true", "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z" } },
+    { "name": "language-is-not-a-device-field", "value": { "id": "fid-1", "platform": "web", "fcmToken": null, "notificationsEnabled": true, "language": "uk", "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z" } },
+    { "name": "missing-notifications-enabled", "value": { "id": "fid-1", "platform": "web", "fcmToken": null, "createdAt": "2026-10-01T08:00:00.000Z", "updatedAt": "2026-10-01T08:00:00.000Z" } }
+  ]
+}

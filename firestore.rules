@@ -121,6 +121,31 @@ service cloud.firestore {
       return d.overdueAt == old.overdueAt && d.get('nextNotifyAt', null) == old.get('nextNotifyAt', null);
     }
 
+    // ---------- users/{uid}/categories/{categoryId} ----------
+
+    function validCategory(d) {
+      return hasExactly(d, ['schemaVersion', 'name', 'color', 'order', 'createdAt', 'updatedAt'], [])
+        && d.schemaVersion == 2
+        && isNonBlankString(d.name, 100)
+        // Keep in sync with contract/palette.json (checked by firestore-tests/categories.rules.test.js).
+        && d.color in ['#da3833', '#ee603c', '#fd8b2b', '#e9be00', '#b7be00',
+          '#7db44e', '#46a549', '#00a47a', '#34c09d', '#007771',
+          '#00a5cf', '#0089b5', '#005ea4', '#6179cf', '#434d82',
+          '#b14dd1', '#c04097', '#f25e6a', '#4d697e', '#86a49c']
+        // `order == order` rules out NaN; the bounds rule out infinities.
+        && d.order is number && d.order == d.order
+        && d.order > -1000000000000000.0 && d.order < 1000000000000000.0;
+    }
+
+    // ---------- users/{uid}/devices/{deviceId} ----------
+
+    function validDevice(d) {
+      return hasExactly(d, ['platform', 'fcmToken', 'notificationsEnabled', 'createdAt', 'updatedAt'], [])
+        && d.platform in ['web', 'android']
+        && (d.fcmToken == null || (d.fcmToken is string && d.fcmToken.size() > 0 && d.fcmToken.size() <= 4096))
+        && d.notificationsEnabled is bool;
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow create: if isOwner(uid) && validUserDoc(request.resource.data)
@@ -136,6 +161,24 @@ service cloud.firestore {
         allow update: if isOwner(uid) && validTask(request.resource.data)
           && validUpdateTimes(request.resource.data, resource.data)
           && serverFieldsUnchanged(request.resource.data, resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /categories/{categoryId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isId(categoryId) && validCategory(request.resource.data)
+          && validCreateTimes(request.resource.data);
+        allow update: if isOwner(uid) && validCategory(request.resource.data)
+          && validUpdateTimes(request.resource.data, resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      match /devices/{deviceId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isId(deviceId) && validDevice(request.resource.data)
+          && validCreateTimes(request.resource.data);
+        allow update: if isOwner(uid) && validDevice(request.resource.data)
+          && validUpdateTimes(request.resource.data, resource.data);
         allow delete: if isOwner(uid);
       }
     }
