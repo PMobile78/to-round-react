@@ -188,19 +188,17 @@ service cloud.firestore {
       allow read, write: if isOwner(uid);
     }
 
-    // User bubbles: owner-only access
+    // Legacy v1 collections: read-only after the move to users/{uid}; kept for the migration and rollback.
     match /user-bubbles/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if isOwner(uid);
     }
 
-    // User tags: owner-only access
     match /user-tags/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if isOwner(uid);
     }
 
-    // User FCM tokens: owner-only access
     match /user-fcm-tokens/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if isOwner(uid);
     }
 
     // Notification dedup keys: Cloud Functions only (admin SDK bypasses these rules).

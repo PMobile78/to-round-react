@@ -7,6 +7,22 @@
                 { "fieldPath": "status", "order": "ASCENDING" },
                 { "fieldPath": "nextNotifyAt", "order": "ASCENDING" }
             ]
+        },
+        {
+            "collectionGroup": "tasks",
+            "queryScope": "COLLECTION_GROUP",
+            "fields": [
+                { "fieldPath": "status", "order": "ASCENDING" },
+                { "fieldPath": "nextNotifyAt", "order": "ASCENDING" }
+            ]
+        },
+        {
+            "collectionGroup": "tasks",
+            "queryScope": "COLLECTION_GROUP",
+            "fields": [
+                { "fieldPath": "status", "order": "ASCENDING" },
+                { "fieldPath": "deletedAt", "order": "ASCENDING" }
+            ]
         }
     ],
     "fieldOverrides": [
