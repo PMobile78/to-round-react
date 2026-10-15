@@ -118,11 +118,18 @@ const indentRest = (text, marker) => {
     }).join('\n');
 };
 
+// Blocks of one list item: a nested list follows on the next line, any other block after a
+// blank line (two paragraphs on adjacent lines would read back as one).
+const LIST_BLOCK = /^(- |\d+\. )/;
+const joinItemBlocks = (blocks) => blocks
+    .map((block, i) => (i === 0 || LIST_BLOCK.test(block) ? block : `\n${block}`))
+    .join('\n');
+
 const renderList = (el, state, ordered) => {
     const start = Number(el.getAttribute('start')) || 1;
     return [...el.children]
         .filter((li) => li.tagName.toLowerCase() === 'li')
-        .map((li, i) => indentRest(renderBlocks(li.childNodes, state).join('\n'), ordered ? `${start + i}. ` : '- '))
+        .map((li, i) => indentRest(joinItemBlocks(renderBlocks(li.childNodes, state)), ordered ? `${start + i}. ` : '- '))
         .join('\n');
 };
 
@@ -131,7 +138,7 @@ const renderTaskList = (el, state) => [...el.children]
     .map((li) => {
         const checked = li.getAttribute('data-checked') === 'true';
         const content = [...li.children].find((c) => c.tagName.toLowerCase() === 'div') || li;
-        const body = renderBlocks(content.childNodes, state).join('\n');
+        const body = joinItemBlocks(renderBlocks(content.childNodes, state));
         return indentRest(body, '- ').replace(/^- /, checked ? '- [x] ' : '- [ ] ');
     })
     .join('\n');

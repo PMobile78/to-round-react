@@ -33,8 +33,6 @@ export default function BubbleDialog(props) {
         bubbleSize,
         setBubbleSize,
         onCreate,
-        useRichText,
-        onToggleUseRichText,
         // Edit mode props
         initialTitle,
         initialDescription,
@@ -131,8 +129,6 @@ export default function BubbleDialog(props) {
                     setTitle={setTitle}
                     description={description}
                     setDescription={setDescription}
-                    useRichText={useRichText}
-                    onToggleUseRichText={onToggleUseRichText}
                     dueDate={formDueDate}
                     setDueDate={setFormDueDate}
                     isOverdue={isOverdue}

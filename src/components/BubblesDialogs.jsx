@@ -42,8 +42,6 @@ const BubblesDialogs = ({
     onStopPulsing,
     showStopPulsing,
     handleSetEditRecurrence,
-    useRichTextEdit,
-    handleToggleEditUseRichText,
     // Tag actions (used by the categories dialog)
     handleOpenTagDialog,
     handleDeleteTag,
@@ -63,8 +61,6 @@ const BubblesDialogs = ({
     handleSetCreateRecurrence,
     handleDeleteCreateNotification,
     createNewBubble,
-    useRichTextCreate,
-    setUseRichTextCreate,
     // Categories dialog
     handleUndoDeleteTag,
     // Font settings dialog
@@ -212,8 +208,6 @@ const BubblesDialogs = ({
                 showStopPulsing={showStopPulsing}
                 editRecurrence={editRecurrence}
                 setEditRecurrence={handleSetEditRecurrence}
-                useRichText={useRichTextEdit}
-                onToggleUseRichText={handleToggleEditUseRichText}
             />
             {/* Диалог создания/редактирования тега */}
             <TagEditorDialog
@@ -302,8 +296,6 @@ const BubblesDialogs = ({
                 bubbleSize={bubbleSize}
                 setBubbleSize={setBubbleSize}
                 onCreate={createNewBubble}
-                useRichText={useRichTextCreate}
-                onToggleUseRichText={setUseRichTextCreate}
             />
             {/* Диалог управления категориями задач - вынесен в отдельный компонент с поддержкой DnD */}
             <TasksCategoriesDialog
