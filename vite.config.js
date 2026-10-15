@@ -16,6 +16,7 @@ export default defineConfig({
     test: {
         // Firestore rules tests need the emulator: they run only through `npm run test:rules`.
         // Agent worktrees under .claude/ hold copies of the repo tests: never collect them.
-        exclude: [...configDefaults.exclude, 'firestore-tests/**', '.claude/**'],
+        // Cloud Functions tests run on node:test through `npm run test:functions`.
+        exclude: [...configDefaults.exclude, 'firestore-tests/**', '.claude/**', 'functions/**'],
     },
 });
