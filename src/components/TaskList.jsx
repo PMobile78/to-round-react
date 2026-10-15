@@ -36,7 +36,7 @@ import useSearch from '../hooks/useSearch';
 import HtmlRenderer from './HtmlRenderer';
 import { stripHtml } from '../utils/stripHtml';
 import { db } from '../firebase';
-import { BUBBLE_STATUS, getBubblesByStatus } from '../services/firestoreService';
+import { BUBBLE_STATUS, getBubblesByStatus } from '../utils/bubbleStatus';
 import { completeTask, deleteTaskForever, restoreTask, trashTask } from '../services/data/tasks';
 
 // Auto-cleanup period for deleted tasks (30 days)

@@ -13,7 +13,6 @@ import ChangePasswordDialog from './ChangePasswordDialog';
 import LogoutConfirmDialog from './LogoutConfirmDialog';
 import TaskListDrawer from './ListViewDrawer';
 import { isOverdue } from '../utils/notifications';
-import { saveTagsToFirestore } from '../services/firestoreService';
 import { useBubblesData } from '../state/BubblesDataStore';
 import { useBubblesUi } from '../state/BubblesUiStore';
 import { COLOR_PALETTE } from '../hooks/tagColors';
@@ -51,6 +50,7 @@ const BubblesDialogs = ({
     // Tag editor dialog
     handleCloseTagDialog,
     handleSaveTag,
+    handleReorderTags,
     // Main menu drawer
     handleToggleBubbleBackground,
     handleToggleMainView,
@@ -88,7 +88,6 @@ const BubblesDialogs = ({
     const {
         bubbles,
         tags,
-        setTags,
         canCreateMoreTags,
         getBubbleCountByTag,
     } = useBubblesData();
@@ -328,10 +327,7 @@ const BubblesDialogs = ({
                 isMobile={isMobile}
                 isSmallScreen={isSmallScreen}
                 getDialogPaperStyles={getDialogPaperStyles}
-                onReorderTags={(updated) => {
-                    setTags(updated);
-                    saveTagsToFirestore(updated);
-                }}
+                onReorderTags={handleReorderTags}
             />
 
             {/* Диалог настроек шрифта */}

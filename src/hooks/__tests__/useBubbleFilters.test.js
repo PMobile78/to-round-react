@@ -1,19 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
-
-// useBubbleFilters imports firestoreService (for BUBBLE_STATUS), which initializes
-// Firebase at module load. Mock the Firebase layer so the pure helpers can be
-// imported in the node test environment (same approach as buildStatusFields.test).
-vi.mock('../../firebase', () => ({ db: {} }));
-vi.mock('firebase/firestore', () => ({
-    doc: () => ({}),
-    setDoc: () => {},
-    updateDoc: () => {},
-    deleteDoc: () => {},
-    getDocs: () => {},
-    collection: () => ({}),
-    writeBatch: () => ({}),
-    serverTimestamp: () => ({})
-}));
+import { describe, it, expect } from 'vitest';
 
 import {
     toggleTagInFilter,

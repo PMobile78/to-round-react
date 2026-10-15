@@ -1,21 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi } from 'vitest';
-
-// useListFilters imports firestoreService (for BUBBLE_STATUS / getBubblesByStatus),
-// which initializes Firebase at module load. Mock the Firebase layer so the pure
-// helpers can be imported in the test environment (same approach as
-// useBubbleFilters.test).
-vi.mock('../../firebase', () => ({ db: {} }));
-vi.mock('firebase/firestore', () => ({
-    doc: () => ({}),
-    setDoc: () => {},
-    updateDoc: () => {},
-    deleteDoc: () => {},
-    getDocs: () => {},
-    collection: () => ({}),
-    writeBatch: () => ({}),
-    serverTimestamp: () => ({})
-}));
+import { describe, it, expect } from 'vitest';
 
 import {
     toggleTagInFilter,

@@ -14,7 +14,7 @@ import { logoutUser } from '../services/authService';
 import { db } from '../firebase';
 import { muteTaskPulse, subscribeTasks } from '../services/data/tasks';
 import { deepLinkTaskId } from '../utils/deepLink';
-import { saveTagsToFirestore, BUBBLE_STATUS } from '../services/firestoreService';
+import { BUBBLE_STATUS } from '../utils/bubbleStatus';
 
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
@@ -141,11 +141,11 @@ const BubblesPage = ({ user, themeMode }) => {
     // is needed.
     const {
         tags,
-        setTags,
         tagsRef,
         deleteTimers,
         handleOpenTagDialog,
         handleSaveTag,
+        handleReorderTags,
         handleDeleteTag,
         handleUndoDeleteTag,
         handleCloseTagDialog,
@@ -227,8 +227,6 @@ const BubblesPage = ({ user, themeMode }) => {
 
     // getDialogPaperStyles moved into BubblesDialogs (Stage G of 010d) — it was
     // only forwarded to the dialogs, which now derive it from useTheme() directly.
-
-    // Note: Functions moved to firestoreService.js for better organization
 
     // Function to get bubble fill style based on theme
     const getBubbleFillStyle = (tagColor = null) => {
@@ -869,6 +867,7 @@ const BubblesPage = ({ user, themeMode }) => {
                 handleDeleteTag={handleDeleteTag}
                 handleCloseTagDialog={handleCloseTagDialog}
                 handleSaveTag={handleSaveTag}
+                handleReorderTags={handleReorderTags}
                 handleToggleBubbleBackground={handleToggleBubbleBackground}
                 handleToggleMainView={handleToggleMainView}
                 categoriesPanelEnabled={categoriesPanelEnabled}
@@ -900,10 +899,7 @@ const BubblesPage = ({ user, themeMode }) => {
                     onOpenTagDialog={() => setCategoriesDialog(true)}
                     bubbles={bubbles}
                     isPermanent={categoriesPanelEnabled}
-                    onReorderTags={(updated) => {
-                        setTags(updated);
-                        saveTagsToFirestore(updated);
-                    }}
+                    onReorderTags={handleReorderTags}
                 />
             )}
 

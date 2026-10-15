@@ -4,7 +4,7 @@
  * the useBubbleWorld hook. These functions decide *which* bubbles belong in the
  * physics world and *how* a bubble should be styled for the current search state.
  */
-import { BUBBLE_STATUS } from '../services/firestoreService';
+import { BUBBLE_STATUS } from './bubbleStatus';
 
 const NO_TAG_GREY = '#B0B0B0';
 

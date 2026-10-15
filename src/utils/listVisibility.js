@@ -1,4 +1,4 @@
-import { getBubblesByStatus } from '../services/firestoreService';
+import { getBubblesByStatus } from './bubbleStatus';
 import { stripHtml } from '../utils/stripHtml';
 
 // Pure helper: true when every tag is selected and "no tag" tasks are shown.

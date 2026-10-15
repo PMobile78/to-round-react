@@ -1,20 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
-
-// bubbleVisibility imports BUBBLE_STATUS from firestoreService, which initializes
-// Firebase at module load. Mock the Firebase layer so the pure helpers can be
-// imported in the test environment (same approach as the useBubbleFilters /
-// useListFilters tests).
-vi.mock('../firebase', () => ({ db: {} }));
-vi.mock('firebase/firestore', () => ({
-    doc: () => ({}),
-    setDoc: () => {},
-    updateDoc: () => {},
-    deleteDoc: () => {},
-    getDocs: () => {},
-    collection: () => ({}),
-    writeBatch: () => ({}),
-    serverTimestamp: () => ({})
-}));
+import { describe, it, expect } from 'vitest';
 
 import { selectVisibleBubbles, computeBubbleSearchRender, countActiveBubblesByTag } from './bubbleVisibility';
 

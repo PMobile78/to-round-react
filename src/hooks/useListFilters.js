@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { lsGet, lsSet } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
-import { getBubblesByStatus } from '../services/firestoreService';
+import { getBubblesByStatus } from '../utils/bubbleStatus';
 import { toggleTagInFilter } from './useBubbleFilters';
 import { useBubblesData } from '../state/BubblesDataStore';
 import { useBubblesUi } from '../state/BubblesUiStore';

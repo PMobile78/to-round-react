@@ -1,14 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { lsSet } from '../utils/storage';
 import { LS } from '../utils/storageKeys';
+import { db } from '../firebase';
 import {
-    subscribeToTagsUpdates,
-    upsertTagInFirestore,
-    deleteTagFromFirestore,
-    updateBubbleFields
-} from '../services/firestoreService';
+    createCategory,
+    deleteCategory,
+    newCategoryId,
+    nextCategoryOrder,
+    reorderCategories,
+    subscribeCategories,
+    updateCategory
+} from '../services/data/categories';
 import logger from '../utils/logger';
-import { applyBubbleFill } from '../utils/bubbleStyle';
 import { useBubblesData } from '../state/BubblesDataStore';
 import { useBubblesUi } from '../state/BubblesUiStore';
 import {
@@ -19,26 +22,21 @@ import {
 
 /**
  * Tag state + behaviour extracted from BubblesPage (Task 2/6 of #38).
+ * Tags are the user's categories, users/{uid}/categories (data contract v2):
+ * src/services/data/categories.js reads and writes them; the live subscription
+ * brings every change back into `tags` (sorted by order).
  *
- * Seam note: the original `subscribeToTagsUpdates` effect did three things —
- * (1) setTags, (2) reconcile filter tags, (3) recolor bubbles. Only (1) lives
- * here; (2)+(3) stay in BubblesPage as a separate effect keyed on `[tags]`.
+ * Seam note: the live subscription only sets `tags`; filter reconciliation and
+ * bubble recolouring stay in BubblesPage as a separate effect keyed on `[tags]`.
  *
- * Cross-hook deps the tag handlers need at call-time — `setBubbles`,
- * `setFilterTags`, `setListFilterTags`, `getBubbleFillStyle` — are read from
- * BubblesStore: `setBubbles` is a store setter; the filter setters and
- * getBubbleFillStyle are published via register() by useBubbleFilters,
- * useListFilters and BubblesPage respectively. Reading them from the store
- * (instead of plain params) still avoids the useTags <-> useBubbleFilters
- * render-order cycle: `setFilterTags` comes from useBubbleFilters, which needs
+ * `setFilterTags` / `setListFilterTags` are read from BubblesStore, which avoids
+ * the useTags <-> useBubbleFilters render-order cycle: useBubbleFilters needs
  * `tags` produced here.
  */
 export function useTags({ user }) {
+    const { tags, setTags } = useBubblesData();
     const {
-        setBubbles, tags, setTags
-    } = useBubblesData();
-    const {
-        registered, setFilterTags, setListFilterTags,
+        setFilterTags, setListFilterTags,
         // Tag-editor state migrated into the store (Stage H of 010d); the handlers
         // below read/set it here instead of via local useState.
         tagName, setTagName, tagColor, setTagColor, editingTag, setEditingTag,
@@ -56,19 +54,14 @@ export function useTags({ user }) {
         deleteTimers.current.clear();
     }, [userUid]);
 
-    // Real-time tags synchronization (wait for auth user).
+    // Real-time categories (wait for auth user).
     // Only setTags lives here; filter reconciliation + bubble recolor stay in
     // BubblesPage as a [tags] effect.
     useEffect(() => {
-        if (!user) return;
-        const unsubscribe = subscribeToTagsUpdates((updatedTags) => {
-            // Ensure updatedTags is always an array
-            const tagsArray = Array.isArray(updatedTags) ? updatedTags : [];
-            setTags(tagsArray);
-        });
-
+        if (!userUid) return;
+        const unsubscribe = subscribeCategories(db, userUid, setTags, (e) => logger.error('Categories listener error:', e));
         return () => unsubscribe();
-    }, [user]);
+    }, [userUid]);
 
     // Функции для работы с цветами
     const getNextAvailableColor = () => getNextAvailableColorPure(tags);
@@ -102,26 +95,22 @@ export function useTags({ user }) {
             return; // Цвет уже занят при редактировании
         }
 
-        const newTag = {
-            id: editingTag ? editingTag.id : Math.random().toString(36).substr(2, 9),
-            name: tagName.trim(),
-            color: tagColor
-        };
-
-        let updatedTags;
+        const name = tagName.trim();
         if (editingTag) {
-            updatedTags = tags.map(tag => tag.id === editingTag.id ? newTag : tag);
+            // Only the fields that changed; the live subscription updates `tags`
+            const changes = {};
+            if (name !== editingTag.name) changes.name = name;
+            if (tagColor !== editingTag.color) changes.color = tagColor;
+            if (Object.keys(changes).length > 0) {
+                updateCategory(db, userUid, editingTag.id, changes).catch(e => logger.error('Error saving tag:', e));
+            }
         } else {
-            updatedTags = [...tags, newTag];
-        }
+            // A new category goes after the last one (spec 4.5)
+            const newTag = { id: newCategoryId(db, userUid), name, color: tagColor, order: nextCategoryOrder(tags) };
+            createCategory(db, userUid, newTag.id, { name: newTag.name, color: newTag.color, order: newTag.order })
+                .catch(e => logger.error('Error saving tag:', e));
 
-        setTags(updatedTags);
-        // Transactional single-tag write: avoids clobbering concurrent tag edits
-        // from another device. onSnapshot reconciles local state afterwards.
-        upsertTagInFirestore(newTag).catch(e => logger.error('Error saving tag:', e));
-
-        // Автоматически активируем новый тег в фильтрах (только для создания, не для редактирования)
-        if (!editingTag) {
+            // Автоматически активируем новый тег в фильтрах (только для создания, не для редактирования)
             // Активируем в фильтрах Bubbles View
             setFilterTags(prev => {
                 const newFilterTags = [...prev, newTag.id];
@@ -143,10 +132,14 @@ export function useTags({ user }) {
         setTagColor(getNextAvailableColor() || '#2f6bdb');
     };
 
+    // Drag-and-drop in the categories panel or dialog: one write, or one renumbering batch
+    const handleReorderTags = (reordered) => {
+        reorderCategories(db, userUid, reordered).catch(e => logger.error('Error reordering tags:', e));
+    };
+
     const handleDeleteTag = (tagId) => {
         const initiatingUid = userUid;
         if (!initiatingUid) return;
-        const { getBubbleFillStyle } = registered;
         const existing = deleteTimers.current.get(tagId);
         if (existing) clearTimeout(existing.timer);
         // Добавляем тег в состояние удаления
@@ -166,26 +159,9 @@ export function useTags({ user }) {
 
             if (userUidRef.current !== pending.uid) return;
 
-            const updatedTags = tagsRef.current.filter(tag => tag.id !== tagId);
-            setTags(updatedTags);
-            // Transactional single-tag delete: reads fresh server state so a tag
-            // added/edited on another device is not overwritten by a stale array.
-            deleteTagFromFirestore(tagId, pending.uid).catch(e => logger.error('Error deleting tag:', e));
-
-            // Удаляем ссылки на этот тег из пузырей
-            const affectedIds = new Set();
-            setBubbles(prev => prev.map(bubble => {
-                if (bubble.tagId === tagId) {
-                    affectedIds.add(bubble.id);
-                    // Reset bubble color to no-tag style
-                    applyBubbleFill(bubble, { tagColor: null, stroke: '#B0B0B0' }, getBubbleFillStyle);
-                    return { ...bubble, tagId: null };
-                }
-                return bubble;
-            }));
-            affectedIds.forEach(id =>
-                updateBubbleFields(id, { tagId: null }, pending.uid).catch(e => logger.error('Error clearing tag from bubble:', e))
-            );
+            // The server clears categoryId on this category's tasks (onCategoryDeleted, spec 4.5);
+            // until then a task of a missing category shows as uncategorized.
+            deleteCategory(db, pending.uid, tagId).catch(e => logger.error('Error deleting tag:', e));
         }, 7000);
 
         // Сохраняем таймер
@@ -217,11 +193,11 @@ export function useTags({ user }) {
 
     return {
         tags,
-        setTags,
         tagsRef,
         deleteTimers: deleteTimers.current,
         handleOpenTagDialog,
         handleSaveTag,
+        handleReorderTags,
         handleDeleteTag,
         handleUndoDeleteTag,
         handleCloseTagDialog,

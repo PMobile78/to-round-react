@@ -6,7 +6,7 @@ import {
     Edit,
     Restore,
 } from '@mui/icons-material';
-import { BUBBLE_STATUS } from '../services/firestoreService';
+import { BUBBLE_STATUS } from '../utils/bubbleStatus';
 
 // Action matrix: define which actions appear for each status
 const ACTIONS = {

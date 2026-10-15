@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import Matter from 'matter-js';
 import { useTheme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { BUBBLE_STATUS } from '../services/firestoreService';
+import { BUBBLE_STATUS } from '../utils/bubbleStatus';
 import { parseLocalDateTime } from '../utils/dateTime';
 import { getActiveNotification, buildNotificationKey } from '../utils/notifications';
 import { bubbleShouldPulse } from '../utils/rafGating';
