@@ -1,365 +1,197 @@
-# Уведомления, дедлайны и повторы
+# Уведомления: напоминания и просрочка (контракт данных v2)
 
-Как устроены **дедлайн** (`dueDate`), **напоминания** («Remind me») и **повтор**
-(«Repeat every»): где хранятся данные, как ведёт себя клиент (пульсация на холсте) и
-как работает серверный планировщик FCM. Весь серверный код — в `functions/index.js`.
+> Здесь описаны Cloud Functions ветки `stage-0-data-contract-v2`. В проде до переезда
+> (подплан 0.7) работают функции v1 на `user-bubbles`; их описание — в версии этого файла
+> в `main` (`git show main:docs/notifications.md`).
 
-## Содержание
-
-- [Что делает система](#что-делает-система)
-- [Где живёт код](#где-живёт-код)
-- [Модель данных](#модель-данных)
-- [Клиент: пульсация на холсте](#клиент-пульсация-на-холсте)
-- [Сервер: ключевая идея `nextNotifyAt`](#сервер-ключевая-идея-nextnotifyat)
-- [Серверные компоненты](#серверные-компоненты)
-- [Тайминг расписания: `every N` vs `*/N`](#тайминг-расписания-every-n-vs-n)
-- [Жизненный цикл задачи](#жизненный-цикл-задачи)
-- [Диаграммы](#диаграммы)
-- [Эксплуатация](#эксплуатация)
-- [Подводные камни](#подводные-камни)
-- [Чеклист для разработчика](#чеклист-для-разработчика)
-- [Ключевые файлы](#ключевые-файлы)
+Спецификация: [разделы 4.4 и 6](superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md).
 
 ## Что делает система
 
-Отправляет пользователям FCM-уведомления по задачам (bubbles):
-
-- **reminder** — заранее, за `minutesBefore` до срока (`dueDate`), для каждого элемента `notifications`;
-- **overdue** — когда срок прошёл; для повторяющихся задач (`recurrence`) срок
-  автоматически переносится на следующее вхождение.
+- Напоминает о задаче за заданное время до срока (часы, дни, недели) и сообщает о просрочке.
+- Срок хранится как местное время и зона (`due.local`, `due.tz`); момент срока сервер считает
+  так же, как веб и Android: все проверяются на общих примерах `contract/fixtures/time.json`.
+- Повторяющиеся задачи сервер не переносит: следующий срок по «Готово» записывает клиент.
+- Уведомления получают устройства пользователя с включённым переключателем и токеном FCM;
+  язык — `settings.language` (`uk`, иначе `en`).
 
 ## Где живёт код
 
-| Область | Файл |
+| Файл | Что внутри |
 |---|---|
-| Холст, пульсация, сохранение пузыря | `src/pages/BubblesPage.jsx` |
-| Сохранение в Firestore, сброс полей при «выполнено» | `src/services/firestoreService.js` |
-| Напоминания, просрочка FCM, перенос `dueDate`, `nextNotifyAt` | `functions/index.js` |
+| `functions/index.js` | только подключение функций к триггерам и расписаниям |
+| `functions/lib/time.js` | местное время + зона → момент (правила `java.time.ZonedDateTime.of`) |
+| `functions/lib/schedule.js` | события задачи, `nextNotifyAt`, решения планировщика и триггера, ключи дедупликации |
+| `functions/lib/messages.js` | получатели, язык, тексты, сообщение FCM |
+| `functions/lib/handlers.js` | Firestore: проход планировщика, триггер, каскад категорий, корзина, чистка ключей |
+| `functions/locales/notifications.{en,uk}.json` | тексты и формы единиц времени |
 
-## Модель данных
+## Данные, которые читает и пишет сервер
 
-Поля документа задачи, относящиеся к срокам:
+- Задача `users/{uid}/tasks/{taskId}`: сервер читает `status`, `due`, `reminders`, `repeat`,
+  `title`; пишет только служебные поля `nextNotifyAt`, `overdueAt`, `pulseMuted` и
+  `categoryId = null` при удалении категории. `updatedAt` сервер не трогает.
+- Устройство `users/{uid}/devices/{deviceId}`: сервер читает `notificationsEnabled` и
+  `fcmToken`; при «мёртвом» токене пишет `fcmToken = null`.
+- Документ пользователя `users/{uid}`: сервер читает `settings.language`.
+- `notification-sent/{key}`: ключи дедупликации; правила закрывают коллекцию для клиентов.
 
-- **`dueDate`** — локальная строка `YYYY-MM-DDTHH:mm:ss` (без смещения) + **`tz`** (IANA-зона).
-  В абсолютный момент переводится через `parseLocalDateTime` (tz-aware, `TZDate`).
-- **`notifications`** — массив напоминаний «за сколько до дедлайна». Элемент может быть:
-  пресет-строкой (`5m`, `1h`, `1d`, `1w`), числом (минуты), объектом `{ minutesBefore }`
-  или `{ value, unit }` (`minutes` / `hours` / `days` / `weeks`). Разбор на сервере
-  централизован в `computeMinutesBefore`.
-- **`recurrence`** — повтор, объект `{ every, unit [, weekDays] }`. `unit`: `minutes`,
-  `hours`, `days`, `weeks`, `months`. Для недель с конкретными днями — массив `weekDays`
-  (0 = воскресенье … 6 = суббота), см. `computeNextWeeklyDueDate`.
-- **`overdueSticky`**, **`overdueAt`** — выставляются сервером при фиксации просрочки
-  («липкая» просрочка и пульс между устройствами).
-- **`overduePulseSuppressed`** — пользователь отключил пульс по сроку (кнопка Stop);
-  хранится, чтобы пульс не возвращался после перезагрузки без нового дедлайна.
-- **`nextNotifyAt`** — Firestore `Timestamp` (UTC), момент ближайшего необработанного
-  события (см. [ниже](#сервер-ключевая-идея-nextnotifyat)).
+## События и `nextNotifyAt`
 
-При статусе **выполнено** (`BUBBLE_STATUS.DONE`) в `updateBubbleStatus` очищаются
-`dueDate`, `notifications`, `recurrence` и флаги просрочки/подавления пульса.
+События активной задачи со сроком D: напоминание в момент D − m для каждого m из `reminders`
+(кратно 60, от 60 до 524 160 минут; остальные значения сервер пропускает) и просрочка в
+момент D. У задачи без срока, с неразборчивым `due.local` или неизвестной зоной событий нет.
 
-## Клиент: пульсация на холсте
+`nextNotifyAt` — момент ближайшего события позже текущего. Планировщик раз в минуту берёт
+только задачи с `nextNotifyAt <= now` (индекс collectionGroup `tasks`: `status` +
+`nextNotifyAt`) и не читает всю базу.
 
-Пульсация — отдельная клиентская анимация, она **не зависит** от доставки push.
-Для каждого активного пузыря с `dueDate` в цикле анимации:
+## Функции
 
-1. Для каждого элемента `notifications` считается смещение до дедлайна (`getOffsetMs`).
-2. Время срабатывания: `targetTime = due − offset`.
-3. Если `now ∈ [targetTime, due)` — пульс **напоминания**. Он **приоритетнее** пульса
-   просрочки: пока идёт окно напоминания, просрочный пульс для той же секунды не показывается.
-4. При `now ≥ due` и отсутствии подавления — пульс **просрочки** (см. `shouldPulseOverdue`:
-   учитываются `overdueSticky`, ручная остановка и `overduePulseSuppressed`).
+| Функция | Запуск | Что делает |
+|---|---|---|
+| `scheduleNotifications` | каждую минуту, `* * * * *` | проход планировщика |
+| `onTaskWritten` | запись `users/{uid}/tasks/{taskId}` | служебные поля после смены расписания |
+| `onCategoryDeleted` | удаление `users/{uid}/categories/{categoryId}` | `categoryId = null` у задач этой категории |
+| `purgeDeletedTasks` | раз в сутки, `0 3 * * *` UTC | удаляет задачи, пролежавшие в корзине больше 30 дней (индекс `status` + `deletedAt`) |
+| `cleanupNotificationSent` | каждый час, `0 * * * *` | удаляет ключи дедупликации старше 7 дней |
 
-Кнопка **Stop** снимает пульс и сохраняет `overduePulseSuppressed: true` вместе с
-`overdueSticky: false` и `overdueAt: null`, чтобы состояние пережило перезагрузку. Любая
-смена `dueDate` сбрасывает подавление. Пока открыт диалог редактирования задачи с
-`recurrence`, пульс для неё отключается (чтобы не отвлекать при настройке).
+Регион всех функций — `europe-west1`.
 
-## Сервер: ключевая идея `nextNotifyAt`
+### Проход планировщика
 
-Раньше scheduled-функция каждую минуту читала **все** активные задачи всех пользователей —
-дорого по Firestore reads и растёт линейно с базой. Теперь каждый документ задачи хранит
-поле `nextNotifyAt` — момент **ближайшего необработанного события** (минимум из
-reminder-времён и самого `dueDate`), и функция запрашивает только то, чему уже пора:
+Для каждой задачи с `nextNotifyAt <= now` учитываются только события в промежутке
+[`nextNotifyAt`, `now`]:
 
-```js
-db.collectionGroup('bubbles')
-  .where('status', '==', 'active')
-  .where('nextNotifyAt', '<=', Timestamp.fromDate(now))
-  .orderBy('nextNotifyAt')
-```
+- **Просрочка:** момент D в промежутке и `overdueAt == null` → уведомление «просрочено» и
+  `overdueAt = now`.
+- **Напоминание:** самое позднее из попавших в промежуток — и только пока срок не наступил.
+  Если планировщик опоздал и D уже прошёл, устаревшее напоминание не отправляется.
+- После прохода `nextNotifyAt` = ближайшее событие позже `now`; событий нет — поле удаляется.
+- Служебные поля пишутся в транзакции, заново прочитав задачу: если пользователь за время
+  прохода изменил расписание, запись пропускается — новое расписание обработает триггер.
+- Из collectionGroup `tasks` берутся только документы с путём `users/{uid}/tasks/{taskId}` от
+  корня базы (проверяется весь путь, а не имена коллекций).
 
-Стоимость теперь зависит от числа реально срабатывающих уведомлений, а не от размера базы.
-Если будущих событий нет, поле удаляется (`FieldValue.delete()`) и задача выпадает из
-запроса (range-фильтр `<=` не возвращает документы без поля).
+### Недоставленные уведомления (#93)
 
-## Серверные компоненты
+- Если у пользователя нет получателей, ключ дедупликации не ставится и `nextNotifyAt` не
+  двигается: следующие проходы пробуют снова.
+- Если ни одно устройство не получило уведомление (все отправки упали или `sendEach` бросил
+  исключение), ключ снимается, и попытка тоже повторяется.
+- Повторы идут 10 минут после момента события, потом событие отбрасывается; у «просрочено»
+  при этом всё равно ставится `overdueAt`. Напоминание повторяется, только пока срок не наступил.
+- Доставлено хотя бы на одно устройство — уведомление считается отправленным.
+- Сбой процесса между созданием ключа и его снятием теряет событие: «не больше одного раза»
+  важнее повтора.
 
-### `nextNotifyAt` и его поддержка
+### Триггер `onTaskWritten`
 
-Поле держат в актуальном состоянии три источника:
+Срабатывает на любую запись задачи, но действует, только если задача создана или изменились
+`due`, `reminders`, `repeat` или `status`:
 
-- **триггер `maintainNextNotifyAt`** — при создании/правке задачи пользователем;
-- **scheduled-функция** — сдвигает поле вперёд после обработки события (в `finally`);
-- **backfill-скрипт** — разово проставляет поле существующим задачам (см. [Эксплуатация](#эксплуатация)).
+- `nextNotifyAt` = ближайшее событие строго позже текущего момента; прошлые события не
+  уведомляются;
+- активная задача с прошедшим сроком и `overdueAt == null` молча получает `overdueAt` — так
+  перенос данных и «вернуть из выполненных» не рассылают старые уведомления;
+- при смене `due`: `pulseMuted = false`, а `overdueAt = null`, если новый срок в будущем или
+  срока нет.
 
-### `computeNextNotifyAt(bubble, fromTime)`
-
-Чистая функция (экспортируется в `exports._test`, покрыта `functions/test-next-notify.js`):
-
-- собирает «триггерные моменты»: для каждого `notif` → `dueDate − minutesBefore`; плюс `dueDate` (overdue);
-- возвращает **минимальный момент строго позже `fromTime`**;
-- если будущих нет — возвращает `fromTime` (немедленная обработка), когда задача просрочена
-  и overdue ещё не слался (`!overdueSticky`) **или** есть `recurrence`, и при этом не `overduePulseSuppressed`;
-- иначе `null`. Результат всегда в UTC.
-
-### Триггер `maintainNextNotifyAt`
-
-`onDocumentWritten` на `user-bubbles/{uid}/bubbles/{bubbleId}`, регион `europe-west1`,
-`maxInstances: 10`.
-
-- На удаление документа — выходит.
-- **Гард от рекурсии:** `significantChanged(before, after)` сравнивает только
-  `['dueDate', 'notifications', 'status', 'recurrence']`. Запись самого `nextNotifyAt`
-  не считается значимой → нет бесконечного цикла.
-- Иначе пишет `computeNextNotifyAt(after, now)` (или удаляет поле).
-
-### Scheduled-функция `scheduleDueDateNotifications`
-
-`onSchedule` `every 1 minutes`, регион `europe-west1`, `maxInstances: 10`. Каждый прогон:
-
-1. `fetchDueBubbles(now)` — индексный запрос только due-задач, группировка по пользователю;
-2. FCM-токены читаются **только** для пользователей из выборки (`getUserFcmTokens`);
-3. для каждой задачи: `isBubbleOverdue` → `handleOverdue`, иначе `handleReminder`;
-4. в `finally` — **всегда** `updateNextNotifyAt(...)`, иначе задача читалась бы каждую минуту.
-
-Очистка `notification-sent` вынесена в отдельную функцию (см. ниже) — ежеминутный
-прогон housekeeping больше не делает.
-
-### Scheduled-функция `cleanupNotificationSent`
-
-`onSchedule` `0 * * * *` (раз в час), регион `europe-west1`, `maxInstances: 1`. Вызывает
-`cleanupOldNotificationSent()` (чистит записи `notification-sent` старше 7 дней).
-Развязана с ежеминутным нотификатором: раньше cleanup висел на ветке `now.getMinutes() === 0`
-внутри `scheduleDueDateNotifications`, и единственный пропущенный прогон в `:00` (cold start,
-наложение, ошибка или не-кратное `every N`-расписание) откладывал чистку на целый час.
-Отдельный почасовой cron устраняет эту хрупкость.
-
-- **`handleReminder`** — выбирает свежий наступивший reminder (`pickReminderToSend`,
-  без жёсткого окна — пропуск минуты не теряет напоминание), шлёт, дедуп по `notification-sent`.
-- **`handleOverdue`** — шлёт overdue (дедуп), ставит `overdueSticky`; для `recurrence`
-  переносит `dueDate` на ближайшее будущее (`computeNextFutureDueDate`); обновляет поля
-  задачи **и локальную копию** `bubble`, чтобы финальный `updateNextNotifyAt` считал от
-  свежего состояния.
+Триггер пишет только служебные поля, поэтому его собственная запись расписание не меняет и
+повторно ничего не делает. В транзакции план пересчитывается от состояния до записи к текущему
+документу: если расписание успело измениться ещё раз, применяется актуальное, а смена срока из
+более ранней записи не теряется. Текущий момент для триггера — время записи (`event.time`), а не
+время запуска: события между записью и запоздавшим запуском всё равно уведомляются.
 
 ### Дедупликация
 
-Коллекция `notification-sent` (доступна только admin SDK). Ключи:
-`reminder:{uid}:{bubbleId}:{minutesBefore}:{dueDate}` и `overdue:{uid}:{bubbleId}:{dueDate}`.
-Строка `dueDate` входит в ключ — при новом дедлайне уведомление можно отправить снова.
-Записи старше 7 дней чистятся ежечасно.
+Перед отправкой сервер атомарно создаёт документ-ключ в `notification-sent` (`create()`
+падает, если ключ уже есть):
 
-### Composite index
+- `reminder:{uid}:{taskId}:{m}:{due.local}@{due.tz}`;
+- `overdue:{uid}:{taskId}:{due.local}@{due.tz}`.
 
-`firestore.indexes.json`: collection group `bubbles`, поля `status ASC, nextNotifyAt ASC`
-(`COLLECTION_GROUP`). Порядок обязателен: equality (`status`) перед range/order (`nextNotifyAt`).
+В id документа `/` из названия зоны записан как `%2F` (`Europe%2FKyiv`): Firestore не
+допускает `/` в id. Новый срок даёт новые ключи, поэтому повторяющаяся задача получает
+уведомления на каждый срок.
+
+## Сообщение
+
+Одно сообщение FCM на каждый токен:
+
+- `data`: `type` (`reminder` или `overdue`), `taskId`, `title`, `body`,
+  `url` = `https://pmobile78.github.io/to-round-react/?taskId=<id>`, у напоминаний ещё
+  `minutesBefore`;
+- `android`: `priority: high`, TTL — сутки;
+- `webpush`: заголовки `TTL: 86400` и `Urgency: high`, `fcmOptions.link = url`.
+
+Тексты лежат в `functions/locales`: «За 1 годину до строку: …», «2 days before: …»,
+«Прострочено: …». Время до срока — в самых крупных целых единицах (часы, дни, недели) с
+формами множественного числа (`Intl.PluralRules`). Название задачи в тексте обрезается до
+200 символов, чтобы сообщение не упёрлось в лимит FCM 4 КБ; пустое после обрезки пробелов
+название показывается как «Без назви» / «Untitled».
+
+Ошибки FCM `messaging/registration-token-not-registered` и
+`messaging/invalid-registration-token` означают мёртвый токен: устройству ставится
+`fcmToken = null` — в транзакции и только если у устройства всё ещё этот токен (оно могло
+успеть зарегистрировать новый). При остальных ошибках токен остаётся. Испорченный токен через
+`sendEach` (HTTP v1) даёт `messaging/invalid-argument` — тот же код, что у кривого сообщения,
+поэтому такой токен сервер не обнуляет.
 
 ## Тайминг расписания: `every N` vs `*/N`
 
-`onSchedule` принимает **оба** формата, но ведут они себя по-разному. Сейчас стоит
-`every 1 minutes`; при переходе на более редкий запуск это важно.
+`onSchedule` принимает и App Engine-синтаксис (`every N minutes`), и unix-cron. `every N`
+отсчитывается от деплоя и конца прошлого запуска и «плавает» (`13:03 → 13:08…`), cron
+`*/N * * * *` срабатывает строго кратно N от начала часа. Все функции здесь на cron; при
+переходе на запуск реже минуты — только `*/N * * * *`. Источник:
+[Cloud Scheduler — cron format](https://cloud.google.com/scheduler/docs/configuring/cron-job-schedules).
 
-- **`every N minutes`** (App Engine) — «end-time interval»: отсчёт от момента деплоя и от
-  конца предыдущего запуска, время «плавающее» и **не кратное** N (`13:03 → 13:08 → 13:13…`).
-- **`*/N * * * *`** (unix-cron, Cloud Scheduler) — привязка к началу часа, срабатывает
-  **строго кратно** N (`13:00 → 13:05 → 13:10…`) независимо от времени деплоя.
+## Тесты
 
-Раньше это было критично, потому что cleanup жил внутри ежеминутного нотификатора на ветке
-`now.getMinutes() === 0`: с `every N` расписание могло встать на `:03, :08…`, условие не
-срабатывало никогда, и `notification-sent` рос бесконечно. Теперь cleanup вынесен в отдельный
-почасовой cron `cleanupNotificationSent` (`0 * * * *`), поэтому от формата расписания
-нотификатора он больше не зависит.
-
-> **Вывод:** для самого нотификатора при переходе на запуск реже минуты предпочтительнее
-> `*/N * * * *`, а не `every N minutes` (предсказуемая привязка к началу часа). Очистка
-> `notification-sent` теперь не зависит от этого выбора.
-
-Источники: [Cloud Scheduler — cron format](https://cloud.google.com/scheduler/docs/configuring/cron-job-schedules),
-[App Engine — cron.yaml](https://cloud.google.com/appengine/docs/legacy/standard/python/config/cronref).
-
-## Жизненный цикл задачи
-
-`dueDate = 15:00`, напоминания за 60 и 10 минут, без `recurrence`:
-
-| Прогон | Действие | Новый `nextNotifyAt` |
-|---|---|---|
-| 14:00 | reminder «за 60» | 14:50 |
-| 14:50 | reminder «за 10» | 15:00 |
-| 15:00 | overdue | поле удалено |
-
-С `recurrence`: на шаге overdue `dueDate` переносится на следующий цикл → `nextNotifyAt`
-указывает на reminder/overdue нового вхождения.
-
-## Диаграммы
-
-### 1. Модель данных и клиентская пульсация
-
-```mermaid
-flowchart TB
-  subgraph storage["Данные задачи (Firestore / состояние пузыря)"]
-    due["dueDate — дедлайн (якорь во времени)"]
-    notif["notifications — Remind me<br/>смещения «за сколько до due»"]
-    rep["recurrence — Repeat every<br/>every, unit, опционально weekDays"]
-  end
-
-  subgraph clientPulse["Клиент: пульсация на холсте (BubblesPage)"]
-    due --> tRem["targetTime = due − offset(notif)"]
-    tRem --> win["now ∈ [targetTime, due) → пульс «напоминание»<br/>приоритетнее просрочки"]
-    due --> tOver["now ≥ due и не подавлен → пульс «просрочка»"]
-    rep --> editor["Открыт редактор задачи с recurrence → пульс отключён"]
-  end
-
-  subgraph serverRep["Сервер: сдвиг due"]
-    rep --> onlyOver["dueDate сдвигается только после факта просрочки<br/>(см. диаграмму 2)"]
-    onlyOver --> newDue["Новый dueDate → новые окна Remind me"]
-  end
-```
-
-### 2. Триггер и планировщик (модель `nextNotifyAt`)
-
-```mermaid
-flowchart TD
-  subgraph trig["Триггер maintainNextNotifyAt (onDocumentWritten)"]
-    w["Запись задачи пользователем"] --> sig{"significantChanged?<br/>dueDate / notifications / status / recurrence"}
-    sig -->|нет| skipT["Выйти — это запись самого nextNotifyAt"]
-    sig -->|да| comp["computeNextNotifyAt(after, now)"]
-    comp --> setN["Записать nextNotifyAt<br/>(или FieldValue.delete, если событий нет)"]
-  end
-
-  subgraph clean["cleanupNotificationSent (hourly, 0 * * * *)"]
-    c0(["Старт почасового прогона"]) --> cl["cleanupOldNotificationSent (>7 дней)"]
-  end
-
-  subgraph sched["scheduleDueDateNotifications (every 1 minute)"]
-    s0(["Старт прогона, now"]) --> q["fetchDueBubbles:<br/>status==active AND nextNotifyAt <= now"]
-    q --> grp["Группировка по пользователю +<br/>FCM-токены только для них"]
-    grp --> each["Для каждой due-задачи"]
-    each --> ov{"isBubbleOverdue?"}
-    ov -->|да| ho["handleOverdue: FCM overdue (дедуп), overdueSticky;<br/>recurrence → computeNextFutureDueDate → новый dueDate"]
-    ov -->|нет| hr["handleReminder: pickReminderToSend → FCM reminder (дедуп)"]
-    ho --> fin["finally: updateNextNotifyAt (всегда)"]
-    hr --> fin
-  end
-```
+- `npm --prefix functions test` — юнит-тесты `node:test` (`functions/test/unit`): время на
+  общих примерах `contract/fixtures/time.json`, расписание, тексты и сообщения.
+- `npm --prefix functions run test:emulator` — тесты на эмуляторе Firestore
+  (`firebase emulators:exec`, порт 8180, проект `demo-to-round`): обработчики из
+  `lib/handlers.js` с поддельной отправкой FCM и проверка экспорта `index.js`. Нужны Java 21+
+  и Firebase CLI 15+.
+- Обе команды входят в `npm run test:functions`, а значит в `npm run test:all` и
+  `npm run verify`.
 
 ## Эксплуатация
 
-Cloud Functions и индексы деплоятся **вручную** (`firebase deploy`), отдельно от фронтенда
-(фронт — CI на GitHub Pages, см. [deployment.md](deployment.md)).
-
-### Деплой (порядок критичен)
-
-> ⚠️ Из ветки `stage-0-data-contract-v2` до переезда (подплан 0.7) `firebase deploy` не запускать:
-> там правила Firestore уже под формат v2 и закрывают для записи коллекции, в которые пишет прод-веб.
-> Деплой функций и индексов — только из `main`.
-
-1. `firebase deploy --only firestore:indexes` — дождаться статуса **Enabled**
-   (Console → Firestore → Indexes).
-2. `firebase deploy --only functions:maintainNextNotifyAt` — первый Gen2-деплой может
-   упасть на «Permission denied … Eventarc Service Agent»; это пропагация прав, повторить через ~5 минут.
-3. **Backfill** (см. ниже) — проставить `nextNotifyAt` существующим задачам.
-4. `firebase deploy --only functions:scheduleDueDateNotifications`.
-
-> ⚠️ Нельзя деплоить scheduled-функцию (шаг 4) раньше backfill (шаг 3): задачи без поля
-> выпадут из запроса, и уведомления замолчат, пока поле не появится.
-
-### Backfill
-
-Скрипт разовый и удалён из репозитория после первого прогона (есть в git-истории, коммит
-`2082a66`). Нужен при первичном вводе поля или массовой рассинхронизации:
-
-```js
-const admin = require('firebase-admin');
-const { Timestamp, FieldValue } = require('firebase-admin/firestore');
-const { _test } = require('./index.js'); // инициализирует admin app; reuse computeNextNotifyAt
-const { computeNextNotifyAt } = _test;
-const db = admin.firestore();
-(async () => {
-    const now = new Date();
-    const snap = await db.collectionGroup('bubbles').where('status', '==', 'active').get();
-    for (const d of snap.docs) {
-        const bubble = Object.assign({ id: d.id }, d.data() || {});
-        const next = computeNextNotifyAt(bubble, now);
-        await d.ref.set({ nextNotifyAt: next ? Timestamp.fromDate(next) : FieldValue.delete() }, { merge: true });
-    }
-    process.exit(0);
-})();
-```
-
-Запуск (нужны Application Default Credentials, например ключ сервис-аккаунта; **без**
-`FIRESTORE_EMULATOR_HOST`, иначе запишет в эмулятор):
-
-```bash
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa-key.json TZ=UTC \
-  GOOGLE_CLOUD_PROJECT=todo-flutter-fb8bf node functions/backfill-next-notify.js
-```
-
-Ключ сервис-аккаунта — секрет: хранить вне репозитория, удалить после.
+> ⚠️ Из ветки `stage-0-data-contract-v2` до переезда (подплан 0.7) `firebase deploy` не
+> запускать: правила Firestore и функции там уже под формат v2 и сломают прод-веб v1.
+> Технически деплой блокирует `scripts/stage0-deploy-guard.js` (predeploy-хук в `firebase.json`),
+> подплан 0.7 его удаляет. Срочные правки прод-функций — из `main`. Порядок выкатки v2 описывает
+> подплан 0.7; при деплое функций под нагрузкой нужен `FUNCTIONS_DISCOVERY_TIMEOUT=60`.
 
 ### Диагностика
 
-`firebase functions:log --only scheduleDueDateNotifications` — чистые прогоны почти пустые
-(функция логирует только ошибки через `console.error`).
+Функции пишут в лог только ошибки (`console.error`). У функций Gen2 `firebase functions:log`
+почти пуст; смотреть в Cloud Logging с фильтром
+`resource.type="cloud_run_revision" AND resource.labels.service_name="schedulenotifications"`
+(имя сервиса — имя функции в нижнем регистре).
 
-- **Уведомления молчат** → у активных задач есть `nextNotifyAt`? индекс **Enabled**?
-  триггер `maintainNextNotifyAt` задеплоен? (без него новые задачи поле не получат).
+- **Уведомления молчат** → у активной задачи есть `nextNotifyAt`? у устройства
+  `notificationsEnabled == true` и есть `fcmToken`? индексы **Enabled**?
 - **`FAILED_PRECONDITION ... requires an index`** → индекс ещё строится или не задеплоен.
-- **Просроченные за время «дыры»** не теряются: их `nextNotifyAt <= now`, попадут в выборку
-  и отправятся с задержкой (дедуп не задвоит).
+- **Задачи из «дыры»** (функция не работала) не теряются: их `nextNotifyAt <= now`, придёт
+  самое позднее событие, дедупликация не задвоит.
 
 ### Локальный эмулятор
 
-```bash
-firebase emulators:start --only functions,firestore
-```
-
-Нужна Java для Firestore-эмулятора.
-
-- Триггер `maintainNextNotifyAt` работает — можно проверять проставление/пересчёт поля.
-- Scheduled-функция по расписанию **не запускается** без pubsub-эмулятора (`onSchedule`
-  требует Cloud Scheduler/Pub-Sub); для полного прогона нужен pubsub-эмулятор + ручной триггер.
+`firebase emulators:start --only functions,firestore` поднимает триггеры (`onTaskWritten`,
+`onCategoryDeleted`) — видно, как пересчитывается `nextNotifyAt`. Функции по расписанию в
+эмуляторе сами не запускаются; их логику проверяют тесты на эмуляторе, вызывая обработчики
+напрямую.
 
 ## Подводные камни
 
-- **`Timestamp`/`FieldValue` импортируются модульно:**
-  `const { Timestamp, FieldValue } = require('firebase-admin/firestore')`. Через
-  `admin.firestore.Timestamp` в Functions-эмуляторе получается `undefined` (эмулятор
-  патчит `firebase-admin`). Модульный импорт работает и в эмуляторе, и в проде.
-- **Часть существующего кода** (`updateBubbleDueDate` / `updateBubbleFields` /
-  `markNotificationSent`) ещё использует `admin.firestore.FieldValue.serverTimestamp()` —
-  в проде работает, но в эмуляторе упадёт; при тестировании в эмуляторе эти места тоже надо
-  перевести на модульный импорт.
-- **Расписание `every 1 minutes`** (App Engine-синтаксис) — при переходе на «реже минуты»
-  см. [Тайминг расписания](#тайминг-расписания-every-n-vs-n).
-- **Legacy-схема мертва:** все задачи в субколлекции `user-bubbles/{uid}/bubbles/{bubbleId}`;
-  индексные запросы по полям внутри старого массива `bubbles[]` невозможны, и серверная
-  логика на него не рассчитывает.
-
-## Чеклист для разработчика
-
-1. Меняете формат `notifications` — синхронизируйте `getOffsetMs` (клиент) и
-   `computeMinutesBefore` (functions).
-2. Меняете правила `recurrence` — обновите `computeNextDueDate` / `computeNextWeeklyDueDate`
-   и тесты (перенос через полночь, DST).
-3. Добавляете поле документа задачи — не забудьте `saveBubblesToFirestore` и маппинг при
-   загрузке (`BubblesPage.jsx` / `firestoreService.js`). Если поле влияет на сроки/напоминания,
-   учтите его в `computeNextNotifyAt` и в списке `significantChanged`.
-
-## Ключевые файлы
-
-- `functions/index.js` — вся серверная логика (триггер, scheduled-функция, чистые функции).
-- `functions/test-next-notify.js` — unit-тесты (`computeNextNotifyAt`, `pickReminderToSend`, `significantChanged`).
-- `firestore.indexes.json` — composite index.
-- `src/pages/BubblesPage.jsx` — клиентская пульсация и сохранение пузыря.
-- `src/services/firestoreService.js` — сохранение и сброс полей при «выполнено».
+- `Timestamp` и `FieldValue` импортируются модульно, из `firebase-admin/firestore`: через
+  `admin.firestore.*` в эмуляторе функций получается `undefined`.
+- Админ-SDK обходит правила Firestore, поэтому сервер пишет только служебные поля и не трогает
+  остальное.
+- `overdueAt` сервер никогда не удаляет, только ставит `null`: правила сравнивают это поле при
+  каждой правке задачи клиентом, и без него правки отклонялись бы.
+- Подколлекция `tasks` где-то кроме `users/{uid}` попадает в collectionGroup-запрос — сервер
+  её отбрасывает (`isUserTaskRef` в `lib/handlers.js`).

@@ -62,8 +62,10 @@ scripts/
   generate-sw.js             # writes public/sw.js injecting Firebase config env vars
   version-bump.js            # patches package.json version field
 functions/
-  index.js                   # Cloud Functions Gen2: scheduled notifier + nextNotifyAt trigger
-  test-next-notify.js        # unit tests for pure scheduler functions
+  index.js                   # Cloud Functions Gen2 (contract v2): wiring of the five functions only
+  lib/                       # time.js, schedule.js, messages.js (pure) + handlers.js (Firestore side)
+  test/unit/                 # node:test unit tests (time on contract/fixtures/time.json)
+  test/emulator/             # node:test on the Firestore emulator (handlers with a fake FCM sender)
   locales/                   # notification text: notifications.en.json, notifications.uk.json
 ```
 
@@ -78,15 +80,17 @@ functions/
 | `user-fcm-tokens/{uid}/tokens/{tokenId}` | owner only |
 | `notification-sent/{key}` | Cloud Functions admin SDK only (`allow read, write: if false` in rules) |
 
-The scheduled Cloud Function reads tasks **only** from the subcollection via an indexed `collectionGroup('bubbles')` query on `nextNotifyAt`; the legacy `bubbles[]` array is not read by server logic. See [docs/notifications.md](docs/notifications.md).
+On branch `stage-0-data-contract-v2` the Cloud Functions read v2 tasks via an indexed `collectionGroup('tasks')` query (`status` + `nextNotifyAt`), only under the root path `users/{uid}/tasks`; production keeps the v1 functions on `user-bubbles` until sub-plan 0.7, and `scripts/stage0-deploy-guard.js` blocks `firebase deploy` from this branch until then. See [docs/notifications.md](docs/notifications.md).
 
 ### Cloud Functions
 
-`functions/index.js` exports **three** functions (region `europe-west1`):
-- `scheduleDueDateNotifications` — `onSchedule` every minute; queries only **due** bubbles via the `nextNotifyAt` index, sends FCM **reminder** / **overdue** notifications, dedups via `notification-sent`
-- `maintainNextNotifyAt` — `onDocumentWritten` trigger keeping each task's `nextNotifyAt` field current
-- `cleanupNotificationSent` — `onSchedule` hourly (`0 * * * *`); trims `notification-sent` entries older than 7 days (decoupled from the per-minute notifier so a single missed run no longer skips cleanup for an hour)
-- Locales `en` and `uk`; `ru` → `en` fallback
+`functions/index.js` exports **five** functions (region `europe-west1`; data contract v2, in production only after sub-plan 0.7):
+- `scheduleNotifications` — `onSchedule` every minute (`* * * * *`); active tasks with `nextNotifyAt <= now` get FCM **reminder** / **overdue** on the user's devices with `notificationsEnabled` and a token, in `settings.language`; dedups via `notification-sent`; an undelivered notification is retried for 10 minutes (#93)
+- `onTaskWritten` — `onDocumentWritten` on `users/{uid}/tasks/{taskId}`; keeps `nextNotifyAt`, `overdueAt` (silent overdue) and `pulseMuted` in step with the task's schedule
+- `onCategoryDeleted` — `onDocumentDeleted` on `users/{uid}/categories/{categoryId}`; sets `categoryId = null` on that category's tasks unless the category exists again
+- `purgeDeletedTasks` — `onSchedule` daily (`0 3 * * *`, UTC); deletes tasks in the trash for more than 30 days
+- `cleanupNotificationSent` — `onSchedule` hourly (`0 * * * *`); trims `notification-sent` entries older than 7 days
+- Logic lives in `functions/lib/`; locales `en` and `uk`, anything else → `en`
 
 Full design and operations: [docs/notifications.md](docs/notifications.md).
 
