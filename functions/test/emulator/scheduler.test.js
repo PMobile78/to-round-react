@@ -161,4 +161,18 @@ describe('scheduleNotifications: undelivered notifications (issue #93)', () => {
         ]);
         assert.equal(messaging.sent.length, 1);
     });
+
+    it('keeps retrying when an overlapping pass met the key while the send was failing', async () => {
+        await ref().set(task({ nextNotifyAt: ts(REMINDER_60) }));
+        const now = at(REMINDER_60) + 10000;
+        const overlapping = fakeMessaging();
+        const failing = fakeMessaging({ 'tok-phone': 'messaging/internal-error' },
+            () => runScheduler({ db, messaging: overlapping, now }));
+        await runScheduler({ db, messaging: failing, now });
+        assert.equal((await ref().get()).get('nextNotifyAt').toMillis(), at(REMINDER_60));
+
+        const messaging = fakeMessaging();
+        await runScheduler({ db, messaging, now: now + 60000 });
+        assert.equal(overlapping.sent.length + messaging.sent.length, 1);
+    });
 });

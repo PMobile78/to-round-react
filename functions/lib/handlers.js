@@ -49,15 +49,20 @@ async function deleteInBatches(db, refs) {
     }
 }
 
-/** Claims a dedup key; false when another run already sent this notification. */
-async function claimKey(db, key, now) {
+/**
+ * Claims a dedup key: 'claimed' — this pass sends; 'sent' — delivered before; 'busy' — another
+ * pass holds the claim and has not delivered yet (its send may still fail and free the key).
+ */
+async function claimKey(ref, now) {
     try {
-        await db.collection('notification-sent').doc(notificationDocId(key)).create({ sentAt: Timestamp.fromMillis(now) });
-        return true;
+        await ref.create({ sentAt: Timestamp.fromMillis(now), state: 'pending' });
+        return 'claimed';
     } catch (e) {
-        if (e && (e.code === 6 || String(e.code).toUpperCase().includes('ALREADY_EXISTS'))) return false;
-        throw e;
+        if (!(e && (e.code === 6 || String(e.code).toUpperCase().includes('ALREADY_EXISTS')))) throw e;
     }
+    const existing = await ref.get();
+    // A key that vanished meanwhile was freed by a failed send; a key without a state counts as sent.
+    return existing.exists && existing.get('state') !== 'pending' ? 'sent' : 'busy';
 }
 
 // A dead token is cleared only if the device still has it: it may have registered a new one meanwhile.
@@ -81,19 +86,28 @@ async function sendToRecipients({ db, messaging, uid, recipients, message }) {
 }
 
 /**
- * Sends a notification once (issue #93): true when at least one device got it or another run
- * already did. Without recipients nothing is claimed; when every send fails the key is freed,
- * so a later pass can retry.
+ * Sends a notification once (issue #93): true when at least one device got it, now or in an
+ * earlier pass. Without recipients nothing is claimed; when every send fails the key is freed,
+ * and while another pass holds the claim this one does not count it as delivered: either way a
+ * later pass can retry.
  */
 async function deliverOnce({ db, messaging, uid, recipients, key, message, now }) {
     if (recipients.length === 0) return false;
-    if (!(await claimKey(db, key, now))) return true;
+    const ref = db.collection('notification-sent').doc(notificationDocId(key));
+    const claim = await claimKey(ref, now);
+    if (claim !== 'claimed') return claim === 'sent';
+    let delivered = 0;
     try {
-        if (await sendToRecipients({ db, messaging, uid, recipients, message }) > 0) return true;
+        delivered = await sendToRecipients({ db, messaging, uid, recipients, message });
     } catch (e) {
         console.error('scheduleNotifications: send failed', uid, message.taskId, e && e.code);
     }
-    await db.collection('notification-sent').doc(notificationDocId(key)).delete();
+    if (delivered > 0) {
+        // If this write fails, the pending key still keeps other passes from sending it again.
+        await ref.update({ state: 'sent' }).catch(() => null);
+        return true;
+    }
+    await ref.delete();
     return false;
 }
 
