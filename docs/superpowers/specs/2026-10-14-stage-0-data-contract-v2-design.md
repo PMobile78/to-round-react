@@ -175,7 +175,8 @@ notification-sent/{key}              служебная, только серве
   - `webpush`: TTL — сутки, `Urgency: high`, `fcmOptions.link = url`.
   
   Веб открывает задачу и по `?taskId=`, и по старому `?bubbleId=`.
-- **Недействительный токен** (ошибки FCM `messaging/registration-token-not-registered` и `messaging/invalid-registration-token`): сервер ставит устройству `fcmToken = null`. При других ошибках токен остаётся.
+- **Недоставленное уведомление** ([#93](https://github.com/PMobile78/to-round-react/issues/93)): ключ в `notification-sent` остаётся, только если уведомление получило хотя бы одно устройство. Нет получателей или все отправки не удались — `nextNotifyAt` не двигается, и следующие проходы повторяют попытку в течение 10 минут после момента события; потом событие отбрасывается (у просрочки `overdueAt` всё равно ставится).
+- **Недействительный токен** (ошибки FCM `messaging/registration-token-not-registered` и `messaging/invalid-registration-token`): сервер ставит устройству `fcmToken = null`, если у устройства всё ещё этот токен. При других ошибках токен остаётся.
 
 ### 4.5 Категории
 
@@ -196,8 +197,8 @@ notification-sent/{key}              служебная, только серве
 | Функция | Запуск | Что делает |
 |---|---|---|
 | `scheduleNotifications` | каждую минуту (`* * * * *`) | collectionGroup `tasks`, где `status == active` и `nextNotifyAt <= now`; обработка по 4.4 |
-| `onTaskWritten` | запись `users/{uid}/tasks/{taskId}` | при создании и при смене `due`, `reminders`, `repeat` или `status` пересчитывает `nextNotifyAt`; если задача активна, срок уже прошёл и `overdueAt == null` — молча ставит `overdueAt`; при смене `due` ставит `pulseMuted = false`, а `overdueAt = null`, если новый срок в будущем или его нет |
-| `onCategoryDeleted` | удаление `users/{uid}/categories/{categoryId}` | ставит `categoryId = null` у задач этой категории |
+| `onTaskWritten` | запись `users/{uid}/tasks/{taskId}` | при создании и при смене `due`, `reminders`, `repeat` или `status` пересчитывает `nextNotifyAt`; если задача активна, срок уже прошёл и `overdueAt == null` — молча ставит `overdueAt`; при смене `due` ставит `pulseMuted = false`, а `overdueAt = null`, если новый срок в будущем или его нет; текущий момент — время записи, изменения считаются в транзакции от состояния до записи к текущему документу |
+| `onCategoryDeleted` | удаление `users/{uid}/categories/{categoryId}` | ставит `categoryId = null` у задач этой категории, если категория с тем же id не создана снова |
 | `purgeDeletedTasks` | раз в сутки (`0 3 * * *`, UTC) | удаляет задачи из корзины старше 30 дней |
 | `cleanupNotificationSent` | каждый час | без изменений |
 

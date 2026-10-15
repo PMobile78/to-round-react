@@ -2,45 +2,54 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Cloud Functions под формат данных v2: напоминания и просрочка по задачам `users/{uid}/tasks`, служебные поля `nextNotifyAt`/`overdueAt`/`pulseMuted`, каскад при удалении категории, очистка корзины — с тестами на общих примерах времени и на эмуляторе Firestore.
+**Goal:** Cloud Functions под формат данных v2: напоминания и просрочка по задачам `users/{uid}/tasks` с повтором недоставленного (#93), служебные поля `nextNotifyAt`/`overdueAt`/`pulseMuted`, каскад при удалении категории, очистка корзины — с тестами на общих примерах времени и на эмуляторе Firestore и с технической защитой от деплоя из ветки до переезда.
 
-**Architecture:** Логика делится на чистые модули без Firestore (`lib/time.js`, `lib/schedule.js`, `lib/messages.js`, юнит-тесты на `node:test`) и слой Firestore `lib/handlers.js`, которому `db`, `messaging` и `now` передаются аргументами: его тесты вызывают обработчики напрямую на эмуляторе Firestore с поддельной отправкой FCM. `index.js` только подключает обработчики к триггерам и расписаниям. Старые функции v1 и расчёт повторов на сервере удаляются; в прод всё выходит при переезде (подплан 0.7).
+**Architecture:** Логика делится на чистые модули без Firestore (`lib/time.js`, `lib/schedule.js`, `lib/messages.js`, юнит-тесты на `node:test`) и слой Firestore `lib/handlers.js`, которому `db`, `messaging` и `now` передаются аргументами: его тесты вызывают обработчики напрямую на эмуляторе Firestore с поддельной отправкой FCM. `index.js` только подключает обработчики к триггерам и расписаниям. Старые функции v1 и расчёт повторов на сервере удаляются; в прод всё выходит при переезде (подплан 0.7), а до него `firebase deploy` из ветки блокирует predeploy-хук.
 
-**Tech Stack:** Node 22 (рантайм функций; локально и в CI — Node 24), CommonJS, firebase-functions 7 (API v2), firebase-admin 14, `node:test` + `node:assert/strict`, Firebase CLI 15 (`emulators:exec`), эмулятор Firestore (Java 21+), `Intl` (часовые пояса и формы множественного числа).
+**Tech Stack:** Node 22 (рантайм функций; локально и в CI — Node 24), CommonJS, firebase-functions 7 (API v2), firebase-admin 14.5, `node:test` + `node:assert/strict` (reporter `spec`), Firebase CLI 15 (`emulators:exec`, predeploy-хуки), эмулятор Firestore (Java 21+), `Intl` (часовые пояса и формы множественного числа).
 
-**Spec:** [docs/superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md](../specs/2026-10-14-stage-0-data-contract-v2-design.md) — разделы 3 (документы), 4.1, 4.2, 4.4 (поведение и уведомления), 6 (сервер), 11 (проверка). Обзор подпланов — [2026-10-14-stage-0-overview.md](2026-10-14-stage-0-overview.md). Предыдущий подплан — [0.2](2026-10-14-stage-0-2-firestore-rules.md) (эмулятор, порт, индексы).
+**Spec:** [docs/superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md](../specs/2026-10-14-stage-0-data-contract-v2-design.md) — разделы 3 (документы), 4.1, 4.2, 4.4 (поведение и уведомления), 6 (сервер), 11 (проверка). Обзор подпланов — [2026-10-14-stage-0-overview.md](2026-10-14-stage-0-overview.md). Предыдущий подплан — [0.2](2026-10-14-stage-0-2-firestore-rules.md) (эмулятор, порт, индексы). Независимое ревью этого плана (2026-10-15) учтено в этой редакции.
 
 ## Global Constraints
 
-- Ветка `stage-0-data-contract-v2`, в `main` не коммитить. Ничего не деплоить: `firebase deploy` из этой ветки до подплана 0.7 запрещён (правила и функции v2 сломают прод-веб v1).
+- Ветка `stage-0-data-contract-v2`, в `main` не коммитить. Ничего не деплоить: `firebase deploy` из ветки до подплана 0.7 запрещён (правила и функции v2 сломают прод-веб v1). С задачи 1 его технически блокирует `scripts/stage0-deploy-guard.js`; `STAGE0_ALLOW_DEPLOY=1` до 0.7 не ставить.
+- `main` влит в ветку перед этим планом (`9f4fb5f`: v0.1.42, firebase-admin 14.5 из аудита `2bd193c`). Если перед исполнением `main` снова ушёл вперёд — влить его до задачи 1. В корневом `package-lock.json` конфликтует только поле `"version"`: взять сторону `main`, не делать `git checkout --theirs` (выбросит записи `@firebase/rules-unit-testing`). Если конфликтует `functions/package-lock.json` — взять версию из `main`, повторить `npm --prefix functions uninstall date-fns @date-fns/tz` (если задача 7 уже сделана) и `npm --prefix functions ci`. `npm install` для этого не использовать: он заново подбирает версии и уводит их от lock, проверенного аудитом. После слияния — `npm ci --legacy-peer-deps`, `npm --prefix functions ci`, `npm run verify`.
 - Функции — CommonJS, `engines.node` остаётся `"22"`, регион всех функций `europe-west1`.
-- Новых зависимостей нет: тесты на встроенных `node:test` и `node:assert/strict`. Зависимости `date-fns` и `@date-fns/tz` удаляются из `functions/` (задача 6).
+- Новых зависимостей нет: тесты на встроенных `node:test` и `node:assert/strict`. Зависимости `date-fns` и `@date-fns/tz` удаляются из `functions/` (задача 7).
+- `node --test` всегда запускается с `--test-reporter=spec`: тогда итоги `ℹ tests N` / `ℹ pass N` одинаковы на Node 22 и 24 (без флага Node 22 вне терминала печатает TAP).
 - Время срока — `due.local` в зоне `due.tz` по правилам `java.time.ZonedDateTime.of`; функции проверяются на общих примерах `contract/fixtures/time.json` (те же, что у веба и Android).
 - Напоминания — минуты, кратные 60, от 60 до 524 160; остальные значения сервер пропускает (спецификация, раздел 7). Язык уведомлений — `settings.language`, если это `uk`, иначе `en`.
-- Сервер пишет в задачу только `nextNotifyAt`, `overdueAt`, `pulseMuted` и `categoryId = null` (каскад), в устройство — только `fcmToken = null`; `updatedAt` не трогает.
+- Недоставленное уведомление (#93): ключ в `notification-sent` остаётся, только если уведомление получило хотя бы одно устройство; иначе `nextNotifyAt` не двигается и следующие проходы повторяют попытку 10 минут после момента события (спецификация, раздел 4.4).
+- Сервер пишет в задачу только `nextNotifyAt`, `overdueAt`, `pulseMuted` и `categoryId = null` (каскад), в устройство — только `fcmToken = null`; `updatedAt` не трогает. `overdueAt` никогда не удаляется, только становится `null`: правила сравнивают его при каждой правке клиентом.
 - Тесты не отправляют настоящих уведомлений: обработчики получают `messaging` аргументом, тесты подставляют подделку с методом `sendEach`.
 - Эмулятор Firestore — порт 8180, проект `demo-to-round` (из `firebase.json`, подплан 0.2); для `test:emulator` нужны Java 21+ и Firebase CLI 15+ (локально есть, в CI их ставит джоб `test`).
-- До задачи 6 в `functions/index.js` остаётся код v1: задача 3 меняет формат текстов, которые он читает. Это допустимо, потому что из ветки ничего не деплоится; задача 6 заменяет `index.js` целиком.
-- В `main` параллельно обновляется `functions/package-lock.json` (аудит зависимостей). При следующем вливании `main` в эту ветку конфликт в этом файле решается пересборкой (`npm --prefix functions install`), а не ручной правкой.
-- Каждая задача заканчивается зелёным `npm run test:functions`; последняя — зелёным `npm run verify`.
+- До задачи 7 в `functions/index.js` остаётся код v1; задача 4 меняет формат текстов, которые он читает. Деплоить его нельзя — это и блокирует хук из задачи 1.
+- Веб-тестов после слияния `9f4fb5f` — 468; план их не меняет, итоговая проверка сравнивает с числом до задачи 1.
+- Каждая задача заканчивается зелёным `npm run test:functions` (задача 1 — `npm run test:rules`); последняя — зелёным `npm run verify`.
+- **Отложенное из ревью 0.2:** нераспознаваемые `due`/`tz` сервер пропускает (код задачи 3 + тест на `2026-02-30T12:00`); Long от Android серверу не важен (админ-SDK отдаёт числа, `validReminders` проверяет `Number.isInteger`); `overdueAt` сервер не удаляет (см. выше); NBSP-название в тексте уведомления заменяется на «Без назви» / «Untitled» (задача 4). Палитра в обе стороны, строже `due.local` в правилах, кэш эмулятора в CI — бэклог правил и CI.
+- **Отложенное из ревью этого плана:** гонка очистки корзины с «Восстановить» (удаление с предусловием `lastUpdateTime`) — бэклог; отправка по id установки (`FidMessage`) вместо токена — возможное упрощение после 0.7; `ignore` для `firestore-debug.log` и `test/` в описании функций — подплан 0.7 (выкатка).
 
 ## Review Focus
 
-- **Подколлекция `tasks` не в `users/{uid}`** (например, внутри `user-mindmaps`, куда владелец пишет что угодно) — сервер не должен по ней уведомлять другого пользователя. Тест «ignores "tasks" collections outside users/{uid}» — в задаче 4.
-- **Пользователь меняет задачу во время прохода планировщика или срабатывания триггера** — устаревшие служебные поля не перезаписывают новое расписание. Тесты «does not overwrite server fields when the user changed the schedule during the pass» — в задаче 4, «skips a stale event when the schedule changed again before the write» — в задаче 5.
-- **Планировщик не работал или опоздал** — после паузы приходит одно уведомление (самое позднее напоминание или «просрочено»), а не пачка устаревших. Тесты «sends only the latest of several reminders…» и «sends overdue instead of a stale reminder…» — в задаче 2, «sends overdue, not a stale reminder, after a late run» — в задаче 4.
-- **Перенос данных создаёт сотни задач с прошедшим сроком** — они молча становятся просроченными, без рассылки. Тесты «marks a new task with a past due overdue…» — в задаче 2, «marks a task created with a past due as overdue silently…» — в задаче 5.
-- **FCM временно отвечает ошибкой** — токен устройства не стирается; стирается только «мёртвый» токен. Тест «clears the token of a device FCM no longer knows, keeps it on other errors» — в задаче 4.
+- **Подколлекция `tasks` не в корне `users/{uid}`** (например, `user-mindmaps/bob/maps/m1/tasks/x` или `user-mindmaps/bob/users/alice/tasks/x`, куда владелец пишет что угодно) — сервер не должен по ней уведомлять другого пользователя. Тесты «ignores "tasks" collections outside users/{uid}» и «ignores a users/{uid}/tasks path nested under another collection» — в задаче 5.
+- **Пользователь меняет задачу во время прохода планировщика или срабатывания триггера** — устаревшие служебные поля не перезаписывают новое расписание, а смена срока из обогнанной записи не теряется. Тесты «does not overwrite server fields when the user changed the schedule during the pass» — в задаче 5; «plans against the current document when the schedule changed again before the write» и «keeps the due change of an event whose write was overtaken by a later one» — в задаче 6.
+- **Планировщик не работал или опоздал** — после паузы приходит одно уведомление (самое позднее напоминание или «просрочено»), а не пачка устаревших. Тесты «sends only the latest of several reminders…» и «sends overdue instead of a stale reminder…» — в задаче 3, «sends overdue, not a stale reminder, after a late run» — в задаче 5.
+- **Перенос данных создаёт сотни задач с прошедшим сроком** — они молча становятся просроченными, без рассылки. Тесты «marks a new task with a past due overdue…» — в задаче 3, «marks a task created with a past due as overdue silently…» — в задаче 6.
+- **Уведомление некому доставить или FCM временно сбоит** — попытка повторяется 10 минут, затем событие отбрасывается; токен стирается, только если он «мёртвый» и устройство его не сменило. Тесты блока «undelivered notifications (issue #93)», «clears the token of a device FCM no longer knows, keeps it on other errors» и «keeps a token the device replaced while the send to the old one was failing» — в задаче 5.
 
 ## Структура файлов
 
 | Файл | Ответственность |
 |---|---|
+| `scripts/stage0-deploy-guard.js` | блокирует `firebase deploy` из ветки до 0.7 (predeploy-хук) |
+| `firebase.json` | (изменение) predeploy-хуки у `firestore` и функций |
+| `docs/firebase.md` | (изменение) упоминание защиты от деплоя |
+| `vite.config.js` | (изменение) корневой Vitest не собирает тесты `functions/` |
 | `functions/lib/time.js` | местное время + зона → момент (двойник `src/contract/time.js` на CommonJS) |
 | `functions/lib/schedule.js` | события задачи, `nextNotifyAt`, решения планировщика и триггера, ключи дедупликации |
 | `functions/lib/messages.js` | получатели, язык, тексты, сообщения FCM |
-| `functions/locales/notifications.{en,uk}.json` | (замена) тексты v2 и формы единиц времени |
-| `functions/lib/handlers.js` | Firestore: проход планировщика, триггер задачи, каскад категорий, корзина, чистка ключей |
+| `functions/locales/notifications.{en,uk}.json` | (замена) тексты v2, «Без назви», формы единиц времени |
+| `functions/lib/handlers.js` | Firestore: проход планировщика с повтором недоставленного, триггер задачи, каскад категорий, корзина, чистка ключей |
 | `functions/index.js` | (замена) только подключение пяти функций v2 |
 | `functions/test/unit/*.test.js` | юнит-тесты `node:test` |
 | `functions/test/emulator/*.test.js` | тесты на эмуляторе Firestore, `helpers.js` — стенд |
@@ -50,12 +59,115 @@
 
 ---
 
-### Task 1: Время в функциях и запуск тестов на `node:test`
+### Task 1: Защита от деплоя из ветки
+
+**Files:**
+- Create: `scripts/stage0-deploy-guard.js`
+- Modify: `firebase.json` (predeploy-хуки), `docs/firebase.md`
+
+**Interfaces:**
+- Consumes: ничего.
+- Produces: `firebase deploy` из ветки падает на predeploy-хуке `firestore` и функций с сообщением `stage-0: firebase deploy is blocked until sub-plan 0.7 …`, пока не задан `STAGE0_ALLOW_DEPLOY=1`. Подплан 0.7 удаляет скрипт и хуки. `firebase emulators:exec` хуки не запускает.
+
+- [ ] **Step 1: Создать `scripts/stage0-deploy-guard.js`**
+
+```js
+// Blocks `firebase deploy` from branch stage-0-data-contract-v2 until the data move (sub-plan 0.7):
+// the v2 rules and functions would break the live v1 web app. Sub-plan 0.7 deletes this guard.
+if (process.env.STAGE0_ALLOW_DEPLOY !== '1') {
+    console.error('stage-0: firebase deploy is blocked until sub-plan 0.7 (see docs/firebase.md).');
+    process.exit(1);
+}
+```
+
+- [ ] **Step 2: Проверить скрипт**
+
+Run: `node scripts/stage0-deploy-guard.js; echo "exit=$?"`, затем `STAGE0_ALLOW_DEPLOY=1 node scripts/stage0-deploy-guard.js; echo "exit=$?"`
+Expected: первая команда печатает `stage-0: firebase deploy is blocked until sub-plan 0.7 (see docs/firebase.md).` и `exit=1`; вторая — только `exit=0`.
+
+- [ ] **Step 3: Подключить хук в `firebase.json`**
+
+Заменить файл целиком (добавлены два `predeploy`, остальное без изменений). Схема Firebase CLI 15.22 допускает `predeploy` и у `firestore`, и у описания функций; `$PROJECT_DIR` CLI подставляет сам.
+
+```json
+{
+    "firestore": {
+        "rules": "firestore.rules",
+        "indexes": "firestore.indexes.json",
+        "predeploy": [
+            "node \"$PROJECT_DIR/scripts/stage0-deploy-guard.js\""
+        ]
+    },
+    "functions": [
+        {
+            "source": "functions",
+            "codebase": "default",
+            "predeploy": [
+                "node \"$PROJECT_DIR/scripts/stage0-deploy-guard.js\""
+            ]
+        }
+    ],
+    "hosting": {
+        "public": "public",
+        "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**"
+        ]
+    },
+    "emulators": {
+        "firestore": {
+            "port": 8180
+        },
+        "ui": {
+            "enabled": false
+        },
+        "singleProjectMode": true
+    }
+}
+```
+
+- [ ] **Step 4: Упомянуть защиту в `docs/firebase.md`**
+
+В предупреждении раздела `## Правила безопасности` заменить строку
+
+```markdown
+> и индексов деплоятся из `main`.
+```
+
+на
+
+```markdown
+> и индексов деплоятся из `main`. Технически деплой из ветки блокирует
+> `scripts/stage0-deploy-guard.js` (predeploy-хук в `firebase.json`); подплан 0.7 его удаляет.
+```
+
+- [ ] **Step 5: Убедиться, что эмулятор и правила работают как раньше**
+
+Run: `npm run test:rules`
+Expected: PASS — `Tests  88 passed (88)`; `firebase.json` прочитан без предупреждений схемы.
+
+Сам `firebase deploy` для проверки хука не запускать: проверен скрипт, а схема CLI подтверждает, что хук на своём месте.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add scripts/stage0-deploy-guard.js firebase.json docs/firebase.md
+git commit -F - <<'EOF'
+chore(stage0): block firebase deploy from the branch until the data move
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+EOF
+```
+
+---
+
+### Task 2: Время в функциях и запуск тестов на `node:test`
 
 **Files:**
 - Create: `functions/lib/time.js`
 - Test: `functions/test/unit/time.test.js`
-- Modify: `functions/package.json` (скрипт `test`)
+- Modify: `functions/package.json` (скрипт `test`), `vite.config.js` (исключение `functions/**`)
 
 **Interfaces:**
 - Consumes: `contract/fixtures/time.json` (план 0.1), раздел `toInstant` — 10 примеров.
@@ -104,7 +216,7 @@ describe('toInstant input checks', () => {
 
 - [ ] **Step 2: Убедиться, что тест падает**
 
-Run: `node --test functions/test/unit/time.test.js`
+Run: `node --test --test-reporter=spec functions/test/unit/time.test.js`
 Expected: FAIL — `Error: Cannot find module '../../lib/time'`, итог `ℹ tests 1`, `ℹ fail 1`.
 
 - [ ] **Step 3: Создать `functions/lib/time.js`**
@@ -196,7 +308,7 @@ module.exports = { parseLocal, isValidTimeZone, toInstant };
 
 - [ ] **Step 4: Убедиться, что тест проходит**
 
-Run: `node --test functions/test/unit/time.test.js`
+Run: `node --test --test-reporter=spec functions/test/unit/time.test.js`
 Expected: PASS — `ℹ tests 13`, `ℹ pass 13`, `ℹ fail 0`.
 
 - [ ] **Step 5: Включить юнит-тесты в `npm test` функций**
@@ -210,25 +322,50 @@ Expected: PASS — `ℹ tests 13`, `ℹ pass 13`, `ℹ fail 0`.
 на
 
 ```json
-        "test": "node --test test/unit/*.test.js && TZ=UTC node test-next-notify.js && TZ=UTC node test-tz.js",
+        "test": "node --test --test-reporter=spec test/unit/*.test.js && TZ=UTC node test-next-notify.js && TZ=UTC node test-tz.js",
 ```
 
-Старые тесты v1 остаются до задачи 6, где удаляется код, который они проверяют.
+Старые тесты v1 остаются до задачи 7, где удаляется код, который они проверяют.
 
-- [ ] **Step 6: Прогнать тесты функций**
+- [ ] **Step 6: Не пускать тесты функций в корневой Vitest**
 
-Run: `npm run test:functions`
-Expected: код выхода 0; сначала `ℹ pass 13`, `ℹ fail 0`, затем строки `PASS` старых тестов, последняя — `PASS  DST: daily repeat keeps 13:00 local across transition: 2026-10-25T13:00:00`.
+В `vite.config.js` заменить блок
 
-- [ ] **Step 7: Проверить линтером**
+```js
+    test: {
+        // Firestore rules tests need the emulator: they run only through `npm run test:rules`.
+        // Agent worktrees under .claude/ hold copies of the repo tests: never collect them.
+        exclude: [...configDefaults.exclude, 'firestore-tests/**', '.claude/**'],
+    },
+```
+
+на
+
+```js
+    test: {
+        // Firestore rules tests need the emulator: they run only through `npm run test:rules`.
+        // Agent worktrees under .claude/ hold copies of the repo tests: never collect them.
+        // Cloud Functions tests run on node:test through `npm run test:functions`.
+        exclude: [...configDefaults.exclude, 'firestore-tests/**', '.claude/**', 'functions/**'],
+    },
+```
+
+Без этого Vitest выполнил бы файлы `node:test` в своём воркере и засчитал бы их пройденными без единой проверки.
+
+- [ ] **Step 7: Прогнать тесты функций и проверить, что Vitest их не видит**
+
+Run: `npm run test:functions`, затем `npx vitest list --filesOnly | grep -c '^functions/'`
+Expected: первая команда — код выхода 0, сначала `ℹ tests 13`, `ℹ pass 13`, затем строки `PASS` старых тестов, последняя — `PASS  DST: daily repeat keeps 13:00 local across transition: 2026-10-25T13:00:00`; вторая печатает `0`.
+
+- [ ] **Step 8: Проверить линтером**
 
 Run: `npm run lint:functions`
 Expected: без ошибок.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add functions/lib/time.js functions/test/unit/time.test.js functions/package.json
+git add functions/lib/time.js functions/test/unit/time.test.js functions/package.json vite.config.js
 git commit -F - <<'EOF'
 feat(functions): local time to instant for contract v2 on shared fixtures
 
@@ -238,14 +375,14 @@ EOF
 
 ---
 
-### Task 2: Расписание задачи — чистые функции
+### Task 3: Расписание задачи — чистые функции
 
 **Files:**
 - Create: `functions/lib/schedule.js`
 - Test: `functions/test/unit/schedule.test.js`
 
 **Interfaces:**
-- Consumes (задача 1): `parseLocal`, `isValidTimeZone`, `toInstant`; `contract/fixtures/tasks.json` (план 0.1).
+- Consumes (задача 2): `parseLocal`, `isValidTimeZone`, `toInstant`; `contract/fixtures/tasks.json` (план 0.1).
 - Produces: `functions/lib/schedule.js`. «Простая задача» (plain task) — поля документа задачи, где время уже в миллисекундах: `{ status, due: { local, tz } | null, reminders: number[], repeat, title, pulseMuted: boolean, overdueAt: number | null, nextNotifyAt: number | null }`.
   - `REMINDER_MIN` (60), `REMINDER_MAX` (524160), `validReminders(list) → number[]` — допустимые, без повторов, по возрастанию;
   - `dueInstantMs(task) → number | null`; `taskEvents(task) → { type: 'reminder' | 'overdue', at: number, minutes?: number }[]` по возрастанию `at`;
@@ -300,6 +437,7 @@ describe('dueInstantMs and taskEvents', () => {
         assert.equal(dueInstantMs(plain({ due: null })), null);
         assert.equal(dueInstantMs(plain({ due: { local: '2026-10-15 12:00', tz: 'Europe/Berlin' } })), null);
         assert.equal(dueInstantMs(plain({ due: { local: '2026-10-15T12:00', tz: 'Mars/Olympus' } })), null);
+        assert.equal(dueInstantMs(plain({ due: { local: '2026-02-30T12:00', tz: 'Europe/Berlin' } })), null);
     });
 
     it('lists reminders and the overdue moment in time order', () => {
@@ -429,7 +567,7 @@ describe('dedup keys', () => {
 
 - [ ] **Step 2: Убедиться, что тест падает**
 
-Run: `node --test functions/test/unit/*.test.js`
+Run: `node --test --test-reporter=spec functions/test/unit/*.test.js`
 Expected: FAIL — `Error: Cannot find module '../../lib/schedule'`, итог `ℹ tests 14`, `ℹ pass 13`, `ℹ fail 1`.
 
 - [ ] **Step 3: Создать `functions/lib/schedule.js`**
@@ -557,7 +695,7 @@ module.exports = {
 
 - [ ] **Step 4: Убедиться, что тесты проходят**
 
-Run: `node --test functions/test/unit/*.test.js`
+Run: `node --test --test-reporter=spec functions/test/unit/*.test.js`
 Expected: PASS — `ℹ tests 37`, `ℹ pass 37`, `ℹ fail 0`.
 
 - [ ] **Step 5: Проверить линтером**
@@ -578,7 +716,7 @@ EOF
 
 ---
 
-### Task 3: Тексты и сообщения FCM
+### Task 4: Тексты и сообщения FCM
 
 **Files:**
 - Create: `functions/lib/messages.js`
@@ -590,10 +728,10 @@ EOF
 - Produces: `functions/lib/messages.js`:
   - `INVALID_TOKEN_CODES: Set<string>` — `messaging/registration-token-not-registered`, `messaging/invalid-registration-token`;
   - `pickLanguage(settings) → 'en' | 'uk'`; `pickRecipients(devices: { id, fcmToken, notificationsEnabled }[]) → { id, token }[]`;
-  - `formatLead(minutes, lang) → string` («1 hour», «2 дні»); `notificationTexts({ type, minutes, taskTitle, lang }) → { title, body }`;
+  - `formatLead(minutes, lang) → string` («1 hour», «2 дні»); `notificationTexts({ type, minutes, taskTitle, lang }) → { title, body }` — пустое после `trim()` название становится «Untitled» / «Без назви»;
   - `taskUrl(taskId)`; `buildMessages({ type, taskId, taskTitle, minutes, lang, tokens }) → Message[]` — сообщение firebase-admin на каждый токен.
   - Формат сообщения — контракт для веба (подпланы 0.4–0.5) и Android: `data` = `{ type, taskId, title, body, url, minutesBefore? }` (все значения строки), `android: { priority: 'high', ttl: 86400000 }`, `webpush: { headers: { TTL: '86400', Urgency: 'high' }, fcmOptions: { link: url } }`.
-  - Тексты: `{ reminder: { title, body }, overdue: { title, body }, units: { hour | day | week: { one, few?, many?, other } } }`, подстановки `{{lead}}`, `{{title}}`, `{{n}}`.
+  - Тексты: `{ untitled, reminder: { title, body }, overdue: { title, body }, units: { hour | day | week: { one, few?, many?, other } } }`, подстановки `{{lead}}`, `{{title}}`, `{{n}}`.
 
 - [ ] **Step 1: Написать падающий тест `functions/test/unit/messages.test.js`**
 
@@ -657,6 +795,11 @@ describe('notificationTexts', () => {
             { title: 'Прострочене завдання!', body: 'Прострочено: Pay bills' });
     });
 
+    it('names a blank title (spaces, no-break spaces) "Untitled"', () => {
+        assert.equal(notificationTexts({ type: 'overdue', taskTitle: '\u00a0 ', lang: 'uk' }).body, 'Прострочено: Без назви');
+        assert.equal(notificationTexts({ type: 'reminder', minutes: 60, taskTitle: '', lang: 'en' }).body, '1 hour before: Untitled');
+    });
+
     it('cuts very long titles to 200 characters', () => {
         const { body } = notificationTexts({ type: 'overdue', taskTitle: '😀'.repeat(1000), lang: 'en' });
         assert.equal(Array.from(body).length, 'Overdue: '.length + 200 + 1);
@@ -699,7 +842,7 @@ describe('buildMessages', () => {
 
 - [ ] **Step 2: Убедиться, что тест падает**
 
-Run: `node --test functions/test/unit/*.test.js`
+Run: `node --test --test-reporter=spec functions/test/unit/*.test.js`
 Expected: FAIL — `Error: Cannot find module '../../lib/messages'`, итог `ℹ tests 38`, `ℹ pass 37`, `ℹ fail 1`.
 
 - [ ] **Step 3: Заменить тексты уведомлений**
@@ -708,6 +851,7 @@ Expected: FAIL — `Error: Cannot find module '../../lib/messages'`, итог `�
 
 ```json
 {
+    "untitled": "Untitled",
     "reminder": {
         "title": "Task reminder",
         "body": "{{lead}} before: {{title}}"
@@ -717,9 +861,18 @@ Expected: FAIL — `Error: Cannot find module '../../lib/messages'`, итог `�
         "body": "Overdue: {{title}}"
     },
     "units": {
-        "hour": { "one": "{{n}} hour", "other": "{{n}} hours" },
-        "day": { "one": "{{n}} day", "other": "{{n}} days" },
-        "week": { "one": "{{n}} week", "other": "{{n}} weeks" }
+        "hour": {
+            "one": "{{n}} hour",
+            "other": "{{n}} hours"
+        },
+        "day": {
+            "one": "{{n}} day",
+            "other": "{{n}} days"
+        },
+        "week": {
+            "one": "{{n}} week",
+            "other": "{{n}} weeks"
+        }
     }
 }
 ```
@@ -728,6 +881,7 @@ Expected: FAIL — `Error: Cannot find module '../../lib/messages'`, итог `�
 
 ```json
 {
+    "untitled": "Без назви",
     "reminder": {
         "title": "Нагадування про завдання",
         "body": "За {{lead}} до строку: {{title}}"
@@ -737,9 +891,24 @@ Expected: FAIL — `Error: Cannot find module '../../lib/messages'`, итог `�
         "body": "Прострочено: {{title}}"
     },
     "units": {
-        "hour": { "one": "{{n}} годину", "few": "{{n}} години", "many": "{{n}} годин", "other": "{{n}} години" },
-        "day": { "one": "{{n}} день", "few": "{{n}} дні", "many": "{{n}} днів", "other": "{{n}} дня" },
-        "week": { "one": "{{n}} тиждень", "few": "{{n}} тижні", "many": "{{n}} тижнів", "other": "{{n}} тижня" }
+        "hour": {
+            "one": "{{n}} годину",
+            "few": "{{n}} години",
+            "many": "{{n}} годин",
+            "other": "{{n}} години"
+        },
+        "day": {
+            "one": "{{n}} день",
+            "few": "{{n}} дні",
+            "many": "{{n}} днів",
+            "other": "{{n}} дня"
+        },
+        "week": {
+            "one": "{{n}} тиждень",
+            "few": "{{n}} тижні",
+            "many": "{{n}} тижнів",
+            "other": "{{n}} тижня"
+        }
     }
 }
 ```
@@ -802,10 +971,10 @@ function shortTitle(title) {
     return chars.length > TITLE_MAX ? `${chars.slice(0, TITLE_MAX).join('')}…` : chars.join('');
 }
 
-/** Localized notification title and body. */
+/** Localized notification title and body; a blank task title reads "Untitled" / "Без назви". */
 function notificationTexts({ type, minutes, taskTitle, lang }) {
     const dict = DICTS[lang] || en;
-    const title = shortTitle(taskTitle);
+    const title = String(taskTitle || '').trim() ? shortTitle(taskTitle) : dict.untitled;
     if (type === 'reminder') {
         return { title: dict.reminder.title, body: fill(dict.reminder.body, { lead: formatLead(minutes, lang), title }) };
     }
@@ -842,8 +1011,8 @@ module.exports = {
 
 - [ ] **Step 5: Убедиться, что тесты проходят**
 
-Run: `node --test functions/test/unit/*.test.js`
-Expected: PASS — `ℹ tests 46`, `ℹ pass 46`, `ℹ fail 0`.
+Run: `node --test --test-reporter=spec functions/test/unit/*.test.js`
+Expected: PASS — `ℹ tests 47`, `ℹ pass 47`, `ℹ fail 0`.
 
 - [ ] **Step 6: Проверить линтером**
 
@@ -858,7 +1027,8 @@ git commit -F - <<'EOF'
 feat(functions): v2 notification texts and FCM messages
 
 Reminder lead time is shown in whole hours, days or weeks with plural
-forms (Intl.PluralRules) instead of minutes.
+forms (Intl.PluralRules) instead of minutes; a blank title reads
+"Untitled".
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -866,7 +1036,7 @@ EOF
 
 ---
 
-### Task 4: Стенд на эмуляторе и проход планировщика
+### Task 5: Стенд на эмуляторе и проход планировщика
 
 **Files:**
 - Modify: `functions/package.json` (скрипт `test:emulator`), `package.json` (скрипт `test:functions`), `eslint.config.js` (`fetch` для `functions/`)
@@ -875,10 +1045,10 @@ EOF
 - Create: `functions/lib/handlers.js`
 
 **Interfaces:**
-- Consumes (задачи 2 и 3): `planSchedulerRun`, `sameSchedule`, `reminderKey`, `overdueKey`, `notificationDocId`; `INVALID_TOKEN_CODES`, `buildMessages`, `pickLanguage`, `pickRecipients`.
+- Consumes (задачи 3 и 4): `planSchedulerRun`, `sameSchedule`, `dueInstantMs`, `reminderKey`, `overdueKey`, `notificationDocId`; `INVALID_TOKEN_CODES`, `buildMessages`, `pickLanguage`, `pickRecipients`.
 - Produces:
-  - `functions/lib/handlers.js`: `toPlainTask(data) → plain task`; `processTask({ db, messaging, uid, snap, lang, recipients, now })`; `runScheduler({ db, messaging, now }) → { tasks: number }`. `db` — Firestore из firebase-admin, `now` — миллисекунды, `messaging` — объект с `sendEach(messages) → Promise<{ responses: { success, error?: { code } }[], successCount, failureCount }>` (как у firebase-admin `Messaging`);
-  - стенд `functions/test/emulator/helpers.js`: `db`, `clearFirestore()`, `fakeMessaging(failTokens) → { sent, sendEach }`, `at(iso) → ms`, `ts(iso) → Timestamp`, `DUE` (`'2026-10-15T10:00:00.000Z'`), `task(overrides)` — задача v2 в форме Firestore (срок 2026-10-15 12:00 Europe/Berlin, напоминания `[60, 1440]`), `seedAlice()` — пользователь `alice` с языком `uk` и тремя устройствами, из которых сообщения должен получать только `phone`;
+  - `functions/lib/handlers.js`: `toPlainTask(data) → plain task`; `processTask({ db, messaging, uid, snap, lang, recipients, now })`; `runScheduler({ db, messaging, now }) → { tasks: number }`. `db` — Firestore из firebase-admin, `now` — миллисекунды, `messaging` — объект с `sendEach(messages) → Promise<{ responses: { success, error?: { code } }[], successCount, failureCount }>` (как у firebase-admin `Messaging`). Недоставленное уведомление не продвигает `nextNotifyAt` в течение 10 минут после момента события (#93);
+  - стенд `functions/test/emulator/helpers.js`: `db`, `clearFirestore()`, `fakeMessaging(failTokens, onSend) → { sent, sendEach }` (`onSend` выполняется до ответа — чтобы поменять Firestore посреди отправки), `at(iso) → ms`, `ts(iso) → Timestamp`, `DUE` (`'2026-10-15T10:00:00.000Z'`), `task(overrides)` — задача v2 в форме Firestore (срок 2026-10-15 12:00 Europe/Berlin, напоминания `[60, 1440]`), `seedAlice()` — пользователь `alice` с языком `uk` и тремя устройствами, из которых сообщения должен получать только `phone`;
   - команды: `npm --prefix functions run test:emulator`; корневой `npm run test:functions` гоняет юнит-тесты и тесты на эмуляторе.
 
 - [ ] **Step 1: Добавить скрипт `test:emulator` в `functions/package.json`**
@@ -886,13 +1056,13 @@ EOF
 Сразу после строки
 
 ```json
-        "test": "node --test test/unit/*.test.js && TZ=UTC node test-next-notify.js && TZ=UTC node test-tz.js",
+        "test": "node --test --test-reporter=spec test/unit/*.test.js && TZ=UTC node test-next-notify.js && TZ=UTC node test-tz.js",
 ```
 
 вставить строку
 
 ```json
-        "test:emulator": "firebase emulators:exec --only firestore --project demo-to-round \"node --test --test-concurrency=1 test/emulator/*.test.js\"",
+        "test:emulator": "firebase emulators:exec --only firestore --project demo-to-round \"node --test --test-reporter=spec --test-concurrency=1 test/emulator/*.test.js\"",
 ```
 
 `firebase` находит `firebase.json`, поднимаясь из `functions/` к корню, и берёт настройки эмулятора оттуда. `--test-concurrency=1` нужен, потому что все файлы работают с одной базой эмулятора.
@@ -949,12 +1119,16 @@ async function clearFirestore() {
     if (!res.ok) throw new Error(`clearFirestore: HTTP ${res.status}`);
 }
 
-/** Stand-in for firebase-admin messaging: records messages, fails the tokens listed in failTokens. */
-function fakeMessaging(failTokens = {}) {
+/**
+ * Stand-in for firebase-admin messaging: records messages, fails the tokens listed in failTokens.
+ * `onSend` runs before the answer comes back, to change Firestore while a send is in flight.
+ */
+function fakeMessaging(failTokens = {}, onSend = null) {
     const sent = [];
     return {
         sent,
         async sendEach(messages) {
+            if (onSend) await onSend(messages);
             const responses = messages.map((m) => {
                 sent.push(m);
                 const code = failTokens[m.token];
@@ -1048,7 +1222,7 @@ describe('scheduleNotifications', () => {
     });
 
     it('notifies overdue once and marks the task when the due moment passes', async () => {
-        await db.doc('users/alice/tasks/t1').set(task({ nextNotifyAt: ts(DUE) }));
+        await db.doc('users/alice/tasks/t1').set(task({ nextNotifyAt: ts(DUE), repeat: { every: 1, unit: 'days' } }));
         const messaging = fakeMessaging();
         const now = at(DUE) + 20000;
         await runScheduler({ db, messaging, now });
@@ -1059,6 +1233,7 @@ describe('scheduleNotifications', () => {
         const after = (await db.doc('users/alice/tasks/t1').get()).data();
         assert.equal(after.overdueAt.toMillis(), now);
         assert.equal('nextNotifyAt' in after, false);
+        assert.deepEqual(after.due, task().due); // the server never moves the due of a repeating task
     });
 
     it('sends overdue, not a stale reminder, after a late run', async () => {
@@ -1080,9 +1255,25 @@ describe('scheduleNotifications', () => {
         assert.equal((await db.doc('users/alice/devices/watch').get()).get('fcmToken'), 'tok-watch');
     });
 
+    it('keeps a token the device replaced while the send to the old one was failing', async () => {
+        await db.doc('users/alice/tasks/t1').set(task({ nextNotifyAt: ts(REMINDER_60) }));
+        const messaging = fakeMessaging({ 'tok-phone': 'messaging/registration-token-not-registered' },
+            () => db.doc('users/alice/devices/phone').update({ fcmToken: 'tok-phone-new' }));
+        await runScheduler({ db, messaging, now: at(REMINDER_60) + 30000 });
+        assert.equal((await db.doc('users/alice/devices/phone').get()).get('fcmToken'), 'tok-phone-new');
+    });
+
     it('ignores "tasks" collections outside users/{uid}', async () => {
         await db.doc('user-mindmaps/bob/maps/m1/tasks/x').set(task({ nextNotifyAt: ts(REMINDER_60) }));
         await db.doc('users/bob/devices/phone').set({ platform: 'android', fcmToken: 'tok-bob', notificationsEnabled: true });
+        const messaging = fakeMessaging();
+        const result = await runScheduler({ db, messaging, now: at(REMINDER_60) + 30000 });
+        assert.equal(result.tasks, 0);
+        assert.equal(messaging.sent.length, 0);
+    });
+
+    it('ignores a users/{uid}/tasks path nested under another collection', async () => {
+        await db.doc('user-mindmaps/bob/users/alice/tasks/x').set(task({ title: 'PHISH from bob', nextNotifyAt: ts(REMINDER_60) }));
         const messaging = fakeMessaging();
         const result = await runScheduler({ db, messaging, now: at(REMINDER_60) + 30000 });
         assert.equal(result.tasks, 0);
@@ -1094,8 +1285,62 @@ describe('scheduleNotifications', () => {
         await ref.set(task({ nextNotifyAt: ts(REMINDER_60) }));
         const stale = await ref.get();
         await ref.update({ due: { local: '2026-10-20T12:00', tz: 'Europe/Berlin' }, nextNotifyAt: ts('2026-10-19T10:00:00.000Z') });
-        await processTask({ db, messaging: fakeMessaging(), uid: 'alice', snap: stale, lang: 'uk', recipients: [], now: at(REMINDER_60) + 30000 });
+        const recipients = [{ id: 'phone', token: 'tok-phone' }];
+        await processTask({ db, messaging: fakeMessaging(), uid: 'alice', snap: stale, lang: 'uk', recipients, now: at(REMINDER_60) + 30000 });
         assert.equal((await ref.get()).get('nextNotifyAt').toMillis(), at('2026-10-19T10:00:00.000Z'));
+    });
+});
+
+describe('scheduleNotifications: undelivered notifications (issue #93)', () => {
+    const KEY = 'notification-sent/reminder:alice:t1:60:2026-10-15T12:00@Europe%2FBerlin';
+    const ref = () => db.doc('users/alice/tasks/t1');
+
+    it('without recipients claims nothing and retries until a device can take it', async () => {
+        await db.doc('users/alice/devices/phone').update({ notificationsEnabled: false });
+        await ref().set(task({ nextNotifyAt: ts(REMINDER_60) }));
+        await runScheduler({ db, messaging: fakeMessaging(), now: at(REMINDER_60) + 10000 });
+        assert.equal((await db.doc(KEY).get()).exists, false);
+        assert.equal((await ref().get()).get('nextNotifyAt').toMillis(), at(REMINDER_60));
+
+        await db.doc('users/alice/devices/phone').update({ notificationsEnabled: true });
+        const messaging = fakeMessaging();
+        await runScheduler({ db, messaging, now: at(REMINDER_60) + 70000 });
+        assert.equal(messaging.sent.length, 1);
+        assert.equal((await ref().get()).get('nextNotifyAt').toMillis(), at(DUE));
+    });
+
+    it('frees the key when every send failed and sends exactly once on a later pass', async () => {
+        await ref().set(task({ nextNotifyAt: ts(REMINDER_60) }));
+        await runScheduler({ db, messaging: fakeMessaging({ 'tok-phone': 'messaging/internal-error' }), now: at(REMINDER_60) + 10000 });
+        assert.equal((await db.doc(KEY).get()).exists, false);
+        const messaging = fakeMessaging();
+        await runScheduler({ db, messaging, now: at(REMINDER_60) + 70000 });
+        await runScheduler({ db, messaging, now: at(REMINDER_60) + 130000 });
+        assert.equal(messaging.sent.length, 1);
+    });
+
+    it('gives up 10 minutes after the event moment', async () => {
+        await ref().set(task({ nextNotifyAt: ts(REMINDER_60) }));
+        await runScheduler({ db, messaging: fakeMessaging({ 'tok-phone': 'messaging/internal-error' }), now: at(REMINDER_60) + 11 * 60000 });
+        assert.equal((await ref().get()).get('nextNotifyAt').toMillis(), at(DUE));
+    });
+
+    it('counts a notification that reached at least one device as delivered', async () => {
+        await db.doc('users/alice/devices/watch').set({ platform: 'android', fcmToken: 'tok-watch', notificationsEnabled: true });
+        await ref().set(task({ nextNotifyAt: ts(REMINDER_60) }));
+        await runScheduler({ db, messaging: fakeMessaging({ 'tok-watch': 'messaging/internal-error' }), now: at(REMINDER_60) + 10000 });
+        assert.equal((await db.doc(KEY).get()).exists, true);
+        assert.equal((await ref().get()).get('nextNotifyAt').toMillis(), at(DUE));
+    });
+
+    it('sends once when two passes overlap', async () => {
+        await ref().set(task({ nextNotifyAt: ts(REMINDER_60) }));
+        const messaging = fakeMessaging();
+        await Promise.all([
+            runScheduler({ db, messaging, now: at(REMINDER_60) + 10000 }),
+            runScheduler({ db, messaging, now: at(REMINDER_60) + 10000 }),
+        ]);
+        assert.equal(messaging.sent.length, 1);
     });
 });
 ```
@@ -1114,10 +1359,14 @@ Expected: FAIL — `Error: Cannot find module '../../lib/handlers'`, итог `�
  */
 const { FieldValue, Timestamp } = require('firebase-admin/firestore');
 const {
-    planSchedulerRun, sameSchedule, reminderKey, overdueKey, notificationDocId,
+    planSchedulerRun, sameSchedule, dueInstantMs, reminderKey, overdueKey, notificationDocId,
 } = require('./schedule');
 const { INVALID_TOKEN_CODES, buildMessages, pickLanguage, pickRecipients } = require('./messages');
 
+const MINUTE_MS = 60 * 1000;
+// A notification nobody received (no recipients, every send failed) is retried by the next
+// passes for this long after its moment, then dropped (issue #93).
+const RETRY_WINDOW_MS = 10 * MINUTE_MS;
 
 const msOf = (value) => (value && typeof value.toMillis === 'function' ? value.toMillis() : null);
 
@@ -1135,10 +1384,12 @@ function toPlainTask(data) {
     };
 }
 
-// Only users/{uid}/tasks/{taskId}: a collection group query also sees any other "tasks" collection.
-const isUserTaskRef = (ref) => ref.parent.id === 'tasks' && ref.parent.parent !== null
-    && ref.parent.parent.parent.id === 'users';
+// Only the root path users/{uid}/tasks/{taskId}: a collection group query also sees any other
+// "tasks" collection, including user-mindmaps/{other}/users/{uid}/tasks/... written by another user.
+const USER_TASK_PATH = /^users\/[^/]+\/tasks\/[^/]+$/;
+const isUserTaskRef = (ref) => USER_TASK_PATH.test(ref.path);
 
+// overdueAt is never deleted, only set to null: the rules compare it on every client update.
 const serverMs = (ms) => (ms === null ? FieldValue.delete() : Timestamp.fromMillis(ms));
 
 /** Claims a dedup key; false when another run already sent this notification. */
@@ -1152,16 +1403,41 @@ async function claimKey(db, key, now) {
     }
 }
 
-/** Sends one notification to the user's devices; dead tokens get fcmToken = null. */
+// A dead token is cleared only if the device still has it: it may have registered a new one meanwhile.
+async function clearDeadToken(db, uid, deviceId, token) {
+    const ref = db.doc(`users/${uid}/devices/${deviceId}`);
+    await db.runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        if (snap.exists && snap.get('fcmToken') === token) tx.update(ref, { fcmToken: null });
+    });
+}
+
+/** Sends one notification to the user's devices; returns how many devices got it. */
 async function sendToRecipients({ db, messaging, uid, recipients, message }) {
-    if (recipients.length === 0) return 0;
     const messages = buildMessages({ ...message, tokens: recipients.map((r) => r.token) });
     const result = await messaging.sendEach(messages);
     await Promise.all(result.responses.map((response, i) => {
         if (response.success || !INVALID_TOKEN_CODES.has(response.error && response.error.code)) return null;
-        return db.doc(`users/${uid}/devices/${recipients[i].id}`).update({ fcmToken: null }).catch(() => null);
+        return clearDeadToken(db, uid, recipients[i].id, recipients[i].token).catch(() => null);
     }));
     return result.successCount;
+}
+
+/**
+ * Sends a notification once (issue #93): true when at least one device got it or another run
+ * already did. Without recipients nothing is claimed; when every send fails the key is freed,
+ * so a later pass can retry.
+ */
+async function deliverOnce({ db, messaging, uid, recipients, key, message, now }) {
+    if (recipients.length === 0) return false;
+    if (!(await claimKey(db, key, now))) return true;
+    try {
+        if (await sendToRecipients({ db, messaging, uid, recipients, message }) > 0) return true;
+    } catch (e) {
+        console.error('scheduleNotifications: send failed', uid, message.taskId, e && e.code);
+    }
+    await db.collection('notification-sent').doc(notificationDocId(key)).delete();
+    return false;
 }
 
 /** One scheduler pass over one due task (spec 4.4). */
@@ -1169,15 +1445,20 @@ async function processTask({ db, messaging, uid, snap, lang, recipients, now }) 
     const task = toPlainTask(snap.data());
     const plan = planSchedulerRun(task, now);
     const message = { taskId: snap.id, taskTitle: task.title, lang };
-    try {
-        if (plan.overdue && await claimKey(db, overdueKey(uid, snap.id, task.due), now)) {
-            await sendToRecipients({ db, messaging, uid, recipients, message: { ...message, type: 'overdue' } });
-        } else if (plan.reminder !== null && await claimKey(db, reminderKey(uid, snap.id, plan.reminder, task.due), now)) {
-            await sendToRecipients({ db, messaging, uid, recipients, message: { ...message, type: 'reminder', minutes: plan.reminder } });
-        }
-    } catch (e) {
-        console.error('scheduleNotifications: send failed', uid, snap.id, e);
+    const due = dueInstantMs(task);
+    let eventAt = null;
+    let delivered = true;
+    if (plan.overdue) {
+        eventAt = due;
+        delivered = await deliverOnce({ db, messaging, uid, recipients, now,
+            key: overdueKey(uid, snap.id, task.due), message: { ...message, type: 'overdue' } });
+    } else if (plan.reminder !== null) {
+        eventAt = due - plan.reminder * MINUTE_MS;
+        delivered = await deliverOnce({ db, messaging, uid, recipients, now,
+            key: reminderKey(uid, snap.id, plan.reminder, task.due), message: { ...message, type: 'reminder', minutes: plan.reminder } });
     }
+    // Not delivered yet: nextNotifyAt stays, so the next passes retry within the window.
+    if (!delivered && now - eventAt < RETRY_WINDOW_MS) return;
     // Server fields are written only if the task still has the schedule this pass worked from.
     await db.runTransaction(async (tx) => {
         const fresh = await tx.get(snap.ref);
@@ -1236,12 +1517,12 @@ module.exports = {
 - [ ] **Step 8: Убедиться, что тесты проходят**
 
 Run: `npm --prefix functions run test:emulator`
-Expected: PASS — `ℹ tests 7`, `ℹ pass 7`, `ℹ fail 0`.
+Expected: PASS — `ℹ tests 14`, `ℹ pass 14`, `ℹ fail 0`.
 
 - [ ] **Step 9: Прогнать все тесты функций и линтер**
 
 Run: `npm run test:functions && npm run lint:functions`
-Expected: код выхода 0; юнит-тесты `ℹ pass 46`, строки `PASS` старых тестов, тесты на эмуляторе `ℹ pass 7`; линтер без ошибок.
+Expected: код выхода 0; юнит-тесты `ℹ pass 47`, строки `PASS` старых тестов, тесты на эмуляторе `ℹ pass 14`; линтер без ошибок.
 
 - [ ] **Step 10: Commit**
 
@@ -1250,23 +1531,27 @@ git add functions/package.json package.json eslint.config.js functions/test/emul
 git commit -F - <<'EOF'
 feat(functions): v2 notification scheduler with Firestore emulator tests
 
+Undelivered notifications are retried for 10 minutes after their moment
+(issue #93); only root users/{uid}/tasks paths count; a dead token is
+cleared only if the device still has it.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
 ```
 
 ---
 
-### Task 5: Триггер задачи, каскад категорий, корзина и чистка ключей
+### Task 6: Триггер задачи, каскад категорий, корзина и чистка ключей
 
 **Files:**
 - Test: `functions/test/emulator/triggers.test.js`, `functions/test/emulator/maintenance.test.js`
 - Modify: `functions/lib/handlers.js` (заменить целиком)
 
 **Interfaces:**
-- Consumes (задачи 2 и 4): `planTaskWrite`, `sameSchedule`; `toPlainTask`, стенд `helpers.js`.
-- Produces (дополнительно к задаче 4) в `functions/lib/handlers.js`:
-  - `handleTaskWritten({ db, ref, before, after, now }) → plan | null` — `before`/`after` — данные документа или `null`;
-  - `clearDeletedCategory({ db, uid, categoryId }) → number` — сколько задач осталось без категории;
+- Consumes (задачи 3 и 5): `planTaskWrite`, `sameSchedule`; `toPlainTask`, стенд `helpers.js`.
+- Produces (дополнительно к задаче 5) в `functions/lib/handlers.js`:
+  - `handleTaskWritten({ db, ref, before, after, now }) → plan | null` — `before`/`after` — данные документа или `null`; план считается в транзакции от `before` к текущему документу, возвращается применённый план или `null`;
+  - `clearDeletedCategory({ db, uid, categoryId }) → number` — сколько задач осталось без категории; `0`, если категория с этим id снова существует;
   - `purgeDeletedTasks({ db, now }) → number` — сколько задач удалено;
   - `cleanupNotificationSent({ db, now }) → number` — сколько ключей удалено.
 
@@ -1331,11 +1616,24 @@ describe('onTaskWritten', () => {
         assert.equal('nextNotifyAt' in after, false);
     });
 
-    it('skips a stale event when the schedule changed again before the write', async () => {
+    it('plans against the current document when the schedule changed again before the write', async () => {
         const first = task();
         await ref().set({ ...first, reminders: [60] });
         await handleTaskWritten({ db, ref: ref(), before: null, after: first, now: NOW });
-        assert.equal('nextNotifyAt' in (await ref().get()).data(), false);
+        assert.equal((await ref().get()).get('nextNotifyAt').toMillis(), at('2026-10-15T09:00:00.000Z'));
+    });
+
+    it('keeps the due change of an event whose write was overtaken by a later one', async () => {
+        const s0 = task({ due: { local: '2026-10-01T12:00', tz: 'Europe/Berlin' }, pulseMuted: true, overdueAt: ts('2026-10-01T10:00:00.000Z') });
+        const s1 = { ...s0, due: task().due };
+        const s2 = { ...s1, reminders: [60] };
+        await ref().set(s2);
+        await handleTaskWritten({ db, ref: ref(), before: s1, after: s2, now: NOW });
+        await handleTaskWritten({ db, ref: ref(), before: s0, after: s1, now: NOW });
+        const after = (await ref().get()).data();
+        assert.equal(after.overdueAt, null);
+        assert.equal(after.pulseMuted, false);
+        assert.equal(after.nextNotifyAt.toMillis(), at('2026-10-15T09:00:00.000Z'));
     });
 });
 ```
@@ -1365,6 +1663,13 @@ describe('onCategoryDeleted', () => {
         assert.equal((await db.doc('users/alice/tasks/b').get()).get('categoryId'), 'work');
         assert.equal((await db.doc('users/bob/tasks/c').get()).get('categoryId'), 'home');
     });
+
+    it('keeps the tasks when a category with the same id exists again', async () => {
+        await db.doc('users/alice/categories/home').set({ schemaVersion: 2, name: 'Home', color: '#da3833', order: 1 });
+        await db.doc('users/alice/tasks/a').set(task({ categoryId: 'home' }));
+        assert.equal(await clearDeletedCategory({ db, uid: 'alice', categoryId: 'home' }), 0);
+        assert.equal((await db.doc('users/alice/tasks/a').get()).get('categoryId'), 'home');
+    });
 });
 
 describe('purgeDeletedTasks', () => {
@@ -1393,11 +1698,11 @@ describe('cleanupNotificationSent', () => {
 - [ ] **Step 2: Убедиться, что тесты падают**
 
 Run: `npm --prefix functions run test:emulator`
-Expected: FAIL — `ℹ tests 16`, `ℹ pass 7`, `ℹ fail 9`; ошибки `TypeError: … is not a function` у `handleTaskWritten`, `clearDeletedCategory`, `purgeDeletedTasks`, `cleanupNotificationSent`.
+Expected: FAIL — `ℹ tests 25`, `ℹ pass 14`, `ℹ fail 11`; ошибки `TypeError: … is not a function` у `handleTaskWritten`, `clearDeletedCategory`, `purgeDeletedTasks`, `cleanupNotificationSent`.
 
 - [ ] **Step 3: Заменить `functions/lib/handlers.js` целиком**
 
-Добавлены: импорт `planTaskWrite`, константы корзины и ключей, `deleteInBatches`, четыре обработчика и их экспорт; код задачи 4 не изменился.
+Добавлены: импорт `planTaskWrite`, константы корзины и ключей, `deleteInBatches`, четыре обработчика и их экспорт. Код задачи 5 не изменился — сверьте, что он в этом файле тот же.
 
 ```js
 /**
@@ -1406,14 +1711,18 @@ Expected: FAIL — `ℹ tests 16`, `ℹ pass 7`, `ℹ fail 9`; ошибки `Typ
  */
 const { FieldValue, Timestamp } = require('firebase-admin/firestore');
 const {
-    planSchedulerRun, planTaskWrite, sameSchedule, reminderKey, overdueKey, notificationDocId,
+    planSchedulerRun, planTaskWrite, sameSchedule, dueInstantMs, reminderKey, overdueKey, notificationDocId,
 } = require('./schedule');
 const { INVALID_TOKEN_CODES, buildMessages, pickLanguage, pickRecipients } = require('./messages');
 
 const BATCH_LIMIT = 450;
-const DAY_MS = 24 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+const DAY_MS = 24 * 60 * MINUTE_MS;
 const TRASH_DAYS = 30;
 const SENT_KEEP_DAYS = 7;
+// A notification nobody received (no recipients, every send failed) is retried by the next
+// passes for this long after its moment, then dropped (issue #93).
+const RETRY_WINDOW_MS = 10 * MINUTE_MS;
 
 const msOf = (value) => (value && typeof value.toMillis === 'function' ? value.toMillis() : null);
 
@@ -1431,10 +1740,12 @@ function toPlainTask(data) {
     };
 }
 
-// Only users/{uid}/tasks/{taskId}: a collection group query also sees any other "tasks" collection.
-const isUserTaskRef = (ref) => ref.parent.id === 'tasks' && ref.parent.parent !== null
-    && ref.parent.parent.parent.id === 'users';
+// Only the root path users/{uid}/tasks/{taskId}: a collection group query also sees any other
+// "tasks" collection, including user-mindmaps/{other}/users/{uid}/tasks/... written by another user.
+const USER_TASK_PATH = /^users\/[^/]+\/tasks\/[^/]+$/;
+const isUserTaskRef = (ref) => USER_TASK_PATH.test(ref.path);
 
+// overdueAt is never deleted, only set to null: the rules compare it on every client update.
 const serverMs = (ms) => (ms === null ? FieldValue.delete() : Timestamp.fromMillis(ms));
 
 async function deleteInBatches(db, refs) {
@@ -1456,16 +1767,41 @@ async function claimKey(db, key, now) {
     }
 }
 
-/** Sends one notification to the user's devices; dead tokens get fcmToken = null. */
+// A dead token is cleared only if the device still has it: it may have registered a new one meanwhile.
+async function clearDeadToken(db, uid, deviceId, token) {
+    const ref = db.doc(`users/${uid}/devices/${deviceId}`);
+    await db.runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        if (snap.exists && snap.get('fcmToken') === token) tx.update(ref, { fcmToken: null });
+    });
+}
+
+/** Sends one notification to the user's devices; returns how many devices got it. */
 async function sendToRecipients({ db, messaging, uid, recipients, message }) {
-    if (recipients.length === 0) return 0;
     const messages = buildMessages({ ...message, tokens: recipients.map((r) => r.token) });
     const result = await messaging.sendEach(messages);
     await Promise.all(result.responses.map((response, i) => {
         if (response.success || !INVALID_TOKEN_CODES.has(response.error && response.error.code)) return null;
-        return db.doc(`users/${uid}/devices/${recipients[i].id}`).update({ fcmToken: null }).catch(() => null);
+        return clearDeadToken(db, uid, recipients[i].id, recipients[i].token).catch(() => null);
     }));
     return result.successCount;
+}
+
+/**
+ * Sends a notification once (issue #93): true when at least one device got it or another run
+ * already did. Without recipients nothing is claimed; when every send fails the key is freed,
+ * so a later pass can retry.
+ */
+async function deliverOnce({ db, messaging, uid, recipients, key, message, now }) {
+    if (recipients.length === 0) return false;
+    if (!(await claimKey(db, key, now))) return true;
+    try {
+        if (await sendToRecipients({ db, messaging, uid, recipients, message }) > 0) return true;
+    } catch (e) {
+        console.error('scheduleNotifications: send failed', uid, message.taskId, e && e.code);
+    }
+    await db.collection('notification-sent').doc(notificationDocId(key)).delete();
+    return false;
 }
 
 /** One scheduler pass over one due task (spec 4.4). */
@@ -1473,15 +1809,20 @@ async function processTask({ db, messaging, uid, snap, lang, recipients, now }) 
     const task = toPlainTask(snap.data());
     const plan = planSchedulerRun(task, now);
     const message = { taskId: snap.id, taskTitle: task.title, lang };
-    try {
-        if (plan.overdue && await claimKey(db, overdueKey(uid, snap.id, task.due), now)) {
-            await sendToRecipients({ db, messaging, uid, recipients, message: { ...message, type: 'overdue' } });
-        } else if (plan.reminder !== null && await claimKey(db, reminderKey(uid, snap.id, plan.reminder, task.due), now)) {
-            await sendToRecipients({ db, messaging, uid, recipients, message: { ...message, type: 'reminder', minutes: plan.reminder } });
-        }
-    } catch (e) {
-        console.error('scheduleNotifications: send failed', uid, snap.id, e);
+    const due = dueInstantMs(task);
+    let eventAt = null;
+    let delivered = true;
+    if (plan.overdue) {
+        eventAt = due;
+        delivered = await deliverOnce({ db, messaging, uid, recipients, now,
+            key: overdueKey(uid, snap.id, task.due), message: { ...message, type: 'overdue' } });
+    } else if (plan.reminder !== null) {
+        eventAt = due - plan.reminder * MINUTE_MS;
+        delivered = await deliverOnce({ db, messaging, uid, recipients, now,
+            key: reminderKey(uid, snap.id, plan.reminder, task.due), message: { ...message, type: 'reminder', minutes: plan.reminder } });
     }
+    // Not delivered yet: nextNotifyAt stays, so the next passes retry within the window.
+    if (!delivered && now - eventAt < RETRY_WINDOW_MS) return;
     // Server fields are written only if the task still has the schedule this pass worked from.
     await db.runTransaction(async (tx) => {
         const fresh = await tx.get(snap.ref);
@@ -1530,32 +1871,41 @@ async function runScheduler({ db, messaging, now }) {
     return { tasks: [...byUser.values()].reduce((n, docs) => n + docs.length, 0) };
 }
 
-/** onTaskWritten: keeps nextNotifyAt, overdueAt and pulseMuted in step with the schedule (spec 6). */
+/**
+ * onTaskWritten: keeps nextNotifyAt, overdueAt and pulseMuted in step with the schedule (spec 6).
+ * Returns the applied plan or null.
+ */
 async function handleTaskWritten({ db, ref, before, after, now }) {
     if (!after) return null;
-    const afterTask = toPlainTask(after);
-    const plan = planTaskWrite(before ? toPlainTask(before) : null, afterTask, now);
-    if (!plan || Object.keys(plan).length === 0) return null;
+    const beforeTask = before ? toPlainTask(before) : null;
+    if (beforeTask && sameSchedule(beforeTask, toPlainTask(after))) return null;
+    let applied = null;
     await db.runTransaction(async (tx) => {
         const fresh = await tx.get(ref);
-        if (!fresh.exists || !sameSchedule(toPlainTask(fresh.data()), afterTask)) return;
+        if (!fresh.exists) return;
+        // Planned against the current document, not the event's after-state: when a later write
+        // landed first, this event's due change (pulse, overdue mark) is still applied.
+        const plan = planTaskWrite(beforeTask, toPlainTask(fresh.data()), now);
+        if (!plan || Object.keys(plan).length === 0) return;
         const updates = {};
         if ('nextNotifyAt' in plan) updates.nextNotifyAt = serverMs(plan.nextNotifyAt);
         if ('overdueAt' in plan) updates.overdueAt = plan.overdueAt === null ? null : Timestamp.fromMillis(plan.overdueAt);
         if ('pulseMuted' in plan) updates.pulseMuted = plan.pulseMuted;
         tx.update(ref, updates);
+        applied = plan;
     });
-    return plan;
+    return applied;
 }
 
 /** onCategoryDeleted: tasks of the deleted category become uncategorized. */
 async function clearDeletedCategory({ db, uid, categoryId }) {
+    // A category created again with the same id (backup restored right after the delete) keeps its tasks.
+    if ((await db.doc(`users/${uid}/categories/${categoryId}`).get()).exists) return 0;
     const snap = await db.collection(`users/${uid}/tasks`).where('categoryId', '==', categoryId).get();
-    for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
-        const batch = db.batch();
-        snap.docs.slice(i, i + BATCH_LIMIT).forEach((d) => batch.update(d.ref, { categoryId: null }));
-        await batch.commit();
-    }
+    const writer = db.bulkWriter();
+    writer.onWriteError(() => false); // a task deleted meanwhile fails alone, the rest still go through
+    snap.docs.forEach((d) => writer.update(d.ref, { categoryId: null }).catch(() => null));
+    await writer.close();
     return snap.size;
 }
 
@@ -1593,7 +1943,7 @@ module.exports = {
 - [ ] **Step 4: Убедиться, что тесты проходят**
 
 Run: `npm --prefix functions run test:emulator`
-Expected: PASS — `ℹ tests 16`, `ℹ pass 16`, `ℹ fail 0`.
+Expected: PASS — `ℹ tests 25`, `ℹ pass 25`, `ℹ fail 0`.
 
 - [ ] **Step 5: Проверить линтером**
 
@@ -1607,13 +1957,16 @@ git add functions/test/emulator/triggers.test.js functions/test/emulator/mainten
 git commit -F - <<'EOF'
 feat(functions): task trigger, category cascade, trash purge and key cleanup
 
+The trigger plans inside its transaction, from the event's before-state
+to the current document, so a due change survives a later write.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
 ```
 
 ---
 
-### Task 6: `index.js` на v2, удаление кода v1, документация
+### Task 7: `index.js` на v2, удаление кода v1, документация
 
 **Files:**
 - Test: `functions/test/emulator/exports.test.js`
@@ -1623,8 +1976,11 @@ EOF
 - Modify: `docs/notifications.md` (заменить целиком), `CLAUDE.md`
 
 **Interfaces:**
-- Consumes (задачи 4 и 5): `runScheduler`, `handleTaskWritten`, `clearDeletedCategory`, `purgeDeletedTasks`, `cleanupNotificationSent`.
-- Produces: экспорт `functions/index.js` для подплана 0.7 (выкатка): `scheduleNotifications` (`* * * * *`), `onTaskWritten` (`users/{uid}/tasks/{taskId}`), `onCategoryDeleted` (`users/{uid}/categories/{categoryId}`), `purgeDeletedTasks` (`0 3 * * *`, UTC), `cleanupNotificationSent` (`0 * * * *`); `scheduleDueDateNotifications` и `maintainNextNotifyAt` в коде больше нет — при выкатке 0.7 их удалит `firebase deploy`.
+- Consumes (задачи 5 и 6): `runScheduler`, `handleTaskWritten`, `clearDeletedCategory`, `purgeDeletedTasks`, `cleanupNotificationSent`.
+- Produces для подплана 0.7 (выкатка):
+  - экспорт `functions/index.js`: `scheduleNotifications` (`* * * * *`), `onTaskWritten` (`users/{uid}/tasks/{taskId}`, `now` = время записи `event.time`), `onCategoryDeleted` (`users/{uid}/categories/{categoryId}`), `purgeDeletedTasks` (`0 3 * * *`, UTC), `cleanupNotificationSent` (`0 * * * *`);
+  - `scheduleDueDateNotifications` и `maintainNextNotifyAt` в коде больше нет. Firebase CLI 15 удаляет такие функции только с `--force` (в неинтерактивном режиме без него деплой прерывается целиком) или по ответу «да» (по умолчанию «нет» — тогда v1 остаётся работать и шлёт дубли по `user-bubbles`). После выкатки проверить, что v1 удалены;
+  - перед выкаткой 0.7 удалить `scripts/stage0-deploy-guard.js` и хуки в `firebase.json`; деплой функций — с `FUNCTIONS_DISCOVERY_TIMEOUT=60`.
 
 - [ ] **Step 1: Написать падающий тест `functions/test/emulator/exports.test.js`**
 
@@ -1665,7 +2021,7 @@ describe('index.js', () => {
 - [ ] **Step 2: Убедиться, что тест падает**
 
 Run: `npm --prefix functions run test:emulator`
-Expected: FAIL — `ℹ tests 20`, `ℹ pass 16`, `ℹ fail 4`; падают все четыре теста `index.js` (сейчас он экспортирует функции v1).
+Expected: FAIL — `ℹ tests 29`, `ℹ pass 25`, `ℹ fail 4`; падают все четыре теста `index.js` (сейчас он экспортирует функции v1).
 
 - [ ] **Step 3: Заменить `functions/index.js` целиком**
 
@@ -1692,10 +2048,12 @@ exports.scheduleNotifications = onSchedule({ schedule: '* * * * *', region: REGI
 });
 
 // Any client write of a task: keeps nextNotifyAt, overdueAt and pulseMuted in step with its schedule.
+// `now` is the time of the write, not of this (possibly late) run: events after the write still count.
 exports.onTaskWritten = onDocumentWritten({ document: 'users/{uid}/tasks/{taskId}', region: REGION, maxInstances: 10 }, async (event) => {
     const before = event.data.before.exists ? event.data.before.data() : null;
     const after = event.data.after.exists ? event.data.after.data() : null;
-    await handlers.handleTaskWritten({ db, ref: event.data.after.ref, before, after, now: Date.now() });
+    const now = Date.parse(event.time) || Date.now();
+    await handlers.handleTaskWritten({ db, ref: event.data.after.ref, before, after, now });
 });
 
 // A deleted category leaves its tasks without a category.
@@ -1717,7 +2075,7 @@ exports.cleanupNotificationSent = onSchedule({ schedule: '0 * * * *', region: RE
 - [ ] **Step 4: Убедиться, что тесты проходят**
 
 Run: `npm --prefix functions run test:emulator`
-Expected: PASS — `ℹ tests 20`, `ℹ pass 20`, `ℹ fail 0`.
+Expected: PASS — `ℹ tests 29`, `ℹ pass 29`, `ℹ fail 0`.
 
 - [ ] **Step 5: Удалить тесты v1 и оставить в `npm test` только юнит-тесты**
 
@@ -1726,13 +2084,13 @@ Run: `git rm functions/test-next-notify.js functions/test-tz.js`
 В `functions/package.json` заменить строку
 
 ```json
-        "test": "node --test test/unit/*.test.js && TZ=UTC node test-next-notify.js && TZ=UTC node test-tz.js",
+        "test": "node --test --test-reporter=spec test/unit/*.test.js && TZ=UTC node test-next-notify.js && TZ=UTC node test-tz.js",
 ```
 
 на
 
 ```json
-        "test": "node --test test/unit/*.test.js",
+        "test": "node --test --test-reporter=spec test/unit/*.test.js",
 ```
 
 - [ ] **Step 6: Удалить библиотеки дат из функций**
@@ -1748,7 +2106,7 @@ Expected: в `dependencies` остались только `firebase-admin` и `f
 - [ ] **Step 7: Прогнать тесты функций и линтер**
 
 Run: `npm run test:functions && npm run lint:functions`
-Expected: код выхода 0; юнит-тесты `ℹ tests 46`, `ℹ pass 46`; тесты на эмуляторе `ℹ tests 20`, `ℹ pass 20`; строк `PASS` старых тестов больше нет; линтер без ошибок.
+Expected: код выхода 0; юнит-тесты `ℹ tests 47`, `ℹ pass 47`; тесты на эмуляторе `ℹ tests 29`, `ℹ pass 29`; строк `PASS` старых тестов больше нет; линтер без ошибок.
 
 - [ ] **Step 8: Commit**
 
@@ -1758,7 +2116,8 @@ git commit -F - <<'EOF'
 feat(functions): wire the v2 functions, drop the v1 notifier and date libraries
 
 scheduleDueDateNotifications and maintainNextNotifyAt are gone from the
-code; the deploy of sub-plan 0.7 removes them from production.
+code; the deploy of sub-plan 0.7 removes them from production. The task
+trigger plans with the time of the write (event.time).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -1839,7 +2198,20 @@ EOF
 - После прохода `nextNotifyAt` = ближайшее событие позже `now`; событий нет — поле удаляется.
 - Служебные поля пишутся в транзакции, заново прочитав задачу: если пользователь за время
   прохода изменил расписание, запись пропускается — новое расписание обработает триггер.
-- Из collectionGroup `tasks` берутся только документы `users/{uid}/tasks/{taskId}`.
+- Из collectionGroup `tasks` берутся только документы с путём `users/{uid}/tasks/{taskId}` от
+  корня базы (проверяется весь путь, а не имена коллекций).
+
+### Недоставленные уведомления (#93)
+
+- Если у пользователя нет получателей, ключ дедупликации не ставится и `nextNotifyAt` не
+  двигается: следующие проходы пробуют снова.
+- Если ни одно устройство не получило уведомление (все отправки упали или `sendEach` бросил
+  исключение), ключ снимается, и попытка тоже повторяется.
+- Повторы идут 10 минут после момента события, потом событие отбрасывается; у «просрочено»
+  при этом всё равно ставится `overdueAt`. Напоминание повторяется, только пока срок не наступил.
+- Доставлено хотя бы на одно устройство — уведомление считается отправленным.
+- Сбой процесса между созданием ключа и его снятием теряет событие: «не больше одного раза»
+  важнее повтора.
 
 ### Триггер `onTaskWritten`
 
@@ -1854,8 +2226,10 @@ EOF
   срока нет.
 
 Триггер пишет только служебные поля, поэтому его собственная запись расписание не меняет и
-повторно ничего не делает. Запись тоже идёт в транзакции и пропускается, если расписание успело
-измениться ещё раз.
+повторно ничего не делает. В транзакции план пересчитывается от состояния до записи к текущему
+документу: если расписание успело измениться ещё раз, применяется актуальное, а смена срока из
+более ранней записи не теряется. Текущий момент для триггера — время записи (`event.time`), а не
+время запуска: события между записью и запоздавшим запуском всё равно уведомляются.
 
 ### Дедупликация
 
@@ -1882,11 +2256,15 @@ EOF
 Тексты лежат в `functions/locales`: «За 1 годину до строку: …», «2 days before: …»,
 «Прострочено: …». Время до срока — в самых крупных целых единицах (часы, дни, недели) с
 формами множественного числа (`Intl.PluralRules`). Название задачи в тексте обрезается до
-200 символов, чтобы сообщение не упёрлось в лимит FCM 4 КБ.
+200 символов, чтобы сообщение не упёрлось в лимит FCM 4 КБ; пустое после обрезки пробелов
+название показывается как «Без назви» / «Untitled».
 
 Ошибки FCM `messaging/registration-token-not-registered` и
 `messaging/invalid-registration-token` означают мёртвый токен: устройству ставится
-`fcmToken = null`. При остальных ошибках токен остаётся.
+`fcmToken = null` — в транзакции и только если у устройства всё ещё этот токен (оно могло
+успеть зарегистрировать новый). При остальных ошибках токен остаётся. Испорченный токен через
+`sendEach` (HTTP v1) даёт `messaging/invalid-argument` — тот же код, что у кривого сообщения,
+поэтому такой токен сервер не обнуляет.
 
 ## Тайминг расписания: `every N` vs `*/N`
 
@@ -1911,12 +2289,16 @@ EOF
 
 > ⚠️ Из ветки `stage-0-data-contract-v2` до переезда (подплан 0.7) `firebase deploy` не
 > запускать: правила Firestore и функции там уже под формат v2 и сломают прод-веб v1.
-> Срочные правки прод-функций — из `main`. Порядок выкатки v2 описывает подплан 0.7.
+> Технически деплой блокирует `scripts/stage0-deploy-guard.js` (predeploy-хук в `firebase.json`),
+> подплан 0.7 его удаляет. Срочные правки прод-функций — из `main`. Порядок выкатки v2 описывает
+> подплан 0.7; при деплое функций под нагрузкой нужен `FUNCTIONS_DISCOVERY_TIMEOUT=60`.
 
 ### Диагностика
 
-`firebase functions:log --only scheduleNotifications` — функции пишут в лог только ошибки
-(`console.error`).
+Функции пишут в лог только ошибки (`console.error`). У функций Gen2 `firebase functions:log`
+почти пуст; смотреть в Cloud Logging с фильтром
+`resource.type="cloud_run_revision" AND resource.labels.service_name="schedulenotifications"`
+(имя сервиса — имя функции в нижнем регистре).
 
 - **Уведомления молчат** → у активной задачи есть `nextNotifyAt`? у устройства
   `notificationsEnabled == true` и есть `fcmToken`? индексы **Enabled**?
@@ -1937,6 +2319,8 @@ EOF
   `admin.firestore.*` в эмуляторе функций получается `undefined`.
 - Админ-SDK обходит правила Firestore, поэтому сервер пишет только служебные поля и не трогает
   остальное.
+- `overdueAt` сервер никогда не удаляет, только ставит `null`: правила сравнивают это поле при
+  каждой правке задачи клиентом, и без него правки отклонялись бы.
 - Подколлекция `tasks` где-то кроме `users/{uid}` попадает в collectionGroup-запрос — сервер
   её отбрасывает (`isUserTaskRef` в `lib/handlers.js`).
 ````
@@ -1968,16 +2352,16 @@ The scheduled Cloud Function reads tasks **only** from the subcollection via an 
 на
 
 ```
-On branch `stage-0-data-contract-v2` the Cloud Functions read v2 tasks via an indexed `collectionGroup('tasks')` query (`status` + `nextNotifyAt`), only under `users/{uid}/tasks`; production keeps the v1 functions on `user-bubbles` until sub-plan 0.7. See [docs/notifications.md](docs/notifications.md).
+On branch `stage-0-data-contract-v2` the Cloud Functions read v2 tasks via an indexed `collectionGroup('tasks')` query (`status` + `nextNotifyAt`), only under the root path `users/{uid}/tasks`; production keeps the v1 functions on `user-bubbles` until sub-plan 0.7, and `scripts/stage0-deploy-guard.js` blocks `firebase deploy` from this branch until then. See [docs/notifications.md](docs/notifications.md).
 ```
 
 Заменить раздел от строки `` `functions/index.js` exports **three** functions (region `europe-west1`): `` до строки `- Locales `en` and `uk`; `ru` → `en` fallback` включительно на
 
 ```
 `functions/index.js` exports **five** functions (region `europe-west1`; data contract v2, in production only after sub-plan 0.7):
-- `scheduleNotifications` — `onSchedule` every minute (`* * * * *`); active tasks with `nextNotifyAt <= now` get FCM **reminder** / **overdue** on the user's devices with `notificationsEnabled` and a token, in `settings.language`; dedups via `notification-sent`
+- `scheduleNotifications` — `onSchedule` every minute (`* * * * *`); active tasks with `nextNotifyAt <= now` get FCM **reminder** / **overdue** on the user's devices with `notificationsEnabled` and a token, in `settings.language`; dedups via `notification-sent`; an undelivered notification is retried for 10 minutes (#93)
 - `onTaskWritten` — `onDocumentWritten` on `users/{uid}/tasks/{taskId}`; keeps `nextNotifyAt`, `overdueAt` (silent overdue) and `pulseMuted` in step with the task's schedule
-- `onCategoryDeleted` — `onDocumentDeleted` on `users/{uid}/categories/{categoryId}`; sets `categoryId = null` on that category's tasks
+- `onCategoryDeleted` — `onDocumentDeleted` on `users/{uid}/categories/{categoryId}`; sets `categoryId = null` on that category's tasks unless the category exists again
 - `purgeDeletedTasks` — `onSchedule` daily (`0 3 * * *`, UTC); deletes tasks in the trash for more than 30 days
 - `cleanupNotificationSent` — `onSchedule` hourly (`0 * * * *`); trims `notification-sent` entries older than 7 days
 - Logic lives in `functions/lib/`; locales `en` and `uk`, anything else → `en`
@@ -1986,7 +2370,7 @@ On branch `stage-0-data-contract-v2` the Cloud Functions read v2 tasks via an in
 - [ ] **Step 11: Полная проверка**
 
 Run: `npm run verify`
-Expected: код выхода 0; веб — `Tests  460 passed (460)`; функции — юнит `ℹ pass 46`, эмулятор `ℹ pass 20`; правила — `Tests  88 passed (88)`; линтер без ошибок.
+Expected: код выхода 0; веб — столько же тестов, сколько давал `verify` до задачи 1 (после слияния `9f4fb5f` — `Tests  468 passed (468)`); функции — юнит `ℹ pass 47`, эмулятор `ℹ pass 29`; правила — `Tests  88 passed (88)`; линтер без ошибок.
 
 - [ ] **Step 12: Commit**
 
