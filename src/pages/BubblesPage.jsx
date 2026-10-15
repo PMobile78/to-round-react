@@ -11,6 +11,8 @@ import { LS } from '../utils/storageKeys';
 import BubblesDialogs from '../components/BubblesDialogs';
 import TextOverlay from '../components/TextOverlay';
 import { logoutUser } from '../services/authService';
+import { db } from '../firebase';
+import { subscribeTasks } from '../services/data/tasks';
 import {
     loadBubblesFromFirestore,
     saveTagsToFirestore,
@@ -289,7 +291,6 @@ const BubblesPage = ({ user, themeMode }) => {
     // BubblesStore in Stage E of 010d; only the refs are consumed here.
     const {
         stickyPulseRef,
-        lastDueRef,
         manuallyStoppedPulsingRef,
         notifiedBubblesRef,
         notifiedBubbleNotificationsRef
@@ -314,13 +315,12 @@ const BubblesPage = ({ user, themeMode }) => {
         engineRef,
         renderRef,
         wallsRef,
-        stickyPulseRef,
-        lastDueRef,
         manuallyStoppedPulsingRef,
         editDialog,
         selectedBubble,
         liveEditRef,
         bubbles,
+        subscribeTasks: (onChanges, onError) => subscribeTasks(db, user.uid, onChanges, onError),
         setBubbles,
         setCanvasSize,
         setSelectedBubble,

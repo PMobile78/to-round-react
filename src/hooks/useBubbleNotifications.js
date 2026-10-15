@@ -44,7 +44,6 @@ export function useBubbleNotifications({
 
     // Refs for overdue/sticky pulse tracking
     const stickyPulseRef = useRef(new Set()); // keep pulsing after repeat-every reschedule
-    const lastDueRef = useRef(new Map());
     const manuallyStoppedPulsingRef = useRef(new Set()); // задачи, которые пользователь остановил вручную
 
     const notifiedBubblesRef = useRef(new Set());
@@ -252,7 +251,6 @@ export function useBubbleNotifications({
 
     return {
         stickyPulseRef,
-        lastDueRef,
         manuallyStoppedPulsingRef,
         notifiedBubblesRef,
         notifiedBubbleNotificationsRef

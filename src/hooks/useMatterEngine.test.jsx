@@ -3,10 +3,6 @@ import React, { StrictMode, act, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import Matter from 'matter-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-    loadBubblesFromFirestore,
-    subscribeToBubblesUpdates,
-} from '../services/firestoreService';
 import { useMatterEngine } from './useMatterEngine';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -31,41 +27,27 @@ vi.mock('matter-js', async (importOriginal) => {
         },
     };
 });
-vi.mock('../services/firestoreService', () => ({
-    loadBubblesFromFirestore: vi.fn(),
-    cleanupOldDeletedBubbles: vi.fn(async (bubbles) => bubbles),
-    subscribeToBubblesUpdates: vi.fn(() => vi.fn()),
-}));
 vi.mock('../utils/logger', () => ({
     default: { error: vi.fn() },
 }));
 
-// A bubble document as serializeBubble writes it to user-bubbles/{uid}/bubbles/{id}.
-const storedBubble = (id, overrides = {}) => ({
+// A task in backup form, as subscribeTasks delivers it.
+const task = (id, overrides = {}) => ({
     id,
-    radius: 50,
     title: `Task ${id}`,
     description: '',
-    fillStyle: 'transparent',
-    strokeStyle: '#3B7DED',
-    tagId: null,
+    categoryId: null,
     status: 'active',
+    due: null,
+    reminders: [],
+    repeat: null,
+    radius: 50,
+    pulseMuted: false,
     createdAt: '2026-10-14T20:00:00.000Z',
     updatedAt: '2026-10-14T20:00:00.000Z',
     deletedAt: null,
-    dueDate: null,
-    tz: 'Europe/Kyiv',
-    notifications: [],
-    recurrence: null,
-    overdueSticky: false,
-    overdueAt: null,
-    overduePulseSuppressed: false,
-    useRichText: false,
     ...overrides,
 });
-
-// Let loadInitialBubbles' awaits settle.
-const flushLoad = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
 describe('useMatterEngine', () => {
     let container;
@@ -75,11 +57,11 @@ describe('useMatterEngine', () => {
     let bubbles; // latest committed bubbles state
     let setBubblesState; // the bubbles setter, for updates the page makes itself (Save)
     let committedBodies; // every Matter body that reached a committed bubbles state
+    let deliver; // the onChanges callback useMatterEngine gave subscribeTasks
+    let subscribeTasks;
 
-    const pushSnapshot = (docs) => {
-        const listener = subscribeToBubblesUpdates.mock.calls[0][0];
-        act(() => listener(docs));
-    };
+    const push = (changes, initial = false) => act(() => deliver(changes, { initial }));
+    const added = (...tasks) => tasks.map((t) => ({ type: 'added', task: t }));
 
     const recordCommit = (state) => {
         bubbles = state;
@@ -96,6 +78,7 @@ describe('useMatterEngine', () => {
             editDialog: false,
             selectedBubble: null,
             bubbles: state,
+            subscribeTasks,
             setBubbles,
             setCanvasSize: vi.fn(),
             setSelectedBubble: vi.fn(),
@@ -126,13 +109,15 @@ describe('useMatterEngine', () => {
         hookProps = {};
         bubbles = undefined;
         committedBodies = new Set();
+        subscribeTasks = vi.fn((onChanges) => {
+            deliver = onChanges;
+            return vi.fn();
+        });
         refs = {
             canvasRef: { current: container },
             engineRef: { current: null },
             renderRef: { current: null },
             wallsRef: { current: [] },
-            stickyPulseRef: { current: new Set() },
-            lastDueRef: { current: new Map() },
             manuallyStoppedPulsingRef: { current: new Set() },
             liveEditRef: { current: { editDialog: false, selectedBubbleId: null } },
         };
@@ -145,115 +130,126 @@ describe('useMatterEngine', () => {
         vi.restoreAllMocks();
     });
 
-    it('gives a bubble created on another device a Matter body', async () => {
-        loadBubblesFromFirestore.mockResolvedValue([storedBubble('local')]);
+    it('gives every task of the first delivery one Matter body', () => {
         act(() => root.render(<Probe />));
-        await flushLoad();
+        push(added(task('a'), task('b', { radius: 40 })), true);
+
+        expect(bubbles.map((b) => [b.id, b.body.circleRadius])).toEqual([['a', 50], ['b', 40]]);
+    });
+
+    it('gives a task created on another device a Matter body', () => {
+        act(() => root.render(<Probe />));
+        push(added(task('local')), true);
         const localBody = bubbles[0].body;
 
-        const remote = storedBubble('remote', { radius: 40, title: 'Created elsewhere', useRichText: true });
-        pushSnapshot([storedBubble('local'), remote]);
+        push(added(task('remote', { radius: 40, title: 'Created elsewhere', categoryId: 'work' })));
 
-        const added = bubbles.find((b) => b.id === 'remote');
-        expect(added).toMatchObject({ title: 'Created elsewhere', radius: 40, useRichText: true, tz: 'Europe/Kyiv' });
-        expect(added.body).toBeDefined();
-        expect(added.body.circleRadius).toBe(40);
+        const remote = bubbles.find((b) => b.id === 'remote');
+        expect(remote).toMatchObject({ title: 'Created elsewhere', radius: 40, tagId: 'work', categoryId: 'work' });
+        expect(remote.body.circleRadius).toBe(40);
         expect(bubbles.find((b) => b.id === 'local').body).toBe(localBody);
     });
 
-    it('creates the body only once when the same remote doc is delivered twice', async () => {
-        loadBubblesFromFirestore.mockResolvedValue([]);
+    it('creates the body only once when the same task is delivered twice', () => {
         act(() => root.render(<Probe />));
-        await flushLoad();
+        push([], true);
 
-        pushSnapshot([storedBubble('remote')]);
+        push(added(task('remote')));
         const body = bubbles[0].body;
-        pushSnapshot([storedBubble('remote')]);
+        push(added(task('remote')));
 
         expect(bubbles).toHaveLength(1);
         expect(bubbles[0].body).toBe(body);
     });
 
-    it("styles a remote bubble's body with its tag fill and stored stroke", async () => {
+    it("styles a new body with its category's fill and colour", () => {
         hookProps = {
-            tags: [{ id: 'work', name: 'Work', color: '#2e7d32' }],
+            tags: [{ id: 'work', name: 'Work', color: '#2e7d32', order: 1 }],
             getBubbleFillStyle: (tagColor) => (tagColor ? `fill ${tagColor}` : 'fill none'),
         };
-        loadBubblesFromFirestore.mockResolvedValue([]);
         act(() => root.render(<Probe />));
-        await flushLoad();
+        push(added(task('remote', { categoryId: 'work' }), task('plain')), true);
 
-        pushSnapshot([storedBubble('remote', { tagId: 'work', strokeStyle: '#123456' })]);
-
-        expect(bubbles[0].body.render).toMatchObject({ fillStyle: 'fill #2e7d32', strokeStyle: '#123456', lineWidth: 1.5 });
+        expect(bubbles[0].body.render).toMatchObject({ fillStyle: 'fill #2e7d32', strokeStyle: '#2e7d32', lineWidth: 1.5 });
+        expect(bubbles[1].body.render).toMatchObject({ fillStyle: 'fill none', strokeStyle: '#B0B0B0' });
     });
 
-    it('keeps the Matter body when another device edits a bubble', async () => {
-        loadBubblesFromFirestore.mockResolvedValue([storedBubble('a')]);
+    it('keeps the Matter body and the other bubbles when another device edits a task', () => {
         act(() => root.render(<Probe />));
-        await flushLoad();
-        const body = bubbles[0].body;
+        push(added(task('a'), task('b')), true);
+        const [a, b] = bubbles;
 
-        pushSnapshot([storedBubble('a', { title: 'Renamed elsewhere', radius: 70 })]);
+        push([{ type: 'modified', task: task('b', { title: 'Renamed elsewhere', radius: 70 }) }]);
 
-        expect(bubbles[0]).toMatchObject({ title: 'Renamed elsewhere', radius: 70 });
-        expect(bubbles[0].body).toBe(body);
+        expect(bubbles[0]).toBe(a);
+        expect(bubbles[1]).toMatchObject({ title: 'Renamed elsewhere', radius: 70 });
+        expect(bubbles[1].body).toBe(b.body);
     });
 
-    it('removes the Matter body of a bubble deleted on another device', async () => {
-        loadBubblesFromFirestore.mockResolvedValue([storedBubble('a'), storedBubble('b')]);
+    it('removes the Matter body of a task deleted on another device', () => {
         act(() => root.render(<Probe />));
-        await flushLoad();
+        push(added(task('a'), task('b')), true);
         // useBubbleWorld puts the visible bodies into the world.
         const world = refs.engineRef.current.world;
         bubbles.forEach((b) => Matter.World.add(world, b.body));
         const deletedBody = bubbles.find((b) => b.id === 'b').body;
 
-        pushSnapshot([storedBubble('a')]);
+        push([{ type: 'removed', task: task('b') }]);
 
         expect(bubbles.map((b) => b.id)).toEqual(['a']);
         expect(world.bodies.includes(deletedBody)).toBe(false);
     });
 
-    it('leaves no orphaned body when a cache snapshot lands before the initial load', async () => {
-        // persistentLocalCache: the listener's first snapshot can come from IndexedDB before
-        // getDocs answers; setBubbles(initialBubbles) then replaces that state.
-        let resolveLoad;
-        loadBubblesFromFirestore.mockReturnValue(new Promise((resolve) => { resolveLoad = resolve; }));
+    it('leaves no orphaned body when a subscription delivers its first list again', () => {
         act(() => root.render(<Probe />));
+        push(added(task('a'), task('b')), true);
+        const world = refs.engineRef.current.world;
+        bubbles.forEach((b) => Matter.World.add(world, b.body));
 
-        pushSnapshot([storedBubble('a'), storedBubble('b')]);
-        resolveLoad([storedBubble('a'), storedBubble('b')]);
-        await flushLoad();
+        push(added(task('a'), task('b')), true);
 
         // useBubbleWorld adds every committed body to the Matter world, so a body that is no
         // longer in state stays there as an unlabeled ghost bubble.
         const finalBodies = bubbles.map((b) => b.body);
-        expect(finalBodies.every(Boolean)).toBe(true);
-        const orphanBodyIds = [...committedBodies]
-            .filter((body) => !finalBodies.includes(body))
-            .map((body) => body.id);
-        expect(orphanBodyIds).toEqual([]);
+        const ghosts = world.bodies.filter((body) => body.label === 'Circle Body' && !finalBodies.includes(body));
+        expect(bubbles).toHaveLength(2);
+        expect(ghosts).toEqual([]);
     });
 
-    it('places a body created after a resize inside the current canvas', async () => {
-        loadBubblesFromFirestore.mockResolvedValue([]);
+    it('places a body created after a resize inside the current canvas', () => {
         act(() => root.render(<Probe />));
-        await flushLoad();
+        push([], true);
         // The canvas shrank (window resize, phone rotation); useMatterResize →
         // updateRenderAndBounds keeps render.options in step with it.
         refs.renderRef.current.options.width = 300;
         refs.renderRef.current.options.height = 400;
         vi.spyOn(Math, 'random').mockReturnValue(0.999);
 
-        pushSnapshot([storedBubble('remote', { radius: 40 })]);
+        push(added(task('remote', { radius: 40 })));
 
         const { x, y } = bubbles[0].body.position;
         expect(x).toBeLessThanOrEqual(300 - 40);
         expect(y).toBeLessThanOrEqual(400 - 40);
     });
 
-    it('keeps the edit dialog closed after Save when a canvas click opened it', async () => {
+    it('follows "stop pulsing" set or cleared on another device', () => {
+        act(() => root.render(<Probe />));
+        push(added(task('a', { pulseMuted: true })), true);
+        expect(refs.manuallyStoppedPulsingRef.current.has('a')).toBe(true);
+
+        push([{ type: 'modified', task: task('a', { pulseMuted: false }) }]);
+        expect(refs.manuallyStoppedPulsingRef.current.has('a')).toBe(false);
+    });
+
+    it('stops listening when the canvas unmounts', () => {
+        act(() => root.render(<Probe />));
+        const unsubscribe = subscribeTasks.mock.results[0].value;
+        act(() => root.unmount());
+        root = createRoot(container);
+        expect(unsubscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the edit dialog closed after Save when a canvas click opened it', () => {
         // As in the app: the dialog state lives in BubblesPage, the bubbles in BubblesDataProvider.
         let setDialogOpen;
         let dialogOpen;
@@ -270,11 +266,10 @@ describe('useMatterEngine', () => {
             setEditBubbleSize: vi.fn(),
         };
         const createMouseConstraint = vi.spyOn(Matter.MouseConstraint, 'create');
-        loadBubblesFromFirestore.mockResolvedValue([storedBubble('a')]);
         // StrictMode as in src/index.jsx: there React calls state updaters a second time.
         const renderApp = () => root.render(<StrictMode><EditDialogState /><Probe /></StrictMode>);
         act(renderApp);
-        await flushLoad();
+        push(added(task('a')), true);
         // useBubbleWorld puts the visible bodies into the world.
         const { body } = bubbles[0];
         Matter.World.add(refs.engineRef.current.world, body);

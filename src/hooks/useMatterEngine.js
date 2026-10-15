@@ -1,19 +1,16 @@
 import { useEffect, useRef } from 'react';
 import Matter from 'matter-js';
 import { createWorldBounds } from '../utils/physicsUtils';
-import {
-    loadBubblesFromFirestore,
-    cleanupOldDeletedBubbles,
-    subscribeToBubblesUpdates,
-} from '../services/firestoreService';
-import { normalizeStoredBubble } from '../utils/bubbleData';
+import { bubbleFromTask } from '../services/data/bubbleModel';
+import { applyTaskChanges } from '../utils/taskSync';
 import logger from '../utils/logger';
 import { shouldPauseEngine } from '../utils/engineIdle';
 import { hexToRgba } from '../utils/colorUtils';
 
 /**
- * Initializes the Matter.js physics engine, renderer, and runner.
- * Loads initial bubbles from Firestore and subscribes to live updates.
+ * Initializes the Matter.js physics engine, renderer, and runner, and keeps the bubbles in step
+ * with the user's tasks through subscribeTasks(onChanges, onError) — the live changes of
+ * src/services/data/tasks.js, applied one by one (#94).
  *
  * Runs once on mount (empty dependency array — matches original behaviour).
  */
@@ -23,8 +20,6 @@ export function useMatterEngine({
     engineRef,
     renderRef,
     wallsRef,
-    stickyPulseRef,
-    lastDueRef,
     manuallyStoppedPulsingRef,
     // editDialog/selectedBubble are captured once at mount and stay stale inside the
     // subscription callback; live edit-dialog state is delivered via liveEditRef instead.
@@ -33,6 +28,8 @@ export function useMatterEngine({
     liveEditRef,
     // Bubbles state; the canvas click handler reads the latest value via bubblesRef.
     bubbles,
+    // (onChanges, onError) => unsubscribe: the signed-in user's live task changes.
+    subscribeTasks,
     // State setters
     setBubbles,
     setCanvasSize,
@@ -107,156 +104,63 @@ export function useMatterEngine({
         // Add walls to the world
         World.add(engine.world, walls);
 
-        // Stored bubble (Firestore doc) → in-memory bubble with a Matter.js body at a random
-        // position. Used by the initial load and by the live listener for ids it has not seen.
-        const createBubbleFromStored = (storedBubble) => {
-            // Create bubbles with random coordinates inside the current canvas: render.options
-            // follows resizes (useMatterResize), canvasSize is the size at mount.
+        // Task → bubble with a Matter.js body at a random spot inside the current canvas:
+        // render.options follows resizes (useMatterResize), canvasSize is the size at mount.
+        const createBubbleFromTask = (task) => {
             const { width, height } = render.options;
             const margin = isMobile ? 50 : 100;
             const x = Math.random() * (width - margin * 2) + margin;
             const y = Math.random() * (height - margin * 2) + margin;
-
-            // Определяем цвет тега для правильного fillStyle
-            let tagColor = null;
-            if (storedBubble.tagId) {
-                const tag = tags.find(t => t.id === storedBubble.tagId);
-                if (tag) {
-                    tagColor = tag.color;
-                }
-            }
+            const bubble = bubbleFromTask(task);
+            const tagColor = tags.find(t => t.id === bubble.tagId)?.color ?? null;
 
             return {
-                ...normalizeStoredBubble(storedBubble),
-                body: Matter.Bodies.circle(x, y, storedBubble.radius, {
+                ...bubble,
+                body: Matter.Bodies.circle(x, y, bubble.radius, {
                     restitution: 0.8,
                     frictionAir: 0.01,
                     render: {
                         fillStyle: getBubbleFillStyle(tagColor),
-                        strokeStyle: storedBubble.strokeStyle || theme?.custom?.bubble?.defaultStroke || '#2f6bdb',
+                        strokeStyle: tagColor || '#B0B0B0',
                         lineWidth: theme?.custom?.bubble?.strokeWidth ?? 1.5
                     }
                 })
             };
         };
 
-        // The live listener creates bodies only after the initial load has replaced the state:
-        // its first snapshot can come from the IndexedDB cache before getDocs answers, and
-        // bodies made for that state would stay in the world as duplicates.
-        let initialLoadDone = false;
+        // Live task changes, one by one. The first delivery (cache or server) builds the list;
+        // the bodies are added to the world after filtering (useBubbleWorld).
+        const unsubscribeTasks = subscribeTasks((changes, { initial }) => {
+            setBubbles(prev => applyTaskChanges(prev, changes, {
+                initial,
+                createBubble: createBubbleFromTask,
+                removeBody: (body) => World.remove(engine.world, body),
+            }));
 
-        // Load bubbles from Firestore
-        const loadInitialBubbles = async () => {
-            try {
-                const storedBubbles = await loadBubblesFromFirestore();
-                const initialBubbles = [];
-
-                if (storedBubbles.length > 0) {
-                    // Auto-cleanup old deleted bubbles
-                    const cleanedBubbles = await cleanupOldDeletedBubbles(storedBubbles);
-
-                    // Restore bubbles from Firestore with random positions
-                    cleanedBubbles.forEach(storedBubble => {
-                        const bubble = createBubbleFromStored(storedBubble);
-
-                        // Инициализируем stickyPulseRef для задач с overdueSticky
-                        if (bubble.overdueSticky) {
-                            stickyPulseRef.current.add(bubble.id);
-                        }
-                        // Восстанавливаем намерение «остановлено вручную» из персистентного поля
-                        if (bubble.overduePulseSuppressed) {
-                            manuallyStoppedPulsingRef.current.add(bubble.id);
-                        }
-                        initialBubbles.push(bubble);
-                    });
-                    // Убираем добавление всех пузырей в физический мир - они будут добавлены после фильтрации
+            // "Stop pulsing" is the task's pulseMuted, also when another device sets it.
+            changes.forEach(({ type, task }) => {
+                if (type !== 'removed' && task.pulseMuted) {
+                    manuallyStoppedPulsingRef.current.add(task.id);
+                } else {
+                    manuallyStoppedPulsingRef.current.delete(task.id);
                 }
-
-                setBubbles(initialBubbles);
-                // Не добавляем пузыри в физический мир сразу - они будут добавлены после применения фильтров
-            } catch (error) {
-                logger.error('Error loading initial bubbles:', error);
-                setBubbles([]);
-            } finally {
-                initialLoadDone = true;
-            }
-        };
-
-        loadInitialBubbles();
-        // Subscribe to live bubbles updates (dueDate changes from server)
-        const unsubscribeBubbles = subscribeToBubblesUpdates((serverBubbles) => {
-            setBubbles(prev => {
-                const map = new Map(prev.map(b => [b.id, b]));
-                const merged = serverBubbles.map(sb => {
-                    const ex = map.get(sb.id);
-                    if (ex) return { ...ex, ...sb, body: ex.body };
-                    // An id we have not seen yet (e.g. created on another device) needs its own
-                    // body, otherwise it never reaches the canvas.
-                    return initialLoadDone ? createBubbleFromStored(sb) : sb;
-                });
-
-                // detect server state and make sticky by server flag (persists across reloads)
-                try {
-                    merged.forEach(sb => {
-                        const id = sb.id;
-                        const newDue = sb?.dueDate ? (parseLocalDateTime(sb.dueDate)?.getTime() ?? null) : null;
-
-                        // Намерение «остановлено вручную» — персистентное поле и единственный
-                        // источник правды. Зеркалим его в ref независимо от overdueSticky,
-                        // иначе серверное эхо overdueSticky=false сбрасывало бы остановку.
-                        if (sb?.overduePulseSuppressed) {
-                            manuallyStoppedPulsingRef.current.add(id);
-                        } else {
-                            manuallyStoppedPulsingRef.current.delete(id);
-                        }
-
-                        // Игнорируем серверные обновления stickyPulseRef для задач с overdueSticky - управляем только вручную
-                        if (sb?.overdueSticky) {
-                            if (newDue && Number.isFinite(newDue)) lastDueRef.current.set(id, newDue);
-                            return;
-                        }
-
-                        stickyPulseRef.current.delete(id);
-
-                        if (newDue && Number.isFinite(newDue)) lastDueRef.current.set(id, newDue);
-                    });
-                } catch { /* Ignore malformed remote pulse state. */ }
-
-                // If edit dialog is open for a selected bubble, reflect live updates.
-                // Read live values via ref — editDialog/selectedBubble captured in this
-                // mount-effect closure are stale (always false/null).
-                const { editDialog: liveOpen, selectedBubbleId } = liveEditRef.current;
-                if (liveOpen && selectedBubbleId != null) {
-                    const updated = merged.find(b => String(b.id) === String(selectedBubbleId));
-                    if (updated) {
-                        // Update selected bubble fields but keep the Matter.js body instance
-                        setSelectedBubble(prevSel => (prevSel ? { ...prevSel, ...updated, body: prevSel.body } : updated));
-                        // Update edit form states for dueDate/notifications/recurrence
-                        if (updated.dueDate) {
-                            try { const d = parseLocalDateTime(updated.dueDate); if (d && !isNaN(d.getTime())) setEditDueDate(d); else setEditDueDate(null); } catch (_) { setEditDueDate(null); }
-                        } else {
-                            setEditDueDate(null);
-                        }
-                        if (Array.isArray(updated.notifications)) {
-                            setEditNotifications(updated.notifications);
-                        }
-                        setEditRecurrence(updated.recurrence || null);
-                        // keep sticky pulsing even if editor opened (until user presses Stop)
-                    }
-                }
-
-                // Remove ghost Matter bodies: a task deleted on another device disappears
-                // from the server list but its body lingers in the world until reload.
-                const mergedIds = new Set(merged.map(b => String(b.id)));
-                prev.forEach(b => {
-                    if (b.body && !mergedIds.has(String(b.id))) {
-                        try { World.remove(engine.world, b.body); } catch { /* Body may already be removed. */ }
-                    }
-                });
-
-                return merged;
             });
-        });
+
+            // If edit dialog is open for a selected bubble, reflect live updates.
+            // Read live values via ref — editDialog/selectedBubble captured in this
+            // mount-effect closure are stale (always false/null).
+            const { editDialog: liveOpen, selectedBubbleId } = liveEditRef.current;
+            const change = liveOpen && selectedBubbleId != null
+                && changes.find(c => c.type === 'modified' && String(c.task.id) === String(selectedBubbleId));
+            if (change) {
+                const updated = bubbleFromTask(change.task);
+                // Update selected bubble fields but keep the Matter.js body instance
+                setSelectedBubble(prevSel => (prevSel ? { ...prevSel, ...updated, body: prevSel.body } : prevSel));
+                setEditDueDate(updated.dueDate ? parseLocalDateTime(updated.dueDate) : null);
+                setEditNotifications(updated.notifications);
+                setEditRecurrence(updated.recurrence);
+            }
+        }, (error) => logger.error('Tasks listener error:', error));
 
         // Create mouse and constraints for drag and drop
         const mouse = Mouse.create(render.canvas);
@@ -587,7 +491,7 @@ export function useMatterEngine({
             Engine.clear(engine);
             render.canvas.remove();
             render.textures = {};
-            if (typeof unsubscribeBubbles === 'function') unsubscribeBubbles();
+            if (typeof unsubscribeTasks === 'function') unsubscribeTasks();
         };
     }, []); // Убираем themeMode из зависимостей
 }
