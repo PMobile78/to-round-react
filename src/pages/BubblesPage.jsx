@@ -6,8 +6,6 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
-import { lsGet, lsSet, lsGetString } from '../utils/storage';
-import { LS } from '../utils/storageKeys';
 import BubblesDialogs from '../components/BubblesDialogs';
 import TextOverlay from '../components/TextOverlay';
 import { logoutUser } from '../services/authService';
@@ -38,9 +36,6 @@ import { withAlpha } from '../utils/colorUtils';
 import { parseLocalDateTime } from '../utils/dateTime';
 import { notificationKeyPrefix, shouldShowStopPulsing } from '../utils/notifications';
 import { applyBubbleFill } from '../utils/bubbleStyle';
-import {
-    readBubbleViewPlannedTasksFromLS
-} from '../utils/bubbleData';
 import { useBubblesData } from '../state/BubblesDataStore';
 import { useBubblesUi } from '../state/BubblesUiStore';
 
@@ -97,6 +92,9 @@ const BubblesPage = ({ user, themeMode }) => {
         setMainView,
         fontSize,
         setFontSize,
+        // User settings from users/{uid}.settings, like the values above.
+        showInstructions,
+        setShowInstructions,
         // categoriesDialog is store-owned as of Stage H of 010d; the page still
         // opens it from the desktop categories panel below.
         setCategoriesDialog,
@@ -190,11 +188,7 @@ const BubblesPage = ({ user, themeMode }) => {
     // Dialog open-flags (filter/menu/font/appearance/change-password/logout/list-view)
     // + fontSize now live in BubblesStore (Stage F of 010d).
 
-    const [showInstructions, setShowInstructions] = useState(() => {
-        const saved = lsGetString(LS.SHOW_INSTRUCTIONS);
-        return saved === null ? true : saved === 'true';
-    }); // Показывать ли подсказки инструкций
-    // bubbleBackgroundEnabled + mainView now live in BubblesStore (Stage F of 010d).
+    // showInstructions, bubbleBackgroundEnabled and mainView are user settings in BubblesStore.
 
     // Состояние поиска для Bubbles View
     const [bubblesSearchQuery, setBubblesSearchQuery] = useState('');
@@ -362,46 +356,10 @@ const BubblesPage = ({ user, themeMode }) => {
         }
     }, [theme, bubbles, tags]);
 
-    // Reconcile filter selections + recolor bubbles whenever the tag set changes.
-    // Seam (Task 2/6 of #38): the live `setTags` half of the old
-    // subscribeToTagsUpdates effect now lives in useTags; this [tags] effect keeps
-    // the filter-reconciliation + bubble-recolor half here. Reconciliation must
-    // not run until tags have actually loaded: every empty `tags` snapshot before
-    // the first real one (initial mount, StrictMode's double-invoke, empty
-    // intermediate Firestore emits) would otherwise treat every saved filter id as
-    // "deleted" and wipe `bubbles-filter-tags` to [] — silently clearing the
-    // user's selected category on every page reload. Skip until the first
-    // non-empty snapshot flips the guard, matching the original
-    // subscription-driven timing.
-    const tagsReconcileInitRef = useRef(false);
+    // Recolor bubbles whenever the tag set changes. Seam (Task 2/6 of #38): the live
+    // `setTags` half lives in useTags. The filters need no reconciliation any more:
+    // BubblesUiStore shows them without categories that no longer exist.
     useEffect(() => {
-        if (!tagsReconcileInitRef.current) {
-            if (tags.length === 0) return;
-            tagsReconcileInitRef.current = true;
-        }
-        const existingTagIds = tags.map(tag => tag.id);
-
-        // Update filter tags to remove deleted tags
-        setFilterTags(currentFilterTags => {
-            const validFilterTags = currentFilterTags.filter(id => existingTagIds.includes(id));
-            // Не записываем ключ впервые, чтобы не блокировать первичную инициализацию фильтра
-            const hadFilterKey = lsGet(LS.FILTER_TAGS) !== null;
-            if (hadFilterKey) {
-                lsSet(LS.FILTER_TAGS, validFilterTags);
-            }
-            return validFilterTags;
-        });
-
-        // Update list filter tags to remove deleted tags
-        setListFilterTags(currentListFilterTags => {
-            const validListFilterTags = currentListFilterTags.filter(id => existingTagIds.includes(id));
-            const hadListFilterKey = lsGet(LS.LIST_FILTER_TAGS) !== null;
-            if (hadListFilterKey) {
-                lsSet(LS.LIST_FILTER_TAGS, validListFilterTags);
-            }
-            return validListFilterTags;
-        });
-
         // Update bubble colors and fill styles when tags change
         setBubbles(currentBubbles => {
             return currentBubbles.map(bubble => {
@@ -525,25 +483,20 @@ const BubblesPage = ({ user, themeMode }) => {
     // Функция для сохранения настроек шрифта
     const handleFontSizeChange = (newSize) => {
         setFontSize(newSize);
-        lsSet(LS.FONT_SIZE, newSize.toString());
     };
 
     // Функция для закрытия подсказок
     const handleCloseInstructions = () => {
         setShowInstructions(false);
-        lsSet(LS.SHOW_INSTRUCTIONS, 'false');
     };
 
     const handleToggleMainView = () => {
-        const next = mainView === 'tasks' ? 'bubbles' : 'tasks';
-        setMainView(next);
-        lsSet(LS.MAIN_VIEW, next);
+        setMainView(mainView === 'tasks' ? 'bubbles' : 'tasks');
     };
 
     const handleToggleBubbleBackground = () => {
         const newValue = !bubbleBackgroundEnabled;
         setBubbleBackgroundEnabled(newValue);
-        lsSet(LS.BACKGROUND_ENABLED, newValue.toString());
 
         // Обновляем фон всех пузырей
         setBubbles(prev => {

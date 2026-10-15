@@ -18,8 +18,6 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import enUS from 'date-fns/locale/en-US';
 import uk from 'date-fns/locale/uk';
-import { lsSet } from '../utils/storage';
-import { LS } from '../utils/storageKeys';
 import i18n from '../i18n';
 import AddNotification from './AddNotification';
 import RepeatSettings from './RepeatSettings';
@@ -95,10 +93,7 @@ export default function BubbleDialogForm(props) {
                     isMobile={isMobile}
                     themeMode={themeMode}
                     useRichText={useRichText}
-                    onToggleRichText={(enabled) => {
-                        onToggleUseRichText?.(enabled);
-                        try { lsSet(LS.USE_RICH_TEXT, enabled); } catch { /* localStorage may be unavailable */ }
-                    }}
+                    onToggleRichText={(enabled) => onToggleUseRichText?.(enabled)}
                     t={t}
                 />
             </Box>

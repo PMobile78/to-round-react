@@ -1,6 +1,4 @@
 import React, { useMemo, useCallback, useEffect } from 'react';
-import { lsSet } from '../utils/storage';
-import { LS } from '../utils/storageKeys';
 import logger from '../utils/logger';
 import {
     Box,
@@ -358,9 +356,7 @@ const TaskList = ({
                             value={listSortBy}
                             label={t('bubbles.sortBy')}
                             onChange={(e) => {
-                                const newSortBy = e.target.value;
-                                setListSortBy(newSortBy);
-                                lsSet(LS.LIST_SORT_BY, newSortBy);
+                                setListSortBy(e.target.value);
                             }}
                         >
                             <MenuItem value="createdAt">{t('bubbles.createdAt')}</MenuItem>
@@ -372,9 +368,7 @@ const TaskList = ({
                     <Tooltip title={listSortOrder === 'asc' ? t('bubbles.sortAscending') : t('bubbles.sortDescending')}>
                         <IconButton
                             onClick={() => {
-                                const newSortOrder = listSortOrder === 'asc' ? 'desc' : 'asc';
-                                setListSortOrder(newSortOrder);
-                                lsSet(LS.LIST_SORT_ORDER, newSortOrder);
+                                setListSortOrder(listSortOrder === 'asc' ? 'desc' : 'asc');
                             }}
                             sx={{
                                 color: 'primary.main',

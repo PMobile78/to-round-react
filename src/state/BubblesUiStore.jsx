@@ -1,17 +1,21 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { lsGet, lsGetString } from '../utils/storage';
-import { LS } from '../utils/storageKeys';
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 import { isAllTagsSelected, countBubblesByTagForBubblesView } from '../utils/bubbleVisibility';
 import { isAllListTagsSelected, countBubblesByTagForListView } from '../utils/listVisibility';
 import { isColorAvailable as isColorAvailablePure } from '../hooks/tagColors';
 import { useBubblesData } from './BubblesDataStore';
+import { useSettings } from './SettingsContext';
+import {
+    categoryIdsFor, mainViewForSettings, mainViewForUi, selectedTagIds, sortByForSettings, sortByForUi,
+} from './settingsView';
 
 /**
  * BubblesUiContext
  *
  * Central store for bubbles/tags view state (dialogs, filters, form state, etc.).
  * Composed with BubblesDataContext via useBubblesData() to compute derived values
- * that mix UI state and data.
+ * that mix UI state and data. The values that are user settings (filters, list
+ * sort, label size, background, main view, panel, hints) come from
+ * users/{uid}.settings through SettingsContext and are written back field by field.
  */
 const BubblesUiContext = createContext(null);
 
@@ -35,6 +39,9 @@ export function BubblesUiProvider({
 }) {
     // Acquire data-layer state for computing mixed derived values
     const { bubbles, tags } = useBubblesData();
+    const { settings, updateSettings, getSettings } = useSettings();
+    const tagsRef = useRef(tags);
+    tagsRef.current = tags;
 
     // Currently selected tag id for the create/edit bubble dialog
     const [selectedTagId, setSelectedTagId] = useState('');
@@ -43,17 +50,73 @@ export function BubblesUiProvider({
     const [searchFoundBubbles, setSearchFoundBubbles] = useState([]);
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
-    // Filter state for bubbles view
-    const [filterTags, setFilterTags] = useState(() => lsGet(LS.FILTER_TAGS, []));
-    const [showNoTag, setShowNoTag] = useState(() => lsGet(LS.SHOW_NO_TAG, true));
+    // Settings-backed values (spec 3.5). Setters take a value or an updater, like useState
+    // setters; each one starts from getSettings(), so changes made in one handler add up.
+    const resolve = (next, current) => (typeof next === 'function' ? next(current) : next);
+    const setSetting = useCallback((key, next, toUi = (v) => v, toSettings = (v) => v) => {
+        updateSettings({ [key]: toSettings(resolve(next, toUi(getSettings()[key]))) });
+    }, [updateSettings, getSettings]);
 
-    // Filter state for list view
+    // Filter state for bubbles view: settings.bubbleFilter
+    const filterTags = useMemo(
+        () => selectedTagIds(settings.bubbleFilter.categoryIds, tags),
+        [settings.bubbleFilter.categoryIds, tags]
+    );
+    const showNoTag = settings.bubbleFilter.showUncategorized;
+    const bubbleViewPlannedTasksOnly = settings.bubbleFilter.plannedOnly;
+    // changes = { categoryIds?, showUncategorized?, plannedOnly? } in settings terms
+    const setBubbleFilter = useCallback((changes) => {
+        updateSettings({ bubbleFilter: { ...getSettings().bubbleFilter, ...changes } });
+    }, [updateSettings, getSettings]);
+    const setFilterTags = useCallback((next) => {
+        const current = selectedTagIds(getSettings().bubbleFilter.categoryIds, tagsRef.current);
+        setBubbleFilter({ categoryIds: categoryIdsFor(resolve(next, current), tagsRef.current) });
+    }, [setBubbleFilter, getSettings]);
+    const setShowNoTag = useCallback((next) => {
+        setBubbleFilter({ showUncategorized: resolve(next, getSettings().bubbleFilter.showUncategorized) });
+    }, [setBubbleFilter, getSettings]);
+    const setBubbleViewPlannedTasksOnly = useCallback((next) => {
+        setBubbleFilter({ plannedOnly: resolve(next, getSettings().bubbleFilter.plannedOnly) });
+    }, [setBubbleFilter, getSettings]);
+
+    // Filter state for list view: the status tab and the search are not settings
     const [listFilter, setListFilter] = useState('active');
     const [listSearchQuery, setListSearchQuery] = useState('');
-    const [listSortBy, setListSortBy] = useState(() => lsGetString(LS.LIST_SORT_BY) || 'updatedAt');
-    const [listSortOrder, setListSortOrder] = useState(() => lsGetString(LS.LIST_SORT_ORDER) || 'desc');
-    const [listFilterTags, setListFilterTags] = useState(() => lsGet(LS.LIST_FILTER_TAGS, []));
-    const [listShowNoTag, setListShowNoTag] = useState(() => lsGet(LS.LIST_SHOW_NO_TAG, true));
+    const listSortBy = sortByForUi(settings.listSort.by);
+    const listSortOrder = settings.listSort.order;
+    const setListSortBy = useCallback((next) => {
+        const { listSort } = getSettings();
+        updateSettings({ listSort: { ...listSort, by: sortByForSettings(resolve(next, sortByForUi(listSort.by))) } });
+    }, [updateSettings, getSettings]);
+    const setListSortOrder = useCallback((next) => {
+        const { listSort } = getSettings();
+        updateSettings({ listSort: { ...listSort, order: resolve(next, listSort.order) } });
+    }, [updateSettings, getSettings]);
+    // settings.listFilter
+    const listFilterTags = useMemo(
+        () => selectedTagIds(settings.listFilter.categoryIds, tags),
+        [settings.listFilter.categoryIds, tags]
+    );
+    const listShowNoTag = settings.listFilter.showUncategorized;
+    // changes = { categoryIds?, showUncategorized? } in settings terms
+    const setListCategoryFilter = useCallback((changes) => {
+        updateSettings({ listFilter: { ...getSettings().listFilter, ...changes } });
+    }, [updateSettings, getSettings]);
+    const setListFilterTags = useCallback((next) => {
+        const current = selectedTagIds(getSettings().listFilter.categoryIds, tagsRef.current);
+        setListCategoryFilter({ categoryIds: categoryIdsFor(resolve(next, current), tagsRef.current) });
+    }, [setListCategoryFilter, getSettings]);
+    const setListShowNoTag = useCallback((next) => {
+        setListCategoryFilter({ showUncategorized: resolve(next, getSettings().listFilter.showUncategorized) });
+    }, [setListCategoryFilter, getSettings]);
+    // A new category shows up in both filters: an explicit choice gets it, "all" (null) has it already
+    const includeCategoryInFilters = useCallback((categoryId) => {
+        const { bubbleFilter, listFilter: listCategoryFilter } = getSettings();
+        if (bubbleFilter.categoryIds !== null) setBubbleFilter({ categoryIds: [...bubbleFilter.categoryIds, categoryId] });
+        if (listCategoryFilter.categoryIds !== null) {
+            setListCategoryFilter({ categoryIds: [...listCategoryFilter.categoryIds, categoryId] });
+        }
+    }, [getSettings, setBubbleFilter, setListCategoryFilter]);
 
     // Form state for the create/edit bubble dialogs
     const [dueDate, setDueDate] = useState(null);              // create-form due date
@@ -76,17 +139,19 @@ export function BubblesUiProvider({
     const [logoutDialog, setLogoutDialog] = useState(false);
     const [listViewDialog, setListViewDialog] = useState(false);
     const [aboutOpen, setAboutOpen] = useState(false);
-    const [fontSize, setFontSize] = useState(() => {
-        const savedFontSize = lsGetString(LS.FONT_SIZE);
-        return savedFontSize ? parseInt(savedFontSize) : 8;
-    });
-    const [bubbleBackgroundEnabled, setBubbleBackgroundEnabled] = useState(() => {
-        const saved = lsGetString(LS.BACKGROUND_ENABLED);
-        return saved === null ? true : saved === 'true';
-    });
-    const [mainView, setMainView] = useState(() => {
-        return lsGetString(LS.MAIN_VIEW) === 'tasks' ? 'tasks' : 'bubbles';
-    });
+    const fontSize = settings.labelFontSize;
+    const setFontSize = useCallback((next) => setSetting('labelFontSize', next), [setSetting]);
+    const bubbleBackgroundEnabled = settings.bubbleBackground;
+    const setBubbleBackgroundEnabled = useCallback((next) => setSetting('bubbleBackground', next), [setSetting]);
+    const mainView = mainViewForUi(settings.mainView);
+    const setMainView = useCallback(
+        (next) => setSetting('mainView', next, mainViewForUi, mainViewForSettings),
+        [setSetting]
+    );
+    const categoriesPanelEnabled = settings.showCategoriesPanel;
+    const setCategoriesPanelEnabled = useCallback((next) => setSetting('showCategoriesPanel', next), [setSetting]);
+    const showInstructions = settings.showInstructions;
+    const setShowInstructions = useCallback((next) => setSetting('showInstructions', next), [setSetting]);
 
     // Tag-editor + categories dialog state
     const [tagDialog, setTagDialog] = useState(false);
@@ -142,6 +207,9 @@ export function BubblesUiProvider({
         setFilterTags,
         showNoTag,
         setShowNoTag,
+        bubbleViewPlannedTasksOnly,
+        setBubbleViewPlannedTasksOnly,
+        setBubbleFilter,
         searchFoundBubbles,
         setSearchFoundBubbles,
         debouncedSearchQuery,
@@ -158,6 +226,8 @@ export function BubblesUiProvider({
         setListFilterTags,
         listShowNoTag,
         setListShowNoTag,
+        setListCategoryFilter,
+        includeCategoryInFilters,
         dueDate,
         setDueDate,
         editDueDate,
@@ -200,6 +270,10 @@ export function BubblesUiProvider({
         setBubbleBackgroundEnabled,
         mainView,
         setMainView,
+        categoriesPanelEnabled,
+        setCategoriesPanelEnabled,
+        showInstructions,
+        setShowInstructions,
         tagDialog,
         setTagDialog,
         tagName,

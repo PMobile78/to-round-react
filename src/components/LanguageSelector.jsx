@@ -13,8 +13,7 @@ import {
 import { Language, Check } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { alpha } from '@mui/material/styles';
-import { lsSet } from '../utils/storage';
-import { LS } from '../utils/storageKeys';
+import { useSettings } from '../state/SettingsContext';
 
 const LanguageSelector = ({ themeMode = 'light', sx = {} }) => {
     const { i18n, t } = useTranslation();
@@ -46,9 +45,13 @@ const LanguageSelector = ({ themeMode = 'light', sx = {} }) => {
         setAnchorEl(null);
     };
 
+    const settingsApi = useSettings();
+
+    // Signed in: the user's setting (App switches i18n to it). On the sign-in screen
+    // only this screen changes (spec 3.5).
     const handleLanguageChange = (languageCode) => {
-        i18n.changeLanguage(languageCode);
-        lsSet(LS.I18N_LNG, languageCode);
+        if (settingsApi) settingsApi.updateSettings({ language: languageCode });
+        else i18n.changeLanguage(languageCode);
         handleClose();
     };
 

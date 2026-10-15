@@ -63,8 +63,7 @@ describe('useTags: categories as v2 documents', () => {
 
         data = { tags: [TAG_A, TAG_B], setTags: vi.fn(), setBubbles: vi.fn() };
         ui = {
-            setFilterTags: vi.fn(),
-            setListFilterTags: vi.fn(),
+            includeCategoryInFilters: vi.fn(),
             tagName: '',
             setTagName: vi.fn(),
             tagColor: '#da3833',
@@ -99,6 +98,7 @@ describe('useTags: categories as v2 documents', () => {
         render({ uid: 'user-a' });
         act(() => handlers.handleSaveTag());
         expect(createCategory).toHaveBeenCalledWith('db', 'user-a', 'new-cat', { name: 'Home', color: '#fd8b2b', order: 3 });
+        expect(ui.includeCategoryInFilters).toHaveBeenCalledWith('new-cat');
     });
 
     it('saves only what changed in a category', () => {

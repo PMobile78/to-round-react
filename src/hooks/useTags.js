@@ -1,6 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { lsSet } from '../utils/storage';
-import { LS } from '../utils/storageKeys';
 import { db } from '../firebase';
 import {
     createCategory,
@@ -29,14 +27,13 @@ import {
  * Seam note: the live subscription only sets `tags`; filter reconciliation and
  * bubble recolouring stay in BubblesPage as a separate effect keyed on `[tags]`.
  *
- * `setFilterTags` / `setListFilterTags` are read from BubblesStore, which avoids
- * the useTags <-> useBubbleFilters render-order cycle: useBubbleFilters needs
- * `tags` produced here.
+ * The filters are user settings kept by BubblesUiStore; a new category is added
+ * to them through includeCategoryInFilters.
  */
 export function useTags({ user }) {
     const { tags, setTags } = useBubblesData();
     const {
-        setFilterTags, setListFilterTags,
+        includeCategoryInFilters,
         // Tag-editor state migrated into the store (Stage H of 010d); the handlers
         // below read/set it here instead of via local useState.
         tagName, setTagName, tagColor, setTagColor, editingTag, setEditingTag,
@@ -111,19 +108,7 @@ export function useTags({ user }) {
                 .catch(e => logger.error('Error saving tag:', e));
 
             // Автоматически активируем новый тег в фильтрах (только для создания, не для редактирования)
-            // Активируем в фильтрах Bubbles View
-            setFilterTags(prev => {
-                const newFilterTags = [...prev, newTag.id];
-                lsSet(LS.FILTER_TAGS, newFilterTags);
-                return newFilterTags;
-            });
-
-            // Активируем в фильтрах List View
-            setListFilterTags(prev => {
-                const newListFilterTags = [...prev, newTag.id];
-                lsSet(LS.LIST_FILTER_TAGS, newListFilterTags);
-                return newListFilterTags;
-            });
+            includeCategoryInFilters(newTag.id);
         }
 
         setTagDialog(false);

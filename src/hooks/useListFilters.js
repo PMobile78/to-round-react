@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { lsGet, lsSet } from '../utils/storage';
-import { LS } from '../utils/storageKeys';
 import { getBubblesByStatus } from '../utils/bubbleStatus';
 import { toggleTagInFilter } from './useBubbleFilters';
 import { useBubblesData } from '../state/BubblesDataStore';
@@ -51,6 +49,7 @@ export function useListFilters({ tags }) {
         setListFilterTags,
         listShowNoTag,
         setListShowNoTag,
+        setListCategoryFilter,
         isAllListFiltersSelected,
         getBubbleCountByTagForListView,
     } = useBubblesUi();
@@ -61,53 +60,23 @@ export function useListFilters({ tags }) {
         storeDataRef.current = { bubbles, listFilter, listSearchQuery };
     }, [bubbles, listFilter, listSearchQuery]);
 
-    // Инициализация настроек фильтра списка задач после загрузки тегов
-    useEffect(() => {
-        if (tags.length > 0) {
-            // Тоже самое для настроек фильтра в списке задач
-            const savedListFilterTags = lsGet(LS.LIST_FILTER_TAGS);
-            const savedListShowNoTag = lsGet(LS.LIST_SHOW_NO_TAG);
-            if (savedListFilterTags === null && savedListShowNoTag === null) {
-                const allTagIds = tags.map(tag => tag.id);
-                setListFilterTags(allTagIds);
-                setListShowNoTag(true);
-                lsSet(LS.LIST_FILTER_TAGS, allTagIds);
-                lsSet(LS.LIST_SHOW_NO_TAG, true);
-            }
-        }
-    }, [tags, setListFilterTags, setListShowNoTag]);
-
-    // Memoized functions for list filter management
+    // Memoized functions for list filter management. The filter is the user's setting
+    // listFilter (users/{uid}.settings), kept by BubblesUiStore; by default all categories.
     const handleListTagFilterChange = useCallback((tagId) => {
-        setListFilterTags(prev => {
-            const newListFilterTags = toggleTagInFilter(prev, tagId);
-            lsSet(LS.LIST_FILTER_TAGS, newListFilterTags);
-            return newListFilterTags;
-        });
+        setListFilterTags(prev => toggleTagInFilter(prev, tagId));
     }, [setListFilterTags]);
 
     const handleListNoTagFilterChange = useCallback(() => {
-        setListShowNoTag(prev => {
-            const newListShowNoTag = !prev;
-            lsSet(LS.LIST_SHOW_NO_TAG, newListShowNoTag);
-            return newListShowNoTag;
-        });
+        setListShowNoTag(prev => !prev);
     }, [setListShowNoTag]);
 
     const clearAllListFilters = useCallback(() => {
-        setListFilterTags([]);
-        setListShowNoTag(false);
-        lsSet(LS.LIST_FILTER_TAGS, []);
-        lsSet(LS.LIST_SHOW_NO_TAG, false);
-    }, [setListFilterTags, setListShowNoTag]);
+        setListCategoryFilter({ categoryIds: [], showUncategorized: false });
+    }, [setListCategoryFilter]);
 
     const selectAllListFilters = useCallback(() => {
-        const allTagIds = tags.map(tag => tag.id);
-        setListFilterTags(allTagIds);
-        setListShowNoTag(true);
-        lsSet(LS.LIST_FILTER_TAGS, allTagIds);
-        lsSet(LS.LIST_SHOW_NO_TAG, true);
-    }, [tags, setListFilterTags, setListShowNoTag]);
+        setListCategoryFilter({ categoryIds: null, showUncategorized: true });
+    }, [setListCategoryFilter]);
 
     // Function for filtering bubbles for list view (supports all statuses).
     // Deps from store (via ref) or local state.

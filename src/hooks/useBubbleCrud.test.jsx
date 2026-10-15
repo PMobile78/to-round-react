@@ -3,6 +3,8 @@ import React, { act, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import Matter from 'matter-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import settingsFixtures from '../../contract/fixtures/settings.json';
+import { SettingsContext } from '../state/SettingsContext';
 import { BubblesDataProvider, useBubblesData } from '../state/BubblesDataStore';
 import { BubblesUiProvider, useBubblesUi } from '../state/BubblesUiStore';
 import { bubbleFromTask } from '../services/data/bubbleModel';
@@ -20,6 +22,9 @@ vi.mock('../services/data/tasks', async (importOriginal) => ({
     trashTask: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('../utils/logger', () => ({ default: { error: vi.fn() } }));
+
+const DEFAULTS = settingsFixtures.valid.find((f) => f.name === 'defaults').value;
+const SETTINGS = { settings: DEFAULTS, updateSettings: vi.fn(), getSettings: () => DEFAULTS };
 
 const TASK = {
     id: 't1',
@@ -91,7 +96,11 @@ describe('useBubbleCrud: task writes through the v2 data layer', () => {
         container = document.createElement('div');
         document.body.appendChild(container);
         root = createRoot(container);
-        act(() => root.render(<BubblesDataProvider><BubblesUiProvider><Probe /></BubblesUiProvider></BubblesDataProvider>));
+        act(() => root.render(
+            <SettingsContext.Provider value={SETTINGS}>
+                <BubblesDataProvider><BubblesUiProvider><Probe /></BubblesUiProvider></BubblesDataProvider>
+            </SettingsContext.Provider>
+        ));
     });
 
     afterEach(() => {

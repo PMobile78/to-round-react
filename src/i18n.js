@@ -30,11 +30,11 @@ i18n
             escapeValue: false // React already does escaping
         },
 
-        // Language detection options
+        // Before sign-in the device language; after it App applies the user's
+        // settings.language (spec 3.5). Nothing is cached in localStorage.
         detection: {
-            order: ['localStorage', 'navigator', 'htmlTag', 'path', 'subdomain'],
-            caches: ['localStorage'],
-            lookupLocalStorage: 'i18nextLng'
+            order: ['navigator'],
+            caches: []
         }
     });
 

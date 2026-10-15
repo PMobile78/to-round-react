@@ -1,31 +1,31 @@
 import { useState, useEffect } from 'react';
 import { createTheme } from '@mui/material/styles';
-import { lsGetString, lsSet } from '../utils/storage';
-import { LS } from '../utils/storageKeys';
 import { getDesignModule, DESIGNS } from '../theme/designs';
 
-export const useThemeMode = () => {
-    const [themeMode, setThemeMode] = useState(() => {
-        const savedTheme = lsGetString(LS.THEME_MODE);
-        return savedTheme || 'system';
-    });
+// Функция для получения системной темы
+const getSystemTheme = () => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+};
 
-    const [design, setDesign] = useState(() => {
-        const savedDesign = lsGetString(LS.DESIGN);
-        return savedDesign || 'classic';
-    });
+/**
+ * Theme mode and design. Signed in, they are the user's settings (users/{uid}.settings,
+ * spec 3.5) and changes are written there through updateSettings. Before sign-in the screen
+ * uses the system theme and the classic design; a change there lasts only for the session.
+ */
+export const useThemeMode = (settings = null, updateSettings = () => {}) => {
+    const [localThemeMode, setLocalThemeMode] = useState('system');
+    const [localDesign, setLocalDesign] = useState('classic');
+    const [systemTheme, setSystemTheme] = useState(getSystemTheme);
 
-    // Функция для получения системной темы
-    const getSystemTheme = () => {
-        if (typeof window !== 'undefined' && window.matchMedia) {
-            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        return 'light';
-    };
+    const themeMode = settings ? settings.themeMode : localThemeMode;
+    const design = settings ? settings.design : localDesign;
 
-    // Получаем актуальную тему (если system, то берем системную)
-    const getActualTheme = () => {
-        return themeMode === 'system' ? getSystemTheme() : themeMode;
+    const setThemeModeExplicit = (mode) => {
+        if (settings) updateSettings({ themeMode: mode });
+        else setLocalThemeMode(mode);
     };
 
     const toggleTheme = () => {
@@ -37,44 +37,26 @@ export const useThemeMode = () => {
         } else {
             newMode = 'light';
         }
-        setThemeMode(newMode);
-        lsSet(LS.THEME_MODE, newMode);
-    };
-
-    const setThemeModeExplicit = (mode) => {
-        setThemeMode(mode);
-        lsSet(LS.THEME_MODE, mode);
+        setThemeModeExplicit(newMode);
     };
 
     const setDesignExplicit = (designId) => {
-        if (DESIGNS[designId]) {
-            setDesign(designId);
-            lsSet(LS.DESIGN, designId);
-        }
+        if (!DESIGNS[designId]) return;
+        if (settings) updateSettings({ design: designId });
+        else setLocalDesign(designId);
     };
 
     // Слушаем изменения системной темы
     useEffect(() => {
-        lsSet(LS.THEME_MODE, themeMode);
-
-        if (themeMode === 'system') {
-            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-            const handleChange = () => {
-                // Принудительно перерендерим компонент при изменении системной темы
-                setThemeMode('system');
-            };
-
-            mediaQuery.addEventListener('change', handleChange);
-            return () => mediaQuery.removeEventListener('change', handleChange);
-        }
+        if (themeMode !== 'system' || typeof window === 'undefined' || !window.matchMedia) return undefined;
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleChange = () => setSystemTheme(getSystemTheme());
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
     }, [themeMode]);
 
-    // Persist design to localStorage whenever it changes
-    useEffect(() => {
-        lsSet(LS.DESIGN, design);
-    }, [design]);
-
-    const actualTheme = getActualTheme();
+    // Получаем актуальную тему (если system, то берем системную)
+    const actualTheme = themeMode === 'system' ? systemTheme : themeMode;
 
     const createAppTheme = (mode, designId) => {
         const designModule = getDesignModule(designId);
@@ -98,4 +80,4 @@ export const useThemeMode = () => {
         theme,
         designs: DESIGNS,
     };
-}; 
+};
