@@ -320,6 +320,7 @@ const BubblesPage = ({ user, themeMode }) => {
         editDialog,
         selectedBubble,
         liveEditRef,
+        bubbles,
         setBubbles,
         setCanvasSize,
         setSelectedBubble,
