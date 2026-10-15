@@ -99,6 +99,44 @@ export function useMatterEngine({
         // Add walls to the world
         World.add(engine.world, walls);
 
+        // Stored bubble (Firestore doc) → in-memory bubble with a Matter.js body at a random
+        // position. Used by the initial load and by the live listener for ids it has not seen.
+        const createBubbleFromStored = (storedBubble) => {
+            // Create bubbles with random coordinates inside the current canvas: render.options
+            // follows resizes (useMatterResize), canvasSize is the size at mount.
+            const { width, height } = render.options;
+            const margin = isMobile ? 50 : 100;
+            const x = Math.random() * (width - margin * 2) + margin;
+            const y = Math.random() * (height - margin * 2) + margin;
+
+            // Определяем цвет тега для правильного fillStyle
+            let tagColor = null;
+            if (storedBubble.tagId) {
+                const tag = tags.find(t => t.id === storedBubble.tagId);
+                if (tag) {
+                    tagColor = tag.color;
+                }
+            }
+
+            return {
+                ...normalizeStoredBubble(storedBubble),
+                body: Matter.Bodies.circle(x, y, storedBubble.radius, {
+                    restitution: 0.8,
+                    frictionAir: 0.01,
+                    render: {
+                        fillStyle: getBubbleFillStyle(tagColor),
+                        strokeStyle: storedBubble.strokeStyle || theme?.custom?.bubble?.defaultStroke || '#2f6bdb',
+                        lineWidth: theme?.custom?.bubble?.strokeWidth ?? 1.5
+                    }
+                })
+            };
+        };
+
+        // The live listener creates bodies only after the initial load has replaced the state:
+        // its first snapshot can come from the IndexedDB cache before getDocs answers, and
+        // bodies made for that state would stay in the world as duplicates.
+        let initialLoadDone = false;
+
         // Load bubbles from Firestore
         const loadInitialBubbles = async () => {
             try {
@@ -110,33 +148,8 @@ export function useMatterEngine({
                     const cleanedBubbles = await cleanupOldDeletedBubbles(storedBubbles);
 
                     // Restore bubbles from Firestore with random positions
-                    const margin = isMobile ? 50 : 100;
                     cleanedBubbles.forEach(storedBubble => {
-                        // Create bubbles with random coordinates
-                        const x = Math.random() * (canvasSize.width - margin * 2) + margin;
-                        const y = Math.random() * (canvasSize.height - margin * 2) + margin;
-
-                        // Определяем цвет тега для правильного fillStyle
-                        let tagColor = null;
-                        if (storedBubble.tagId) {
-                            const tag = tags.find(t => t.id === storedBubble.tagId);
-                            if (tag) {
-                                tagColor = tag.color;
-                            }
-                        }
-
-                        const bubble = {
-                            ...normalizeStoredBubble(storedBubble),
-                            body: Matter.Bodies.circle(x, y, storedBubble.radius, {
-                                restitution: 0.8,
-                                frictionAir: 0.01,
-                                render: {
-                                    fillStyle: getBubbleFillStyle(tagColor),
-                                    strokeStyle: storedBubble.strokeStyle || theme?.custom?.bubble?.defaultStroke || '#2f6bdb',
-                                    lineWidth: theme?.custom?.bubble?.strokeWidth ?? 1.5
-                                }
-                            })
-                        };
+                        const bubble = createBubbleFromStored(storedBubble);
 
                         // Инициализируем stickyPulseRef для задач с overdueSticky
                         if (bubble.overdueSticky) {
@@ -156,6 +169,8 @@ export function useMatterEngine({
             } catch (error) {
                 logger.error('Error loading initial bubbles:', error);
                 setBubbles([]);
+            } finally {
+                initialLoadDone = true;
             }
         };
 
@@ -166,7 +181,10 @@ export function useMatterEngine({
                 const map = new Map(prev.map(b => [b.id, b]));
                 const merged = serverBubbles.map(sb => {
                     const ex = map.get(sb.id);
-                    return ex ? { ...ex, ...sb, body: ex.body } : sb;
+                    if (ex) return { ...ex, ...sb, body: ex.body };
+                    // An id we have not seen yet (e.g. created on another device) needs its own
+                    // body, otherwise it never reaches the canvas.
+                    return initialLoadDone ? createBubbleFromStored(sb) : sb;
                 });
 
                 // detect server state and make sticky by server flag (persists across reloads)
