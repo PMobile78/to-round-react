@@ -1,5 +1,4 @@
-import React, { useRef } from 'react';
-import logger from '../utils/logger';
+import React from 'react';
 import { Drawer, Box, Typography, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider, Switch } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,8 +10,6 @@ import {
     Info,
     Logout,
     Sell,
-    FileDownload,
-    FileUpload,
     ViewListOutlined,
     AccountTreeOutlined,
     LockOutlined
@@ -38,43 +35,9 @@ const MainMenuDrawer = ({
     onOpenChangePasswordDialog,
     onOpenMindMap,
     onAbout,
-    onLogout,
-    onExportJson,
-    onImportJson
+    onLogout
 }) => {
     const { t } = useTranslation();
-    const fileInputRef = useRef(null);
-
-    const handleImportClick = () => {
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-            fileInputRef.current.click();
-        }
-    };
-
-    const handleFileChange = (event) => {
-        try {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                try {
-                    const text = reader.result;
-                    const parsed = JSON.parse(text);
-                    onClose();
-                    onImportJson && onImportJson(parsed);
-                } catch (e) {
-                    logger.error('Invalid JSON file', e);
-                    window.alert(t('bubbles.importInvalidJson'));
-                }
-            };
-            reader.readAsText(file);
-        } catch (e) {
-            logger.error('Failed to import JSON', e);
-            window.alert(t('bubbles.importFailed'));
-        }
-    };
-
     return (
         <Drawer
             anchor="left"
@@ -123,42 +86,6 @@ const MainMenuDrawer = ({
                     </ListItemButton>
 
                     <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
-
-                    <ListItemButton
-                        onClick={() => {
-                            onClose();
-                            onExportJson && onExportJson();
-                        }}
-                        sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
-                    >
-                        <ListItemIcon sx={{ minWidth: 40 }}>
-                            <FileDownload sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={t('bubbles.exportJson')}
-                            primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
-                        />
-                    </ListItemButton>
-
-                    <ListItemButton
-                        onClick={handleImportClick}
-                        sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
-                    >
-                        <ListItemIcon sx={{ minWidth: 40 }}>
-                            <FileUpload sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={t('bubbles.importJson')}
-                            primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
-                        />
-                        <input
-                            type="file"
-                            accept="application/json"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            style={{ display: 'none' }}
-                        />
-                    </ListItemButton>
 
                     <ListItem sx={{ padding: '16px 24px' }}>
                         <ListItemIcon sx={{ minWidth: 40 }}>

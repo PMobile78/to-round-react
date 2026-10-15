@@ -55,8 +55,6 @@ const BubblesDialogs = ({
     categoriesPanelEnabled,
     handleToggleCategoriesPanel,
     handleLogout,
-    handleExportJson,
-    handleImportJson,
     // Create bubble dialog
     createDialog,
     setCreateDialog,
@@ -255,8 +253,6 @@ const BubblesDialogs = ({
                 onOpenMindMap={onOpenMindMap}
                 onAbout={() => setAboutOpen(true)}
                 onLogout={handleLogout}
-                onExportJson={handleExportJson}
-                onImportJson={handleImportJson}
             />
 
             <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} t={t} />

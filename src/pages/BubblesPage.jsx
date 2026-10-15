@@ -37,7 +37,6 @@ import { useMatterEngine } from '../hooks/useMatterEngine';
 import { useDraggableFab } from '../hooks/useDraggableFab';
 import { useBubbleFilters } from '../hooks/useBubbleFilters';
 import { useListFilters } from '../hooks/useListFilters';
-import { useBubbleImportExport } from '../hooks/useBubbleImportExport';
 import { useBubbleWorld } from '../hooks/useBubbleWorld';
 import { useTags } from '../hooks/useTags';
 import { useBubbleNotifications } from '../hooks/useBubbleNotifications';
@@ -193,13 +192,6 @@ const BubblesPage = ({ user, themeMode }) => {
         isAllListFiltersSelected,
         getBubbleCountByTagForListView,
     } = useListFilters({ tags });
-
-    // JSON import/export handlers extracted into useBubbleImportExport (Task D of #68).
-    // Now uses BubblesStore directly for bubbles/tags state.
-    const {
-        handleExportJson,
-        handleImportJson,
-    } = useBubbleImportExport();
 
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false); // Состояние панели категорий
     // categoriesDialog moved to BubblesStore (Stage H of 010d).
@@ -639,9 +631,6 @@ const BubblesPage = ({ user, themeMode }) => {
         setEditRecurrence(value);
     }, []);
 
-    // JSON import/export (handleExportJson / handleImportJson) now lives in
-    // useBubbleImportExport (Task D of #68); sourced from the hook above.
-
     // open-bubble deep-link listener now lives in useBubbleCrud (Task 5/6 of #38).
 
     // Авто-открытие по URL-параметру (?bubbleId=...) даже если событие было пропущено
@@ -904,8 +893,6 @@ const BubblesPage = ({ user, themeMode }) => {
                 categoriesPanelEnabled={categoriesPanelEnabled}
                 handleToggleCategoriesPanel={handleToggleCategoriesPanel}
                 handleLogout={handleLogout}
-                handleExportJson={handleExportJson}
-                handleImportJson={handleImportJson}
                 createDialog={createDialog}
                 setCreateDialog={setCreateDialog}
                 handleSetCreateRecurrence={handleSetCreateRecurrence}
