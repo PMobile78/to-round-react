@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import React, { act, useEffect, useState } from 'react';
+import React, { StrictMode, act, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import Matter from 'matter-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -67,12 +67,13 @@ const storedBubble = (id, overrides = {}) => ({
 // Let loadInitialBubbles' awaits settle.
 const flushLoad = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
-describe('useMatterEngine live bubbles listener', () => {
+describe('useMatterEngine', () => {
     let container;
     let root;
     let refs;
     let hookProps; // per-test overrides of the hook's props
     let bubbles; // latest committed bubbles state
+    let setBubblesState; // the bubbles setter, for updates the page makes itself (Save)
     let committedBodies; // every Matter body that reached a committed bubbles state
 
     const pushSnapshot = (docs) => {
@@ -89,10 +90,12 @@ describe('useMatterEngine live bubbles listener', () => {
 
     function Probe() {
         const [state, setBubbles] = useState([]);
+        setBubblesState = setBubbles;
         useMatterEngine({
             ...refs,
             editDialog: false,
             selectedBubble: null,
+            bubbles: state,
             setBubbles,
             setCanvasSize: vi.fn(),
             setSelectedBubble: vi.fn(),
@@ -248,5 +251,55 @@ describe('useMatterEngine live bubbles listener', () => {
         const { x, y } = bubbles[0].body.position;
         expect(x).toBeLessThanOrEqual(300 - 40);
         expect(y).toBeLessThanOrEqual(400 - 40);
+    });
+
+    it('keeps the edit dialog closed after Save when a canvas click opened it', async () => {
+        // As in the app: the dialog state lives in BubblesPage, the bubbles in BubblesDataProvider.
+        let setDialogOpen;
+        let dialogOpen;
+        function EditDialogState() {
+            const [open, setOpen] = useState(false);
+            setDialogOpen = setOpen;
+            useEffect(() => { dialogOpen = open; }, [open]);
+            return null;
+        }
+        hookProps = {
+            setEditDialog: (open) => setDialogOpen(open),
+            setSelectedBubble: vi.fn(),
+            setSelectedTagId: vi.fn(),
+            setEditBubbleSize: vi.fn(),
+        };
+        const createMouseConstraint = vi.spyOn(Matter.MouseConstraint, 'create');
+        loadBubblesFromFirestore.mockResolvedValue([storedBubble('a')]);
+        // StrictMode as in src/index.jsx: there React calls state updaters a second time.
+        const renderApp = () => root.render(<StrictMode><EditDialogState /><Probe /></StrictMode>);
+        act(renderApp);
+        await flushLoad();
+        // useBubbleWorld puts the visible bodies into the world.
+        const { body } = bubbles[0];
+        Matter.World.add(refs.engineRef.current.world, body);
+        // A user clicks long after the last bubbles update. The provider has re-rendered since,
+        // so React runs a setBubbles updater that keeps the state right away and leaves it queued.
+        act(renderApp);
+
+        // Matter triggers these from its update tick after a click on the canvas.
+        const mouseConstraint = createMouseConstraint.mock.results.at(-1).value;
+        const mouse = { position: { ...body.position } };
+        act(() => {
+            Matter.Events.trigger(mouseConstraint, 'mousedown', { mouse });
+            Matter.Events.trigger(mouseConstraint, 'mouseup', { mouse });
+        });
+        expect(dialogOpen).toBe(true);
+        expect(hookProps.setSelectedBubble).toHaveBeenCalledWith(bubbles[0]);
+        expect(hookProps.setSelectedTagId).toHaveBeenCalledWith('');
+        expect(hookProps.setEditBubbleSize).toHaveBeenCalledWith(50);
+
+        // Save (useBubbleCrud.handleSaveBubble): store the edited bubble, close the dialog.
+        act(() => {
+            setBubblesState((prev) => prev.map((b) => ({ ...b, updatedAt: '2026-10-15T07:00:00.000Z' })));
+            setDialogOpen(false);
+        });
+        expect(bubbles[0].updatedAt).toBe('2026-10-15T07:00:00.000Z');
+        expect(dialogOpen).toBe(false);
     });
 });

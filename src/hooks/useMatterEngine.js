@@ -31,6 +31,8 @@ export function useMatterEngine({
     editDialog,
     selectedBubble,
     liveEditRef,
+    // Bubbles state; the canvas click handler reads the latest value via bubblesRef.
+    bubbles,
     // State setters
     setBubbles,
     setCanvasSize,
@@ -58,6 +60,12 @@ export function useMatterEngine({
     useEffect(() => {
         themeRef.current = theme;
     }, [theme]);
+
+    // Latest bubbles for the canvas click handler (its closure is created once at mount)
+    const bubblesRef = useRef(bubbles);
+    useEffect(() => {
+        bubblesRef.current = bubbles;
+    }, [bubbles]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -297,16 +305,15 @@ export function useMatterEngine({
 
                 const targetBodyId = upBody ? upBody.id : null;
                 if (targetBodyId && (!downBodyId || downBodyId === targetBodyId)) {
-                    setBubbles(currentBubblesState => {
-                        const clickedBubble = currentBubblesState.find(b => b.body.id === targetBodyId);
-                        if (clickedBubble) {
-                            setSelectedBubble(clickedBubble);
-                            setSelectedTagId(clickedBubble.tagId || '');
-                            setEditBubbleSize(clickedBubble.radius);
-                            setEditDialog(true);
-                        }
-                        return currentBubblesState;
-                    });
+                    // Not inside a setBubbles updater: React may run an updater again later
+                    // (StrictMode does on the next bubbles render), which reopened the dialog after Save.
+                    const clickedBubble = bubblesRef.current.find(b => b.body.id === targetBodyId);
+                    if (clickedBubble) {
+                        setSelectedBubble(clickedBubble);
+                        setSelectedTagId(clickedBubble.tagId || '');
+                        setEditBubbleSize(clickedBubble.radius);
+                        setEditDialog(true);
+                    }
                 }
             }
             downBodyId = null;
