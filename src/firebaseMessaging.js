@@ -53,10 +53,12 @@ async function messagingToken() {
 
 /**
  * Registration after sign-in (spec 3.3): the permission is asked for, then this device is
- * written with its FCM token, or with null when there is none. Errors are only logged.
+ * written with its FCM token, or with null without permission or push support. When FCM fails
+ * to give a token, a registered device keeps the one it has. Errors are only logged.
  */
 export async function registerThisDevice(uid) {
-    let fcmToken = null;
+    // Stays undefined when FCM fails: that says nothing about the token the device already has.
+    let fcmToken;
     try {
         fcmToken = await messagingToken();
     } catch (e) {

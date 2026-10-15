@@ -41,6 +41,19 @@ describe('devices', () => {
         expect(data.updatedAt.toMillis()).toBeGreaterThan(PAST.toMillis());
     });
 
+    it('keeps the token of a known device when this browser could not get one (FCM error)', async () => {
+        await seed(env, devicePath, {
+            platform: 'web', fcmToken: 'token-1', notificationsEnabled: true, createdAt: PAST, updatedAt: PAST,
+        });
+        await expect(registerDevice(device(), OWNER, 'fid-1', undefined)).resolves.toBe(false);
+        expect(await read(devicePath)).toMatchObject({ fcmToken: 'token-1', notificationsEnabled: true });
+    });
+
+    it('registers a new device without a token when this browser could not get one', async () => {
+        await expect(registerDevice(device(), OWNER, 'fid-1', undefined)).resolves.toBe(true);
+        expect(await read(devicePath)).toMatchObject({ fcmToken: null, notificationsEnabled: true });
+    });
+
     it('turns notifications on this device off and on, live', async () => {
         await registerDevice(device(), OWNER, 'fid-1', 'token-1');
         const seen = [];

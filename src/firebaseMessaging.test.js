@@ -102,15 +102,17 @@ describe('firebaseMessaging: this device in users/{uid}/devices (spec 3.3)', () 
         expect(mocks.registerDevice).toHaveBeenCalledWith('db', 'user-1', 'fid-1', null);
     });
 
-    it('registers this device without a token where FCM fails or push is unsupported', async () => {
+    it('leaves the stored token alone where FCM fails for a moment (spec 3.3)', async () => {
         mocks.getToken.mockRejectedValueOnce(new Error('messaging/token-subscribe-failed'));
         await registerThisDevice('user-1');
+        // undefined: no token known, so a registered device keeps the one it has.
+        expect(mocks.registerDevice.mock.calls).toEqual([['db', 'user-1', 'fid-1', undefined]]);
+    });
+
+    it('registers this device without a token where push is unsupported', async () => {
         mocks.isSupported.mockResolvedValueOnce(false);
         await registerThisDevice('user-1');
-        expect(mocks.registerDevice.mock.calls).toEqual([
-            ['db', 'user-1', 'fid-1', null],
-            ['db', 'user-1', 'fid-1', null],
-        ]);
+        expect(mocks.registerDevice.mock.calls).toEqual([['db', 'user-1', 'fid-1', null]]);
     });
 
     it('removes this device and invalidates its token on sign-out', async () => {

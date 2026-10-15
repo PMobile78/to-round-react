@@ -110,8 +110,9 @@ export const auth = getAuth(app);
 уведомления, получает токен через `getToken` (с VAPID-ключом и регистрацией service worker) и
 записывает это устройство в `users/{uid}/devices/{deviceId}`, где `deviceId` — id установки
 Firebase (`getId`). Известному устройству обновляется только токен, новое создаётся с
-включённым `notificationsEnabled`; без разрешения токен `null`. При выходе документ устройства
-удаляется до `signOut`. Язык напоминаний — `settings.language` пользователя, у устройства его
+включённым `notificationsEnabled`; без разрешения токен `null`. Если FCM не выдал токен из-за
+ошибки (например, нет сети), известное устройство сохраняет прежний токен, а новое
+регистрируется с `null`. При выходе документ устройства удаляется до `signOut`. Язык напоминаний — `settings.language` пользователя, у устройства его
 нет. Foreground-сообщения показываются через service worker, чтобы клик открывал нужный URL
 (`?taskId=<id>`; старые ссылки `?bubbleId=` тоже открываются). VAPID-ключ берётся из
 `config.firebase.vapidKey` (см. [environment.md](environment.md)).

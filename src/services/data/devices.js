@@ -12,15 +12,17 @@ const deviceRef = (db, uid, deviceId) => doc(db, 'users', uid, 'devices', device
 
 /**
  * Registration on sign-in: a known device gets only its new token (the switch is kept),
- * a new one is created with notifications on. fcmToken is null without permission. True if created.
+ * a new one is created with notifications on. fcmToken is null without permission, and
+ * undefined when this browser could not get it (an FCM error): a known device then keeps the
+ * token it has (spec 3.3: null only without permission or for a token FCM rejected). True if created.
  */
 export const registerDevice = async (db, uid, deviceId, fcmToken) => {
     const ref = deviceRef(db, uid, deviceId);
     if ((await getDoc(ref)).exists()) {
-        await updateDoc(ref, deviceUpdateData({ fcmToken }));
+        if (fcmToken !== undefined) await updateDoc(ref, deviceUpdateData({ fcmToken }));
         return false;
     }
-    await setDoc(ref, newDeviceData({ platform: 'web', fcmToken }));
+    await setDoc(ref, newDeviceData({ platform: 'web', fcmToken: fcmToken ?? null }));
     return true;
 };
 
