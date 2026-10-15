@@ -10,7 +10,8 @@ Human-facing documentation lives in [`docs/`](docs/README.md) (setup, Firebase, 
 npm start              # dev server (also generates service worker)
 npm run build          # production build (also generates service worker)
 npm test               # run tests (vitest)
-npm run test:rules     # Firestore rules tests on the emulator (needs Java 21+ and Firebase CLI 15+)
+npm run test:rules     # Firestore emulator tests: rules + web data layer (needs Java 21+ and Firebase CLI 15+)
+npm run start:emulator # dev server against the local Auth + Firestore emulators (.env.emulator)
 npm run preview        # serve production build locally
 npm run generate-sw    # generate public/sw.js from env vars only
 npm run deploy         # build + push to gh-pages branch
@@ -34,18 +35,23 @@ npm run version:major
 index.html                 # entry point (Vite)
 vite.config.js             # Vite configuration (base: '/to-round-react/', outDir: 'build')
 src/
-  App.jsx                    # root: Firebase Auth listener → AuthForm | BubblesPage
-  index.jsx                  # React DOM root
-  firebase.js                # Firebase SDK init
-  firebaseMessaging.js       # FCM setup / token registration
+  App.jsx                    # root: Firebase Auth listener + user settings → AuthForm | BubblesPage
+  index.jsx                  # React DOM root; registers this device after sign-in
+  firebase.js                # Firebase SDK init (emulators when REACT_APP_FIREBASE_EMULATORS=true)
+  firebaseMessaging.js       # this device in users/{uid}/devices: FCM token, foreground messages
   i18n.js                    # i18next init (en + uk)
   pages/
     BubblesPage.jsx          # main screen / god-component (active refactor target — see hooks/)
     MindMapPage.jsx          # mind map screen
   services/
-    authService.js           # Firebase Auth wrapper
-    firestoreService.js      # Firestore CRUD: bubbles, tags, FCM tokens
+    authService.js           # Firebase Auth wrapper (sign-out removes this device first)
     mindmapService.js        # Firestore CRUD: mind maps
+    data/                    # data contract v2 on users/{uid}/…; db and uid are arguments
+      convert.js             # Firestore document <-> backup-form record (Timestamp <-> ISO)
+      tasks.js, categories.js, settings.js, devices.js   # reads, live changes, writes
+      bubbleModel.js         # interim bridge to the old editors' fields (until sub-plan 0.5)
+  state/                     # BubblesDataStore, BubblesUiStore (settings-backed values),
+                             # SettingsStore (useUserSettings) + SettingsContext
   hooks/                     # extracted from BubblesPage
     useMatterEngine.js       # Matter.js physics world lifecycle
     useDraggableFab.js       # draggable FAB position
@@ -71,16 +77,21 @@ functions/
 
 ### Firestore data model
 
-| Collection | Access |
-|---|---|
-| `user-bubbles/{uid}/bubbles/{bubbleId}` | owner (`uid`) only — **current schema** |
-| `user-bubbles/{uid}` (field `bubbles[]`) | owner only — **legacy array schema**, no longer read by server logic |
-| `user-tags/{uid}` | owner only |
-| `user-mindmaps/{uid}/{document=**}` | owner only |
-| `user-fcm-tokens/{uid}/tokens/{tokenId}` | owner only |
-| `notification-sent/{key}` | Cloud Functions admin SDK only (`allow read, write: if false` in rules) |
+Data contract v2 ([spec](docs/superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md), section 3); the rules check every document's shape (`firestore.rules`).
 
-On branch `stage-0-data-contract-v2` the Cloud Functions read v2 tasks via an indexed `collectionGroup('tasks')` query (`status` + `nextNotifyAt`), only under the root path `users/{uid}/tasks`; production keeps the v1 functions on `user-bubbles` until sub-plan 0.7, and `scripts/stage0-deploy-guard.js` blocks `firebase deploy` from this branch until then. See [docs/notifications.md](docs/notifications.md).
+| Path | Content | Access |
+|---|---|---|
+| `users/{uid}` | `schemaVersion: 2`, `settings` (all UI settings), optional `migration` | owner; never deleted |
+| `users/{uid}/tasks/{taskId}` | task; `overdueAt`/`nextNotifyAt` belong to Cloud Functions | owner |
+| `users/{uid}/categories/{categoryId}` | category (`name`, palette `color`, `order`) | owner |
+| `users/{uid}/devices/{deviceId}` | device = Firebase installation id: `fcmToken`, `notificationsEnabled` | owner |
+| `user-mindmaps/{uid}/{document=**}` | mind maps (unchanged in stage 0) | owner |
+| `notification-sent/{key}` | dedup keys | Cloud Functions admin SDK only (`if false` in rules) |
+| `user-bubbles`, `user-tags`, `user-fcm-tokens` | v1 data | owner read-only; kept for the migration (sub-plan 0.6) and rollback |
+
+Clients write creates with `serverTimestamp()` and partial updates with `updatedAt: serverTimestamp()`; an existing document is never overwritten with `setDoc` (the rules reject it). Settings, tasks and categories live only in Firestore — localStorage keeps just the FAB position, the last open mind map and the mind map copies.
+
+On branch `stage-0-data-contract-v2` the web and the Cloud Functions use only `users/{uid}/…` (the functions query `collectionGroup('tasks')` by `status` + `nextNotifyAt`, only under the root path `users/{uid}/tasks`); production keeps v1 on `user-bubbles` until sub-plan 0.7, and `scripts/stage0-deploy-guard.js` blocks `firebase deploy` from this branch until then. See [docs/notifications.md](docs/notifications.md).
 
 ### Cloud Functions
 
@@ -96,7 +107,7 @@ Full design and operations: [docs/notifications.md](docs/notifications.md).
 
 ### Environment variables
 
-Copy `.env.example` to `.env` for local development. All Firebase vars are `REACT_APP_FIREBASE_*`. The CI workflow generates `.env.production` from GitHub Secrets at build time — do not commit real credentials.
+Copy `.env.example` to `.env` for local development. All Firebase vars are `REACT_APP_FIREBASE_*`. `.env.emulator` (committed, demo values only) is read by `npm run start:emulator` and turns on `REACT_APP_FIREBASE_EMULATORS`. The CI workflow generates `.env.production` from GitHub Secrets at build time — do not commit real credentials.
 
 The service worker (`public/sw.js`) is generated from env vars by `scripts/generate-sw.js`. It must run before `start` or `build` (already wired into both npm scripts).
 

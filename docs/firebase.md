@@ -30,7 +30,8 @@ export const auth = getAuth(app);
 
 - `createUser(email, password, displayName?)` — регистрация (+ `updateProfile` для имени);
 - `loginUser(email, password)` — вход;
-- `logoutUser()` — выход (чистит локальные данные пользователя);
+- `logoutUser()` — выход: сначала удаляет документ этого устройства (`users/{uid}/devices`),
+  потом `signOut`;
 - `resetPassword(email, languageCode)` — письмо для сброса пароля на языке интерфейса со ссылкой
   «Continue» обратно в приложение;
 - `onAuthStateChange(cb)` — подписка на состояние входа.
@@ -43,20 +44,25 @@ export const auth = getAuth(app);
 
 ## Модель данных Firestore
 
-Все пользовательские данные изолированы по `uid` владельца.
+Все пользовательские данные изолированы по `uid` владельца. В ветке этапа 0 веб работает
+только с форматом v2 ([спецификация](superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md),
+раздел 3); код — в `src/services/data/`.
 
-| Коллекция | Доступ |
-|---|---|
-| `user-bubbles/{uid}/bubbles/{bubbleId}` | только владелец — **актуальная схема** (субколлекция) |
-| `user-bubbles/{uid}`, поле `bubbles[]` | только владелец — **legacy-массив**, серверная логика его не использует |
-| `user-tags/{uid}` | только владелец |
-| `user-mindmaps/{uid}/{document=**}` | только владелец |
-| `user-fcm-tokens/{uid}/tokens/{tokenId}` | только владелец |
-| `notification-sent/{key}` | только Cloud Functions (admin SDK); в правилах `if false` |
+| Путь | Что лежит | Доступ |
+|---|---|---|
+| `users/{uid}` | `schemaVersion: 2`, `settings` (все настройки интерфейса), `migration` | только владелец; удалить нельзя |
+| `users/{uid}/tasks/{taskId}` | задачи | только владелец |
+| `users/{uid}/categories/{categoryId}` | категории | только владелец |
+| `users/{uid}/devices/{deviceId}` | устройства (id установки Firebase) | только владелец |
+| `user-mindmaps/{uid}/{document=**}` | карты mindmap | только владелец |
+| `notification-sent/{key}` | ключи дедупликации | только Cloud Functions (admin SDK); в правилах `if false` |
+| `user-bubbles`, `user-tags`, `user-fcm-tokens` | данные v1 | владелец только читает: для переноса (0.6) и отката |
 
-Серверный планировщик читает задачи **только из субколлекции** (индексный запрос по
-collection group) — внутрь legacy-массива `bubbles[]` индексные запросы невозможны, и
-серверная логика на него не рассчитывает.
+Слой данных создаёт документы с `serverTimestamp()` и меняет их только частичными
+обновлениями с `updatedAt: serverTimestamp()`; `setDoc` поверх существующего документа правила
+отклоняют. В localStorage остаются только позиция кнопки «+», последняя открытая карта и копия
+карт mindmap: настройки, задачи и категории живут в Firestore. При первом входе настройки
+этого браузера переносятся в `users/{uid}.settings`, и старые ключи удаляются.
 
 ## Правила безопасности
 
@@ -91,18 +97,24 @@ collection group) — внутрь legacy-массива `bubbles[]` индек�
 ### Тесты правил
 
 `npm run test:rules` поднимает эмулятор Firestore (`firebase emulators:exec`, порт 8180, проект
-`demo-to-round` без доступа к настоящей базе) и гоняет тесты из `firestore-tests/`. Нужны Java 21+
+`demo-to-round` без доступа к настоящей базе) и гоняет тесты из `firestore-tests/`: правила
+(`*.rules.test.js`) и слой данных веба (`*.data.test.js`, в том числе синхронизацию холста
+между двумя клиентами, #94). Нужны Java 21+
 и Firebase CLI 15+. Тесты переводят общие примеры из `contract/fixtures/` в форму Firestore и
 проверяют, что правила принимают каждую правильную запись и отклоняют неправильные. Команда входит
 в `npm run test:all` и `npm run verify`.
 
-## FCM (push-токены)
+## FCM и устройства
 
-`src/firebaseMessaging.js` запрашивает разрешение на уведомления, получает токен через
-`getToken` (с VAPID-ключом и регистрацией service worker) и сохраняет его в
-`user-fcm-tokens/{uid}`. Foreground-сообщения показываются через service worker, чтобы
-клик открывал нужный URL. VAPID-ключ берётся из `config.firebase.vapidKey`
-(см. [environment.md](environment.md)).
+После каждого входа `src/firebaseMessaging.js` (`registerThisDevice`) запрашивает разрешение на
+уведомления, получает токен через `getToken` (с VAPID-ключом и регистрацией service worker) и
+записывает это устройство в `users/{uid}/devices/{deviceId}`, где `deviceId` — id установки
+Firebase (`getId`). Известному устройству обновляется только токен, новое создаётся с
+включённым `notificationsEnabled`; без разрешения токен `null`. При выходе документ устройства
+удаляется до `signOut`. Язык напоминаний — `settings.language` пользователя, у устройства его
+нет. Foreground-сообщения показываются через service worker, чтобы клик открывал нужный URL
+(`?taskId=<id>`; старые ссылки `?bubbleId=` тоже открываются). VAPID-ключ берётся из
+`config.firebase.vapidKey` (см. [environment.md](environment.md)).
 
 ## Cloud Functions
 
@@ -130,4 +142,6 @@ dev-сервер в режиме `emulator`: Vite берёт `.env.emulator` (д
 `src/firebase.js` при `REACT_APP_FIREBASE_EMULATORS=true` подключает SDK к эмуляторам вместо
 настоящего проекта. Аккаунт заводится прямо в форме входа и живёт только в эмуляторе; данные
 пропадают при остановке (Ctrl+C). Push-уведомления на эмуляторе не работают: у демо-проекта нет
-FCM, поэтому устройство регистрируется без токена.
+FCM, поэтому устройство регистрируется без токена. Ошибка `Installations: Create Installation
+request failed … API key not valid` в консоли ожидаема: id установки SDK выдаёт локально, им
+устройство и регистрируется.

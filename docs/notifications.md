@@ -142,6 +142,10 @@
 200 символов, чтобы сообщение не упёрлось в лимит FCM 4 КБ; пустое после обрезки пробелов
 название показывается как «Без назви» / «Untitled».
 
+Веб показывает такое сообщение сам: в фоне — `onBackgroundMessage` сервис-воркера
+(`scripts/generate-sw.js`), на открытой вкладке — `onMessage` в `src/firebaseMessaging.js`;
+клик открывает `url`, и приложение открывает задачу по `?taskId=` (и по старому `?bubbleId=`).
+
 Ошибки FCM `messaging/registration-token-not-registered` и
 `messaging/invalid-registration-token` означают мёртвый токен: устройству ставится
 `fcmToken = null` — в транзакции и только если у устройства всё ещё этот токен (оно могло

@@ -44,10 +44,11 @@ src/
   index.jsx              # точка входа React DOM
   App.jsx                # корень: слушатель Firebase Auth → AuthForm | BubblesPage
   firebase.js            # инициализация Firebase SDK (конфиг из utils/config.js)
-  firebaseMessaging.js   # FCM: запрос разрешения, токен, foreground-обработчик
+  firebaseMessaging.js   # FCM: разрешение, токен, это устройство в users/{uid}/devices
   i18n.js                # инициализация i18next (en + uk)
   pages/                 # BubblesPage.jsx (главный экран), MindMapPage.jsx
-  services/              # authService, firestoreService, mindmapService
+  services/              # authService, mindmapService, data/ (слой данных v2: users/{uid}/…)
+  state/                 # хранилища интерфейса и настроек пользователя
   hooks/                 # useMatterEngine, useBubbleFilters, useThemeMode, …
   components/            # React-компоненты (.jsx): диалоги, drawer-ы, редакторы, селекторы
   locales/en|uk/         # translation.json
