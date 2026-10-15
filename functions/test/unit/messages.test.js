@@ -58,7 +58,7 @@ describe('notificationTexts', () => {
     });
 
     it('names a blank title (spaces, no-break spaces) "Untitled"', () => {
-        assert.equal(notificationTexts({ type: 'overdue', taskTitle: '  ', lang: 'uk' }).body, 'Прострочено: Без назви');
+        assert.equal(notificationTexts({ type: 'overdue', taskTitle: '\u00a0 ', lang: 'uk' }).body, 'Прострочено: Без назви');
         assert.equal(notificationTexts({ type: 'reminder', minutes: 60, taskTitle: '', lang: 'en' }).body, '1 hour before: Untitled');
     });
 
