@@ -1,11 +1,7 @@
 import { getMessaging, getToken, onMessage, isSupported, deleteToken } from 'firebase/messaging';
-import app from './firebase';
-
-// Store FCM token in Firestore under the current user document
-import { doc, setDoc, updateDoc, getDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
-import { db } from './firebase';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import i18n from './i18n';
+import { getId, getInstallations } from 'firebase/installations';
+import app, { db } from './firebase';
+import { registerDevice, unregisterDevice } from './services/data/devices';
 import { config } from './utils/config';
 import logger from './utils/logger';
 
@@ -40,108 +36,48 @@ export function teardownForegroundMessageListener() {
     foregroundMessageUnsubscribe = null;
 }
 
-// Remove this device's FCM token (Firestore doc + invalidate token) on logout
-export async function removeCurrentToken() {
-    teardownForegroundMessageListener();
+/** This browser's Firebase installation id: its device id in users/{uid}/devices (spec 3.3). */
+export const thisDeviceId = () => getId(getInstallations(app));
+
+// FCM token of this browser after asking for the permission; null without permission or push support.
+async function messagingToken() {
+    if (!(await isSupported())) return null;
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return null;
+
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: await navigator.serviceWorker.ready });
+    setupForegroundMessageListener(messaging);
+    return token || null;
+}
+
+/**
+ * Registration after sign-in (spec 3.3): the permission is asked for, then this device is
+ * written with its FCM token, or with null when there is none. Errors are only logged.
+ */
+export async function registerThisDevice(uid) {
+    let fcmToken = null;
     try {
-        const supported = await isSupported();
-        if (!supported) return;
-        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+        fcmToken = await messagingToken();
+    } catch (e) {
+        logger.error('[FCM] token error:', e);
+    }
+    try {
+        await registerDevice(db, uid, await thisDeviceId(), fcmToken);
+    } catch (e) {
+        logger.error('[FCM] device registration error:', e);
+    }
+}
 
-        const currentUser = getAuth().currentUser;
-        if (!currentUser) return;
-
-        const messaging = getMessaging(app);
-        const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: await navigator.serviceWorker.ready });
-        if (token) {
-            await deleteDoc(doc(db, 'user-fcm-tokens', currentUser.uid, 'tokens', token));
+/** Sign-out, before signOut: removes this device's document and invalidates its FCM token. */
+export async function unregisterThisDevice(uid) {
+    teardownForegroundMessageListener();
+    await unregisterDevice(db, uid, await thisDeviceId());
+    try {
+        if (await isSupported() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            await deleteToken(getMessaging(app));
         }
-        await deleteToken(messaging);
     } catch (e) {
         logger.error('[FCM] remove token on logout error:', e);
     }
 }
-
-export async function initMessagingAndSaveToken() {
-    try {
-        const supported = await isSupported();
-        if (!supported) {
-            return null;
-        }
-
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            return null;
-        }
-
-        const messaging = getMessaging(app);
-        const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: await navigator.serviceWorker.ready });
-
-        await saveToken(token);
-        setupForegroundMessageListener(messaging);
-
-        return token;
-    } catch (e) {
-        logger.error('[FCM] init error:', e);
-        return null;
-    }
-}
-
-async function saveToken(token) {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) {
-        // wait for auth change if needed
-        await new Promise((resolve) => {
-            const unsub = onAuthStateChanged(auth, (u) => {
-                if (u) {
-                    unsub();
-                    resolve(null);
-                }
-            });
-            setTimeout(() => { unsub(); resolve(null); }, 5000);
-        });
-    }
-
-    const currentUser = getAuth().currentUser;
-    if (!currentUser) return;
-
-    // Сохраняем токен как документ в подколлекции: user-fcm-tokens/{uid}/tokens/{token}
-    const tokenRef = doc(db, 'user-fcm-tokens', currentUser.uid, 'tokens', token);
-    const tokenData = {
-        userId: currentUser.uid,
-        token,
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        language: (typeof i18n?.language === 'string' && i18n.language) || (typeof navigator !== 'undefined' ? navigator.language : 'unknown'),
-        updatedAt: serverTimestamp(),
-    };
-    const snap = await getDoc(tokenRef);
-    if (!snap.exists()) {
-        await setDoc(tokenRef, { ...tokenData, createdAt: serverTimestamp() });
-    } else {
-        await updateDoc(tokenRef, tokenData);
-    }
-}
-
-export async function updateMessagingTokenLanguage(language) {
-    try {
-        const supported = await isSupported();
-        if (!supported) return;
-
-        const auth = getAuth();
-        const currentUser = auth.currentUser;
-        if (!currentUser) return;
-
-        const messaging = getMessaging(app);
-        const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: await navigator.serviceWorker.ready });
-
-        const tokenRef = doc(db, 'user-fcm-tokens', currentUser.uid, 'tokens', token);
-        await setDoc(tokenRef, {
-            language: (typeof language === 'string' && language) || (typeof i18n?.language === 'string' && i18n.language) || (typeof navigator !== 'undefined' ? navigator.language : 'unknown'),
-            updatedAt: serverTimestamp()
-        }, { merge: true });
-    } catch (e) {
-        // ignore
-    }
-}
-

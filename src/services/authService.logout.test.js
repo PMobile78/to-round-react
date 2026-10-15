@@ -16,9 +16,9 @@ vi.mock('firebase/auth', () => ({
     updatePassword: vi.fn(),
 }));
 
-const mockRemoveCurrentToken = vi.fn();
+const mockUnregisterThisDevice = vi.fn();
 vi.mock('../firebaseMessaging', () => ({
-    removeCurrentToken: (...args) => mockRemoveCurrentToken(...args),
+    unregisterThisDevice: (...args) => mockUnregisterThisDevice(...args),
 }));
 
 import { logoutUser } from './authService';
@@ -27,32 +27,33 @@ describe('logoutUser', () => {
     beforeEach(() => {
         vi.useFakeTimers();
         mockSignOut.mockReset();
-        mockRemoveCurrentToken.mockReset();
+        mockUnregisterThisDevice.mockReset();
     });
     afterEach(() => { vi.useRealTimers(); });
 
-    it('removes the token then signs out on the happy path', async () => {
-        mockRemoveCurrentToken.mockResolvedValue();
-        mockSignOut.mockResolvedValue();
+    it('removes this device first, then signs out (spec 3.3)', async () => {
+        const order = [];
+        mockUnregisterThisDevice.mockImplementation(async () => { order.push('unregister'); });
+        mockSignOut.mockImplementation(async () => { order.push('signOut'); });
 
         const result = await logoutUser();
 
-        expect(mockRemoveCurrentToken).toHaveBeenCalledOnce();
-        expect(mockSignOut).toHaveBeenCalledOnce();
+        expect(mockUnregisterThisDevice).toHaveBeenCalledWith('u1');
+        expect(order).toEqual(['unregister', 'signOut']);
         expect(result).toEqual({ success: true });
     });
 
-    it('does not let a hanging token cleanup block sign-out beyond the timeout', async () => {
-        mockRemoveCurrentToken.mockReturnValue(new Promise(() => {})); // never resolves
+    it('does not let a hanging device removal block sign-out beyond the timeout', async () => {
+        mockUnregisterThisDevice.mockReturnValue(new Promise(() => {})); // never resolves
         mockSignOut.mockResolvedValue();
 
         const resultPromise = logoutUser();
 
-        // While the cleanup is pending and before the 2s timeout, sign-out must wait.
+        // While the removal is pending and before the 2s timeout, sign-out must wait.
         await vi.advanceTimersByTimeAsync(1999);
         expect(mockSignOut).not.toHaveBeenCalled();
 
-        // Once the timeout elapses, logout proceeds regardless of the stuck cleanup.
+        // Once the timeout elapses, logout proceeds regardless of the stuck removal.
         await vi.advanceTimersByTimeAsync(1);
         const result = await resultPromise;
 
@@ -60,8 +61,8 @@ describe('logoutUser', () => {
         expect(result).toEqual({ success: true });
     });
 
-    it('still signs out when token cleanup rejects', async () => {
-        mockRemoveCurrentToken.mockRejectedValue(new Error('FCM down'));
+    it('still signs out when the device removal fails', async () => {
+        mockUnregisterThisDevice.mockRejectedValue(new Error('offline'));
         mockSignOut.mockResolvedValue();
 
         const result = await logoutUser();

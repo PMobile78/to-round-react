@@ -11,9 +11,9 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase';
 import logger from '../utils/logger';
-import { removeCurrentToken } from '../firebaseMessaging';
+import { unregisterThisDevice } from '../firebaseMessaging';
 
-// Upper bound for the best-effort FCM token cleanup on logout, so a slow
+// Upper bound for the best-effort device cleanup on logout, so a slow
 // network / FCM round-trip cannot hang the sign-out.
 const LOGOUT_TOKEN_CLEANUP_TIMEOUT_MS = 2000;
 
@@ -67,21 +67,16 @@ export const loginUser = async (email, password) => {
 export const logoutUser = async () => {
     try {
         const uid = auth.currentUser?.uid;
-        // Remove this device's FCM token before sign-out (owner-only rules block it afterwards).
-        // Best-effort and time-boxed: swallow its errors and never let a slow FCM/network
-        // round-trip hang logout — proceed to sign-out after the timeout regardless.
+        // Remove this device (users/{uid}/devices) before sign-out: owner-only rules block it
+        // afterwards (spec 3.3). Best-effort and time-boxed: swallow its errors and never let a
+        // slow FCM/network round-trip hang logout — proceed to sign-out after the timeout regardless.
         try {
             await Promise.race([
-                removeCurrentToken(),
+                uid ? unregisterThisDevice(uid) : Promise.resolve(),
                 new Promise((resolve) => setTimeout(resolve, LOGOUT_TOKEN_CLEANUP_TIMEOUT_MS)),
             ]);
         } catch (e) { /* logout proceeds regardless */ }
         await signOut(auth);
-        // Clear user-specific localStorage data after sign-out
-        if (uid) {
-            localStorage.removeItem(`bubbles_${uid}`);
-            localStorage.removeItem(`tags_${uid}`);
-        }
         return { success: true };
     } catch (error) {
         logger.error('Error logging out:', error);

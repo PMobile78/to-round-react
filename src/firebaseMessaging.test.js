@@ -2,19 +2,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-    deleteDoc: vi.fn(),
     deleteToken: vi.fn(),
-    doc: vi.fn(() => 'token-ref'),
-    getAuth: vi.fn(),
-    getDoc: vi.fn(),
+    getId: vi.fn(),
+    getInstallations: vi.fn(() => 'installations'),
     getMessaging: vi.fn(() => 'messaging'),
     getToken: vi.fn(),
     isSupported: vi.fn(),
-    onAuthStateChanged: vi.fn(),
     onMessage: vi.fn(),
-    serverTimestamp: vi.fn(() => 'server-timestamp'),
-    setDoc: vi.fn(),
-    updateDoc: vi.fn(),
+    registerDevice: vi.fn(),
+    unregisterDevice: vi.fn(),
 }));
 
 vi.mock('firebase/messaging', () => ({
@@ -24,45 +20,46 @@ vi.mock('firebase/messaging', () => ({
     isSupported: mocks.isSupported,
     onMessage: mocks.onMessage,
 }));
-vi.mock('firebase/firestore', () => ({
-    deleteDoc: mocks.deleteDoc,
-    doc: mocks.doc,
-    getDoc: mocks.getDoc,
-    serverTimestamp: mocks.serverTimestamp,
-    setDoc: mocks.setDoc,
-    updateDoc: mocks.updateDoc,
+vi.mock('firebase/installations', () => ({
+    getId: mocks.getId,
+    getInstallations: mocks.getInstallations,
 }));
-vi.mock('firebase/auth', () => ({
-    getAuth: mocks.getAuth,
-    onAuthStateChanged: mocks.onAuthStateChanged,
+vi.mock('./services/data/devices', () => ({
+    registerDevice: mocks.registerDevice,
+    unregisterDevice: mocks.unregisterDevice,
 }));
 vi.mock('./firebase', () => ({ default: 'app', db: 'db' }));
-vi.mock('./i18n', () => ({ default: { language: 'en' } }));
 vi.mock('./utils/config', () => ({ config: { firebase: { vapidKey: 'vapid-key' } } }));
 vi.mock('./utils/logger', () => ({ default: { error: vi.fn() } }));
 
-import { initMessagingAndSaveToken, teardownForegroundMessageListener } from './firebaseMessaging';
+import { registerThisDevice, teardownForegroundMessageListener, unregisterThisDevice } from './firebaseMessaging';
 
-describe('firebaseMessaging foreground listener', () => {
+describe('firebaseMessaging: this device in users/{uid}/devices (spec 3.3)', () => {
     let activeHandlers;
     let unsubscribeCalls;
     let registration;
+    let permission;
 
     beforeEach(() => {
         activeHandlers = new Set();
         unsubscribeCalls = [];
         registration = { showNotification: vi.fn().mockResolvedValue() };
+        permission = 'granted';
 
         Object.defineProperty(navigator, 'serviceWorker', {
             configurable: true,
             value: { ready: Promise.resolve(registration) },
         });
-        vi.stubGlobal('Notification', { requestPermission: vi.fn().mockResolvedValue('granted') });
+        vi.stubGlobal('Notification', {
+            requestPermission: vi.fn(() => Promise.resolve(permission)),
+            get permission() { return permission; },
+        });
 
         mocks.isSupported.mockResolvedValue(true);
+        mocks.getId.mockResolvedValue('fid-1');
         mocks.getToken.mockResolvedValue('token-1');
-        mocks.getAuth.mockReturnValue({ currentUser: { uid: 'user-1' } });
-        mocks.getDoc.mockResolvedValue({ exists: () => true });
+        mocks.registerDevice.mockResolvedValue(true);
+        mocks.unregisterDevice.mockResolvedValue();
         mocks.onMessage.mockImplementation((_messaging, handler) => {
             activeHandlers.add(handler);
             const unsubscribe = vi.fn(() => activeHandlers.delete(handler));
@@ -77,42 +74,60 @@ describe('firebaseMessaging foreground listener', () => {
         vi.clearAllMocks();
     });
 
-    it('keeps one listener while repeated init calls still sync the token', async () => {
-        await initMessagingAndSaveToken();
-        await initMessagingAndSaveToken();
-        await initMessagingAndSaveToken();
+    it('registers this installation with its FCM token and keeps one foreground listener', async () => {
+        await registerThisDevice('user-1');
+        await registerThisDevice('user-1');
+        await registerThisDevice('user-1');
 
+        expect(mocks.registerDevice).toHaveBeenCalledTimes(3);
+        expect(mocks.registerDevice).toHaveBeenLastCalledWith('db', 'user-1', 'fid-1', 'token-1');
         expect(mocks.onMessage).toHaveBeenCalledOnce();
         expect(activeHandlers.size).toBe(1);
-        expect(mocks.getToken).toHaveBeenCalledTimes(3);
-        expect(mocks.updateDoc).toHaveBeenCalledTimes(3);
-        expect(mocks.updateDoc).toHaveBeenLastCalledWith('token-ref', expect.objectContaining({
-            token: 'token-1',
-            language: 'en',
-        }));
 
-        const payload = {
-            notification: { title: 'Reminder', body: 'One message' },
-            data: { bubbleId: 'bubble-1', url: '/?bubbleId=bubble-1' },
-        };
+        // A v2 message has no notification block: the text comes in data (sub-plan 0.3).
+        const payload = { data: { type: 'reminder', taskId: 't1', title: 'Pay bills', body: 'In 1 hour', url: '/?taskId=t1' } };
         await Promise.all([...activeHandlers].map((handler) => handler(payload)));
 
         expect(registration.showNotification).toHaveBeenCalledOnce();
-        expect(registration.showNotification).toHaveBeenCalledWith('Reminder', expect.objectContaining({
-            body: 'One message',
+        expect(registration.showNotification).toHaveBeenCalledWith('Pay bills', expect.objectContaining({
+            body: 'In 1 hour',
             data: payload.data,
         }));
     });
 
-    it('unsubscribes on teardown and creates one listener on re-init', async () => {
-        await initMessagingAndSaveToken();
-        teardownForegroundMessageListener();
+    it('registers this device without a token when notifications are not allowed', async () => {
+        permission = 'denied';
+        await registerThisDevice('user-1');
+        expect(mocks.getToken).not.toHaveBeenCalled();
+        expect(mocks.registerDevice).toHaveBeenCalledWith('db', 'user-1', 'fid-1', null);
+    });
 
+    it('registers this device without a token where FCM fails or push is unsupported', async () => {
+        mocks.getToken.mockRejectedValueOnce(new Error('messaging/token-subscribe-failed'));
+        await registerThisDevice('user-1');
+        mocks.isSupported.mockResolvedValueOnce(false);
+        await registerThisDevice('user-1');
+        expect(mocks.registerDevice.mock.calls).toEqual([
+            ['db', 'user-1', 'fid-1', null],
+            ['db', 'user-1', 'fid-1', null],
+        ]);
+    });
+
+    it('removes this device and invalidates its token on sign-out', async () => {
+        await registerThisDevice('user-1');
+        await unregisterThisDevice('user-1');
+
+        expect(mocks.unregisterDevice).toHaveBeenCalledWith('db', 'user-1', 'fid-1');
+        expect(mocks.deleteToken).toHaveBeenCalledWith('messaging');
         expect(unsubscribeCalls[0]).toHaveBeenCalledOnce();
         expect(activeHandlers.size).toBe(0);
+    });
 
-        await initMessagingAndSaveToken();
-        await initMessagingAndSaveToken();
+    it('creates one foreground listener again on the next sign-in', async () => {
+        await registerThisDevice('user-1');
+        await unregisterThisDevice('user-1');
+        await registerThisDevice('user-1');
+        await registerThisDevice('user-1');
 
         expect(mocks.onMessage).toHaveBeenCalledTimes(2);
         expect(activeHandlers.size).toBe(1);

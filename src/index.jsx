@@ -8,8 +8,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './i18n';
 import './styles/design-backdrops.css';
-import { initMessagingAndSaveToken, updateMessagingTokenLanguage } from './firebaseMessaging';
-import i18n from './i18n';
+import { registerThisDevice } from './firebaseMessaging';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import logger from './utils/logger';
 import { deepLinkTaskId } from './utils/deepLink';
@@ -36,10 +35,8 @@ root.render(
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
         const swPath = `${import.meta.env.BASE_URL}sw.js`;
-        navigator.serviceWorker.register(swPath).then(function (registration) {
-            // Initialize FCM after SW is ready and process deep links
-            initMessagingAndSaveToken();
-            try { updateMessagingTokenLanguage(i18n.language); } catch { /* Messaging may be unavailable. */ }
+        navigator.serviceWorker.register(swPath).then(function () {
+            // FCM uses this SW (registerThisDevice waits for it); process deep links
             handleDeepLink();
         }, function (err) {
             logger.error('[SW] Registration failed:', err);
@@ -49,27 +46,12 @@ if ('serviceWorker' in navigator) {
     handleDeepLink();
 }
 
-// Keep token language in sync with app language
-try {
-    i18n.on('languageChanged', (lng) => {
-        updateMessagingTokenLanguage(lng);
-    });
-} catch (e) {
-    // ignore
-}
-
-// Update/save token after login to apply the current app language chosen on auth screen
+// Register this device for reminders after sign-in (spec 3.3). The language of the
+// reminders is the user's settings.language, so the device carries none.
 try {
     const auth = getAuth();
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            try {
-                await initMessagingAndSaveToken();
-            } catch { /* Messaging may be unavailable. */ }
-            try {
-                await updateMessagingTokenLanguage(i18n.language);
-            } catch { /* Messaging may be unavailable. */ }
-        }
+    onAuthStateChanged(auth, (user) => {
+        if (user) registerThisDevice(user.uid);
     });
 } catch (e) {
     // ignore
