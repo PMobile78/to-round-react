@@ -28,4 +28,9 @@ describe('index.js', () => {
         assert.equal(eventPath(fns.onCategoryDeleted), 'users/{uid}/categories/{categoryId}');
         assert.equal(fns.onCategoryDeleted.__endpoint.eventTrigger.eventType, 'google.cloud.firestore.document.v1.deleted');
     });
+
+    it('retries a failed trigger run instead of dropping the event (both handlers are idempotent)', () => {
+        assert.equal(fns.onTaskWritten.__endpoint.eventTrigger.retry, true);
+        assert.equal(fns.onCategoryDeleted.__endpoint.eventTrigger.retry, true);
+    });
 });
