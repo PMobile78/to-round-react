@@ -5,8 +5,8 @@ import {
     loadBubblesFromFirestore,
     cleanupOldDeletedBubbles,
     subscribeToBubblesUpdates,
-    BUBBLE_STATUS,
 } from '../services/firestoreService';
+import { normalizeStoredBubble } from '../utils/bubbleData';
 import logger from '../utils/logger';
 import { shouldPauseEngine } from '../utils/engineIdle';
 import { hexToRgba } from '../utils/colorUtils';
@@ -126,7 +126,7 @@ export function useMatterEngine({
                         }
 
                         const bubble = {
-                            id: storedBubble.id,
+                            ...normalizeStoredBubble(storedBubble),
                             body: Matter.Bodies.circle(x, y, storedBubble.radius, {
                                 restitution: 0.8,
                                 frictionAir: 0.01,
@@ -135,21 +135,7 @@ export function useMatterEngine({
                                     strokeStyle: storedBubble.strokeStyle || theme?.custom?.bubble?.defaultStroke || '#2f6bdb',
                                     lineWidth: theme?.custom?.bubble?.strokeWidth ?? 1.5
                                 }
-                            }),
-                            radius: storedBubble.radius,
-                            title: storedBubble.title || '',
-                            description: storedBubble.description || '',
-                            tagId: storedBubble.tagId || null,
-                            status: storedBubble.status || BUBBLE_STATUS.ACTIVE,
-                            createdAt: storedBubble.createdAt || new Date().toISOString(),
-                            updatedAt: storedBubble.updatedAt || new Date().toISOString(),
-                            deletedAt: storedBubble.deletedAt || null,
-                            dueDate: storedBubble.dueDate || null,
-                            notifications: storedBubble.notifications || [],
-                            recurrence: storedBubble.recurrence || null,
-                            overdueSticky: storedBubble.overdueSticky || false,
-                            overdueAt: storedBubble.overdueAt || null,
-                            overduePulseSuppressed: storedBubble.overduePulseSuppressed || false
+                            })
                         };
 
                         // Инициализируем stickyPulseRef для задач с overdueSticky

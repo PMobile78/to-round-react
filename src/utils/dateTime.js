@@ -102,3 +102,15 @@ export const getOffsetMs = (notification) => {
     }
     return 0;
 };
+
+/**
+ * Formats the build moment (UTC ISO string that CI puts into REACT_APP_BUILD_TIME) in local time
+ * as "DD.MM.YYYY HH:mm". Returns "-" when there is no valid time (local dev build).
+ */
+export const formatBuildTime = (iso) => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) return '-';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};

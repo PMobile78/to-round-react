@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box } from '@mui/material';
 import packageJson from '../../package.json';
+import { formatBuildTime } from '../utils/dateTime';
 
 /** Сборка подставляет REACT_APP_VERSION; без неё — версия из package.json (локальный dev без устаревшего .env). */
 const APP_VERSION = import.meta.env.REACT_APP_VERSION || packageJson.version || 'dev';
@@ -27,8 +28,7 @@ export default function AboutDialog({ open, onClose, t }) {
             <DialogContent>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Typography variant="body2">Version: {APP_VERSION}</Typography>
-                    <Typography variant="body2">Build time: {import.meta.env.REACT_APP_BUILD_TIME || '-'}</Typography>
-                    <Typography variant="body2">Commit: {import.meta.env.REACT_APP_GIT_SHA || '-'}</Typography>
+                    <Typography variant="body2">Deployed: {formatBuildTime(import.meta.env.REACT_APP_BUILD_TIME)}</Typography>
                     {memoryInfo && (
                         <Box sx={{ mt: 1 }}>
                             <Typography variant="body2">

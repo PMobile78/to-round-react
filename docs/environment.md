@@ -45,6 +45,7 @@ npm start
 |---|---|---|
 | `REACT_APP_NAME` | `To-Round` | Имя приложения |
 | `REACT_APP_VERSION` | версия из `package.json` | Версия (в проде проставляется CI) |
+| `REACT_APP_BUILD_TIME` | нет (в окне «-») | Время сборки, UTC ISO; ставит CI при деплое, окно «О программе» показывает его в местном времени (`Deployed`) |
 | `REACT_APP_ENVIRONMENT` | `development` | Имя окружения |
 
 ## Как получить значения Firebase

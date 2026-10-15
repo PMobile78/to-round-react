@@ -33,6 +33,11 @@ export const sanitizeBubble = (raw) => {
     };
 };
 
+// Stored bubble (Firestore doc / localStorage fallback) → in-memory bubble data; the caller
+// attaches the Matter.js body. Same whitelist as imports, so every field serializeBubble
+// persists (useRichText, tz, …) survives a page reload.
+export const normalizeStoredBubble = (storedBubble) => sanitizeBubble(storedBubble);
+
 // Whitelist-validate a single imported tag — strips unknown/dangerous fields.
 export const sanitizeTag = (raw) => {
     if (!raw || typeof raw !== 'object') return null;
