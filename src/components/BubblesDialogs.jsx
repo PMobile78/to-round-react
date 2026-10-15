@@ -28,6 +28,8 @@ import { COLOR_PALETTE } from '../hooks/tagColors';
  * stay in BubblesPage and arrive here as plain props.
  */
 const BubblesDialogs = ({
+    // The signed-in user: the list drawer writes the user's tasks
+    uid,
     // Edit bubble dialog
     editDialog,
     handleCloseDialog,
@@ -85,7 +87,6 @@ const BubblesDialogs = ({
     };
     const {
         bubbles,
-        setBubbles,
         tags,
         setTags,
         canCreateMoreTags,
@@ -385,7 +386,7 @@ const BubblesDialogs = ({
                 isMobile={isMobile}
                 themeMode={themeMode}
                 bubbles={bubbles}
-                setBubbles={setBubbles}
+                uid={uid}
                 tags={tags}
                 listFilter={listFilter}
                 setListFilter={setListFilter}

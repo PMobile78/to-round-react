@@ -35,21 +35,16 @@ import TaskActionButtons from './TaskActionButtons';
 import useSearch from '../hooks/useSearch';
 import HtmlRenderer from './HtmlRenderer';
 import { stripHtml } from '../utils/stripHtml';
-import {
-    BUBBLE_STATUS,
-    markBubbleAsDone,
-    markBubbleAsDeleted,
-    restoreBubble,
-    getBubblesByStatus,
-    deleteBubbleDoc
-} from '../services/firestoreService';
+import { db } from '../firebase';
+import { BUBBLE_STATUS, getBubblesByStatus } from '../services/firestoreService';
+import { completeTask, deleteTaskForever, restoreTask, trashTask } from '../services/data/tasks';
 
 // Auto-cleanup period for deleted tasks (30 days)
 const DELETED_TASKS_CLEANUP_DAYS = 30;
 
 const TaskList = ({
     bubbles,
-    setBubbles,
+    uid,
     tags,
     listFilter,
     setListFilter,
@@ -265,42 +260,28 @@ const TaskList = ({
         return new Date(dueDate) < new Date();
     }, []);
 
-    // Memoized action handlers
-    const handleRestoreBubble = useCallback(async (bubbleId) => {
-        try {
-            const updatedBubbles = await restoreBubble(bubbleId, bubbles);
-            setBubbles(updatedBubbles);
-        } catch (error) {
-            logger.error('Error restoring bubble:', error);
-        }
-    }, [bubbles, setBubbles]);
+    // Memoized action handlers. They write through the data layer; the live task
+    // subscription (useMatterEngine) brings the change back into the list.
+    const handleRestoreBubble = useCallback((bubbleId) => {
+        restoreTask(db, uid, bubbleId).catch(error => logger.error('Error restoring bubble:', error));
+    }, [uid]);
 
-    // Mark task as done from list view
-    const handleMarkTaskAsDone = useCallback(async (taskId) => {
-        try {
-            const updatedBubbles = await markBubbleAsDone(taskId, bubbles);
-            setBubbles(updatedBubbles);
-        } catch (error) {
-            logger.error('Error marking task as done:', error);
-        }
-    }, [bubbles, setBubbles]);
+    // Mark task as done from list view (a repeating task moves to its next due)
+    const handleMarkTaskAsDone = useCallback((taskId) => {
+        const task = bubbles.find(bubble => bubble.id === taskId);
+        if (!task) return;
+        completeTask(db, uid, task).catch(error => logger.error('Error marking task as done:', error));
+    }, [bubbles, uid]);
 
-    // Delete task from list view
-    const handleDeleteTask = useCallback(async (taskId) => {
-        try {
-            const updatedBubbles = await markBubbleAsDeleted(taskId, bubbles);
-            setBubbles(updatedBubbles);
-        } catch (error) {
-            logger.error('Error deleting task:', error);
-        }
-    }, [bubbles, setBubbles]);
+    // Delete task from list view (to the trash)
+    const handleDeleteTask = useCallback((taskId) => {
+        trashTask(db, uid, taskId).catch(error => logger.error('Error deleting task:', error));
+    }, [uid]);
 
     // Permanently delete task from list view
-    const handlePermanentDeleteTask = useCallback(async (taskId) => {
-        const updatedBubbles = bubbles.filter(bubble => bubble.id !== taskId);
-        setBubbles(updatedBubbles);
-        deleteBubbleDoc(taskId).catch(e => logger.error('Error permanently deleting task:', e));
-    }, [bubbles, setBubbles]);
+    const handlePermanentDeleteTask = useCallback((taskId) => {
+        deleteTaskForever(db, uid, taskId).catch(e => logger.error('Error permanently deleting task:', e));
+    }, [uid]);
 
     // Edit task from list view
     const handleEditTask = useCallback((task) => {

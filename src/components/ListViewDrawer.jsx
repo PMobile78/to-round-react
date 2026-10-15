@@ -11,7 +11,7 @@ const TaskListDrawer = ({
     themeMode,
     // ListView props
     bubbles,
-    setBubbles,
+    uid,
     tags,
     listFilter,
     setListFilter,
@@ -68,7 +68,7 @@ const TaskListDrawer = ({
             <Box sx={{ height: 'calc(100vh - 73px)', overflow: 'auto' }}>
                 <TaskList
                     bubbles={bubbles}
-                    setBubbles={setBubbles}
+                    uid={uid}
                     tags={tags}
                     listFilter={listFilter}
                     setListFilter={setListFilter}

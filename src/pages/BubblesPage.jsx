@@ -12,16 +12,9 @@ import BubblesDialogs from '../components/BubblesDialogs';
 import TextOverlay from '../components/TextOverlay';
 import { logoutUser } from '../services/authService';
 import { db } from '../firebase';
-import { subscribeTasks } from '../services/data/tasks';
-import {
-    loadBubblesFromFirestore,
-    saveTagsToFirestore,
-    subscribeToBubblesUpdates,
-    BUBBLE_STATUS,
-    cleanupOldDeletedBubbles,
-    updateBubbleFields,
-    deleteBubbleDoc
-} from '../services/firestoreService';
+import { muteTaskPulse, subscribeTasks } from '../services/data/tasks';
+import { deepLinkTaskId } from '../utils/deepLink';
+import { saveTagsToFirestore, BUBBLE_STATUS } from '../services/firestoreService';
 
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
@@ -131,9 +124,8 @@ const BubblesPage = ({ user, themeMode }) => {
         handleDeleteBubble,
         handleMarkAsDone,
         handleCloseDialog,
-        clearAllBubbles,
         handleToggleEditUseRichText
-    } = useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile });
+    } = useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile, uid: user.uid });
 
     // Live mirror of edit-dialog state for the Matter mount-effect subscription
     // (its closure captures editDialog/selectedBubble once and stays stale).
@@ -476,8 +468,8 @@ const BubblesPage = ({ user, themeMode }) => {
 
 
 
-    // Bubble CRUD (createBubble/openCreateDialog/createNewBubble/handleSaveBubble/
-    // handleDeleteBubble/handleMarkAsDone/handleCloseDialog/clearAllBubbles/
+    // Bubble CRUD (openCreateDialog/createNewBubble/handleSaveBubble/
+    // handleDeleteBubble/handleMarkAsDone/handleCloseDialog/
     // handleToggleEditUseRichText + the open-bubble deep-link listener) live in
     // useBubbleCrud (Task 5/6 of #38).
 
@@ -633,13 +625,12 @@ const BubblesPage = ({ user, themeMode }) => {
 
     // open-bubble deep-link listener now lives in useBubbleCrud (Task 5/6 of #38).
 
-    // Авто-открытие по URL-параметру (?bubbleId=...) даже если событие было пропущено
+    // Авто-открытие по URL-параметру (?taskId=... или старому ?bubbleId=...) даже если событие было пропущено
     const deepLinkHandledRef = React.useRef(false);
     useEffect(() => {
         if (deepLinkHandledRef.current) return;
         try {
-            const params = new URLSearchParams(window.location.search);
-            const bubbleId = params.get('bubbleId');
+            const bubbleId = deepLinkTaskId(window.location.search);
             if (!bubbleId) return;
             const found = bubbles.find(b => String(b.id) === String(bubbleId));
             if (found) {
@@ -680,19 +671,8 @@ const BubblesPage = ({ user, themeMode }) => {
                 notifiedBubbleNotificationsRef.current.delete(key);
             });
 
-            // Персистим намерение «остановлено вручную» + сбрасываем серверный sticky-флаг
-            const updatedBubble = {
-                ...selectedBubble,
-                overduePulseSuppressed: true,
-                overdueSticky: false,
-                overdueAt: null,
-                updatedAt: new Date().toISOString()
-            };
-
-            setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? updatedBubble : b));
-            updateBubbleFields(selectedBubble.id, {
-                overduePulseSuppressed: true, overdueSticky: false, overdueAt: null, updatedAt: updatedBubble.updatedAt
-            }).catch(e => logger.error('Error stopping pulsing:', e));
+            // Персистим намерение «остановлено вручную» (pulseMuted); сервер сбросит его при смене срока
+            muteTaskPulse(db, user.uid, selectedBubble.id).catch(e => logger.error('Error stopping pulsing:', e));
 
             // Close edit dialog after stop pulsing
             setEditDialog(false);
@@ -839,7 +819,7 @@ const BubblesPage = ({ user, themeMode }) => {
                     onAddBubble={handleOpenCreateDialog}
                     taskListProps={{
                         bubbles,
-                        setBubbles,
+                        uid: user.uid,
                         tags,
                         listFilter,
                         setListFilter,
@@ -870,6 +850,7 @@ const BubblesPage = ({ user, themeMode }) => {
 
             {/* Все диалоги и дроверы (Task A of #64) */}
             <BubblesDialogs
+                uid={user.uid}
                 editDialog={editDialog}
                 handleCloseDialog={handleCloseDialog}
                 selectedBubble={selectedBubble}

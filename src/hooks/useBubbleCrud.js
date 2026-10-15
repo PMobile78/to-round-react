@@ -1,24 +1,18 @@
 import { useEffect, useState } from 'react';
 import Matter from 'matter-js';
-import {
-    BUBBLE_STATUS,
-    markBubbleAsDeleted,
-    clearBubblesFromFirestore,
-    upsertBubble,
-    updateBubbleFields,
-    buildStatusFields
-} from '../services/firestoreService';
+import { db } from '../firebase';
+import { completionChanges, createTask, newTaskId, trashTask, updateTask } from '../services/data/tasks';
+import { bubbleFromTask, taskChangesFromForm, taskFieldsFromForm, withTaskChanges } from '../services/data/bubbleModel';
 import logger from '../utils/logger';
-import { formatLocalDateTime, getUserTimeZone, parseLocalDateTime } from '../utils/dateTime';
 import { useBubblesData } from '../state/BubblesDataStore';
 import { useBubblesUi } from '../state/BubblesUiStore';
 
 /**
  * Bubble create/edit/delete/done CRUD + dialog state, extracted from
- * BubblesPage (Task 5/6 of #38). This is also the "bubbles sync" layer —
- * optimistic local updates paired with upsertBubble / updateBubbleFields /
- * markBubbleAsDeleted from firestoreService (the live read subscription itself
- * lives in useMatterEngine).
+ * BubblesPage (Task 5/6 of #38). Writes go to users/{uid}/tasks through
+ * src/services/data/tasks.js; the live subscription in useMatterEngine brings
+ * every change back. Local updates are made right away only where a Matter
+ * body changes (new, re-created, removed from the canvas).
  *
  * `bubbles`/`setBubbles` and the Matter refs stay owned by BubblesPage and are
  * passed in directly. This hook runs early (it owns selectedBubble/editDialog,
@@ -28,7 +22,7 @@ import { useBubblesUi } from '../state/BubblesUiStore';
  * and page-local UI values (canvasSize + the create/edit notification state) are
  * passed as explicit handler arguments by BubblesPage.
  */
-export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile }) {
+export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile, uid }) {
     const { tags } = useBubblesData();
     const {
         registered,
@@ -46,42 +40,19 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
     const [useRichTextCreate, setUseRichTextCreate] = useState(false);
     const [useRichTextEdit, setUseRichTextEdit] = useState(false);
 
-    // Bubble creation function
-    const createBubble = (x, y, radius, tagId = null) => {
+    // Matter.js body of a bubble, coloured by its category (tag)
+    const createBody = (x, y, radius, tagId) => {
         const { getBubbleFillStyle } = registered;
-        let strokeColor = '#B0B0B0'; // light gray color by default
-        let tagColor = null;
-
-        if (tagId) {
-            const tag = tags.find(t => t.id === tagId);
-            if (tag) {
-                strokeColor = tag.color;
-                tagColor = tag.color;
-            }
-        }
-
-        const body = Matter.Bodies.circle(x, y, radius, {
+        const tagColor = tags.find(t => t.id === tagId)?.color ?? null;
+        return Matter.Bodies.circle(x, y, radius, {
             restitution: 0.8,
             frictionAir: 0.01,
             render: {
                 fillStyle: getBubbleFillStyle(tagColor),
-                strokeStyle: strokeColor,
+                strokeStyle: tagColor || '#B0B0B0', // light gray color by default
                 lineWidth: theme.custom?.bubble?.strokeWidth ?? 1.5
             }
         });
-
-        return {
-            id: Math.random().toString(36).substr(2, 9),
-            body,
-            radius,
-            title: '',
-            description: '',
-            tagId,
-            status: BUBBLE_STATUS.ACTIVE,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            deletedAt: null,
-        };
     };
 
     // Function for opening create bubble dialog
@@ -109,27 +80,26 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         }
 
         const margin = isMobile ? 50 : 100;
-
-        const newBubble = createBubble(
-            Math.random() * (canvasSize.width - margin * 2) + margin,
-            50,
-            bubbleSize, // Используем выбранный размер
-            selectedTagId || null
-        );
-
-        // Set title, description, dueDate, recurrence
-        newBubble.title = title;
-        newBubble.description = description;
-        newBubble.dueDate = formatLocalDateTime(dueDate);
-        newBubble.tz = getUserTimeZone();
-        newBubble.notifications = createNotifications;
-        newBubble.recurrence = createRecurrence;
-        // persist editor mode per task
-        newBubble.useRichText = !!useRichTextCreate;
+        const fields = taskFieldsFromForm({
+            title,
+            description,
+            useRichText: useRichTextCreate,
+            tagId: selectedTagId,
+            radius: bubbleSize, // Используем выбранный размер
+            dueDate,
+            notifications: createNotifications,
+            recurrence: createRecurrence,
+        });
+        const id = newTaskId(db, uid);
+        const now = new Date().toISOString();
+        const newBubble = {
+            ...bubbleFromTask({ id, ...fields, status: 'active', pulseMuted: false, createdAt: now, updatedAt: now, deletedAt: null }),
+            body: createBody(Math.random() * (canvasSize.width - margin * 2) + margin, 50, bubbleSize, fields.categoryId),
+        };
 
         Matter.World.add(engineRef.current.world, newBubble.body);
         setBubbles(prev => [...prev, newBubble]);
-        upsertBubble(newBubble).catch(e => logger.error('Error saving new bubble:', e));
+        createTask(db, uid, id, fields).catch(e => logger.error('Error saving new bubble:', e));
 
         // Close dialog and reset form
         setCreateDialog(false);
@@ -137,87 +107,41 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         setDueDate(null);
     };
 
-    // Save bubble changes
+    // Save bubble changes: only the fields the user changed are written
     const handleSaveBubble = ({ title, description, editDueDate, editNotifications, editRecurrence, manuallyStoppedPulsingRef, setEditDueDate }) => {
-        const { getBubbleFillStyle } = registered;
         if (!title.trim()) return;
         if (selectedBubble && engineRef.current) {
-            // Сначала обновляем физическое тело
-            const { Bodies } = Matter;
-
-            // Определяем стили для тела
-            let strokeColor = '#B0B0B0';
-            let fillStyle = getBubbleFillStyle(null);
-
-            if (selectedTagId) {
-                const tag = tags.find(t => t.id === selectedTagId);
-                if (tag) {
-                    strokeColor = tag.color;
-                    fillStyle = getBubbleFillStyle(tag.color);
-                }
+            const changes = taskChangesFromForm(selectedBubble, {
+                title,
+                description,
+                useRichText: useRichTextEdit,
+                tagId: selectedTagId,
+                radius: editBubbleSize,
+                dueDate: editDueDate,
+                notifications: editNotifications,
+                recurrence: editRecurrence,
+            });
+            // A new due starts a new cycle: the "stopped manually" mark goes, like pulseMuted.
+            if (changes.due !== undefined) {
+                manuallyStoppedPulsingRef.current.delete(selectedBubble.id);
             }
 
-            // Создаем новое тело с обновленными параметрами
-            const newBody = Bodies.circle(
-                selectedBubble.body.position.x,
-                selectedBubble.body.position.y,
-                editBubbleSize,
-                {
-                    restitution: 0.8,
-                    frictionAir: 0.01,
-                    render: {
-                        fillStyle: fillStyle,
-                        strokeStyle: strokeColor,
-                        lineWidth: theme.custom?.bubble?.strokeWidth ?? 1.5
-                    }
-                }
-            );
-
-            // Удаляем старое тело и добавляем новое
-            const worldBodies = engineRef.current.world.bodies;
-            const bodyExists = worldBodies.some(body => body.id === selectedBubble.body.id);
-
-            if (bodyExists) {
+            // Удаляем старое тело и добавляем новое (размер и цвет могли измениться)
+            const newBody = createBody(selectedBubble.body.position.x, selectedBubble.body.position.y, editBubbleSize, selectedTagId || null);
+            if (engineRef.current.world.bodies.some(body => body.id === selectedBubble.body.id)) {
                 Matter.World.remove(engineRef.current.world, selectedBubble.body);
             }
             Matter.World.add(engineRef.current.world, newBody);
 
-            // Теперь обновляем состояние
-            const newDueDate = formatLocalDateTime(editDueDate);
-
-            // Проверяем, изменилась ли дата на будущую и нужно ли отключить пульсацию
-            const shouldDisablePulsing = newDueDate &&
-                parseLocalDateTime(newDueDate) > new Date();
-
-            // Отключаем пульсацию при удалении даты
-            const shouldDisablePulsingOnDelete = !newDueDate && selectedBubble.dueDate;
-
-            // Дата изменилась на будущую или удалена — начинаем новый цикл:
-            // сбрасываем и in-memory флаг, и персистентный overduePulseSuppressed.
-            const dateChanged = shouldDisablePulsing || shouldDisablePulsingOnDelete;
-            if (dateChanged) {
-                manuallyStoppedPulsingRef.current.delete(selectedBubble.id);
-            }
-
+            const hasChanges = Object.keys(changes).length > 0;
             const updatedBubble = {
-                ...selectedBubble,
-                title,
-                description,
-                tagId: selectedTagId || null,
-                radius: editBubbleSize,
+                ...withTaskChanges(selectedBubble, hasChanges ? { ...changes, updatedAt: new Date().toISOString() } : {}),
                 body: newBody,
-                updatedAt: new Date().toISOString(),
-                dueDate: newDueDate,
-                tz: getUserTimeZone(),
-                notifications: editNotifications,
-                recurrence: editRecurrence,
-                overdueSticky: dateChanged ? false : selectedBubble.overdueSticky,
-                overdueAt: dateChanged ? null : selectedBubble.overdueAt,
-                overduePulseSuppressed: dateChanged ? false : selectedBubble.overduePulseSuppressed
             };
-
             setBubbles(prev => prev.map(b => (b.id === selectedBubble.id ? updatedBubble : b)));
-            upsertBubble(updatedBubble).catch(e => logger.error('Error saving bubble edit:', e));
+            if (hasChanges) {
+                updateTask(db, uid, selectedBubble.id, changes).catch(e => logger.error('Error saving bubble edit:', e));
+            }
         }
 
         setEditDialog(false);
@@ -226,28 +150,38 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
-    // Delete bubble (mark as deleted)
-    const handleDeleteBubble = async () => {
+    // Delete bubble (move it to the trash)
+    const handleDeleteBubble = () => {
         if (selectedBubble && engineRef.current) {
-            try {
-                // Remove from Matter.js world
-                Matter.World.remove(engineRef.current.world, selectedBubble.body);
+            // Remove from Matter.js world
+            Matter.World.remove(engineRef.current.world, selectedBubble.body);
 
-                // Mark as deleted in Firestore
-                const updatedBubbles = await markBubbleAsDeleted(selectedBubble.id, bubbles);
-                setBubbles(updatedBubbles);
-            } catch (error) {
-                logger.error('Error deleting bubble:', error);
-            }
+            const deleted = { status: 'deleted', deletedAt: new Date().toISOString() };
+            setBubbles(prev => prev.map(b => (b.id === selectedBubble.id ? withTaskChanges(b, deleted) : b)));
+            trashTask(db, uid, selectedBubble.id).catch(error => logger.error('Error deleting bubble:', error));
         }
         setEditDialog(false);
         setSelectedBubble(null);
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
+    // "Done" (spec 4.1): the changes go to the bubble at once and to Firestore
+    const completeSelected = () => {
+        const changes = completionChanges(selectedBubble, new Date());
+        setBubbles(prev => prev.map(b => (b.id === selectedBubble.id ? withTaskChanges(b, changes) : b)));
+        updateTask(db, uid, selectedBubble.id, changes).catch(e => logger.error('Error marking bubble as done:', e));
+    };
+
     // Mark bubble as done
     const handleMarkAsDone = async () => {
-        if (selectedBubble && engineRef.current) {
+        if (selectedBubble && engineRef.current && selectedBubble.repeat && selectedBubble.due) {
+            // A repeating task moves to its next due and stays on the canvas: no pop
+            try {
+                completeSelected();
+            } catch (error) {
+                logger.error('Error marking bubble as done:', error);
+            }
+        } else if (selectedBubble && engineRef.current) {
             try {
                 // Анимация лопания с брызгами и звуком
                 const bubble = selectedBubble;
@@ -327,21 +261,14 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
                             Matter.World.remove(engineRef.current.world, body);
                             Matter.World.remove(engineRef.current.world, splashParticles);
                             // Обновляем статус в Firestore
-                            const fields = buildStatusFields(selectedBubble, BUBBLE_STATUS.DONE);
-                            updateBubbleFields(selectedBubble.id, fields)
-                                .then(() => {
-                                    setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? { ...b, ...fields } : b));
-                                })
-                                .catch(e => logger.error('Error marking bubble as done:', e));
+                            completeSelected();
                         }
                     };
                     animatePop();
                 } else {
                     // Если нет тела, просто удаляем
                     Matter.World.remove(engineRef.current.world, selectedBubble.body);
-                    const fields = buildStatusFields(selectedBubble, BUBBLE_STATUS.DONE);
-                    await updateBubbleFields(selectedBubble.id, fields);
-                    setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? { ...b, ...fields } : b));
+                    completeSelected();
                 }
             } catch (error) {
                 logger.error('Error marking bubble as done:', error);
@@ -360,28 +287,9 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
-    // Clear all bubbles
-    const clearAllBubbles = () => {
-        if (engineRef.current) {
-            // Remove all bubbles from the physics world
-            bubbles.forEach(bubble => {
-                Matter.World.remove(engineRef.current.world, bubble.body);
-            });
-
-            // Clear state and Firestore
-            setBubbles([]);
-            clearBubblesFromFirestore();
-        }
-    };
-
+    // Only the editor mode of this dialog: v2 keeps the description as Markdown (bubbleModel)
     const handleToggleEditUseRichText = (enabled) => {
         setUseRichTextEdit(!!enabled);
-        if (!selectedBubble) return;
-        // Обновляем выбранный пузырь и сохраняем в БД
-        setSelectedBubble(prev => prev ? { ...prev, useRichText: !!enabled } : prev);
-        const fields = { useRichText: !!enabled, updatedAt: new Date().toISOString() };
-        setBubbles(prev => prev.map(b => b.id === selectedBubble.id ? { ...b, ...fields } : b));
-        updateBubbleFields(selectedBubble.id, fields).catch(e => logger.error('Error toggling rich text:', e));
     };
 
     // Открытие конкретного бабла по deep-link событию из index.js
@@ -412,14 +320,12 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         setUseRichTextCreate,
         useRichTextEdit,
         setUseRichTextEdit,
-        createBubble,
         openCreateDialog,
         createNewBubble,
         handleSaveBubble,
         handleDeleteBubble,
         handleMarkAsDone,
         handleCloseDialog,
-        clearAllBubbles,
         handleToggleEditUseRichText
     };
 }

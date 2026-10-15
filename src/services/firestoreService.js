@@ -1,17 +1,10 @@
 import {
-    collection,
     doc,
     setDoc,
     updateDoc,
     getDoc,
-    getDocs,
-    deleteDoc,
-    query,
-    orderBy,
     serverTimestamp,
     onSnapshot,
-    where,
-    writeBatch,
     runTransaction
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -41,247 +34,16 @@ export const BUBBLE_STATUS = {
     DELETED: 'deleted'
 };
 
-// Serialize a bubble into a plain storage object (single source of truth)
-const serializeBubble = (bubble) => ({
-    id: String(bubble.id),
-    radius: bubble.radius,
-    title: bubble.title || '',
-    description: bubble.description || '',
-    fillStyle: bubble.body?.render?.fillStyle || bubble.fillStyle || 'transparent',
-    strokeStyle: bubble.body?.render?.strokeStyle || bubble.strokeStyle || '#3B7DED',
-    tagId: bubble.tagId || null,
-    status: bubble.status || BUBBLE_STATUS.ACTIVE,
-    createdAt: bubble.createdAt || new Date().toISOString(),
-    updatedAt: bubble.updatedAt || new Date().toISOString(),
-    deletedAt: bubble.deletedAt || null,
-    dueDate: bubble.dueDate || null,
-    tz: bubble.tz || null,
-    notifications: bubble.notifications || [],
-    recurrence: bubble.recurrence || null,
-    overdueSticky: typeof bubble.overdueSticky === 'boolean' ? bubble.overdueSticky : false,
-    overdueAt: bubble.overdueAt || null,
-    overduePulseSuppressed: typeof bubble.overduePulseSuppressed === 'boolean' ? bubble.overduePulseSuppressed : false,
-    useRichText: !!bubble.useRichText
-});
-
-// Auto-cleanup period (30 days in milliseconds)
-const CLEANUP_PERIOD = 30 * 24 * 60 * 60 * 1000;
-
-// Bubbles operations
-export const saveBubblesToFirestore = async (bubblesData) => {
-    try {
-        const userId = getUserDocumentId();
-        const parentRef = doc(db, BUBBLES_COLLECTION, userId);
-        const bubblesCol = collection(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION);
-
-        // existing docs
-        const existingSnap = await getDocs(bubblesCol);
-        const existingIds = new Set(existingSnap.docs.map(d => d.id));
-
-        // Prepare batch upserts/deletes
-        const batch = writeBatch(db);
-
-        // Upsert incoming
-        const incomingIds = new Set();
-        for (const bubble of bubblesData) {
-            const id = String(bubble.id);
-            incomingIds.add(id);
-            const ref = doc(bubblesCol, id);
-            batch.set(ref, serializeBubble(bubble), { merge: true });
-        }
-
-        // Delete removed
-        for (const id of existingIds) {
-            if (!incomingIds.has(id)) {
-                const ref = doc(bubblesCol, id);
-                batch.delete(ref);
-            }
-        }
-
-        // Touch parent doc
-        batch.set(parentRef, { updatedAt: serverTimestamp(), userId, schema: 'normalized' }, { merge: true });
-
-        await batch.commit();
-
-    } catch (error) {
-        logger.error('Error saving bubbles to Firestore (normalized). Falling back to localStorage.', error);
-        const currentUser = getCurrentUser();
-        if (!currentUser) return;
-        try {
-            // Fallback to localStorage with user-specific key
-            const userId = currentUser.uid;
-            const bubblesForStorage = bubblesData.map(serializeBubble);
-            lsSet(`bubbles_${userId}`, bubblesForStorage);
-        } catch (localStorageError) {
-            logger.error('localStorage fallback also failed:', localStorageError);
-        }
-    }
-};
-
-export const loadBubblesFromFirestore = async () => {
-    try {
-        const userId = getUserDocumentId();
-        // Try new normalized storage first
-        const bubblesCol = collection(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION);
-        const snapshot = await getDocs(bubblesCol);
-        const normalized = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (normalized.length > 0) return normalized;
-
-        // Fallback to localStorage with user-specific key
-        const stored = lsGet(`bubbles_${userId}`);
-        return stored || [];
-    } catch (error) {
-        logger.error('Error loading bubbles from Firestore:', error);
-        // Fallback to localStorage with user-specific key
-        const uid = getCurrentUser()?.uid;
-        if (!uid) return [];
-        const stored = lsGet(`bubbles_${uid}`);
-        return stored || [];
-    }
-};
-
-export const clearBubblesFromFirestore = async () => {
-    try {
-        const userId = getUserDocumentId();
-        try {
-            // Delete all docs in subcollection
-            const bubblesCol = collection(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION);
-            const snap = await getDocs(bubblesCol);
-            const batch = writeBatch(db);
-            snap.forEach(d => batch.delete(d.ref));
-            // keep parent doc with timestamp
-            const parentRef = doc(db, BUBBLES_COLLECTION, userId);
-            batch.set(parentRef, { updatedAt: serverTimestamp(), userId }, { merge: true });
-            await batch.commit();
-        } catch (normalizedErr) {
-            logger.warn('Clear subcollection failed, trying legacy doc delete', normalizedErr);
-            const bubblesRef = doc(db, BUBBLES_COLLECTION, userId);
-            await deleteDoc(bubblesRef);
-        }
-    } catch (error) {
-        logger.error('Error clearing bubbles from Firestore:', error);
-        // Fallback to localStorage
-        const uid = getCurrentUser()?.uid;
-        if (uid) localStorage.removeItem(`bubbles_${uid}`);
-    }
-};
-
-// Build status-change fields (pure computation, no Firestore writes)
-export const buildStatusFields = (bubble, newStatus) => {
-    const fields = { status: newStatus, updatedAt: new Date().toISOString() };
-    if (newStatus === BUBBLE_STATUS.DELETED) {
-        fields.deletedAt = new Date().toISOString();
-    } else if (bubble.status === BUBBLE_STATUS.DELETED && newStatus !== BUBBLE_STATUS.DELETED) {
-        fields.deletedAt = null;
-    }
-    if (newStatus === BUBBLE_STATUS.DONE) {
-        Object.assign(fields, {
-            dueDate: null,
-            notifications: [],
-            recurrence: null,
-            overdueSticky: false,
-            overdueAt: null,
-            overduePulseSuppressed: false
-        });
-    }
-    return fields;
-};
-
-// Update bubble status
-export const updateBubbleStatus = async (bubbleId, newStatus, bubblesData) => {
-    try {
-        const bubble = bubblesData.find(b => b.id === bubbleId);
-        if (!bubble) throw new Error(`Bubble ${bubbleId} not found`);
-
-        const fields = buildStatusFields(bubble, newStatus);
-
-        const userId = getUserDocumentId();
-        const ref = doc(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION, String(bubbleId));
-        await updateDoc(ref, fields);
-
-        const updatedBubbles = bubblesData.map(b =>
-            b.id === bubbleId ? { ...b, ...fields } : b
-        );
-        return updatedBubbles;
-    } catch (error) {
-        logger.error('Error updating bubble status:', error);
-        throw error;
-    }
-};
-
-// Point-wise upsert single bubble (create or full edit)
-export const upsertBubble = async (bubble) => {
-    const userId = getUserDocumentId();
-    const ref = doc(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION, String(bubble.id));
-    await setDoc(ref, serializeBubble(bubble), { merge: true });
-};
-
 // Point-wise update fields of single bubble
 export const updateBubbleFields = async (bubbleId, fields, userId = getUserDocumentId()) => {
     const ref = doc(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION, String(bubbleId));
     await updateDoc(ref, fields);
 };
 
-// Point-wise delete single bubble document
-export const deleteBubbleDoc = async (bubbleId) => {
-    const userId = getUserDocumentId();
-    const ref = doc(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION, String(bubbleId));
-    await deleteDoc(ref);
-};
-
 // Get bubbles by status
 export const getBubblesByStatus = (bubblesData, status) => {
     if (!status) return bubblesData;
     return bubblesData.filter(bubble => bubble.status === status);
-};
-
-// Auto-cleanup old deleted bubbles
-export const cleanupOldDeletedBubbles = async (bubblesData) => {
-    try {
-        const currentTime = Date.now();
-        const filteredBubbles = bubblesData.filter(bubble => {
-            // Keep non-deleted bubbles
-            if (bubble.status !== BUBBLE_STATUS.DELETED) {
-                return true;
-            }
-
-            // Keep deleted bubbles that are newer than 30 days
-            if (bubble.deletedAt) {
-                const deletedTime = new Date(bubble.deletedAt).getTime();
-                return (currentTime - deletedTime) < CLEANUP_PERIOD;
-            }
-
-            // Keep bubbles without deletedAt (shouldn't happen, but just in case)
-            return true;
-        });
-
-        // Only update if we actually removed some bubbles
-        if (filteredBubbles.length < bubblesData.length) {
-            const removed = bubblesData.filter(b => !filteredBubbles.includes(b));
-            await Promise.all(removed.map(b => deleteBubbleDoc(b.id).catch(e => logger.error('Cleanup delete failed:', e))));
-            return filteredBubbles;
-        }
-
-        return bubblesData;
-    } catch (error) {
-        logger.error('Error cleaning up old deleted bubbles:', error);
-        return bubblesData;
-    }
-};
-
-// Mark bubble as done
-export const markBubbleAsDone = async (bubbleId, bubblesData) => {
-    return await updateBubbleStatus(bubbleId, BUBBLE_STATUS.DONE, bubblesData);
-};
-
-// Mark bubble as deleted
-export const markBubbleAsDeleted = async (bubbleId, bubblesData) => {
-    return await updateBubbleStatus(bubbleId, BUBBLE_STATUS.DELETED, bubblesData);
-};
-
-// Restore bubble from deleted
-export const restoreBubble = async (bubbleId, bubblesData) => {
-    return await updateBubbleStatus(bubbleId, BUBBLE_STATUS.ACTIVE, bubblesData);
 };
 
 // Tags operations
@@ -374,26 +136,6 @@ export const loadTagsFromFirestore = async () => {
 };
 
 // Real-time listeners (optional)
-export const subscribeToBubblesUpdates = (callback) => {
-    try {
-        const userId = getUserDocumentId();
-        const bubblesCol = collection(db, BUBBLES_COLLECTION, userId, BUBBLES_SUBCOLLECTION);
-        let currentUnsub = null;
-        currentUnsub = onSnapshot(bubblesCol, (querySnap) => {
-            const list = [];
-            querySnap.forEach(d => list.push({ id: d.id, ...d.data() }));
-            callback(list);
-        }, (err) => {
-            logger.error('Subcollection onSnapshot error', err);
-            callback([]);
-        });
-        return () => currentUnsub?.();
-    } catch (error) {
-        logger.error('Error setting up bubbles listener:', error);
-        return () => { };
-    }
-};
-
 export const subscribeToTagsUpdates = (callback) => {
     try {
         const userId = getUserDocumentId();

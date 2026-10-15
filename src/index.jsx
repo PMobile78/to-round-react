@@ -12,12 +12,12 @@ import { initMessagingAndSaveToken, updateMessagingTokenLanguage } from './fireb
 import i18n from './i18n';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import logger from './utils/logger';
+import { deepLinkTaskId } from './utils/deepLink';
 
-// Handle notification deep links like /?bubbleId=...
+// Handle notification deep links like /?taskId=... (and the old /?bubbleId=...)
 function handleDeepLink() {
     try {
-        const params = new URLSearchParams(window.location.search);
-        const bubbleId = params.get('bubbleId');
+        const bubbleId = deepLinkTaskId(window.location.search);
         if (bubbleId) {
             window.dispatchEvent(new CustomEvent('open-bubble', { detail: { bubbleId } }));
         }
