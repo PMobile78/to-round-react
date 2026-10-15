@@ -79,6 +79,12 @@ const mapRepeat = (recurrence, due, notes) => {
     return repeat;
 };
 
+/** v1 notifications -> v2 reminders by the migration rules (whole hours, sorted, at most 10). */
+export const remindersFromV1 = (notifications) => mapReminders(notifications, new Set());
+
+/** v1 recurrence -> v2 repeat for this due by the migration rules; null without a due. */
+export const repeatFromV1 = (recurrence, due) => mapRepeat(recurrence, due, new Set());
+
 // Accepts ISO strings and Firestore Timestamp-like objects ({ toDate() }).
 const timestampMs = (value) => {
     if (typeof value === 'string') return Date.parse(value);
