@@ -1,12 +1,18 @@
 {
     "firestore": {
         "rules": "firestore.rules",
-        "indexes": "firestore.indexes.json"
+        "indexes": "firestore.indexes.json",
+        "predeploy": [
+            "node \"$PROJECT_DIR/scripts/stage0-deploy-guard.js\""
+        ]
     },
     "functions": [
         {
             "source": "functions",
-            "codebase": "default"
+            "codebase": "default",
+            "predeploy": [
+                "node \"$PROJECT_DIR/scripts/stage0-deploy-guard.js\""
+            ]
         }
     ],
     "hosting": {
