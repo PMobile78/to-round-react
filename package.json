@@ -9,7 +9,7 @@
     "build": "npm run generate-sw && vite build",
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
-    "test:functions": "npm --prefix functions test",
+    "test:functions": "npm --prefix functions test && npm --prefix functions run test:emulator",
     "test:rules": "firebase emulators:exec --only firestore --project demo-to-round \"vitest run --config vitest.rules.config.js\"",
     "test:all": "npm test && npm run test:functions && npm run test:rules",
     "lint": "eslint src",

@@ -6,6 +6,7 @@
     },
     "scripts": {
         "test": "node --test --test-reporter=spec test/unit/*.test.js && TZ=UTC node test-next-notify.js && TZ=UTC node test-tz.js",
+        "test:emulator": "firebase emulators:exec --only firestore --project demo-to-round \"node --test --test-reporter=spec --test-concurrency=1 test/emulator/*.test.js\"",
         "lint": "eslint .",
         "serve": "firebase emulators:start --only functions",
         "shell": "firebase functions:shell",
