@@ -16,6 +16,9 @@ const SENT_KEEP_DAYS = 7;
 // A notification nobody received (no recipients, every send failed) is retried by the next
 // passes for this long after its moment, then dropped (issue #93).
 const RETRY_WINDOW_MS = 10 * MINUTE_MS;
+// A key still 'pending' after this long was left by a pass that died mid-send (a pass runs at
+// most 60 s, timeoutSeconds in index.js): the next pass takes it over and sends again.
+const STALE_CLAIM_MS = 2 * MINUTE_MS;
 
 const msOf = (value) => (value && typeof value.toMillis === 'function' ? value.toMillis() : null);
 
@@ -52,17 +55,25 @@ async function deleteInBatches(db, refs) {
 /**
  * Claims a dedup key: 'claimed' — this pass sends; 'sent' — delivered before; 'busy' — another
  * pass holds the claim and has not delivered yet (its send may still fail and free the key).
+ * A claim left pending for STALE_CLAIM_MS is taken over while a retry is allowed (`mayTakeOver`):
+ * if its dead pass did reach a device, the notification comes twice, which is better than not at all.
  */
-async function claimKey(ref, now) {
+async function claimKey(db, ref, now, mayTakeOver) {
     try {
         await ref.create({ sentAt: Timestamp.fromMillis(now), state: 'pending' });
         return 'claimed';
     } catch (e) {
         if (!(e && (e.code === 6 || String(e.code).toUpperCase().includes('ALREADY_EXISTS')))) throw e;
     }
-    const existing = await ref.get();
-    // A key that vanished meanwhile was freed by a failed send; a key without a state counts as sent.
-    return existing.exists && existing.get('state') !== 'pending' ? 'sent' : 'busy';
+    return db.runTransaction(async (tx) => {
+        const existing = await tx.get(ref);
+        // A key that vanished meanwhile was freed by a failed send; a key without a state counts as sent.
+        if (!existing.exists) return 'busy';
+        if (existing.get('state') !== 'pending') return 'sent';
+        if (!mayTakeOver || now - msOf(existing.get('sentAt')) < STALE_CLAIM_MS) return 'busy';
+        tx.update(ref, { sentAt: Timestamp.fromMillis(now) });
+        return 'claimed';
+    });
 }
 
 // A dead token is cleared only if the device still has it: it may have registered a new one meanwhile.
@@ -89,12 +100,12 @@ async function sendToRecipients({ db, messaging, uid, recipients, message }) {
  * Sends a notification once (issue #93): true when at least one device got it, now or in an
  * earlier pass. Without recipients nothing is claimed; when every send fails the key is freed,
  * and while another pass holds the claim this one does not count it as delivered: either way a
- * later pass can retry.
+ * later pass can retry. A stale claim is taken over only within the retry window of the event.
  */
-async function deliverOnce({ db, messaging, uid, recipients, key, message, now }) {
+async function deliverOnce({ db, messaging, uid, recipients, key, message, now, eventAt }) {
     if (recipients.length === 0) return false;
     const ref = db.collection('notification-sent').doc(notificationDocId(key));
-    const claim = await claimKey(ref, now);
+    const claim = await claimKey(db, ref, now, now - eventAt < RETRY_WINDOW_MS);
     if (claim !== 'claimed') return claim === 'sent';
     let delivered = 0;
     try {
@@ -121,11 +132,11 @@ async function processTask({ db, messaging, uid, snap, lang, recipients, now }) 
     let delivered = true;
     if (plan.overdue) {
         eventAt = due;
-        delivered = await deliverOnce({ db, messaging, uid, recipients, now,
+        delivered = await deliverOnce({ db, messaging, uid, recipients, now, eventAt,
             key: overdueKey(uid, snap.id, task.due), message: { ...message, type: 'overdue' } });
     } else if (plan.reminder !== null) {
         eventAt = due - plan.reminder * MINUTE_MS;
-        delivered = await deliverOnce({ db, messaging, uid, recipients, now,
+        delivered = await deliverOnce({ db, messaging, uid, recipients, now, eventAt,
             key: reminderKey(uid, snap.id, plan.reminder, task.due), message: { ...message, type: 'reminder', minutes: plan.reminder } });
     }
     // Not delivered yet: nextNotifyAt stays, so the next passes retry within the window.
@@ -237,6 +248,7 @@ async function cleanupNotificationSent({ db, now }) {
 }
 
 module.exports = {
+    STALE_CLAIM_MS,
     toPlainTask,
     processTask,
     runScheduler,

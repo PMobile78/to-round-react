@@ -175,4 +175,33 @@ describe('scheduleNotifications: undelivered notifications (issue #93)', () => {
         await runScheduler({ db, messaging, now: now + 60000 });
         assert.equal(overlapping.sent.length + messaging.sent.length, 1);
     });
+
+    it('takes over a key left pending by a pass that died mid-send', async () => {
+        await ref().set(task({ nextNotifyAt: ts(REMINDER_60) }));
+        // A pass claimed the reminder at its moment and died before sending or freeing the key.
+        await db.doc(KEY).set({ sentAt: ts(REMINDER_60), state: 'pending' });
+
+        const early = fakeMessaging();
+        await runScheduler({ db, messaging: early, now: at(REMINDER_60) + 60000 }); // the claimer may still be alive
+        assert.equal(early.sent.length, 0);
+        assert.equal((await ref().get()).get('nextNotifyAt').toMillis(), at(REMINDER_60));
+
+        const messaging = fakeMessaging();
+        await runScheduler({ db, messaging, now: at(REMINDER_60) + 3 * 60000 });
+        assert.deepEqual(messaging.sent.map((m) => m.token), ['tok-phone']);
+        assert.equal((await db.doc(KEY).get()).get('state'), 'sent');
+        assert.equal((await ref().get()).get('nextNotifyAt').toMillis(), at(DUE));
+    });
+
+    it('drops the event instead of taking over a pending key after the retry window', async () => {
+        await ref().set(task({ nextNotifyAt: ts(DUE) }));
+        await db.doc('notification-sent/overdue:alice:t1:2026-10-15T12:00@Europe%2FBerlin').set({ sentAt: ts(DUE), state: 'pending' });
+        const messaging = fakeMessaging();
+        const now = at(DUE) + 11 * 60000;
+        await runScheduler({ db, messaging, now });
+        assert.equal(messaging.sent.length, 0);
+        const after = (await ref().get()).data();
+        assert.equal(after.overdueAt.toMillis(), now);
+        assert.equal('nextNotifyAt' in after, false);
+    });
 });

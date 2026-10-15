@@ -15,7 +15,8 @@ const messaging = getMessaging();
 const REGION = 'europe-west1';
 
 // Every minute: reminders and overdue notifications of tasks whose nextNotifyAt has come.
-exports.scheduleNotifications = onSchedule({ schedule: '* * * * *', region: REGION, maxInstances: 10 }, async () => {
+// A pass ends within timeoutSeconds, well before another pass may take over its pending keys.
+exports.scheduleNotifications = onSchedule({ schedule: '* * * * *', region: REGION, maxInstances: 10, timeoutSeconds: 60 }, async () => {
     await handlers.runScheduler({ db, messaging, now: Date.now() });
 });
 

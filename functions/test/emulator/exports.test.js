@@ -1,6 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const fns = require('../../index');
+const { STALE_CLAIM_MS } = require('../../lib/handlers');
 
 const schedule = (fn) => fn.__endpoint.scheduleTrigger.schedule;
 const eventPath = (fn) => fn.__endpoint.eventTrigger.eventFilterPathPatterns.document;
@@ -32,5 +33,11 @@ describe('index.js', () => {
     it('retries a failed trigger run instead of dropping the event (both handlers are idempotent)', () => {
         assert.equal(fns.onTaskWritten.__endpoint.eventTrigger.retry, true);
         assert.equal(fns.onCategoryDeleted.__endpoint.eventTrigger.retry, true);
+    });
+
+    it('ends a scheduler pass before another pass may take over its pending key', () => {
+        const { timeoutSeconds } = fns.scheduleNotifications.__endpoint;
+        assert.equal(Number.isInteger(timeoutSeconds), true);
+        assert.equal(timeoutSeconds * 1000 < STALE_CLAIM_MS, true);
     });
 });
