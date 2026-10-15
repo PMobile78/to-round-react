@@ -1,12 +1,25 @@
 {
+    "untitled": "Untitled",
     "reminder": {
         "title": "Task reminder",
-        "bodyNoTitle": "{{minutes}} min before",
-        "bodyWithTitle": "{{minutes}} min before: {{title}}"
+        "body": "{{lead}} before: {{title}}"
     },
     "overdue": {
         "title": "Overdue task!",
-        "bodyNoTitle": "You have an overdue task.",
-        "bodyWithTitle": "Overdue: {{title}}"
+        "body": "Overdue: {{title}}"
+    },
+    "units": {
+        "hour": {
+            "one": "{{n}} hour",
+            "other": "{{n}} hours"
+        },
+        "day": {
+            "one": "{{n}} day",
+            "other": "{{n}} days"
+        },
+        "week": {
+            "one": "{{n}} week",
+            "other": "{{n}} weeks"
+        }
     }
 }
