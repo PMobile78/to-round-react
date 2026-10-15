@@ -4,11 +4,15 @@
  */
 const { FieldValue, Timestamp } = require('firebase-admin/firestore');
 const {
-    planSchedulerRun, sameSchedule, dueInstantMs, reminderKey, overdueKey, notificationDocId,
+    planSchedulerRun, planTaskWrite, sameSchedule, dueInstantMs, reminderKey, overdueKey, notificationDocId,
 } = require('./schedule');
 const { INVALID_TOKEN_CODES, buildMessages, pickLanguage, pickRecipients } = require('./messages');
 
+const BATCH_LIMIT = 450;
 const MINUTE_MS = 60 * 1000;
+const DAY_MS = 24 * 60 * MINUTE_MS;
+const TRASH_DAYS = 30;
+const SENT_KEEP_DAYS = 7;
 // A notification nobody received (no recipients, every send failed) is retried by the next
 // passes for this long after its moment, then dropped (issue #93).
 const RETRY_WINDOW_MS = 10 * MINUTE_MS;
@@ -36,6 +40,14 @@ const isUserTaskRef = (ref) => USER_TASK_PATH.test(ref.path);
 
 // overdueAt is never deleted, only set to null: the rules compare it on every client update.
 const serverMs = (ms) => (ms === null ? FieldValue.delete() : Timestamp.fromMillis(ms));
+
+async function deleteInBatches(db, refs) {
+    for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
+        const batch = db.batch();
+        refs.slice(i, i + BATCH_LIMIT).forEach((ref) => batch.delete(ref));
+        await batch.commit();
+    }
+}
 
 /** Claims a dedup key; false when another run already sent this notification. */
 async function claimKey(db, key, now) {
@@ -152,8 +164,70 @@ async function runScheduler({ db, messaging, now }) {
     return { tasks: [...byUser.values()].reduce((n, docs) => n + docs.length, 0) };
 }
 
+/**
+ * onTaskWritten: keeps nextNotifyAt, overdueAt and pulseMuted in step with the schedule (spec 6).
+ * Returns the applied plan or null.
+ */
+async function handleTaskWritten({ db, ref, before, after, now }) {
+    if (!after) return null;
+    const beforeTask = before ? toPlainTask(before) : null;
+    if (beforeTask && sameSchedule(beforeTask, toPlainTask(after))) return null;
+    let applied = null;
+    await db.runTransaction(async (tx) => {
+        const fresh = await tx.get(ref);
+        if (!fresh.exists) return;
+        // Planned against the current document, not the event's after-state: when a later write
+        // landed first, this event's due change (pulse, overdue mark) is still applied.
+        const plan = planTaskWrite(beforeTask, toPlainTask(fresh.data()), now);
+        if (!plan || Object.keys(plan).length === 0) return;
+        const updates = {};
+        if ('nextNotifyAt' in plan) updates.nextNotifyAt = serverMs(plan.nextNotifyAt);
+        if ('overdueAt' in plan) updates.overdueAt = plan.overdueAt === null ? null : Timestamp.fromMillis(plan.overdueAt);
+        if ('pulseMuted' in plan) updates.pulseMuted = plan.pulseMuted;
+        tx.update(ref, updates);
+        applied = plan;
+    });
+    return applied;
+}
+
+/** onCategoryDeleted: tasks of the deleted category become uncategorized. */
+async function clearDeletedCategory({ db, uid, categoryId }) {
+    // A category created again with the same id (backup restored right after the delete) keeps its tasks.
+    if ((await db.doc(`users/${uid}/categories/${categoryId}`).get()).exists) return 0;
+    const snap = await db.collection(`users/${uid}/tasks`).where('categoryId', '==', categoryId).get();
+    const writer = db.bulkWriter();
+    writer.onWriteError(() => false); // a task deleted meanwhile fails alone, the rest still go through
+    snap.docs.forEach((d) => writer.update(d.ref, { categoryId: null }).catch(() => null));
+    await writer.close();
+    return snap.size;
+}
+
+/** purgeDeletedTasks: removes tasks that have been in the trash for more than 30 days. */
+async function purgeDeletedTasks({ db, now }) {
+    const snap = await db.collectionGroup('tasks')
+        .where('status', '==', 'deleted')
+        .where('deletedAt', '<=', Timestamp.fromMillis(now - TRASH_DAYS * DAY_MS))
+        .get();
+    const refs = snap.docs.map((d) => d.ref).filter(isUserTaskRef);
+    await deleteInBatches(db, refs);
+    return refs.length;
+}
+
+/** cleanupNotificationSent: drops dedup keys older than 7 days. */
+async function cleanupNotificationSent({ db, now }) {
+    const snap = await db.collection('notification-sent')
+        .where('sentAt', '<=', Timestamp.fromMillis(now - SENT_KEEP_DAYS * DAY_MS))
+        .get();
+    await deleteInBatches(db, snap.docs.map((d) => d.ref));
+    return snap.size;
+}
+
 module.exports = {
     toPlainTask,
     processTask,
     runScheduler,
+    handleTaskWritten,
+    clearDeletedCategory,
+    purgeDeletedTasks,
+    cleanupNotificationSent,
 };
