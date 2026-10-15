@@ -6,6 +6,7 @@
   "main": "src/pages/BubblesPage.jsx",
   "scripts": {
     "start": "npm run generate-sw && vite",
+    "start:emulator": "npm run generate-sw && firebase emulators:exec --only auth,firestore --project demo-to-round \"vite --mode emulator\"",
     "build": "npm run generate-sw && vite build",
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",

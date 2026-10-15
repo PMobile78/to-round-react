@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { connectFirestoreEmulator, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { connectAuthEmulator, getAuth } from 'firebase/auth';
 import { config, validateConfig } from './utils/config';
 
 // Validate Firebase configuration
@@ -33,5 +33,12 @@ export const db = initializeFirestore(app, {
 
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
+
+// `npm run start:emulator` (.env.emulator): the local Auth and Firestore emulators
+// from firebase.json instead of the real project.
+if (import.meta.env.REACT_APP_FIREBASE_EMULATORS === 'true') {
+    connectFirestoreEmulator(db, '127.0.0.1', 8180);
+    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+}
 
 export default app; 

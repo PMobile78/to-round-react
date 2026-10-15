@@ -118,3 +118,16 @@ firebase emulators:start --only functions,firestore
 Для Firestore-эмулятора нужна Java 21+; порт — 8180 (задан в `firebase.json`). Эмулятор использует те же `firestore.rules` и
 `firestore.indexes.json`. Нюансы запуска функций в эмуляторе —
 в [notifications.md → Локальный эмулятор](notifications.md#локальный-эмулятор).
+
+### Веб на эмуляторе
+
+```bash
+npm run start:emulator
+```
+
+Поднимает эмуляторы Auth (порт 9099) и Firestore (8180) для проекта `demo-to-round` и запускает
+dev-сервер в режиме `emulator`: Vite берёт `.env.emulator` (демо-значения, в git), а
+`src/firebase.js` при `REACT_APP_FIREBASE_EMULATORS=true` подключает SDK к эмуляторам вместо
+настоящего проекта. Аккаунт заводится прямо в форме входа и живёт только в эмуляторе; данные
+пропадают при остановке (Ctrl+C). Push-уведомления на эмуляторе не работают: у демо-проекта нет
+FCM, поэтому устройство регистрируется без токена.
