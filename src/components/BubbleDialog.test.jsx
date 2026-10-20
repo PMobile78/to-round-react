@@ -73,6 +73,11 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
         expect(button('bubbles.save').disabled).toBe(true);
     });
 
+    it('does not save a due the picker cannot read as a date (02/31)', () => {
+        render({ editDue: new Date(NaN) });
+        expect(button('bubbles.save').disabled).toBe(true);
+    });
+
     it('marks a due that has passed as overdue', () => {
         render({ editDue: new Date(Date.now() - HOUR) });
         expect(document.body.textContent).toContain('bubbles.overdue');

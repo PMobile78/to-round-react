@@ -83,7 +83,9 @@ export default function BubbleDialog(props) {
     const titleKey = mode === 'create' ? 'bubbles.createNewBubble' : 'bubbles.editBubble';
     // Spec 3.1: a description holds at most 100 000 characters; a longer one is not saved.
     const descriptionTooLong = description.length > LIMITS.descriptionMaxLength;
-    const cannotSave = !title.trim() || descriptionTooLong;
+    // While its sections spell a date that does not exist (02/31), the picker hands over an Invalid Date.
+    const dueInvalid = Number.isNaN(formDue?.getTime());
+    const cannotSave = !title.trim() || descriptionTooLong || dueInvalid;
 
     return (
         <Dialog
