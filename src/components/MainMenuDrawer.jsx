@@ -12,7 +12,8 @@ import {
     Sell,
     ViewListOutlined,
     AccountTreeOutlined,
-    LockOutlined
+    LockOutlined,
+    NotificationsActiveOutlined
 } from '@mui/icons-material';
 import LanguageSelector from './LanguageSelector';
 
@@ -35,7 +36,10 @@ const MainMenuDrawer = ({
     onOpenChangePasswordDialog,
     onOpenMindMap,
     onAbout,
-    onLogout
+    onLogout,
+    // This browser in users/{uid}/devices (null until registered) and its reminders switch
+    thisDevice,
+    onToggleThisDeviceReminders
 }) => {
     const { t } = useTranslation();
     return (
@@ -227,6 +231,33 @@ const MainMenuDrawer = ({
                                 checked={categoriesPanelEnabled}
                                 onChange={onToggleCategoriesPanel}
                                 disabled={mainView === 'tasks'}
+                                size="small"
+                                sx={{
+                                    '& .MuiSwitch-switchBase.Mui-checked': { color: themeMode === 'light' ? '#3B7DED' : '#90CAF9' },
+                                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: themeMode === 'light' ? '#3B7DED' : '#90CAF9' }
+                                }}
+                            />
+                        </Box>
+                    </ListItem>
+
+                    <ListItem sx={{ padding: '16px 24px' }}>
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <NotificationsActiveOutlined sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        </ListItemIcon>
+                        <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" sx={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500, marginBottom: 0.5 }}>
+                                {t('bubbles.deviceReminders')}
+                            </Typography>
+                            {thisDevice && thisDevice.fcmToken === null && (
+                                <Typography variant="caption" sx={{ display: 'block', color: themeMode === 'light' ? '#7F8C8D' : '#aaaaaa', marginBottom: 1, lineHeight: 1.3 }}>
+                                    {t('bubbles.deviceRemindersNoPermission')}
+                                </Typography>
+                            )}
+                            <Switch
+                                checked={Boolean(thisDevice && thisDevice.notificationsEnabled)}
+                                onChange={(e) => onToggleThisDeviceReminders(e.target.checked)}
+                                disabled={!thisDevice}
+                                inputProps={{ 'aria-label': t('bubbles.deviceReminders') }}
                                 size="small"
                                 sx={{
                                     '& .MuiSwitch-switchBase.Mui-checked': { color: themeMode === 'light' ? '#3B7DED' : '#90CAF9' },
