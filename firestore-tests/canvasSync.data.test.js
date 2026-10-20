@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 /**
- * Issue #94 with two real Firestore clients on the emulator: device A writes tasks through the
- * data layer, device B is the canvas itself (useMatterEngine fed by subscribeTasks), which has
- * to show every change without a reload and with exactly one Matter body per task.
+ * Issues #94 and #101 with two real Firestore clients on the emulator: device A writes tasks
+ * through the data layer (one by one, or a whole backup import), device B is the canvas itself
+ * (useMatterEngine fed by subscribeTasks), which has to show every change without a reload and
+ * with exactly one Matter body per task.
  * No JSX: the rules config collects plain *.test.js files.
  */
 import { createElement, useEffect, useState } from 'react';
@@ -11,6 +12,7 @@ import Matter from 'matter-js';
 import { describe, it, beforeAll, afterAll, afterEach, beforeEach, expect, vi } from 'vitest';
 import { OWNER, setupRulesEnv } from './helpers';
 import { createTask, deleteTaskForever, newTaskId, subscribeTasks, updateTask } from '../src/services/data/tasks';
+import { commitInBatches, planImport } from '../src/services/data/backup';
 import { useMatterEngine } from '../src/hooks/useMatterEngine';
 
 // Matter's canvas renderer and rAF runner need a real browser; the engine, bodies and
@@ -133,5 +135,35 @@ describe('canvas sync between two devices (#94, Firestore emulator)', () => {
         const circles = refs.engineRef.current.world.bodies.filter((body) => body.label === 'Circle Body');
         expect(circles).toEqual([added.body]);
         expect([...bodiesById.get(remote)]).toEqual([added.body]);
+    });
+
+    it('shows an imported backup without a reload: its tasks only, one body each, also after the same import again (#101)', async () => {
+        const deviceA = env.authenticatedContext(OWNER).firestore();
+        await createTask(deviceA, OWNER, 'old1', FIELDS);
+        await createTask(deviceA, OWNER, 'old2', { ...FIELDS, title: 'Not in the backup' });
+        root.render(createElement(DeviceB, { db: env.authenticatedContext(OWNER).firestore() }));
+        await vi.waitFor(() => expect(bubbles?.length).toBe(2), SYNC_WAIT);
+        const keptBody = bubbles.find((b) => b.id === 'old1').body;
+
+        const backupTask = (id, title) => ({
+            id, title, description: '', categoryId: null, status: 'active', due: null, reminders: [], repeat: null,
+            radius: 45, pulseMuted: false, createdAt: '2026-02-01T08:00:00.000Z', updatedAt: '2026-02-02T08:00:00.000Z', deletedAt: null,
+        });
+        const backup = { version: 2, settings: null, categories: [], tasks: [backupTask('old1', 'Kept and renamed'), backupTask('new1', 'From the backup')] };
+        const importBackup = async () => {
+            const { writes } = await planImport(deviceA, OWNER, backup);
+            await commitInBatches(deviceA, OWNER, writes);
+        };
+
+        await importBackup();
+        await vi.waitFor(() => expect(bubbles.map((b) => b.title).sort()).toEqual(['From the backup', 'Kept and renamed']), SYNC_WAIT);
+        await importBackup();
+        // The second import updates both tasks: wait until device B has seen it.
+        await vi.waitFor(() => expect(bubbles.find((b) => b.id === 'new1').updatedAt).not.toBe('2026-02-02T08:00:00.000Z'), SYNC_WAIT);
+
+        const circles = refs.engineRef.current.world.bodies.filter((body) => body.label === 'Circle Body');
+        expect(circles).toHaveLength(2);
+        expect(bubbles.find((b) => b.id === 'old1').body).toBe(keptBody);
+        expect(['old1', 'new1'].map((id) => bodiesById.get(id).size)).toEqual([1, 1]);
     });
 });
