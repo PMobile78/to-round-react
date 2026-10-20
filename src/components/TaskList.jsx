@@ -35,7 +35,7 @@ import HtmlRenderer from './HtmlRenderer';
 import { stripHtml } from '../utils/stripHtml';
 import { db } from '../firebase';
 import { BUBBLE_STATUS, getBubblesByStatus } from '../utils/bubbleStatus';
-import { completeTask, deleteTaskForever, restoreTask, trashTask } from '../services/data/tasks';
+import { completeTask, deleteTaskForever, finishSeries, restoreTask, trashTask } from '../services/data/tasks';
 
 // Auto-cleanup period for deleted tasks (30 days)
 const DELETED_TASKS_CLEANUP_DAYS = 30;
@@ -240,6 +240,11 @@ const TaskList = ({
         if (!task) return;
         completeTask(db, uid, task).catch(error => logger.error('Error marking task as done:', error));
     }, [bubbles, uid]);
+
+    // "Finish series" of a repeating task from list view (spec 4.1): done, like a one-off task
+    const handleFinishSeries = useCallback((taskId) => {
+        finishSeries(db, uid, taskId).catch(error => logger.error('Error finishing the series:', error));
+    }, [uid]);
 
     // Delete task from list view (to the trash)
     const handleDeleteTask = useCallback((taskId) => {
@@ -566,6 +571,7 @@ const TaskList = ({
                                         t={t}
                                         onEdit={handleEditTask}
                                         onMarkDone={handleMarkTaskAsDone}
+                                        onFinishSeries={handleFinishSeries}
                                         onDelete={handleDeleteTask}
                                         onRestore={handleRestoreBubble}
                                         onPermanentDelete={handlePermanentDeleteTask}

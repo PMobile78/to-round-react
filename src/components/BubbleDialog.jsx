@@ -9,7 +9,7 @@ import {
     IconButton,
     Divider
 } from '@mui/material';
-import { CloseOutlined, DeleteOutlined, CheckCircle } from '@mui/icons-material';
+import { CloseOutlined, DeleteOutlined, CheckCircle, DoneAll } from '@mui/icons-material';
 import { LIMITS } from '../contract/schema';
 import BubbleDialogForm from './BubbleDialogForm';
 
@@ -43,6 +43,8 @@ export default function BubbleDialog(props) {
         setEditBubbleSize,
         handleDeleteBubble,
         handleMarkAsDone,
+        handleFinishSeries,
+        showFinishSeries,
         handleSaveBubble,
         editRepeat,
         setEditRepeat,
@@ -181,6 +183,19 @@ export default function BubbleDialog(props) {
                             >
                                 {t('bubbles.markAsDone')}
                             </Button>
+                            {showFinishSeries && (
+                                <Button
+                                    onClick={handleFinishSeries}
+                                    variant="outlined"
+                                    color="success"
+                                    startIcon={<DoneAll />}
+                                    fullWidth={isSmallScreen}
+                                    size={isSmallScreen ? 'small' : 'medium'}
+                                    sx={{ borderRadius: 2, ...(!isSmallScreen && { minHeight: 36 }) }}
+                                >
+                                    {t('bubbles.finishSeries')}
+                                </Button>
+                            )}
                             {isMobile && showStopPulsing ? (
                                 <Button
                                     onClick={onStopPulsing}

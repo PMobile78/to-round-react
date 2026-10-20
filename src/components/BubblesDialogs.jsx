@@ -36,6 +36,8 @@ const BubblesDialogs = ({
     setEditDialog,
     handleDeleteBubble,
     handleMarkAsDone,
+    handleFinishSeries,
+    showFinishSeries,
     handleSaveBubble,
     onStopPulsing,
     showStopPulsing,
@@ -188,6 +190,8 @@ const BubblesDialogs = ({
                 setEditBubbleSize={setEditBubbleSize}
                 handleDeleteBubble={handleDeleteBubble}
                 handleMarkAsDone={handleMarkAsDone}
+                handleFinishSeries={handleFinishSeries}
+                showFinishSeries={showFinishSeries}
                 handleSaveBubble={handleSaveBubble}
                 onStopPulsing={onStopPulsing}
                 showStopPulsing={showStopPulsing}

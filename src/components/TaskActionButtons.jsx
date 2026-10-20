@@ -3,14 +3,16 @@ import { Box, IconButton } from '@mui/material';
 import {
     CheckCircle,
     DeleteOutlined,
+    DoneAll,
     Edit,
     Restore,
 } from '@mui/icons-material';
-import { BUBBLE_STATUS } from '../utils/bubbleStatus';
+import { BUBBLE_STATUS, canFinishSeries } from '../utils/bubbleStatus';
 
 // Action matrix: define which actions appear for each status
+// ("finishSeries" only for a repeating task, see canFinishSeries)
 const ACTIONS = {
-    [BUBBLE_STATUS.ACTIVE]: ['edit', 'done', 'delete'],
+    [BUBBLE_STATUS.ACTIVE]: ['edit', 'done', 'finishSeries', 'delete'],
     [BUBBLE_STATUS.DONE]: ['edit', 'restore', 'delete'],
     [BUBBLE_STATUS.DELETED]: ['edit', 'restore', 'permanentDelete'],
 };
@@ -28,6 +30,12 @@ const ACTION_METADATA = {
         color: 'success.main',
         titleKey: 'bubbles.markAsDone',
         handler: 'onMarkDone',
+    },
+    finishSeries: {
+        icon: DoneAll,
+        color: 'success.main',
+        titleKey: 'bubbles.finishSeries',
+        handler: 'onFinishSeries',
     },
     delete: {
         icon: DeleteOutlined,
@@ -54,14 +62,16 @@ const TaskActionButtons = ({
     t,
     onEdit,
     onMarkDone,
+    onFinishSeries,
     onDelete,
     onRestore,
     onPermanentDelete,
 }) => {
-    const actions = ACTIONS[task.status] || [];
+    const actions = (ACTIONS[task.status] || []).filter((action) => action !== 'finishSeries' || canFinishSeries(task));
     const handlers = {
         onEdit,
         onMarkDone,
+        onFinishSeries,
         onDelete,
         onRestore,
         onPermanentDelete,

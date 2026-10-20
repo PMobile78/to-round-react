@@ -12,6 +12,9 @@ const PLANNED_TAB = 'postpone';
 export const isPlannedTask = (bubble, now) => bubble.status === BUBBLE_STATUS.ACTIVE
     && Number.isFinite(bubble.dueAt) && bubble.dueAt > now;
 
+/** "Finish series" (spec 4.1) is offered for an active repeating task. */
+export const canFinishSeries = (bubble) => bubble.status === BUBBLE_STATUS.ACTIVE && bubble.repeat !== null;
+
 // Get bubbles by status (a list tab); `now` (ms) decides the "planned" tab
 export const getBubblesByStatus = (bubblesData, status, now = Date.now()) => {
     if (!status) return bubblesData;

@@ -10,7 +10,7 @@ import { BubblesUiProvider, useBubblesUi } from '../state/BubblesUiStore';
 import { deviceTimeZone, toLocal } from '../contract/time';
 import { bubbleFromTask } from '../services/data/bubbleModel';
 import { dueForPicker } from '../services/data/taskForm';
-import { createTask, trashTask, updateTask } from '../services/data/tasks';
+import { createTask, finishSeries, trashTask, updateTask } from '../services/data/tasks';
 import { useBubbleCrud } from './useBubbleCrud';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -20,6 +20,7 @@ vi.mock('../services/data/tasks', async (importOriginal) => ({
     ...(await importOriginal()),
     newTaskId: vi.fn(() => 'new-id'),
     createTask: vi.fn(() => Promise.resolve()),
+    finishSeries: vi.fn(() => Promise.resolve()),
     updateTask: vi.fn(() => Promise.resolve()),
     trashTask: vi.fn(() => Promise.resolve()),
 }));
@@ -195,6 +196,18 @@ describe('useBubbleCrud: task writes through the v2 data layer', () => {
         expect(updateTask).toHaveBeenCalledWith('db', 'u1', 't1', { due: { local: '2026-10-15T09:00', tz: 'Europe/Berlin' } });
         expect(data.bubbles[0]).toMatchObject({ status: 'active', due: { local: '2026-10-15T09:00', tz: 'Europe/Berlin' } });
         expect(engineRef.current.world.bodies).toContain(bubble.body);
+    });
+
+    it('finishes the series of a repeating task: done, after the pop animation', async () => {
+        const bubble = openInDialog({ ...TASK, due: { local: '2026-10-10T09:00', tz: 'Europe/Berlin' }, repeat: { every: 1, unit: 'days' } });
+
+        act(() => { crud.handleFinishSeries(); });
+
+        expect(crud.editDialog).toBe(false);
+        await vi.waitFor(() => expect(finishSeries).toHaveBeenCalledWith('db', 'u1', 't1'));
+        expect(data.bubbles[0].status).toBe('done');
+        expect(engineRef.current.world.bodies).not.toContain(bubble.body);
+        expect(updateTask).not.toHaveBeenCalled();
     });
 
     it('finishes a one-off task after the pop animation', async () => {
