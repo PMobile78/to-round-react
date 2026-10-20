@@ -144,6 +144,16 @@
         "1hourBefore": "1 hour before",
         "1dayBefore": "1 day before",
         "custom": "Custom...",
+        "reminderBefore": {
+            "hours_one": "{{count}} hour before",
+            "hours_other": "{{count}} hours before",
+            "days_one": "{{count}} day before",
+            "days_other": "{{count}} days before",
+            "weeks_one": "{{count}} week before",
+            "weeks_other": "{{count}} weeks before"
+        },
+        "reminderRange": "From 1 hour to 52 weeks",
+        "remindersMax": "At most 10 reminders",
         "exportJson": "Export JSON",
         "importJson": "Import JSON",
         "importConfirm": "Import {{importBubbles}} tasks and {{importTags}} categories? This will delete {{deleteBubbles}} current tasks and {{deleteTags}} current categories.",
