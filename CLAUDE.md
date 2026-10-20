@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Human-facing documentation lives in [`docs/`](docs/README.md) (setup, Firebase, notifications, deployment, i18n).
+Human-facing documentation lives in [`docs/`](docs/README.md) (setup, Firebase, notifications, deployment, i18n, migration and backup).
 
 ## Commands
 
@@ -12,6 +12,8 @@ npm run build          # production build (also generates service worker)
 npm test               # run tests (vitest)
 npm run test:rules     # Firestore emulator tests: rules + web data layer (needs Java 21+ and Firebase CLI 15+)
 npm run start:emulator # dev server against the local Auth + Firestore emulators (.env.emulator)
+npm run rehearsal:load  # rehearsal of the move: a v1 export into the v1 collections of an emulator account
+npm run rehearsal:check # rehearsal of the move: users/{uid} against that export (docs/migration.md)
 npm run preview        # serve production build locally
 npm run generate-sw    # generate public/sw.js from env vars only
 npm run deploy         # build + push to gh-pages branch
@@ -35,7 +37,7 @@ npm run version:major
 index.html                 # entry point (Vite)
 vite.config.js             # Vite configuration (base: '/to-round-react/', outDir: 'build')
 src/
-  App.jsx                    # root: Firebase Auth listener + user settings → AuthForm | BubblesPage
+  App.jsx                    # root: Firebase Auth listener + user settings → AuthForm | MigrationGate → BubblesPage
   index.jsx                  # React DOM root; registers this device after sign-in
   firebase.js                # Firebase SDK init (emulators when REACT_APP_FIREBASE_EMULATORS=true)
   firebaseMessaging.js       # this device in users/{uid}/devices: FCM token, foreground messages
@@ -51,6 +53,8 @@ src/
       tasks.js, categories.js, settings.js, devices.js   # reads, live changes, writes
       bubbleModel.js         # task -> the bubble the app shows (+ tagId, dueAt: moment of the due)
       taskForm.js            # task dialogs' values -> fields of a new task / partial changes
+      backup.js              # v2 backup export; import = replace in batches of at most 450 writes
+      migration.js           # the move from user-bubbles / user-tags (spec 9): read, preview, write, marker
   state/                     # BubblesDataStore, BubblesUiStore (settings-backed values),
                              # SettingsStore (useUserSettings) + SettingsContext
   hooks/                     # extracted from BubblesPage
@@ -63,12 +67,15 @@ src/
     useThemeMode.js          # MUI theme / dark-light toggle
     useMindmaps.js           # mind map state / persistence
     useThisDevice.js         # this browser's users/{uid}/devices doc + "reminders on this device"
+    useBackup.js             # backup export / import of the main menu (BackupDialog)
+    useMigration.js          # the move from v1 before the app opens (MigrationGate, MigrationDialog)
   components/                # UI dialogs, drawers, editors, selectors
   locales/en/ uk/            # i18next translation JSON files
   utils/                     # config, logger, storage, physicsUtils, reorderArray
 scripts/
   generate-sw.js             # writes public/sw.js injecting Firebase config env vars
   version-bump.js            # patches package.json version field
+  rehearsal/                 # rehearsal of the move on the emulator (vitest.rehearsal.config.js)
 functions/
   index.js                   # Cloud Functions Gen2 (contract v2): wiring of the five functions only
   lib/                       # time.js, schedule.js, messages.js (pure) + handlers.js (Firestore side)
@@ -89,7 +96,7 @@ Data contract v2 ([spec](docs/superpowers/specs/2026-10-14-stage-0-data-contract
 | `users/{uid}/devices/{deviceId}` | device = Firebase installation id: `fcmToken`, `notificationsEnabled` | owner |
 | `user-mindmaps/{uid}/{document=**}` | mind maps (unchanged in stage 0) | owner |
 | `notification-sent/{key}` | dedup keys | Cloud Functions admin SDK only (`if false` in rules) |
-| `user-bubbles`, `user-tags`, `user-fcm-tokens` | v1 data | owner read-only; kept for the migration (sub-plan 0.6) and rollback |
+| `user-bubbles`, `user-tags`, `user-fcm-tokens` | v1 data | owner read-only; the move reads them (spec 9.1, left as they are); kept for rollback |
 
 Clients write creates with `serverTimestamp()` and partial updates with `updatedAt: serverTimestamp()`; an existing document is never overwritten with `setDoc` (the rules reject it). Settings, tasks and categories live only in Firestore — localStorage keeps just the FAB position, the last open mind map and the mind map copies.
 
