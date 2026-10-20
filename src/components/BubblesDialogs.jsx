@@ -12,7 +12,6 @@ import AppearanceDialog from './AppearanceDialog';
 import ChangePasswordDialog from './ChangePasswordDialog';
 import LogoutConfirmDialog from './LogoutConfirmDialog';
 import TaskListDrawer from './ListViewDrawer';
-import { isOverdue } from '../utils/notifications';
 import { useBubblesData } from '../state/BubblesDataStore';
 import { useBubblesUi } from '../state/BubblesUiStore';
 import { COLOR_PALETTE } from '../hooks/tagColors';
@@ -35,13 +34,11 @@ const BubblesDialogs = ({
     selectedBubble,
     setSelectedBubble,
     setEditDialog,
-    handleDeleteNotification,
     handleDeleteBubble,
     handleMarkAsDone,
     handleSaveBubble,
     onStopPulsing,
     showStopPulsing,
-    handleSetEditRecurrence,
     // Tag actions (used by the categories dialog)
     handleOpenTagDialog,
     handleDeleteTag,
@@ -58,8 +55,6 @@ const BubblesDialogs = ({
     // Create bubble dialog
     createDialog,
     setCreateDialog,
-    handleSetCreateRecurrence,
-    handleDeleteCreateNotification,
     createNewBubble,
     // Categories dialog
     handleUndoDeleteTag,
@@ -111,22 +106,19 @@ const BubblesDialogs = ({
         isAllListFiltersSelected,
         getBubbleCountByTagForListView,
         // Form state (create/edit dialogs) — read from the store (Stage E2 of 010d)
-        // instead of via props; forwarded to BubbleDialog below unchanged. The
-        // recurrence setters stay as the page-local handleSet*Recurrence props.
-        dueDate,
-        setDueDate,
-        editDueDate,
-        setEditDueDate,
-        createNotifications,
-        setCreateNotifications,
-        editNotifications,
-        setEditNotifications,
-        createRecurrence,
-        editRecurrence,
-        notifDialogOpen,
-        setNotifDialogOpen,
-        notifValue,
-        setNotifValue,
+        // instead of via props; forwarded to BubbleDialog below unchanged.
+        createDue,
+        setCreateDue,
+        editDue,
+        setEditDue,
+        createReminders,
+        setCreateReminders,
+        editReminders,
+        setEditReminders,
+        createRepeat,
+        setCreateRepeat,
+        editRepeat,
+        setEditRepeat,
         bubbleSize,
         setBubbleSize,
         editBubbleSize,
@@ -182,20 +174,13 @@ const BubblesDialogs = ({
                 t={t}
                 isSmallScreen={isSmallScreen}
                 isMobile={isMobile}
-                themeMode={themeMode}
                 getDialogPaperStyles={getDialogPaperStyles}
                 initialTitle={selectedBubble?.title || ''}
                 initialDescription={selectedBubble?.description || ''}
-                editDueDate={editDueDate}
-                setEditDueDate={setEditDueDate}
-                isOverdue={isOverdue}
-                notifDialogOpen={notifDialogOpen}
-                setNotifDialogOpen={setNotifDialogOpen}
-                notifValue={notifValue}
-                setNotifValue={setNotifValue}
-                editNotifications={editNotifications}
-                setEditNotifications={setEditNotifications}
-                handleDeleteNotification={handleDeleteNotification}
+                editDue={editDue}
+                setEditDue={setEditDue}
+                editReminders={editReminders}
+                setEditReminders={setEditReminders}
                 tags={tags}
                 selectedTagId={selectedTagId}
                 setSelectedTagId={setSelectedTagId}
@@ -206,8 +191,8 @@ const BubblesDialogs = ({
                 handleSaveBubble={handleSaveBubble}
                 onStopPulsing={onStopPulsing}
                 showStopPulsing={showStopPulsing}
-                editRecurrence={editRecurrence}
-                setEditRecurrence={handleSetEditRecurrence}
+                editRepeat={editRepeat}
+                setEditRepeat={setEditRepeat}
             />
             {/* Диалог создания/редактирования тега */}
             <TagEditorDialog
@@ -276,20 +261,13 @@ const BubblesDialogs = ({
                 t={t}
                 isSmallScreen={isSmallScreen}
                 isMobile={isMobile}
-                themeMode={themeMode}
                 getDialogPaperStyles={getDialogPaperStyles}
-                dueDate={dueDate}
-                setDueDate={setDueDate}
-                isOverdue={isOverdue}
-                notifDialogOpen={notifDialogOpen}
-                setNotifDialogOpen={setNotifDialogOpen}
-                notifValue={notifValue}
-                setNotifValue={setNotifValue}
-                createNotifications={createNotifications}
-                setCreateNotifications={setCreateNotifications}
-                createRecurrence={createRecurrence}
-                setCreateRecurrence={handleSetCreateRecurrence}
-                handleDeleteCreateNotification={handleDeleteCreateNotification}
+                createDue={createDue}
+                setCreateDue={setCreateDue}
+                createReminders={createReminders}
+                setCreateReminders={setCreateReminders}
+                createRepeat={createRepeat}
+                setCreateRepeat={setCreateRepeat}
                 tags={tags}
                 selectedTagId={selectedTagId}
                 setSelectedTagId={setSelectedTagId}

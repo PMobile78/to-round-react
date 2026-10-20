@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import Matter from 'matter-js';
 import { createWorldBounds } from '../utils/physicsUtils';
 import { bubbleFromTask } from '../services/data/bubbleModel';
+import { dueForPicker } from '../services/data/taskForm';
 import { applyTaskChanges } from '../utils/taskSync';
 import logger from '../utils/logger';
 import { shouldPauseEngine } from '../utils/engineIdle';
@@ -37,9 +38,9 @@ export function useMatterEngine({
     setSelectedTagId,
     setEditBubbleSize,
     setEditDialog,
-    setEditDueDate,
-    setEditNotifications,
-    setEditRecurrence,
+    setEditDue,
+    setEditReminders,
+    setEditRepeat,
     // Functions / computed values
     isMobile,
     themeMode,
@@ -47,7 +48,6 @@ export function useMatterEngine({
     dropSpeed,
     getBubbleFillStyle,
     getCanvasSize,
-    parseLocalDateTime,
     theme,
 }) {
     // Keep theme reference current for afterRender handler (avoid stale closure)
@@ -156,9 +156,9 @@ export function useMatterEngine({
                 const updated = bubbleFromTask(change.task);
                 // Update selected bubble fields but keep the Matter.js body instance
                 setSelectedBubble(prevSel => (prevSel ? { ...prevSel, ...updated, body: prevSel.body } : prevSel));
-                setEditDueDate(updated.dueDate ? parseLocalDateTime(updated.dueDate) : null);
-                setEditNotifications(updated.notifications);
-                setEditRecurrence(updated.recurrence);
+                setEditDue(dueForPicker(updated));
+                setEditReminders(updated.reminders);
+                setEditRepeat(updated.repeat);
             }
         }, (error) => logger.error('Tasks listener error:', error));
 

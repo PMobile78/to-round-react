@@ -85,16 +85,15 @@ describe('useMatterEngine', () => {
             setSelectedTagId: vi.fn(),
             setEditBubbleSize: vi.fn(),
             setEditDialog: vi.fn(),
-            setEditDueDate: vi.fn(),
-            setEditNotifications: vi.fn(),
-            setEditRecurrence: vi.fn(),
+            setEditDue: vi.fn(),
+            setEditReminders: vi.fn(),
+            setEditRepeat: vi.fn(),
             isMobile: false,
             themeMode: 'light',
             tags: [],
             dropSpeed: 1,
             getBubbleFillStyle: () => 'rgba(0, 0, 0, 0)',
             getCanvasSize: () => ({ width: 800, height: 600 }),
-            parseLocalDateTime: () => null,
             theme: {},
             ...hookProps,
         });
@@ -239,6 +238,20 @@ describe('useMatterEngine', () => {
 
         push([{ type: 'modified', task: task('a', { pulseMuted: false }) }]);
         expect(refs.manuallyStoppedPulsingRef.current.has('a')).toBe(false);
+    });
+
+    it('shows the due, reminders and repeat another device saved in the open edit dialog', () => {
+        hookProps = { setSelectedBubble: vi.fn(), setEditDue: vi.fn(), setEditReminders: vi.fn(), setEditRepeat: vi.fn() };
+        act(() => root.render(<Probe />));
+        push(added(task('a')), true);
+        refs.liveEditRef.current = { editDialog: true, selectedBubbleId: 'a' };
+
+        const due = { local: '2026-10-20T09:00', tz: 'Europe/Berlin' };
+        push([{ type: 'modified', task: task('a', { due, reminders: [60], repeat: { every: 1, unit: 'days' } }) }]);
+
+        expect(hookProps.setEditDue).toHaveBeenCalledWith(new Date('2026-10-20T07:00:00.000Z'));
+        expect(hookProps.setEditReminders).toHaveBeenCalledWith([60]);
+        expect(hookProps.setEditRepeat).toHaveBeenCalledWith({ every: 1, unit: 'days' });
     });
 
     it('stops listening when the canvas unmounts', () => {

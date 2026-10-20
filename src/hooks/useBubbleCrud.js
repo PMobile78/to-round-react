@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import Matter from 'matter-js';
 import { db } from '../firebase';
 import { completionChanges, createTask, newTaskId, trashTask, updateTask } from '../services/data/tasks';
-import { bubbleFromTask, taskChangesFromForm, taskFieldsFromForm, withTaskChanges } from '../services/data/bubbleModel';
+import { bubbleFromTask, withTaskChanges } from '../services/data/bubbleModel';
+import { taskChangesFromForm, taskFieldsFromForm } from '../services/data/taskForm';
 import logger from '../utils/logger';
 import { useBubblesData } from '../state/BubblesDataStore';
 import { useBubblesUi } from '../state/BubblesUiStore';
@@ -19,8 +20,8 @@ import { useBubblesUi } from '../state/BubblesUiStore';
  * which useMatterEngine and useBubbleNotifications consume), so values defined by
  * later hooks are not plain props: shared domain values (tags, selectedTagId,
  * selectedCategory, getBubbleFillStyle) are read from BubblesStore at call-time,
- * and page-local UI values (canvasSize + the create/edit notification state) are
- * passed as explicit handler arguments by BubblesPage.
+ * and page-local UI values (canvasSize + the create/edit due, reminders and repeat)
+ * are passed as explicit handler arguments by BubblesPage.
  */
 export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile, uid }) {
     const { tags } = useBubblesData();
@@ -53,7 +54,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
     };
 
     // Function for opening create bubble dialog
-    const openCreateDialog = ({ setDueDate, setCreateNotifications }) => {
+    const openCreateDialog = ({ setCreateDue, setCreateReminders, setCreateRepeat }) => {
         const { selectedCategory } = registered;
         const categoryReserved = new Set(['all', 'no-tags', 'planned-tasks']);
         const tagFromPanel =
@@ -64,13 +65,14 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
                 : '';
         setSelectedTagId(tagFromPanel);
         setBubbleSize(45); // Сброс размера к значению по умолчанию
-        setDueDate(null); // Сброс даты
-        setCreateNotifications([]); // сброс уведомлений
+        setCreateDue(null); // Сброс срока
+        setCreateReminders([]); // сброс напоминаний
+        setCreateRepeat(null); // сброс повтора
         setCreateDialog(true);
     };
 
     // Function for creating a new bubble
-    const createNewBubble = ({ title, description, canvasSize, dueDate, createNotifications, createRecurrence, setDueDate }) => {
+    const createNewBubble = ({ title, description, canvasSize, createDue, createReminders, createRepeat, setCreateDue }) => {
         if (!engineRef.current || !renderRef.current || !title.trim()) {
             return;
         }
@@ -79,11 +81,11 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         const fields = taskFieldsFromForm({
             title,
             description,
-            tagId: selectedTagId,
+            categoryId: selectedTagId,
             radius: bubbleSize, // Используем выбранный размер
-            dueDate,
-            notifications: createNotifications,
-            recurrence: createRecurrence,
+            due: createDue,
+            reminders: createReminders,
+            repeat: createRepeat,
         });
         const id = newTaskId(db, uid);
         const now = new Date().toISOString();
@@ -99,21 +101,22 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         // Close dialog and reset form
         setCreateDialog(false);
         setSelectedTagId('');
-        setDueDate(null);
+        setCreateDue(null);
     };
 
-    // Save bubble changes: only the fields the user changed are written
-    const handleSaveBubble = ({ title, description, editDueDate, editNotifications, editRecurrence, manuallyStoppedPulsingRef, setEditDueDate }) => {
+    // Save bubble changes: only the fields the user changed are written. A task that another
+    // device deleted for good while the dialog was open is gone from bubbles: no body, no write.
+    const handleSaveBubble = ({ title, description, editDue, editReminders, editRepeat, manuallyStoppedPulsingRef, setEditDue }) => {
         if (!title.trim()) return;
-        if (selectedBubble && engineRef.current) {
+        if (selectedBubble && engineRef.current && bubbles.some(b => b.id === selectedBubble.id)) {
             const changes = taskChangesFromForm(selectedBubble, {
                 title,
                 description,
-                tagId: selectedTagId,
+                categoryId: selectedTagId,
                 radius: editBubbleSize,
-                dueDate: editDueDate,
-                notifications: editNotifications,
-                recurrence: editRecurrence,
+                due: editDue,
+                reminders: editReminders,
+                repeat: editRepeat,
             });
             // A new due starts a new cycle: the "stopped manually" mark goes, like pulseMuted.
             if (changes.due !== undefined) {
@@ -140,7 +143,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
 
         setEditDialog(false);
         setSelectedBubble(null);
-        setEditDueDate(null);
+        setEditDue(null);
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 

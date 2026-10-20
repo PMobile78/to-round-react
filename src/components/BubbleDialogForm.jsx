@@ -19,8 +19,9 @@ import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers';
 import enUS from 'date-fns/locale/en-US';
 import uk from 'date-fns/locale/uk';
 import i18n from '../i18n';
-import AddNotification from './AddNotification';
-import RepeatSettings from './RepeatSettings';
+import { LIMITS } from '../contract/schema';
+import ReminderEditor from './ReminderEditor';
+import RepeatEditor from './RepeatEditor';
 import MarkdownEditor from './MarkdownEditor';
 
 export default function BubbleDialogForm(props) {
@@ -28,23 +29,17 @@ export default function BubbleDialogForm(props) {
         t,
         isSmallScreen,
         isMobile,
-        themeMode,
         title,
         setTitle,
         description,
         setDescription,
-        dueDate,
-        setDueDate,
-        isOverdue,
-        notifDialogOpen,
-        setNotifDialogOpen,
-        notifValue,
-        setNotifValue,
-        notifications,
-        setNotifications,
-        handleDeleteNotification,
-        recurrence,
-        setRecurrence,
+        descriptionTooLong,
+        due,
+        setDue,
+        reminders,
+        setReminders,
+        repeat,
+        setRepeat,
         tags,
         selectedTagId,
         setSelectedTagId,
@@ -56,6 +51,13 @@ export default function BubbleDialogForm(props) {
 
     const currentLang = (typeof i18n.language === 'string' ? i18n.language : 'en') || 'en';
     const adapterLocale = currentLang.startsWith('uk') ? uk : enUS;
+    const overdue = due !== null && due.getTime() < Date.now();
+    // Reminders and a repeat need a due (spec 3.1): they go together with it.
+    const clearDue = () => {
+        setDue(null);
+        setReminders([]);
+        setRepeat(null);
+    };
 
     return (
         <>
@@ -70,6 +72,7 @@ export default function BubbleDialogForm(props) {
                 maxRows={4}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                inputProps={{ maxLength: LIMITS.titleMaxLength }}
                 sx={{
                     marginTop: 3,
                     '& .MuiInputBase-input': {
@@ -91,6 +94,11 @@ export default function BubbleDialogForm(props) {
                     isMobile={isMobile}
                     t={t}
                 />
+                {descriptionTooLong && (
+                    <Typography variant="caption" color="error" sx={{ display: 'block', marginTop: 0.5 }}>
+                        {t('bubbles.descriptionTooLong')}
+                    </Typography>
+                )}
             </Box>
             <FormControl fullWidth margin="dense" variant="outlined">
                 <InputLabel>{t('bubbles.categoryLabel')}</InputLabel>
@@ -123,8 +131,8 @@ export default function BubbleDialogForm(props) {
                     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={adapterLocale}>
                         <DateTimePicker
                             label={t('bubbles.dueDateLabel')}
-                            value={dueDate}
-                            onChange={setDueDate}
+                            value={due}
+                            onChange={setDue}
                             ampm={false}
                             closeOnSelect={false}
                             views={["year", "month", "day", "hours", "minutes"]}
@@ -143,12 +151,12 @@ export default function BubbleDialogForm(props) {
                                         marginTop: 2,
                                         marginBottom: 2,
                                         '& .MuiInputBase-root': {
-                                            borderColor: isOverdue(dueDate) ? '#f44336' : undefined,
+                                            borderColor: overdue ? '#f44336' : undefined,
                                             '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: isOverdue(dueDate) ? '#f44336' : undefined,
+                                                borderColor: overdue ? '#f44336' : undefined,
                                             },
                                             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: isOverdue(dueDate) ? '#f44336' : undefined,
+                                                borderColor: overdue ? '#f44336' : undefined,
                                             }
                                         }
                                     }}
@@ -167,13 +175,13 @@ export default function BubbleDialogForm(props) {
                         {t('bubbles.stopPulsing') || 'Stop pulsing'}
                     </Button>
                 ) : null}
-                {dueDate && (
-                    <IconButton onClick={() => { setDueDate(null); setNotifications([]); }} sx={{ mt: 1 }}>
+                {due && (
+                    <IconButton onClick={clearDue} sx={{ mt: 1 }}>
                         <Clear />
                     </IconButton>
                 )}
             </Box>
-            {dueDate && isOverdue(dueDate) && (
+            {overdue && (
                 <Box sx={{
                     display: 'flex', alignItems: 'center', gap: 1, marginTop: 1, padding: 1,
                     backgroundColor: 'rgba(244, 67, 54, 0.1)', borderRadius: 1,
@@ -184,24 +192,12 @@ export default function BubbleDialogForm(props) {
                     </Typography>
                 </Box>
             )}
-            <Box>
-                <AddNotification
-                    open={notifDialogOpen}
-                    onClose={() => setNotifDialogOpen(false)}
-                    onSave={val => setNotifValue(val)}
-                    initialValue={notifValue}
-                    notifications={notifications}
-                    onAdd={notifs => setNotifications(notifs)}
-                    onDelete={handleDeleteNotification}
-                    dueDate={dueDate}
-                    themeMode={themeMode}
-                />
-            </Box>
-            <RepeatSettings
-                value={recurrence}
-                onChange={setRecurrence}
+            <ReminderEditor reminders={reminders} onChange={setReminders} due={due} t={t} />
+            <RepeatEditor
+                value={repeat}
+                onChange={setRepeat}
                 t={t}
-                disabled={!dueDate}
+                disabled={!due}
                 isMobile={isMobile}
             />
             <Box sx={{ marginTop: 2, marginBottom: 1, width: isMobile ? '95%' : '100%', marginX: isMobile ? 'auto' : 0 }}>

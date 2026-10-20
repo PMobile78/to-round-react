@@ -10,6 +10,7 @@ import {
     Divider
 } from '@mui/material';
 import { CloseOutlined, DeleteOutlined, CheckCircle } from '@mui/icons-material';
+import { LIMITS } from '../contract/schema';
 import BubbleDialogForm from './BubbleDialogForm';
 
 export default function BubbleDialog(props) {
@@ -20,42 +21,34 @@ export default function BubbleDialog(props) {
         t,
         isSmallScreen,
         isMobile,
-        themeMode,
         getDialogPaperStyles,
         // Create mode props
-        dueDate,
-        setDueDate,
-        createNotifications,
-        setCreateNotifications,
-        handleDeleteCreateNotification,
-        createRecurrence,
-        setCreateRecurrence,
+        createDue,
+        setCreateDue,
+        createReminders,
+        setCreateReminders,
+        createRepeat,
+        setCreateRepeat,
         bubbleSize,
         setBubbleSize,
         onCreate,
         // Edit mode props
         initialTitle,
         initialDescription,
-        editDueDate,
-        setEditDueDate,
-        editNotifications,
-        setEditNotifications,
-        handleDeleteNotification,
+        editDue,
+        setEditDue,
+        editReminders,
+        setEditReminders,
         editBubbleSize,
         setEditBubbleSize,
         handleDeleteBubble,
         handleMarkAsDone,
         handleSaveBubble,
-        editRecurrence,
-        setEditRecurrence,
+        editRepeat,
+        setEditRepeat,
         onStopPulsing,
         showStopPulsing,
         // Shared props
-        isOverdue,
-        notifDialogOpen,
-        setNotifDialogOpen,
-        notifValue,
-        setNotifValue,
         tags,
         selectedTagId,
         setSelectedTagId
@@ -77,16 +70,18 @@ export default function BubbleDialog(props) {
     }, [open, mode, initialTitle, initialDescription]);
 
     // Determine which form props to pass based on mode
-    const formDueDate = mode === 'create' ? dueDate : editDueDate;
-    const setFormDueDate = mode === 'create' ? setDueDate : setEditDueDate;
-    const formNotifications = mode === 'create' ? createNotifications : editNotifications;
-    const setFormNotifications = mode === 'create' ? setCreateNotifications : setEditNotifications;
-    const formHandleDeleteNotification = mode === 'create' ? handleDeleteCreateNotification : handleDeleteNotification;
-    const formRecurrence = mode === 'create' ? createRecurrence : editRecurrence;
-    const setFormRecurrence = mode === 'create' ? setCreateRecurrence : setEditRecurrence;
+    const formDue = mode === 'create' ? createDue : editDue;
+    const setFormDue = mode === 'create' ? setCreateDue : setEditDue;
+    const formReminders = mode === 'create' ? createReminders : editReminders;
+    const setFormReminders = mode === 'create' ? setCreateReminders : setEditReminders;
+    const formRepeat = mode === 'create' ? createRepeat : editRepeat;
+    const setFormRepeat = mode === 'create' ? setCreateRepeat : setEditRepeat;
     const formBubbleSize = mode === 'create' ? bubbleSize : editBubbleSize;
     const setFormBubbleSize = mode === 'create' ? setBubbleSize : setEditBubbleSize;
     const titleKey = mode === 'create' ? 'bubbles.createNewBubble' : 'bubbles.editBubble';
+    // Spec 3.1: a description holds at most 100 000 characters; a longer one is not saved.
+    const descriptionTooLong = description.length > LIMITS.descriptionMaxLength;
+    const cannotSave = !title.trim() || descriptionTooLong;
 
     return (
         <Dialog
@@ -124,23 +119,17 @@ export default function BubbleDialog(props) {
                     t={t}
                     isSmallScreen={isSmallScreen}
                     isMobile={isMobile}
-                    themeMode={themeMode}
                     title={title}
                     setTitle={setTitle}
                     description={description}
                     setDescription={setDescription}
-                    dueDate={formDueDate}
-                    setDueDate={setFormDueDate}
-                    isOverdue={isOverdue}
-                    notifDialogOpen={notifDialogOpen}
-                    setNotifDialogOpen={setNotifDialogOpen}
-                    notifValue={notifValue}
-                    setNotifValue={setNotifValue}
-                    notifications={formNotifications}
-                    setNotifications={setFormNotifications}
-                    handleDeleteNotification={formHandleDeleteNotification}
-                    recurrence={formRecurrence}
-                    setRecurrence={setFormRecurrence}
+                    descriptionTooLong={descriptionTooLong}
+                    due={formDue}
+                    setDue={setFormDue}
+                    reminders={formReminders}
+                    setReminders={setFormReminders}
+                    repeat={formRepeat}
+                    setRepeat={setFormRepeat}
                     tags={tags}
                     selectedTagId={selectedTagId}
                     setSelectedTagId={setSelectedTagId}
@@ -163,7 +152,7 @@ export default function BubbleDialog(props) {
                         <Button onClick={onClose} color="inherit" fullWidth={isSmallScreen} sx={{ minHeight: isMobile ? 48 : 36 }}>
                             {t('bubbles.cancel')}
                         </Button>
-                        <Button onClick={() => onCreate({ title, description })} variant="contained" fullWidth={isSmallScreen} sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36 }} disabled={!title.trim()}>
+                        <Button onClick={() => onCreate({ title, description })} variant="contained" fullWidth={isSmallScreen} sx={{ borderRadius: 2, minHeight: isMobile ? 48 : 36 }} disabled={cannotSave}>
                             {t('bubbles.create')}
                         </Button>
                     </>
@@ -212,7 +201,7 @@ export default function BubbleDialog(props) {
                             <Button onClick={onClose} color="inherit" fullWidth={isSmallScreen} size={isSmallScreen ? 'small' : 'medium'} sx={{ order: isSmallScreen ? 2 : 1, ...(!isSmallScreen && { minHeight: 36 }) }}>
                                 {t('bubbles.cancel')}
                             </Button>
-                            <Button onClick={() => handleSaveBubble({ title, description })} variant="contained" fullWidth={isSmallScreen} size={isSmallScreen ? 'small' : 'medium'} sx={{ borderRadius: 2, order: isSmallScreen ? 1 : 2, ...(!isSmallScreen && { minHeight: 36 }) }} disabled={!title.trim()}>
+                            <Button onClick={() => handleSaveBubble({ title, description })} variant="contained" fullWidth={isSmallScreen} size={isSmallScreen ? 'small' : 'medium'} sx={{ borderRadius: 2, order: isSmallScreen ? 1 : 2, ...(!isSmallScreen && { minHeight: 36 }) }} disabled={cannotSave}>
                                 {t('bubbles.save')}
                             </Button>
                         </Box>

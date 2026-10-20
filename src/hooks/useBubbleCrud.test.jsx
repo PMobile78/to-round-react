@@ -7,7 +7,9 @@ import settingsFixtures from '../../contract/fixtures/settings.json';
 import { SettingsContext } from '../state/SettingsContext';
 import { BubblesDataProvider, useBubblesData } from '../state/BubblesDataStore';
 import { BubblesUiProvider, useBubblesUi } from '../state/BubblesUiStore';
+import { deviceTimeZone, toLocal } from '../contract/time';
 import { bubbleFromTask } from '../services/data/bubbleModel';
+import { dueForPicker } from '../services/data/taskForm';
 import { createTask, trashTask, updateTask } from '../services/data/tasks';
 import { useBubbleCrud } from './useBubbleCrud';
 
@@ -74,6 +76,7 @@ describe('useBubbleCrud: task writes through the v2 data layer', () => {
         act(() => data.setBubbles([bubble]));
         act(() => {
             crud.setSelectedBubble(bubble);
+            crud.setEditDialog(true);
             ui.setSelectedTagId(bubble.tagId || '');
             ui.setEditBubbleSize(bubble.radius);
         });
@@ -83,11 +86,21 @@ describe('useBubbleCrud: task writes through the v2 data layer', () => {
     const save = (bubble, overrides) => act(() => crud.handleSaveBubble({
         title: bubble.title,
         description: bubble.description,
-        editDueDate: null,
-        editNotifications: bubble.notifications,
-        editRecurrence: bubble.recurrence,
+        editDue: dueForPicker(bubble),
+        editReminders: bubble.reminders,
+        editRepeat: bubble.repeat,
         manuallyStoppedPulsingRef: { current: new Set() },
-        setEditDueDate: vi.fn(),
+        setEditDue: vi.fn(),
+        ...overrides,
+    }));
+    const create = (overrides) => act(() => crud.createNewBubble({
+        title: 'Pay bills',
+        description: '',
+        canvasSize: { width: 800, height: 600 },
+        createDue: null,
+        createReminders: [],
+        createRepeat: null,
+        setCreateDue: vi.fn(),
         ...overrides,
     }));
 
@@ -111,21 +124,26 @@ describe('useBubbleCrud: task writes through the v2 data layer', () => {
     });
 
     it('creates the task with the values of the create dialog and shows it at once', () => {
-        act(() => crud.createNewBubble({
-            title: 'Pay bills',
-            description: '',
-            canvasSize: { width: 800, height: 600 },
-            dueDate: null,
-            createNotifications: [],
-            createRecurrence: null,
-            setDueDate: vi.fn(),
-        }));
+        create();
 
         expect(createTask).toHaveBeenCalledWith('db', 'u1', 'new-id', {
             title: 'Pay bills', description: '', categoryId: null, due: null, reminders: [], repeat: null, radius: 45,
         });
         expect(data.bubbles).toEqual([expect.objectContaining({ id: 'new-id', title: 'Pay bills', status: 'active' })]);
         expect(engineRef.current.world.bodies).toContain(data.bubbles[0].body);
+    });
+
+    it('creates the task with the due, reminders and repeat of the create dialog', () => {
+        const due = new Date('2026-10-15T07:30:00.000Z');
+        create({ title: '  Pay bills ', createDue: due, createReminders: [1440, 60], createRepeat: { every: 1, unit: 'weeks', weekdays: [5, 1] } });
+
+        const zone = deviceTimeZone();
+        expect(createTask).toHaveBeenCalledWith('db', 'u1', 'new-id', {
+            title: 'Pay bills', description: '', categoryId: null, radius: 45,
+            due: { local: toLocal(due, zone), tz: zone },
+            reminders: [60, 1440],
+            repeat: { every: 1, unit: 'weeks', weekdays: [1, 5] },
+        });
     });
 
     it('saves only the fields the user changed', () => {
@@ -138,6 +156,20 @@ describe('useBubbleCrud: task writes through the v2 data layer', () => {
     it('writes nothing when the dialog is saved unchanged', () => {
         save(openInDialog(TASK));
         expect(updateTask).not.toHaveBeenCalled();
+    });
+
+    it('saves nothing and adds no body when another device deleted the task for good', () => {
+        const bubble = openInDialog(TASK);
+        // The live subscription (useMatterEngine) drops the task and its body.
+        Matter.World.remove(engineRef.current.world, bubble.body);
+        act(() => data.setBubbles([]));
+
+        save(bubble, { title: 'Pay all bills' });
+
+        expect(updateTask).not.toHaveBeenCalled();
+        expect(engineRef.current.world.bodies).toEqual([]);
+        expect(crud.editDialog).toBe(false);
+        expect(crud.selectedBubble).toBe(null);
     });
 
     it('saves the description as the Markdown the editor hands over', () => {

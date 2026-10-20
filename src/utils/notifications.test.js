@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
     getDueTime,
-    isOverdue,
     getDueNotifications,
     getActiveNotification,
     buildNotificationKey,
@@ -12,13 +11,6 @@ import {
 const HOUR = 60 * 60 * 1000;
 const DUE = Date.parse('2026-06-14T12:00:00.000Z');
 
-// Build a local naive ISO string ("YYYY-MM-DDTHH:mm:ss") from a Date so the
-// values round-trip through parseLocalDateTime (local-time interpretation).
-const localIso = (d) => {
-    const p = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-};
-
 describe('getDueTime', () => {
     it('returns null when there is no bubble or no due', () => {
         expect(getDueTime(null)).toBe(null);
@@ -28,34 +20,6 @@ describe('getDueTime', () => {
 
     it('returns the moment of the due in ms', () => {
         expect(getDueTime({ dueAt: DUE })).toBe(DUE);
-    });
-});
-
-describe('isOverdue', () => {
-    it('is false for falsy / invalid dueDate', () => {
-        expect(isOverdue(null)).toBe(false);
-        expect(isOverdue('')).toBe(false);
-        expect(isOverdue('garbage')).toBe(false);
-    });
-
-    it('is true when due is before now', () => {
-        const past = localIso(new Date(2020, 0, 1, 0, 0, 0));
-        expect(isOverdue(past, new Date(2026, 0, 1))).toBe(true);
-    });
-
-    it('is false when due is after now', () => {
-        const future = localIso(new Date(2030, 0, 1, 0, 0, 0));
-        expect(isOverdue(future, new Date(2026, 0, 1))).toBe(false);
-    });
-
-    it('accepts epoch-ms for now', () => {
-        const past = localIso(new Date(2020, 0, 1, 0, 0, 0));
-        expect(isOverdue(past, new Date(2026, 0, 1).getTime())).toBe(true);
-    });
-
-    it('boundary: exactly now is not overdue (strict <)', () => {
-        const d = new Date(2026, 5, 14, 10, 0, 0);
-        expect(isOverdue(localIso(d), d.getTime())).toBe(false);
     });
 });
 
