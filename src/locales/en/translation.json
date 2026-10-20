@@ -42,6 +42,8 @@
         "menu": "Menu",
         "taskCategories": "Tasks categories",
         "taskCategoriesPanel": "Tasks categories panel",
+        "deviceReminders": "Reminders on this device",
+        "deviceRemindersNoPermission": "Notifications are not allowed in this browser, so reminders cannot reach it.",
         "settings": "Settings",
         "about": "About",
         "memoryUsage": "Memory usage",

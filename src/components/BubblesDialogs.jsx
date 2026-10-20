@@ -15,6 +15,7 @@ import TaskListDrawer from './ListViewDrawer';
 import { useBubblesData } from '../state/BubblesDataStore';
 import { useBubblesUi } from '../state/BubblesUiStore';
 import { COLOR_PALETTE } from '../hooks/tagColors';
+import { useThisDevice } from '../hooks/useThisDevice';
 
 /**
  * Presentational container for all of BubblesPage's dialogs and drawers.
@@ -78,6 +79,8 @@ const BubblesDialogs = ({
         backgroundColor: theme.palette.background.paper,
         color: theme.palette.text.primary,
     };
+    // This browser's reminders switch in the main menu (spec 8.9)
+    const thisDevice = useThisDevice(uid);
     const {
         bubbles,
         tags,
@@ -236,6 +239,8 @@ const BubblesDialogs = ({
                 onOpenMindMap={onOpenMindMap}
                 onAbout={() => setAboutOpen(true)}
                 onLogout={handleLogout}
+                thisDevice={thisDevice.device}
+                onToggleThisDeviceReminders={thisDevice.setNotificationsEnabled}
             />
 
             <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} t={t} />

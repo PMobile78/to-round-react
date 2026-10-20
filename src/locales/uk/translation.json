@@ -42,6 +42,8 @@
         "menu": "Меню",
         "taskCategories": "Категорії завдань",
         "taskCategoriesPanel": "Панель категорій завдань",
+        "deviceReminders": "Нагадування на цьому пристрої",
+        "deviceRemindersNoPermission": "Сповіщення в цьому браузері не дозволені, тож нагадування сюди не прийдуть.",
         "settings": "Налаштування",
         "about": "Про програму",
         "memoryUsage": "Використання пам'яті",
