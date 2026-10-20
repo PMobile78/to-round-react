@@ -9,10 +9,13 @@
 ## Возможности
 
 - **Холст с физикой** (Matter.js) — задачи как пузырьки, перетаскивание, пульсация по сроку.
-- **Rich-text описания** (TipTap), безопасный рендер через DOMPurify.
+- **Описания в Markdown** — визуальный редактор TipTap: жирный, курсив, списки, чек-листы, ссылки.
 - **Теги / категории**, фильтры и поиск по задачам.
-- **Дедлайны, напоминания и повторы** — `dueDate`, «Remind me», «Repeat every».
-- **Push-уведомления** (FCM) — reminder заранее и overdue по сроку, через Cloud Functions.
+- **Сроки, напоминания и повторы** — срок во времени устройства, напоминания за часы, дни или
+  недели, повтор каждые N часов, дней, недель или месяцев; «Готово» переносит повторяющуюся задачу
+  на следующий раз, «Завершить серию» закрывает её.
+- **Push-уведомления** (FCM) — reminder заранее и overdue по сроку, через Cloud Functions;
+  на каждом устройстве — переключатель «Напоминания на этом устройстве».
 - **Mind maps** (@xyflow/react + mind-elixir).
 - **i18n** — English и Українська; тёмная/светлая тема.
 - **Синхронизация** между устройствами через Firebase Auth (email/пароль) + Firestore.
@@ -20,7 +23,7 @@
 ## Стек
 
 React (Vite 8) · Firebase (Auth, Firestore, Cloud Functions Gen2, FCM) ·
-Matter.js · MUI v7 · TipTap · i18next · date-fns · DOMPurify ·
+Matter.js · MUI v7 · TipTap + @tiptap/markdown · i18next · date-fns · DOMPurify ·
 @xyflow/react + mind-elixir + dagre (mind maps).
 
 ## Быстрый старт

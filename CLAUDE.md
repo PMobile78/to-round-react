@@ -26,7 +26,7 @@ npm run version:major
 
 ## Architecture
 
-**Stack:** React (Vite 8), Firebase (Auth + Firestore client + Cloud Functions Gen2 + FCM), Matter.js, MUI v7, TipTap (rich text), i18next, @xyflow/react + mind-elixir (mind maps), date-fns, DOMPurify.  
+**Stack:** React (Vite 8), Firebase (Auth + Firestore client + Cloud Functions Gen2 + FCM), Matter.js, MUI v7, TipTap + @tiptap/markdown (Markdown descriptions), i18next, @xyflow/react + mind-elixir (mind maps), date-fns, DOMPurify.  
 **Hosting:** GitHub Pages. Deployed via `.github/workflows/deploy-prod.yml` — **manual** `workflow_dispatch` only. Push/PR trigger **nothing** (no CI); tests + lint run only inside the deploy flow (via the reusable `test.yml`).
 
 ### Frontend structure
@@ -49,7 +49,8 @@ src/
     data/                    # data contract v2 on users/{uid}/…; db and uid are arguments
       convert.js             # Firestore document <-> backup-form record (Timestamp <-> ISO)
       tasks.js, categories.js, settings.js, devices.js   # reads, live changes, writes
-      bubbleModel.js         # interim bridge to the old editors' fields (until sub-plan 0.5)
+      bubbleModel.js         # task -> the bubble the app shows (+ tagId, dueAt: moment of the due)
+      taskForm.js            # task dialogs' values -> fields of a new task / partial changes
   state/                     # BubblesDataStore, BubblesUiStore (settings-backed values),
                              # SettingsStore (useUserSettings) + SettingsContext
   hooks/                     # extracted from BubblesPage
@@ -61,6 +62,7 @@ src/
     useSearch.js             # search state
     useThemeMode.js          # MUI theme / dark-light toggle
     useMindmaps.js           # mind map state / persistence
+    useThisDevice.js         # this browser's users/{uid}/devices doc + "reminders on this device"
   components/                # UI dialogs, drawers, editors, selectors
   locales/en/ uk/            # i18next translation JSON files
   utils/                     # config, logger, storage, physicsUtils, reorderArray
