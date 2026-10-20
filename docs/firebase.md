@@ -58,7 +58,7 @@ export const auth = getAuth(app);
 | `users/{uid}/devices/{deviceId}` | устройства (id установки Firebase) | только владелец |
 | `user-mindmaps/{uid}/{document=**}` | карты mindmap | только владелец |
 | `notification-sent/{key}` | ключи дедупликации | только Cloud Functions (admin SDK); в правилах `if false` |
-| `user-bubbles`, `user-tags`, `user-fcm-tokens` | данные v1 | владелец только читает: для переноса (0.6) и отката |
+| `user-bubbles`, `user-tags`, `user-fcm-tokens` | данные v1 | владелец только читает: их читает перенос ([migration.md](migration.md)), они нужны для отката |
 
 Слой данных создаёт документы с `serverTimestamp()` и меняет их только частичными
 обновлениями с `updatedAt: serverTimestamp()`; `setDoc` поверх существующего документа правила
