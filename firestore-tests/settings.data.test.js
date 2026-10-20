@@ -39,10 +39,10 @@ describe('user document and settings', () => {
         });
     });
 
-    it('delivers the settings live, null until the document exists', async () => {
+    it('delivers the settings live, and null while the server has no document', async () => {
         const seen = [];
-        const unsubscribe = subscribeUserDoc(device(), OWNER, (settings) => seen.push(settings));
-        await vi.waitFor(() => expect(seen).toEqual([null]));
+        const unsubscribe = subscribeUserDoc(device(), OWNER, (settings, meta) => seen.push(settings || meta));
+        await vi.waitFor(() => expect(seen.at(-1)).toEqual({ fromCache: false }));
         await ensureUserDoc(device(), OWNER, DEFAULTS);
         await vi.waitFor(() => expect(seen.at(-1)).toEqual(DEFAULTS));
         await updateSettings(device(), OWNER, { design: 'clay' });
