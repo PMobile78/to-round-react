@@ -1,12 +1,11 @@
 /**
  * Interim bridge until sub-plan 0.5 brings the v2 editors: a v2 task <-> the bubble fields the
  * current dialogs, list and canvas read (tagId, dueDate, notifications, recurrence, …).
- * The old editors still offer minutes and rich text. Their values are written by the migration
- * rules (spec 9.2: minutes round up to whole hours), and the description stays Markdown.
+ * The old editors still offer minutes. Their values are written by the migration rules
+ * (spec 9.2: minutes round up to whole hours); the description is the Markdown of the editor.
  * The bubble keeps every v2 field next to the old names; 0.5 drops the old names.
  */
 import { deviceTimeZone, toInstant, toLocal } from '../../contract/time';
-import { htmlToMarkdown } from '../../contract/markdown';
 import { remindersFromV1, repeatFromV1 } from '../../contract/migrateV1';
 
 const HOUR = 60;
@@ -48,7 +47,6 @@ export const bubbleFromTask = (task, timeZone = deviceTimeZone()) => ({
     notifications: task.reminders.map(reminderForEditor),
     recurrence: recurrenceForEditor(task.repeat),
     overduePulseSuppressed: task.pulseMuted,
-    useRichText: false,
 });
 
 /** A bubble after a local write: v2 fields with the changes, old names recomputed, body kept. */
@@ -56,20 +54,16 @@ export const withTaskChanges = (bubble, changes, timeZone = deviceTimeZone()) =>
 
 const dueFromForm = (dueDate, timeZone) => (dueDate ? { local: toLocal(dueDate, timeZone), tz: timeZone } : null);
 
-const descriptionFromForm = ({ description, useRichText }) => (useRichText
-    ? htmlToMarkdown(description || '').markdown
-    : description || '');
-
 /**
  * The create dialog -> fields for createTask (spec 4.2: the due is written in the zone of this
- * device). form = { title, description, useRichText, tagId, radius, dueDate: Date | null,
+ * device). form = { title, description (Markdown), tagId, radius, dueDate: Date | null,
  * notifications, recurrence } in the old editors' shapes.
  */
 export const taskFieldsFromForm = (form, timeZone = deviceTimeZone()) => {
     const due = dueFromForm(form.dueDate, timeZone);
     return {
         title: form.title,
-        description: descriptionFromForm(form),
+        description: form.description,
         categoryId: form.tagId || null,
         due,
         reminders: due ? remindersFromV1(form.notifications) : [],
@@ -111,7 +105,7 @@ export const taskChangesFromForm = (task, form, timeZone = deviceTimeZone()) => 
     }
     const next = {
         title: form.title,
-        description: descriptionFromForm(form),
+        description: form.description,
         categoryId: form.tagId || null,
         due,
         reminders: due ? remindersFromV1(form.notifications) : [],

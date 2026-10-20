@@ -21,7 +21,7 @@ import uk from 'date-fns/locale/uk';
 import i18n from '../i18n';
 import AddNotification from './AddNotification';
 import RepeatSettings from './RepeatSettings';
-import RichTextEditor from './RichTextEditor';
+import MarkdownEditor from './MarkdownEditor';
 
 export default function BubbleDialogForm(props) {
     const {
@@ -33,8 +33,6 @@ export default function BubbleDialogForm(props) {
         setTitle,
         description,
         setDescription,
-        useRichText,
-        onToggleUseRichText,
         dueDate,
         setDueDate,
         isOverdue,
@@ -86,14 +84,11 @@ export default function BubbleDialogForm(props) {
                 <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 1 }}>
                     {t('bubbles.descriptionLabel')}
                 </Typography>
-                <RichTextEditor
+                <MarkdownEditor
                     value={description}
                     onChange={setDescription}
-                    placeholder={t('bubbles.descriptionPlaceholder') || 'Введите описание...'}
+                    placeholder={t('bubbles.descriptionPlaceholder')}
                     isMobile={isMobile}
-                    themeMode={themeMode}
-                    useRichText={useRichText}
-                    onToggleRichText={(enabled) => onToggleUseRichText?.(enabled)}
                     t={t}
                 />
             </Box>

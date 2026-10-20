@@ -36,9 +36,6 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
     const [createDialog, setCreateDialog] = useState(false); // Диалог создания нового пузыря
     const [editDialog, setEditDialog] = useState(false);
     const [selectedBubble, setSelectedBubble] = useState(null);
-    // Режим редактора для создания и редактирования
-    const [useRichTextCreate, setUseRichTextCreate] = useState(false);
-    const [useRichTextEdit, setUseRichTextEdit] = useState(false);
 
     // Matter.js body of a bubble, coloured by its category (tag)
     const createBody = (x, y, radius, tagId) => {
@@ -69,7 +66,6 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         setBubbleSize(45); // Сброс размера к значению по умолчанию
         setDueDate(null); // Сброс даты
         setCreateNotifications([]); // сброс уведомлений
-        setUseRichTextCreate(false); // новая задача: по умолчанию обычный текст
         setCreateDialog(true);
     };
 
@@ -83,7 +79,6 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         const fields = taskFieldsFromForm({
             title,
             description,
-            useRichText: useRichTextCreate,
             tagId: selectedTagId,
             radius: bubbleSize, // Используем выбранный размер
             dueDate,
@@ -114,7 +109,6 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
             const changes = taskChangesFromForm(selectedBubble, {
                 title,
                 description,
-                useRichText: useRichTextEdit,
                 tagId: selectedTagId,
                 radius: editBubbleSize,
                 dueDate: editDueDate,
@@ -287,11 +281,6 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
     };
 
-    // Only the editor mode of this dialog: v2 keeps the description as Markdown (bubbleModel)
-    const handleToggleEditUseRichText = (enabled) => {
-        setUseRichTextEdit(!!enabled);
-    };
-
     // Открытие конкретного бабла по deep-link событию из index.js
     useEffect(() => {
         function handleOpenBubble(e) {
@@ -316,16 +305,11 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         setEditDialog,
         selectedBubble,
         setSelectedBubble,
-        useRichTextCreate,
-        setUseRichTextCreate,
-        useRichTextEdit,
-        setUseRichTextEdit,
         openCreateDialog,
         createNewBubble,
         handleSaveBubble,
         handleDeleteBubble,
         handleMarkAsDone,
-        handleCloseDialog,
-        handleToggleEditUseRichText
+        handleCloseDialog
     };
 }

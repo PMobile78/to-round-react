@@ -112,17 +112,12 @@ const BubblesPage = ({ user, themeMode }) => {
         setEditDialog,
         selectedBubble,
         setSelectedBubble,
-        useRichTextCreate,
-        setUseRichTextCreate,
-        useRichTextEdit,
-        setUseRichTextEdit,
         openCreateDialog,
         createNewBubble,
         handleSaveBubble,
         handleDeleteBubble,
         handleMarkAsDone,
-        handleCloseDialog,
-        handleToggleEditUseRichText
+        handleCloseDialog
     } = useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile, uid: user.uid });
 
     // Live mirror of edit-dialog state for the Matter mount-effect subscription
@@ -425,9 +420,8 @@ const BubblesPage = ({ user, themeMode }) => {
 
 
     // Bubble CRUD (openCreateDialog/createNewBubble/handleSaveBubble/
-    // handleDeleteBubble/handleMarkAsDone/handleCloseDialog/
-    // handleToggleEditUseRichText + the open-bubble deep-link listener) live in
-    // useBubbleCrud (Task 5/6 of #38).
+    // handleDeleteBubble/handleMarkAsDone/handleCloseDialog + the open-bubble
+    // deep-link listener) live in useBubbleCrud (Task 5/6 of #38).
 
     // getFilteredBubblesForList now lives in useListFilters (Task C of #67).
 
@@ -555,11 +549,8 @@ const BubblesPage = ({ user, themeMode }) => {
                 setEditBubbleSize(selectedBubble.radius);
             }
             setEditRecurrence(selectedBubble.recurrence || null);
-            setUseRichTextEdit(!!selectedBubble.useRichText);
         }
     }, [editDialog, selectedBubble]);
-
-    // handleToggleEditUseRichText now lives in useBubbleCrud (Task 5/6 of #38).
 
     // Notification dialog/create state + language-reset effect now live in
     // useBubbleNotifications (Task 4/6 of #38).
@@ -814,8 +805,6 @@ const BubblesPage = ({ user, themeMode }) => {
                 onStopPulsing={handleStopPulsing}
                 showStopPulsing={editDialogShowStopPulsing}
                 handleSetEditRecurrence={handleSetEditRecurrence}
-                useRichTextEdit={useRichTextEdit}
-                handleToggleEditUseRichText={handleToggleEditUseRichText}
                 handleOpenTagDialog={handleOpenTagDialog}
                 handleDeleteTag={handleDeleteTag}
                 handleCloseTagDialog={handleCloseTagDialog}
@@ -831,8 +820,6 @@ const BubblesPage = ({ user, themeMode }) => {
                 handleSetCreateRecurrence={handleSetCreateRecurrence}
                 handleDeleteCreateNotification={handleDeleteCreateNotification}
                 createNewBubble={(payload) => createNewBubble({ ...payload, canvasSize, dueDate, createNotifications, createRecurrence, setDueDate })}
-                useRichTextCreate={useRichTextCreate}
-                setUseRichTextCreate={setUseRichTextCreate}
                 handleUndoDeleteTag={handleUndoDeleteTag}
                 handleFontSizeChange={handleFontSizeChange}
                 confirmLogout={confirmLogout}

@@ -140,11 +140,10 @@ describe('useBubbleCrud: task writes through the v2 data layer', () => {
         expect(updateTask).not.toHaveBeenCalled();
     });
 
-    it('keeps the editor mode out of Firestore: v2 stores the description as Markdown', () => {
-        openInDialog(TASK);
-        act(() => crud.handleToggleEditUseRichText(true));
-        expect(crud.useRichTextEdit).toBe(true);
-        expect(updateTask).not.toHaveBeenCalled();
+    it('saves the description as the Markdown the editor hands over', () => {
+        const bubble = openInDialog(TASK);
+        save(bubble, { description: '**milk**\n\n- [ ] bread' });
+        expect(updateTask).toHaveBeenCalledWith('db', 'u1', 't1', { description: '**milk**\n\n- [ ] bread' });
     });
 
     it('moves a deleted task to the trash', () => {

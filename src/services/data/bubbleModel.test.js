@@ -26,7 +26,6 @@ const task = (overrides) => ({
 const formOf = (bubble, overrides) => ({
     title: bubble.title,
     description: bubble.description,
-    useRichText: false,
     tagId: bubble.tagId,
     radius: bubble.radius,
     dueDate: bubble.dueDate ? toInstant(bubble.dueDate.slice(0, 16), BERLIN) : null,
@@ -38,7 +37,7 @@ const formOf = (bubble, overrides) => ({
 describe('bubbleFromTask: a v2 task as the bubble the old editors understand', () => {
     it('keeps the v2 fields and adds the old names', () => {
         const bubble = bubbleFromTask(task({ pulseMuted: true }), BERLIN);
-        expect(bubble).toMatchObject({ ...task({ pulseMuted: true }), tagId: 'c1', overduePulseSuppressed: true, useRichText: false });
+        expect(bubble).toMatchObject({ ...task({ pulseMuted: true }), tagId: 'c1', overduePulseSuppressed: true });
     });
 
     it('shows the due in the time of this device', () => {
@@ -88,7 +87,6 @@ describe('taskFieldsFromForm: a new task from the create dialog', () => {
     const form = (overrides) => ({
         title: 'Pay bills',
         description: '',
-        useRichText: false,
         tagId: '',
         radius: 45,
         dueDate: new Date('2026-10-15T07:30:45.000Z'),
@@ -121,10 +119,8 @@ describe('taskFieldsFromForm: a new task from the create dialog', () => {
         expect(fields).toMatchObject({ due: null, reminders: [], repeat: null });
     });
 
-    it('stores the description as Markdown: plain text as typed, rich text converted', () => {
+    it('stores the description as the Markdown the editor hands over', () => {
         expect(taskFieldsFromForm(form({ description: '**bold** text' }), BERLIN).description).toBe('**bold** text');
-        expect(taskFieldsFromForm(form({ description: '<p><strong>bold</strong> text</p>', useRichText: true }), BERLIN).description)
-            .toBe('**bold** text');
     });
 
     it('keeps the category the user picked', () => {
