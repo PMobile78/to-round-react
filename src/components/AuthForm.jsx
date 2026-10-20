@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { createUser, loginUser, resetPassword } from '../services/authService';
 import LanguageSelector from './LanguageSelector';
 import ThemeToggle from './ThemeToggle';
+import { APP_NAME } from '../appName';
 
 const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) => {
     const { t, i18n } = useTranslation();
@@ -175,7 +176,7 @@ const AuthForm = ({ onLoginSuccess, themeMode, toggleTheme, themeToggleProps }) 
                         />
                     </Box>
                     <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#667eea', marginBottom: 1 }}>
-                        To-Round
+                        {APP_NAME}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
                         {t('auth.welcome')}

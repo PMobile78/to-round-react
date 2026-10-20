@@ -1,6 +1,5 @@
 {
     "bubbles": {
-        "title": "Interactive Bubbles",
         "addBubble": "Add Bubble",
         "editBubble": "Edit Bubble",
         "deleteBubble": "Delete Bubble",
