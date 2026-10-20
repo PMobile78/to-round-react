@@ -14,7 +14,7 @@
  * No Matter.js / DOM side effects here: every function is a pure data→decision
  * mapping, so they are unit-testable in isolation.
  */
-import { getActiveNotification, getDueTime } from './notifications';
+import { isPulsing } from './notifications';
 
 /**
  * TextOverlay only needs to re-map label positions while bodies can move, i.e.
@@ -33,21 +33,14 @@ export const shouldSyncOverlayPositions = (isAwake) => isAwake !== false;
  * Mirrors the pulse conditions in useBubbleNotifications' animate(), minus the
  * Matter side effects and the `status === ACTIVE` / `body` guards the caller
  * already applies:
- *   - suppressed (manual stop / `overduePulseSuppressed`) never pulses
- *   - a matured, not-yet-due notification pulses
- *   - otherwise: overdue (`now >= due`), or sticky-overdue
+ *   - stopped (manual stop / `pulseMuted`) never pulses
+ *   - a matured, not-yet-due reminder pulses
+ *   - otherwise: overdue (`now >= due`)
  *
- * `stickyIds` / `suppressedIds` are the live Sets the hook keeps; either may be
- * omitted in tests.
+ * `suppressedIds` is the live Set the hook keeps; it may be omitted in tests.
  */
-export const bubbleShouldPulse = (bubble, now, { stickyIds, suppressedIds } = {}) => {
-    if (!bubble || !bubble.dueDate) return false;
-    if (bubble.overduePulseSuppressed) return false;
+export const bubbleShouldPulse = (bubble, now, { suppressedIds } = {}) => {
+    if (!bubble) return false;
     if (suppressedIds && suppressedIds.has(bubble.id)) return false;
-    const due = getDueTime(bubble);
-    if (due === null) return false;
-    if (getActiveNotification(bubble, now)) return true;
-    return now >= due
-        || bubble.overdueSticky === true
-        || (stickyIds ? stickyIds.has(bubble.id) : false);
+    return isPulsing(bubble, now);
 };

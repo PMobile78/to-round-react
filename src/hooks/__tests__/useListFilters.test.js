@@ -106,6 +106,20 @@ describe('filterBubblesForList (getFilteredBubblesForList)', () => {
         });
         expect(result.map(b => b.id)).toEqual(['3', '6']); // bubble 3 (no tag) + bubble 6 (deleted tag)
     });
+
+    it('fills the "planned" tab with active tasks whose due is still ahead', () => {
+        const hour = 60 * 60 * 1000;
+        const withDues = [
+            bubble('ahead', 'a', 'active', { dueAt: Date.now() + hour }),
+            bubble('passed', 'a', 'active', { dueAt: Date.now() - hour }),
+            bubble('done-ahead', 'a', 'done', { dueAt: Date.now() + hour }),
+            bubble('no-due', 'a', 'active', { dueAt: null }),
+        ];
+        const result = filterBubblesForList({
+            bubbles: withDues, tags, listFilter: 'postpone', listFilterTags: ['a', 'b'], listShowNoTag: true
+        });
+        expect(result.map(b => b.id)).toEqual(['ahead']);
+    });
 });
 
 describe('countBubblesByTagForListView (getBubbleCountByTagForListView)', () => {
@@ -157,5 +171,19 @@ describe('countBubblesByTagForListView (getBubbleCountByTagForListView)', () => 
             'a'
         );
         expect(count).toBe(2); // falls back to the full active count for the tag
+    });
+
+    it('counts the tasks of the "planned" tab by their due', () => {
+        const hour = 60 * 60 * 1000;
+        const withDues = [
+            bubble('1', 'a', 'active', { dueAt: Date.now() + hour }),
+            bubble('2', 'a', 'active', { dueAt: Date.now() - hour }),
+            bubble('3', 'a', 'active', { dueAt: null }),
+        ];
+        const count = countBubblesByTagForListView(
+            { bubbles: withDues, tags, listFilter: 'postpone', listSearchQuery: '' },
+            'a'
+        );
+        expect(count).toBe(1);
     });
 });

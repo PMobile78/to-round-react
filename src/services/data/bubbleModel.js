@@ -1,11 +1,12 @@
 /**
- * Interim bridge until sub-plan 0.5 brings the v2 editors: a v2 task <-> the bubble fields the
- * current dialogs, list and canvas read (tagId, dueDate, notifications, recurrence, …).
+ * Interim bridge until sub-plan 0.5 brings the v2 editors: a v2 task <-> the bubble the app shows.
+ * The canvas and the list read tagId and dueAt (the moment of the due); the current dialogs read
+ * the old fields (dueDate, notifications, recurrence, …).
  * The old editors still offer minutes. Their values are written by the migration rules
  * (spec 9.2: minutes round up to whole hours); the description is the Markdown of the editor.
  * The bubble keeps every v2 field next to the old names; 0.5 drops the old names.
  */
-import { deviceTimeZone, toInstant, toLocal } from '../../contract/time';
+import { deviceTimeZone, isValidTimeZone, toInstant, toLocal } from '../../contract/time';
 import { remindersFromV1, repeatFromV1 } from '../../contract/migrateV1';
 
 const HOUR = 60;
@@ -39,10 +40,22 @@ const dueDateForEditor = (due, timeZone) => {
     }
 };
 
+// The moment of the due in ms (spec 4.2). A zone this browser does not know reads the time as
+// written in the zone of this device; a date that does not exist gives no moment.
+const dueAtOf = (due, timeZone) => {
+    if (!due) return null;
+    try {
+        return toInstant(due.local, isValidTimeZone(due.tz) ? due.tz : timeZone).getTime();
+    } catch {
+        return null;
+    }
+};
+
 /** v2 task (or bubble) -> bubble fields; the Matter body, if any, is kept. */
 export const bubbleFromTask = (task, timeZone = deviceTimeZone()) => ({
     ...task,
     tagId: task.categoryId,
+    dueAt: dueAtOf(task.due, timeZone),
     dueDate: dueDateForEditor(task.due, timeZone),
     notifications: task.reminders.map(reminderForEditor),
     recurrence: recurrenceForEditor(task.repeat),

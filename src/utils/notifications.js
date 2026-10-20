@@ -6,16 +6,14 @@
  * Note: next-notify / reschedule scheduling lives server-side (Cloud Functions);
  * the client only decides *when to pulse* and *which notification is active*.
  */
-import { parseLocalDateTime, getOffsetMs } from './dateTime';
+import { parseLocalDateTime } from './dateTime';
+
+const MINUTE_MS = 60 * 1000;
 
 /**
- * Parsed due time (ms) for a bubble, or null when there's no/invalid dueDate.
+ * The moment of the due (ms) of a bubble — its dueAt, set by bubbleFromTask — or null without one.
  */
-export const getDueTime = (bubble) => {
-    if (!bubble || !bubble.dueDate) return null;
-    const parsed = parseLocalDateTime(bubble.dueDate);
-    return parsed ? parsed.getTime() : null;
-};
+export const getDueTime = (bubble) => (bubble && Number.isFinite(bubble.dueAt) ? bubble.dueAt : null);
 
 /**
  * Is `dueDate` in the past relative to `now`?
@@ -30,17 +28,16 @@ export const isOverdue = (dueDate, now = new Date()) => {
 };
 
 /**
- * Notifications that have "matured" for a bubble at time `now` — i.e. their
- * target time has passed but the due date hasn't. Returns
- * `{ idx, targetTime, notif }[]` sorted by `targetTime` ascending
- * (earliest-scheduled target first).
+ * Reminders that have "matured" for a bubble at time `now` — i.e. their
+ * target time has passed but the due hasn't. `reminders` are minutes before
+ * the due (spec 3.1). Returns `{ idx, targetTime, minutes }[]` sorted by
+ * `targetTime` ascending (earliest-scheduled target first).
  */
 export const getDueNotifications = (bubble, now) => {
     const due = getDueTime(bubble);
-    if (due === null) return [];
-    if (!Array.isArray(bubble.notifications) || bubble.notifications.length === 0) return [];
-    return bubble.notifications
-        .map((notif, idx) => ({ idx, targetTime: due - getOffsetMs(notif), notif }))
+    if (due === null || !Array.isArray(bubble.reminders)) return [];
+    return bubble.reminders
+        .map((minutes, idx) => ({ idx, targetTime: due - minutes * MINUTE_MS, minutes }))
         .sort((a, b) => a.targetTime - b.targetTime)
         .filter(({ targetTime }) => now >= targetTime && now < due);
 };
@@ -68,47 +65,19 @@ export const buildNotificationKey = (bubbleId, targetTime) => `${bubbleId}:${tar
 export const notificationKeyPrefix = (bubbleId) => `${bubbleId}:`;
 
 /**
- * Whether the edit dialog should show the "stop pulsing" button.
- * Returns true if the bubble is active with a valid recurrence and is currently
- * inside a notification window, overdue, or flagged sticky.
- *
- * @param {Object} bubble - The bubble to check
- * @param {number} now - Current time in ms
- * @param {Set} stickyPulseIds - Set of bubble IDs that are sticky-pulsing
- * @returns {boolean} true if the stop button should show
+ * Whether a bubble pulses at time `now`: it has a due, its pulse is not stopped
+ * (pulseMuted), and a reminder has come or the due has passed.
  */
-export function shouldShowStopPulsing(bubble, now, stickyPulseIds) {
-    try {
-        if (!bubble || bubble.status !== 'active') return false;
+export const isPulsing = (bubble, now) => {
+    const due = getDueTime(bubble);
+    if (due === null || bubble.pulseMuted) return false;
+    return now >= due || getActiveNotification(bubble, now) !== null;
+};
 
-        const rec = bubble.recurrence;
-        const every = rec && typeof rec === 'object' ? Number(rec.every) : NaN;
-        if (!Number.isFinite(every) || every < 1) return false;
-
-        // Check if inside notification window or overdue
-        if (bubble.dueDate) {
-            const parsedDue = parseLocalDateTime(bubble.dueDate);
-            if (!parsedDue) return false;
-            const due = parsedDue.getTime();
-
-            // Check notification windows
-            if (Array.isArray(bubble.notifications) && bubble.notifications.length > 0) {
-                for (const notif of bubble.notifications) {
-                    const offsetMs = getOffsetMs(notif);
-                    const targetTime = due - offsetMs;
-                    if (Number.isFinite(targetTime) && now >= targetTime && now < due) return true;
-                }
-            }
-
-            // Check if overdue
-            if (now >= due) return true;
-        }
-
-        // Check sticky flag
-        if (bubble.overdueSticky || stickyPulseIds.has(bubble.id)) return true;
-
-        return false;
-    } catch (_) {
-        return false;
-    }
-}
+/**
+ * Whether the edit dialog shows the "stop pulsing" button (spec 4.1): for every
+ * active task that pulses at time `now` (ms).
+ */
+export const shouldShowStopPulsing = (bubble, now) => Boolean(bubble)
+    && bubble.status === 'active'
+    && isPulsing(bubble, now);

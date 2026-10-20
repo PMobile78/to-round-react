@@ -13,7 +13,6 @@ const ACTIONS = {
     [BUBBLE_STATUS.ACTIVE]: ['edit', 'done', 'delete'],
     [BUBBLE_STATUS.DONE]: ['edit', 'restore', 'delete'],
     [BUBBLE_STATUS.DELETED]: ['edit', 'restore', 'permanentDelete'],
-    [BUBBLE_STATUS.POSTPONE]: ['edit', 'restore', 'delete'],
 };
 
 // Action metadata: icon, color, title, and handler mapping

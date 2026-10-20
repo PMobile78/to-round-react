@@ -12,7 +12,7 @@ import { logoutUser } from '../services/authService';
 import { db } from '../firebase';
 import { muteTaskPulse, subscribeTasks } from '../services/data/tasks';
 import { deepLinkTaskId } from '../utils/deepLink';
-import { BUBBLE_STATUS } from '../utils/bubbleStatus';
+import { BUBBLE_STATUS, isPlannedTask } from '../utils/bubbleStatus';
 
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
@@ -261,7 +261,6 @@ const BubblesPage = ({ user, themeMode }) => {
     // (Task 4/6 of #38). The create/edit form state it used to own moved to the
     // BubblesStore in Stage E of 010d; only the refs are consumed here.
     const {
-        stickyPulseRef,
         manuallyStoppedPulsingRef,
         notifiedBubblesRef,
         notifiedBubbleNotificationsRef
@@ -449,13 +448,8 @@ const BubblesPage = ({ user, themeMode }) => {
     };
 
     const plannedTasksBubbleCount = useMemo(() => {
-        const now = new Date();
-        return bubbles.filter((bubble) => (
-            bubble.dueDate &&
-            new Date(bubble.dueDate) > now &&
-            bubble.status !== BUBBLE_STATUS.DELETED &&
-            bubble.status !== BUBBLE_STATUS.DONE
-        )).length;
+        const now = Date.now();
+        return bubbles.filter((bubble) => isPlannedTask(bubble, now)).length;
     }, [bubbles]);
 
     // isOverdue moved to utils/notifications.js (Task 3/6 of #38).
@@ -596,7 +590,6 @@ const BubblesPage = ({ user, themeMode }) => {
             if (!selectedBubble) return;
 
             // Очищаем локальные ссылки на пульсацию
-            stickyPulseRef.current.delete(selectedBubble.id);
             notifiedBubblesRef.current.delete(selectedBubble.id);
 
             // Добавляем задачу в список вручную остановленных
@@ -624,12 +617,10 @@ const BubblesPage = ({ user, themeMode }) => {
         }
     };
 
-    // Whether the edit dialog should show the "stop pulsing" button: active task
-    // with a valid recurrence that is currently inside a notification window,
-    // overdue, or flagged sticky. Computed each render from selectedBubble.
-    const editDialogShowStopPulsing = shouldShowStopPulsing(
-        selectedBubble, Date.now(), stickyPulseRef.current
-    );
+    // Whether the edit dialog should show the "stop pulsing" button: every active
+    // task that pulses now (a reminder has come or the due has passed) and is not
+    // stopped yet. Computed each render from selectedBubble.
+    const editDialogShowStopPulsing = shouldShowStopPulsing(selectedBubble, Date.now());
 
     return (
         <Box sx={{
