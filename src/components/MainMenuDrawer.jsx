@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Drawer, Box, Typography, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider, Switch } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import {
@@ -13,7 +13,9 @@ import {
     ViewListOutlined,
     AccountTreeOutlined,
     LockOutlined,
-    NotificationsActiveOutlined
+    NotificationsActiveOutlined,
+    FileDownload,
+    FileUpload
 } from '@mui/icons-material';
 import LanguageSelector from './LanguageSelector';
 
@@ -39,9 +41,26 @@ const MainMenuDrawer = ({
     onLogout,
     // This browser in users/{uid}/devices (null until registered) and its reminders switch
     thisDevice,
-    onToggleThisDeviceReminders
+    onToggleThisDeviceReminders,
+    // Backup (spec 10): the export, and the import of the chosen file
+    onExportBackup,
+    onImportBackupFile
 }) => {
     const { t } = useTranslation();
+    const fileInputRef = useRef(null);
+
+    const handleImportClick = () => {
+        fileInputRef.current.value = '';
+        fileInputRef.current.click();
+    };
+
+    const handleFileChange = (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        onClose();
+        onImportBackupFile && onImportBackupFile(file);
+    };
+
     return (
         <Drawer
             anchor="left"
@@ -90,6 +109,35 @@ const MainMenuDrawer = ({
                     </ListItemButton>
 
                     <Divider sx={{ backgroundColor: themeMode === 'light' ? '#E0E0E0' : '#333333', margin: '8px 0' }} />
+
+                    <ListItemButton
+                        onClick={() => {
+                            onClose();
+                            onExportBackup && onExportBackup();
+                        }}
+                        sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <FileDownload sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={t('backup.export')}
+                            primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
+                        />
+                    </ListItemButton>
+
+                    <ListItemButton
+                        onClick={handleImportClick}
+                        sx={{ padding: '16px 24px', cursor: 'pointer', '&:hover': { backgroundColor: themeMode === 'light' ? '#F8F9FA' : '#333333' } }}
+                    >
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            <FileUpload sx={{ color: themeMode === 'light' ? '#BDC3C7' : '#aaaaaa' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={t('backup.import')}
+                            primaryTypographyProps={{ color: themeMode === 'light' ? '#2C3E50' : '#ffffff', fontWeight: 500 }}
+                        />
+                    </ListItemButton>
 
                     <ListItem sx={{ padding: '16px 24px' }}>
                         <ListItemIcon sx={{ minWidth: 40 }}>
@@ -295,6 +343,13 @@ const MainMenuDrawer = ({
                         <ListItemText primary={t('auth.logout')} primaryTypographyProps={{ color: themeMode === 'light' ? '#D32F2F' : '#FF8A80', fontWeight: 500 }} />
                     </ListItemButton>
                 </List>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/json,.json"
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                />
             </Box>
         </Drawer>
     );

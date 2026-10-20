@@ -11,11 +11,13 @@ import FontSettingsDialog from './FontSettingsDialog';
 import AppearanceDialog from './AppearanceDialog';
 import ChangePasswordDialog from './ChangePasswordDialog';
 import LogoutConfirmDialog from './LogoutConfirmDialog';
+import BackupDialog from './BackupDialog';
 import TaskListDrawer from './ListViewDrawer';
 import { useBubblesData } from '../state/BubblesDataStore';
 import { useBubblesUi } from '../state/BubblesUiStore';
 import { COLOR_PALETTE } from '../hooks/tagColors';
 import { useThisDevice } from '../hooks/useThisDevice';
+import { useBackup } from '../hooks/useBackup';
 
 /**
  * Presentational container for all of BubblesPage's dialogs and drawers.
@@ -81,6 +83,8 @@ const BubblesDialogs = ({
     };
     // This browser's reminders switch in the main menu (spec 8.9)
     const thisDevice = useThisDevice(uid);
+    // Backup export and import of the main menu (spec 10)
+    const backup = useBackup(uid);
     const {
         bubbles,
         tags,
@@ -241,6 +245,17 @@ const BubblesDialogs = ({
                 onLogout={handleLogout}
                 thisDevice={thisDevice.device}
                 onToggleThisDeviceReminders={thisDevice.setNotificationsEnabled}
+                onExportBackup={backup.exportBackup}
+                onImportBackupFile={backup.importFile}
+            />
+
+            <BackupDialog
+                state={backup.state}
+                onConfirm={backup.confirmImport}
+                onClose={backup.close}
+                isMobile={isMobile}
+                getDialogPaperStyles={getDialogPaperStyles}
+                t={t}
             />
 
             <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} t={t} />

@@ -299,5 +299,25 @@
             "link": "Link",
             "enterUrl": "Enter URL:"
         }
+    },
+    "backup": {
+        "export": "Export backup",
+        "import": "Import backup",
+        "title": "Backup",
+        "replace": "The backup replaces all your tasks and categories.",
+        "inBackup": "In the backup — tasks: {{tasks}}, categories: {{categories}}.",
+        "toDelete": "Not in the backup and will be deleted — tasks: {{tasks}}, categories: {{categories}}.",
+        "settings": "The settings from the backup replace yours.",
+        "oldFormat": "This backup is from the old version: reminders and repeats are rounded up to whole hours, and formatting the editor does not keep becomes plain text.",
+        "confirm": "Import",
+        "writing": "Saving: {{done}} of {{total}}",
+        "done": "The backup has been imported.",
+        "notJson": "This file is not a backup: it is not JSON. Nothing was changed.",
+        "notBackup": "This file is not a backup of this app. Nothing was changed.",
+        "unsupported": "This version of the backup is not supported. Nothing was changed.",
+        "invalid": "Records in the backup that cannot be read: {{n}}. Nothing was changed.",
+        "readFailed": "Your current data could not be read. Nothing was changed.",
+        "writeFailed": "The import stopped: {{done}} of {{total}} changes are saved. Import the same file again to finish.",
+        "exportFailed": "The backup could not be exported."
     }
 }
