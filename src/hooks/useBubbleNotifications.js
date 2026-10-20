@@ -3,8 +3,7 @@ import Matter from 'matter-js';
 import { useTheme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { BUBBLE_STATUS } from '../utils/bubbleStatus';
-import { parseLocalDateTime } from '../utils/dateTime';
-import { getActiveNotification, buildNotificationKey } from '../utils/notifications';
+import { getActiveNotification, getDueTime, buildNotificationKey } from '../utils/notifications';
 import { bubbleShouldPulse } from '../utils/rafGating';
 import { applyBubbleFill } from '../utils/bubbleStyle';
 
@@ -42,8 +41,7 @@ export function useBubbleNotifications({
     const theme = useTheme();
     const overdueColor = alpha(theme.palette.error.main, 0.5);
 
-    // Refs for overdue/sticky pulse tracking
-    const stickyPulseRef = useRef(new Set()); // keep pulsing after repeat-every reschedule
+    // Refs for overdue pulse tracking
     const manuallyStoppedPulsingRef = useRef(new Set()); // задачи, которые пользователь остановил вручную
 
     const notifiedBubblesRef = useRef(new Set());
@@ -140,7 +138,6 @@ export function useBubbleNotifications({
                         bubble.body
                         && bubble.status === BUBBLE_STATUS.ACTIVE
                         && bubbleShouldPulse(bubble, ts, {
-                            stickyIds: stickyPulseRef.current,
                             suppressedIds: manuallyStoppedPulsingRef.current
                         })
                     );
@@ -153,13 +150,12 @@ export function useBubbleNotifications({
             const now = Date.now();
             pulsePhase += 0.12;
             bubbles.forEach(bubble => {
-                if (!bubble.body || bubble.status !== BUBBLE_STATUS.ACTIVE || !bubble.dueDate) return;
-                const parsedDue = parseLocalDateTime(bubble.dueDate);
-                if (!parsedDue) return;
-                const due = parsedDue.getTime();
+                if (!bubble.body || bubble.status !== BUBBLE_STATUS.ACTIVE) return;
+                const due = getDueTime(bubble);
+                if (due === null) return;
 
                 // Если открыт редактор этой бульбашки и включён Repeat — не мерцать
-                if (editDialog && selectedBubble && selectedBubble.id === bubble.id && bubble.recurrence) {
+                if (editDialog && selectedBubble && selectedBubble.id === bubble.id && bubble.repeat) {
                     if (Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
                         const scale = bubble.radius / bubble.body.circleRadius;
                         Matter.Body.scale(bubble.body, scale, scale);
@@ -169,8 +165,8 @@ export function useBubbleNotifications({
                     return;
                 }
                 // 0. Пользователь остановил пульсацию вручную — не мерцать,
-                // пока не изменится/не перенесётся dueDate (флаг сбрасывается отдельно).
-                if (bubble.overduePulseSuppressed || manuallyStoppedPulsingRef.current.has(bubble.id)) {
+                // пока не изменится срок (pulseMuted сбрасывает сервер).
+                if (bubble.pulseMuted || manuallyStoppedPulsingRef.current.has(bubble.id)) {
                     if (Math.abs(bubble.body.circleRadius - bubble.radius) > 0.5) {
                         const scale = bubble.radius / bubble.body.circleRadius;
                         Matter.Body.scale(bubble.body, scale, scale);
@@ -206,11 +202,10 @@ export function useBubbleNotifications({
                         const tagColor = bubble.tagId ? tags.find(t => t.id === bubble.tagId)?.color : null;
                         applyBubbleFill(bubble, { tagColor }, getBubbleFillStyle);
                     }
-                    return; // не пульсируем по dueDate, если есть активное уведомление
+                    return; // не пульсируем по сроку, если есть активное уведомление
                 }
-                // 3. Если нет активных уведомлений, но dueDate просрочен — пульсация по dueDate
-                const shouldPulseOverdue = now >= due || stickyPulseRef.current.has(bubble.id);
-                if (shouldPulseOverdue || bubble.overdueSticky) {
+                // 3. Если нет активных уведомлений, но срок прошёл — пульсация по сроку
+                if (now >= due) {
                     if (!notifiedBubblesRef.current.has(bubble.id)) {
                         // showNotificationAndVibrate(bubble); // disabled for FCM testing
                         notifiedBubblesRef.current.add(bubble.id);
@@ -250,7 +245,6 @@ export function useBubbleNotifications({
     }, [i18nLanguage]);
 
     return {
-        stickyPulseRef,
         manuallyStoppedPulsingRef,
         notifiedBubblesRef,
         notifiedBubbleNotificationsRef

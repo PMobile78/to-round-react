@@ -9,6 +9,9 @@ import {
     shouldShowStopPulsing
 } from './notifications';
 
+const HOUR = 60 * 60 * 1000;
+const DUE = Date.parse('2026-06-14T12:00:00.000Z');
+
 // Build a local naive ISO string ("YYYY-MM-DDTHH:mm:ss") from a Date so the
 // values round-trip through parseLocalDateTime (local-time interpretation).
 const localIso = (d) => {
@@ -17,19 +20,14 @@ const localIso = (d) => {
 };
 
 describe('getDueTime', () => {
-    it('returns null when there is no bubble or dueDate', () => {
+    it('returns null when there is no bubble or no due', () => {
         expect(getDueTime(null)).toBe(null);
         expect(getDueTime({})).toBe(null);
-        expect(getDueTime({ dueDate: null })).toBe(null);
+        expect(getDueTime({ dueAt: null })).toBe(null);
     });
 
-    it('returns null for an unparseable dueDate', () => {
-        expect(getDueTime({ dueDate: 'not-a-date' })).toBe(null);
-    });
-
-    it('returns the parsed local time in ms', () => {
-        const d = new Date(2026, 5, 14, 10, 0, 0);
-        expect(getDueTime({ dueDate: localIso(d) })).toBe(d.getTime());
+    it('returns the moment of the due in ms', () => {
+        expect(getDueTime({ dueAt: DUE })).toBe(DUE);
     });
 });
 
@@ -62,54 +60,40 @@ describe('isOverdue', () => {
 });
 
 describe('getDueNotifications', () => {
-    const due = new Date(2026, 5, 14, 12, 0, 0); // bubble due at noon
-    const bubble = {
-        dueDate: localIso(due),
-        notifications: ['10m', '1h', '1d'] // target = due - offset
-    };
+    const bubble = { dueAt: DUE, reminders: [60, 1440, 10080] }; // 1 hour, 1 day, 1 week before
 
-    it('returns [] when no due time or no notifications', () => {
-        expect(getDueNotifications({ dueDate: null, notifications: ['10m'] }, Date.now())).toEqual([]);
-        expect(getDueNotifications({ dueDate: bubble.dueDate, notifications: [] }, Date.now())).toEqual([]);
-        expect(getDueNotifications({ dueDate: bubble.dueDate }, Date.now())).toEqual([]);
+    it('returns [] when no due time or no reminders', () => {
+        expect(getDueNotifications({ dueAt: null, reminders: [60] }, DUE)).toEqual([]);
+        expect(getDueNotifications({ dueAt: DUE, reminders: [] }, DUE)).toEqual([]);
+        expect(getDueNotifications({ dueAt: DUE }, DUE)).toEqual([]);
     });
 
-    it('returns only matured notifications (target <= now < due), sorted by target asc', () => {
-        // 30 min before due: '10m' not yet matured (target = due-10m, now < target),
-        // '1h' matured (target = due-1h <= now), '1d' matured.
-        const now = due.getTime() - 30 * 60 * 1000;
-        const res = getDueNotifications(bubble, now);
-        const idxs = res.map(r => r.idx);
-        // ascending by targetTime: '1d' (idx 2, smallest target) before '1h' (idx 1)
-        expect(idxs).toEqual([2, 1]);
-        expect(res[0].targetTime).toBeLessThan(res[1].targetTime);
+    it('returns only the reminders that have come (target <= now < due), earliest first', () => {
+        // 2 hours before the due: "1 hour" has not come yet, "1 day" and "1 week" have.
+        const res = getDueNotifications(bubble, DUE - 2 * HOUR);
+        expect(res.map((r) => r.idx)).toEqual([2, 1]);
+        expect(res.map((r) => r.targetTime)).toEqual([DUE - 168 * HOUR, DUE - 24 * HOUR]);
     });
 
-    it('excludes notifications once now >= due', () => {
-        const now = due.getTime() + 1000;
-        expect(getDueNotifications(bubble, now)).toEqual([]);
+    it('returns nothing once the due has come', () => {
+        expect(getDueNotifications(bubble, DUE)).toEqual([]);
     });
 });
 
 describe('getActiveNotification', () => {
-    const due = new Date(2026, 5, 14, 12, 0, 0);
-    const bubble = { dueDate: localIso(due), notifications: ['10m', '1h'] };
+    const bubble = { dueAt: DUE, reminders: [60, 1440] };
 
-    it('returns null when nothing has matured', () => {
-        const now = due.getTime() - 2 * 60 * 60 * 1000; // 2h before, neither matured
-        expect(getActiveNotification(bubble, now)).toBe(null);
+    it('returns null when no reminder has come', () => {
+        expect(getActiveNotification(bubble, DUE - 25 * HOUR)).toBe(null);
     });
 
-    it('returns the matured notification with the smallest target time', () => {
-        const now = due.getTime() - 5 * 60 * 1000; // 5 min before -> both matured, pick smallest target ('1h')
-        const active = getActiveNotification(bubble, now);
-        expect(active).not.toBe(null);
-        expect(active.idx).toBe(1);
-        expect(active.targetTime).toBe(due.getTime() - 60 * 60 * 1000);
+    it('returns the reminder that has come with the smallest target time', () => {
+        const active = getActiveNotification(bubble, DUE - 30 * 60 * 1000);
+        expect(active).toMatchObject({ idx: 1, targetTime: DUE - 24 * HOUR });
     });
 
-    it('returns null past the due date', () => {
-        expect(getActiveNotification(bubble, due.getTime() + 1)).toBe(null);
+    it('returns null past the due', () => {
+        expect(getActiveNotification(bubble, DUE + 1)).toBe(null);
     });
 });
 
@@ -125,106 +109,30 @@ describe('dedup keys', () => {
     });
 });
 
-describe('shouldShowStopPulsing', () => {
-    const stickyIds = new Set();
+describe('shouldShowStopPulsing: the button for every task that pulses (spec 4.1)', () => {
+    const task = (overrides) => ({ id: 'b1', status: 'active', dueAt: DUE, reminders: [], repeat: null, pulseMuted: false, ...overrides });
 
-    it('returns false for non-active bubble', () => {
-        const bubble = { status: 'done', recurrence: { every: 1 } };
-        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
+    it('shows for an overdue task, with or without a repeat', () => {
+        expect(shouldShowStopPulsing(task(), DUE + 1)).toBe(true);
+        expect(shouldShowStopPulsing(task({ repeat: { every: 1, unit: 'days' } }), DUE + 1)).toBe(true);
     });
 
-    it('returns false when no recurrence', () => {
-        const bubble = { status: 'active', dueDate: localIso(new Date()) };
-        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
+    it('shows while a reminder has come and the due has not', () => {
+        expect(shouldShowStopPulsing(task({ reminders: [60] }), DUE - 30 * 60 * 1000)).toBe(true);
     });
 
-    it('returns false when recurrence.every < 1', () => {
-        const bubble = { status: 'active', recurrence: { every: 0 } };
-        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
+    it('does not show before the first reminder or without a due', () => {
+        expect(shouldShowStopPulsing(task({ reminders: [60] }), DUE - 2 * HOUR)).toBe(false);
+        expect(shouldShowStopPulsing(task({ dueAt: null }), DUE + 1)).toBe(false);
     });
 
-    it('returns true when overdue', () => {
-        const past = new Date(2020, 0, 1, 0, 0, 0);
-        const bubble = {
-            status: 'active',
-            dueDate: localIso(past),
-            recurrence: { every: 1 }
-        };
-        const now = new Date(2026, 0, 1).getTime();
-        expect(shouldShowStopPulsing(bubble, now, stickyIds)).toBe(true);
+    it('does not show when the pulse is already stopped', () => {
+        expect(shouldShowStopPulsing(task({ pulseMuted: true }), DUE + 1)).toBe(false);
     });
 
-    it('returns true inside a notification window', () => {
-        const due = new Date(2026, 5, 14, 12, 0, 0);
-        const now = due.getTime() - 5 * 60 * 1000; // 5 min before due
-        const bubble = {
-            status: 'active',
-            id: 'test-bubble',
-            dueDate: localIso(due),
-            recurrence: { every: 1 },
-            notifications: ['10m'] // target = due - 10m, now is due - 5m => inside window
-        };
-        expect(shouldShowStopPulsing(bubble, now, stickyIds)).toBe(true);
-    });
-
-    it('returns false when not yet in notification window', () => {
-        const due = new Date(2026, 5, 14, 12, 0, 0);
-        const now = due.getTime() - 15 * 60 * 1000; // 15 min before due
-        const bubble = {
-            status: 'active',
-            id: 'test-bubble',
-            dueDate: localIso(due),
-            recurrence: { every: 1 },
-            notifications: ['10m'] // target = due - 10m, now < target => not yet matured
-        };
-        expect(shouldShowStopPulsing(bubble, now, stickyIds)).toBe(false);
-    });
-
-    it('returns true when sticky id is present', () => {
-        const future = new Date(2030, 0, 1, 0, 0, 0);
-        const bubble = {
-            id: 'sticky-bubble',
-            status: 'active',
-            dueDate: localIso(future),
-            recurrence: { every: 1 }
-        };
-        const stickyWithId = new Set(['sticky-bubble']);
-        expect(shouldShowStopPulsing(bubble, Date.now(), stickyWithId)).toBe(true);
-    });
-
-    it('returns true when overdueSticky flag is set', () => {
-        const future = new Date(2030, 0, 1, 0, 0, 0);
-        const bubble = {
-            status: 'active',
-            dueDate: localIso(future),
-            recurrence: { every: 1 },
-            overdueSticky: true
-        };
-        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(true);
-    });
-
-    it('returns false for well-formed but not-yet-due, no sticky', () => {
-        const future = new Date(2030, 0, 1, 0, 0, 0);
-        const bubble = {
-            status: 'active',
-            dueDate: localIso(future),
-            recurrence: { every: 1 },
-            notifications: ['10m']
-        };
-        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
-    });
-
-    it('returns false on invalid dueDate', () => {
-        const bubble = {
-            status: 'active',
-            dueDate: 'not-a-date',
-            recurrence: { every: 1 }
-        };
-        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
-    });
-
-    it('returns false on exception and catches errors gracefully', () => {
-        const bubble = null;
-        expect(shouldShowStopPulsing(bubble, Date.now(), stickyIds)).toBe(false);
+    it('does not show for a task that is done or deleted, or without a task', () => {
+        expect(shouldShowStopPulsing(task({ status: 'done' }), DUE + 1)).toBe(false);
+        expect(shouldShowStopPulsing(task({ status: 'deleted' }), DUE + 1)).toBe(false);
+        expect(shouldShowStopPulsing(null, DUE + 1)).toBe(false);
     });
 });

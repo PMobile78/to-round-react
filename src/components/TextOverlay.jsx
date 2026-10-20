@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Box, Typography, useTheme, alpha } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { parseLocalDateTime } from '../utils/dateTime';
 import { shouldSyncOverlayPositions } from '../utils/rafGating';
 
 /**
@@ -70,14 +69,14 @@ function TextOverlay({
           y: bubble.body.position.y,
           radius: bubble.radius,
           title: bubble.title,
-          dueDate: bubble.dueDate || null,
+          dueAt: bubble.dueAt ?? null,
           tagId: bubble.tagId || null,
           status: bubble.status || null
         }));
       setPositions(prev => {
         if (prev.length === newPositions.length && newPositions.every((p, i) =>
           prev[i] && Math.round(prev[i].x) === Math.round(p.x) && Math.round(prev[i].y) === Math.round(p.y)
-          && prev[i].dueDate === p.dueDate && prev[i].tagId === p.tagId
+          && prev[i].dueAt === p.dueAt && prev[i].tagId === p.tagId
         )) return prev;
         return newPositions;
       });
@@ -95,15 +94,11 @@ function TextOverlay({
     return lang.startsWith('uk') ? 'uk-UA' : lang.startsWith('ru') ? 'ru-RU' : 'en-US';
   }, [i18n.language]);
 
-  const isOverdue = useCallback((dueDate) => {
-    const d = parseLocalDateTime(dueDate);
-    return d ? d.getTime() < Date.now() : false;
-  }, []);
+  const isOverdue = useCallback((dueAt) => dueAt < Date.now(), []);
 
-  // Текст плашки: "due 18:00" если срок сегодня, иначе "due 14.06"
-  const formatDueLabel = useCallback((dueDate) => {
-    const d = parseLocalDateTime(dueDate);
-    if (!d) return null;
+  // Текст плашки: "due 18:00" если срок сегодня, иначе "due 14.06" (время устройства)
+  const formatDueLabel = useCallback((dueAt) => {
+    const d = new Date(dueAt);
     const now = new Date();
     const sameDay = d.getFullYear() === now.getFullYear()
       && d.getMonth() === now.getMonth()
@@ -115,9 +110,8 @@ function TextOverlay({
   }, [locale, t]);
 
   // Относительный день для подписи: today / tomorrow / дата
-  const formatRelativeDay = useCallback((dueDate) => {
-    const d = parseLocalDateTime(dueDate);
-    if (!d) return null;
+  const formatRelativeDay = useCallback((dueAt) => {
+    const d = new Date(dueAt);
     const now = new Date();
     const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startDue = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -129,11 +123,9 @@ function TextOverlay({
 
   // Плашка времени в правом верхнем углу пузыря
   const renderBubbleDue = useCallback((bubble) => {
-    if (!bubble.dueDate) return null;
-    const label = formatDueLabel(bubble.dueDate);
-    if (!label) return null;
-
-    const overdue = isOverdue(bubble.dueDate);
+    if (bubble.dueAt === null) return null;
+    const label = formatDueLabel(bubble.dueAt);
+    const overdue = isOverdue(bubble.dueAt);
     const hasSearchQuery = debouncedBubblesSearchQuery && debouncedBubblesSearchQuery.trim();
     const opacity = hasSearchQuery ? (foundBubblesIds.has(bubble.id) ? 1 : 0.4) : 1;
     const offset = bubble.radius * 0.62;
@@ -205,7 +197,7 @@ function TextOverlay({
 
     // Подпись под заголовком: "<тег> · <срок>"
     const tagName = bubble.tagId ? tags.find(tag => tag.id === bubble.tagId)?.name : null;
-    const relativeDay = bubble.dueDate ? formatRelativeDay(bubble.dueDate) : null;
+    const relativeDay = bubble.dueAt !== null ? formatRelativeDay(bubble.dueAt) : null;
     const subtitle = [tagName, relativeDay].filter(Boolean).join(' · ');
 
     return bubble.title ? (

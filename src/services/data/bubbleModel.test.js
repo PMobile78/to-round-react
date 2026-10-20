@@ -50,6 +50,22 @@ describe('bubbleFromTask: a v2 task as the bubble the old editors understand', (
             .toBe('2026-10-15T09:00:00');
     });
 
+    it('gives the moment of the due in ms for the canvas, the list and the pulse', () => {
+        // 09:00 in Kyiv (UTC+3 in October).
+        expect(bubbleFromTask(task(), BERLIN).dueAt).toBe(Date.parse('2026-10-15T06:00:00.000Z'));
+    });
+
+    it('reads a due in a zone this browser does not know as written in the zone of this device', () => {
+        // 09:00 in Berlin (UTC+2 in October).
+        expect(bubbleFromTask(task({ due: { local: '2026-10-15T09:00', tz: 'Mars/Olympus' } }), BERLIN).dueAt)
+            .toBe(Date.parse('2026-10-15T07:00:00.000Z'));
+    });
+
+    it('has no moment of the due without a due or with a date that does not exist', () => {
+        expect(bubbleFromTask(task({ due: null, reminders: [] }), BERLIN).dueAt).toBe(null);
+        expect(bubbleFromTask(task({ due: { local: '2026-02-30T09:00', tz: BERLIN } }), BERLIN).dueAt).toBe(null);
+    });
+
     it('has no due, reminders or repeat for a task without a due', () => {
         expect(bubbleFromTask(task({ due: null, reminders: [] }), BERLIN))
             .toMatchObject({ dueDate: null, notifications: [], recurrence: null });

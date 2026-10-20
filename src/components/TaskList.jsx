@@ -72,20 +72,10 @@ const TaskList = ({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    // Memoized function to get filtered bubbles for list view (без поиска)
+    // Memoized function to get filtered bubbles for list view (без поиска);
+    // the "planned" tab ('postpone') holds active tasks whose due is still ahead
     const getFilteredBubblesForList = useMemo(() => {
-        let filteredByStatus;
-        if (listFilter === 'postpone') {
-            // Показываем только задачи с dueDate в будущем и статусом не DELETED и не DONE
-            const now = new Date();
-            filteredByStatus = bubbles.filter(bubble => {
-                if (!bubble.dueDate) return false;
-                if (bubble.status === BUBBLE_STATUS.DELETED || bubble.status === BUBBLE_STATUS.DONE) return false;
-                return new Date(bubble.dueDate) > now;
-            });
-        } else {
-            filteredByStatus = getBubblesByStatus(bubbles, listFilter);
-        }
+        const filteredByStatus = getBubblesByStatus(bubbles, listFilter);
 
         // Apply tag filters using separate list filter states
         const allTagsSelected = tags.length > 0 && listFilterTags.length === tags.length && listShowNoTag;
@@ -170,8 +160,6 @@ const TaskList = ({
                 return <CheckCircle sx={{ color: theme.palette.success.main }} />;
             case BUBBLE_STATUS.DELETED:
                 return <DeleteOutlined sx={{ color: theme.palette.error.main }} />;
-            case BUBBLE_STATUS.POSTPONE:
-                return <LocalOffer sx={{ color: theme.palette.warning.main }} />;
             default:
                 return <CheckCircle sx={{ color: theme.palette.info.main }} />;
         }
@@ -184,8 +172,6 @@ const TaskList = ({
                 return alpha(theme.palette.success.main, 0.12);
             case BUBBLE_STATUS.DELETED:
                 return alpha(theme.palette.error.main, 0.12);
-            case BUBBLE_STATUS.POSTPONE:
-                return alpha(theme.palette.warning.main, 0.12);
             default:
                 return 'transparent'; // Transparent background for active tasks
         }
@@ -207,20 +193,7 @@ const TaskList = ({
                 return false;
             });
         }
-        let statusFilteredBubbles;
-        if (status === 'active') {
-            statusFilteredBubbles = filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.ACTIVE);
-        } else if (status === 'done') {
-            statusFilteredBubbles = filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.DONE);
-        } else if (status === 'postpone') {
-            // Только задачи с dueDate в будущем и статусом не DELETED и не DONE
-            const now = new Date();
-            statusFilteredBubbles = filteredBubbles.filter(bubble => bubble.dueDate && new Date(bubble.dueDate) > now && bubble.status !== BUBBLE_STATUS.DELETED && bubble.status !== BUBBLE_STATUS.DONE);
-        } else if (status === 'deleted') {
-            statusFilteredBubbles = filteredBubbles.filter(bubble => bubble.status === BUBBLE_STATUS.DELETED);
-        } else {
-            statusFilteredBubbles = filteredBubbles;
-        }
+        const statusFilteredBubbles = getBubblesByStatus(filteredBubbles, status);
         if (!debouncedSearchQuery.trim()) {
             return statusFilteredBubbles.length;
         }
@@ -252,11 +225,8 @@ const TaskList = ({
         });
     }, []);
 
-    // Функция для проверки просроченности due date
-    const isOverdue = useCallback((dueDate) => {
-        if (!dueDate) return false;
-        return new Date(dueDate) < new Date();
-    }, []);
+    // Функция для проверки просроченности срока (dueAt, мс)
+    const isOverdue = useCallback((dueAt) => dueAt < Date.now(), []);
 
     // Memoized action handlers. They write through the data layer; the live task
     // subscription (useMatterEngine) brings the change back into the list.
@@ -508,10 +478,10 @@ const TaskList = ({
                                             {task.title || t('bubbles.empty')}
                                         </Typography>
 
-                                        {task.dueDate && (
+                                        {task.dueAt !== null && (
                                             <Box sx={{ marginBottom: 1 }}>
                                                 <Typography variant="body2" sx={{
-                                                    color: isOverdue(task.dueDate)
+                                                    color: isOverdue(task.dueAt)
                                                         ? theme.palette.error.main
                                                         : theme.palette.info.main,
                                                     fontWeight: 500,
@@ -519,8 +489,8 @@ const TaskList = ({
                                                     alignItems: 'center',
                                                     gap: 0.5
                                                 }}>
-                                                    {t('bubbles.dueDateLabel')}: {formatDate(task.dueDate)}
-                                                    {isOverdue(task.dueDate) && (
+                                                    {t('bubbles.dueDateLabel')}: {formatDate(task.dueAt)}
+                                                    {isOverdue(task.dueAt) && (
                                                         <Typography
                                                             component="span"
                                                             variant="caption"

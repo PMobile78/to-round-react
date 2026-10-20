@@ -4,7 +4,7 @@
  * the useBubbleWorld hook. These functions decide *which* bubbles belong in the
  * physics world and *how* a bubble should be styled for the current search state.
  */
-import { BUBBLE_STATUS } from './bubbleStatus';
+import { BUBBLE_STATUS, isPlannedTask } from './bubbleStatus';
 
 const NO_TAG_GREY = '#B0B0B0';
 
@@ -62,8 +62,8 @@ export function countActiveBubblesByTag(bubbles, tags, tagId) {
  *   - "all tags selected + showNoTag" short-circuits to every active bubble,
  *   - otherwise keep bubbles whose (existing) tag is selected, plus — when
  *     showNoTag is on — untagged bubbles and bubbles whose tag was deleted,
- *   - in planned-tasks mode, additionally keep only future-due, non-done,
- *     non-deleted bubbles.
+ *   - in planned-tasks mode, additionally keep only bubbles whose due is still
+ *     ahead (isPlannedTask).
  *
  * `now` is injectable so the planned-tasks branch is deterministically testable.
  */
@@ -102,13 +102,8 @@ export const selectVisibleBubbles = (
         return tagFiltered;
     }
 
-    // Как в TaskList для вкладки «Запланированные»: dueDate строго в будущем, не выполнены и не удалены
-    return tagFiltered.filter((bubble) => (
-        bubble.dueDate &&
-        new Date(bubble.dueDate) > now &&
-        bubble.status !== BUBBLE_STATUS.DELETED &&
-        bubble.status !== BUBBLE_STATUS.DONE
-    ));
+    // Как в TaskList для вкладки «Запланированные»: срок ещё впереди
+    return tagFiltered.filter((bubble) => isPlannedTask(bubble, now.getTime()));
 };
 
 /**

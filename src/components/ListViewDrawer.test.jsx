@@ -40,20 +40,16 @@ describe('TaskListDrawer: list actions of the signed-in user', () => {
     let container;
     let root;
 
-    beforeEach(() => {
-        container = document.createElement('div');
-        document.body.appendChild(container);
-        root = createRoot(container);
-        act(() => root.render(
+    const renderList = ({ bubbles = [bubbleFromTask(TASK)], listFilter = 'active' } = {}) => act(() => root.render(
             <TaskListDrawer
                 open
                 onClose={vi.fn()}
                 isMobile={false}
                 themeMode="light"
-                bubbles={[bubbleFromTask(TASK)]}
+                bubbles={bubbles}
                 uid="u1"
                 tags={[]}
-                listFilter="active"
+                listFilter={listFilter}
                 setListFilter={vi.fn()}
                 listSortBy="updatedAt"
                 setListSortBy={vi.fn()}
@@ -76,7 +72,13 @@ describe('TaskListDrawer: list actions of the signed-in user', () => {
                 isAllListFiltersSelected
                 onOpenFilterMenu={vi.fn()}
             />
-        ));
+    ));
+
+    beforeEach(() => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        root = createRoot(container);
+        renderList();
     });
 
     afterEach(() => {
@@ -95,5 +97,15 @@ describe('TaskListDrawer: list actions of the signed-in user', () => {
     it('marks a task done for the signed-in user', () => {
         click('bubbles.markAsDone');
         expect(completeTask).toHaveBeenCalledWith('db', 'u1', expect.objectContaining({ id: 't1' }));
+    });
+
+    it('lists under "Planned" only the active tasks whose due is still ahead', () => {
+        const ahead = bubbleFromTask({ ...TASK, id: 't2', title: 'Ahead', due: { local: '2099-01-01T09:00', tz: 'Europe/Kyiv' } });
+        const passed = bubbleFromTask({ ...TASK, id: 't3', title: 'Passed', due: { local: '2020-01-01T09:00', tz: 'Europe/Kyiv' } });
+        renderList({ bubbles: [bubbleFromTask(TASK), ahead, passed], listFilter: 'postpone' });
+        const text = document.body.textContent;
+        expect(text).toContain('Ahead');
+        expect(text).not.toContain('Passed');
+        expect(text).not.toContain('Pay bills');
     });
 });

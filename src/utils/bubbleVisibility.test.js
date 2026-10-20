@@ -136,14 +136,14 @@ describe('selectVisibleBubbles', () => {
         expect(result).toEqual([]);
     });
 
-    it('bubbleViewPlannedTasksOnly keeps only future-due, non-done, non-deleted bubbles', () => {
+    it('bubbleViewPlannedTasksOnly keeps only active bubbles whose due is still ahead', () => {
         const now = new Date('2026-06-15T12:00:00Z');
-        const future = '2026-06-20T12:00:00Z';
-        const past = '2026-06-10T12:00:00Z';
+        const future = Date.parse('2026-06-20T12:00:00Z');
+        const past = Date.parse('2026-06-10T12:00:00Z');
         const bubbles = [
-            bub('future', 'active', 't1', { dueDate: future }),
-            bub('past', 'active', 't1', { dueDate: past }),
-            bub('noDue', 'active', 't1'),
+            bub('future', 'active', 't1', { dueAt: future }),
+            bub('past', 'active', 't1', { dueAt: past }),
+            bub('noDue', 'active', 't1', { dueAt: null }),
         ];
         const result = selectVisibleBubbles(
             {
