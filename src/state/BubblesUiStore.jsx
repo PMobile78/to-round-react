@@ -118,15 +118,14 @@ export function BubblesUiProvider({
         }
     }, [getSettings, setBubbleFilter, setListCategoryFilter]);
 
-    // Form state for the create/edit bubble dialogs
-    const [dueDate, setDueDate] = useState(null);              // create-form due date
-    const [editDueDate, setEditDueDate] = useState(null);      // edit-form due date
-    const [createNotifications, setCreateNotifications] = useState([]);
-    const [editNotifications, setEditNotifications] = useState([]);
-    const [createRecurrence, setCreateRecurrence] = useState(null);
-    const [editRecurrence, setEditRecurrence] = useState(null);
-    const [notifDialogOpen, setNotifDialogOpen] = useState(false); // shared create+edit notif sub-dialog
-    const [notifValue, setNotifValue] = useState(null);            // shared create+edit
+    // Form state for the create/edit bubble dialogs (spec 3.1): the date picker's Date or null,
+    // reminders in minutes before the due, the repeat editor's value or null
+    const [createDue, setCreateDue] = useState(null);
+    const [editDue, setEditDue] = useState(null);
+    const [createReminders, setCreateReminders] = useState([]);
+    const [editReminders, setEditReminders] = useState([]);
+    const [createRepeat, setCreateRepeat] = useState(null);
+    const [editRepeat, setEditRepeat] = useState(null);
     const [bubbleSize, setBubbleSize] = useState(45);              // create-form bubble size
     const [editBubbleSize, setEditBubbleSize] = useState(45);      // edit-form bubble size
 
@@ -228,22 +227,18 @@ export function BubblesUiProvider({
         setListShowNoTag,
         setListCategoryFilter,
         includeCategoryInFilters,
-        dueDate,
-        setDueDate,
-        editDueDate,
-        setEditDueDate,
-        createNotifications,
-        setCreateNotifications,
-        editNotifications,
-        setEditNotifications,
-        createRecurrence,
-        setCreateRecurrence,
-        editRecurrence,
-        setEditRecurrence,
-        notifDialogOpen,
-        setNotifDialogOpen,
-        notifValue,
-        setNotifValue,
+        createDue,
+        setCreateDue,
+        editDue,
+        setEditDue,
+        createReminders,
+        setCreateReminders,
+        editReminders,
+        setEditReminders,
+        createRepeat,
+        setCreateRepeat,
+        editRepeat,
+        setEditRepeat,
         bubbleSize,
         setBubbleSize,
         editBubbleSize,

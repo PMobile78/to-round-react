@@ -6,26 +6,12 @@
  * Note: next-notify / reschedule scheduling lives server-side (Cloud Functions);
  * the client only decides *when to pulse* and *which notification is active*.
  */
-import { parseLocalDateTime } from './dateTime';
-
 const MINUTE_MS = 60 * 1000;
 
 /**
  * The moment of the due (ms) of a bubble — its dueAt, set by bubbleFromTask — or null without one.
  */
 export const getDueTime = (bubble) => (bubble && Number.isFinite(bubble.dueAt) ? bubble.dueAt : null);
-
-/**
- * Is `dueDate` in the past relative to `now`?
- * `now` may be a Date or epoch-ms; defaults to the current time.
- */
-export const isOverdue = (dueDate, now = new Date()) => {
-    if (!dueDate) return false;
-    const parsed = parseLocalDateTime(dueDate);
-    if (!parsed) return false;
-    const nowMs = now instanceof Date ? now.getTime() : now;
-    return parsed.getTime() < nowMs;
-};
 
 /**
  * Reminders that have "matured" for a bubble at time `now` — i.e. their

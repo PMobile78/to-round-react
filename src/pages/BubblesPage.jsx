@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
     Box,
     useMediaQuery,
@@ -33,7 +33,7 @@ import { useTags } from '../hooks/useTags';
 import { useBubbleNotifications } from '../hooks/useBubbleNotifications';
 import { useBubbleCrud } from '../hooks/useBubbleCrud';
 import { withAlpha } from '../utils/colorUtils';
-import { parseLocalDateTime } from '../utils/dateTime';
+import { dueForPicker } from '../services/data/taskForm';
 import { notificationKeyPrefix, shouldShowStopPulsing } from '../utils/notifications';
 import { applyBubbleFill } from '../utils/bubbleStyle';
 import { useBubblesData } from '../state/BubblesDataStore';
@@ -65,20 +65,20 @@ const BubblesPage = ({ user, themeMode }) => {
         listSortOrder,
         setListSortOrder,
         // Form state (create/edit bubble dialogs) — migrated into the store in
-        // Stage E of 010d; consumed here by the form handlers, the save/create
-        // wrappers, and passed through to useMatterEngine.
-        dueDate,
-        setDueDate,
-        editDueDate,
-        setEditDueDate,
-        createNotifications,
-        setCreateNotifications,
-        editNotifications,
-        setEditNotifications,
-        createRecurrence,
-        setCreateRecurrence,
-        editRecurrence,
-        setEditRecurrence,
+        // Stage E of 010d; consumed here by the save/create wrappers and the
+        // edit-dialog effect, and passed through to useMatterEngine.
+        createDue,
+        setCreateDue,
+        editDue,
+        setEditDue,
+        createReminders,
+        setCreateReminders,
+        editReminders,
+        setEditReminders,
+        createRepeat,
+        setCreateRepeat,
+        editRepeat,
+        setEditRepeat,
         setEditBubbleSize,
         // Dialog open-flags + settings values — migrated into the store in Stage F
         // of 010d; consumed here by header buttons and the page-local handlers.
@@ -277,7 +277,7 @@ const BubblesPage = ({ user, themeMode }) => {
 
     // openCreateDialog needs the create-form setters (page-local, owned by
     // useBubbleNotifications); supply them explicitly at the call site.
-    const handleOpenCreateDialog = () => openCreateDialog({ setDueDate, setCreateNotifications });
+    const handleOpenCreateDialog = () => openCreateDialog({ setCreateDue, setCreateReminders, setCreateRepeat });
 
     // Physics engine — initialised once on mount via hook
     useMatterEngine({
@@ -297,16 +297,15 @@ const BubblesPage = ({ user, themeMode }) => {
         setSelectedTagId,
         setEditBubbleSize,
         setEditDialog,
-        setEditDueDate,
-        setEditNotifications,
-        setEditRecurrence,
+        setEditDue,
+        setEditReminders,
+        setEditRepeat,
         isMobile,
         themeMode,
         tags,
         dropSpeed,
         getBubbleFillStyle,
         getCanvasSize,
-        parseLocalDateTime,
         theme,
     });
 
@@ -452,8 +451,6 @@ const BubblesPage = ({ user, themeMode }) => {
         return bubbles.filter((bubble) => isPlannedTask(bubble, now)).length;
     }, [bubbles]);
 
-    // isOverdue moved to utils/notifications.js (Task 3/6 of #38).
-
     // Функция выхода
     const handleLogout = () => {
         setLogoutDialog(true);
@@ -501,63 +498,24 @@ const BubblesPage = ({ user, themeMode }) => {
 
     // Notification refs + the rAF pulse loop now live in useBubbleNotifications.
 
-    // --- Сброс пульсации при удалении уведомления ---
-    // Для editNotifications
-    const handleDeleteNotification = useCallback((idx) => {
-        setEditNotifications(prev => {
-            // Не удаляем ключ из notifiedBubbleNotificationsRef.current
-            return prev.filter((_, i) => i !== idx);
-        });
-    }, []);
-    // Для createNotifications
-    const handleDeleteCreateNotification = useCallback((idx) => {
-        setCreateNotifications(prev => {
-            // Не удаляем ключ из notifiedBubbleNotificationsRef.current
-            return prev.filter((_, i) => i !== idx);
-        });
-    }, []);
-
-    // При открытии диалога редактирования подставлять все поля (title/description/tag/size/dueDate/notifications)
+    // При открытии диалога редактирования подставлять все поля (tag/size/due/reminders/repeat)
     useEffect(() => {
         if (editDialog && selectedBubble) {
-            // notifications
-            setEditNotifications(Array.isArray(selectedBubble.notifications) ? selectedBubble.notifications : []);
-            setEditRecurrence(selectedBubble.recurrence || null);
-            // due date
-            let val = selectedBubble.dueDate;
-            if (val) {
-                if (typeof val === 'string') {
-                    const parsed = parseLocalDateTime(val);
-                    setEditDueDate(parsed);
-                } else if (val instanceof Date) {
-                    setEditDueDate(val);
-                } else {
-                    setEditDueDate(null);
-                }
-            } else {
-                setEditDueDate(null);
-            }
+            setEditReminders(selectedBubble.reminders);
+            setEditRepeat(selectedBubble.repeat);
+            // the picker shows the moment of the due in the time of this device
+            setEditDue(dueForPicker(selectedBubble));
             // basic fields for Save button logic
             setSelectedTagId(selectedBubble.tagId || '');
             if (typeof selectedBubble.radius === 'number') {
                 setEditBubbleSize(selectedBubble.radius);
             }
-            setEditRecurrence(selectedBubble.recurrence || null);
         }
     }, [editDialog, selectedBubble]);
 
     // Notification dialog/create state + language-reset effect now live in
     // useBubbleNotifications (Task 4/6 of #38).
     // aboutOpen now lives in BubblesStore (Stage F of 010d).
-
-    // Stable callbacks for recurrence setters
-    const handleSetCreateRecurrence = useCallback((value) => {
-        setCreateRecurrence(value);
-    }, []);
-
-    const handleSetEditRecurrence = useCallback((value) => {
-        setEditRecurrence(value);
-    }, []);
 
     // open-bubble deep-link listener now lives in useBubbleCrud (Task 5/6 of #38).
 
@@ -789,13 +747,11 @@ const BubblesPage = ({ user, themeMode }) => {
                 selectedBubble={selectedBubble}
                 setSelectedBubble={setSelectedBubble}
                 setEditDialog={setEditDialog}
-                handleDeleteNotification={handleDeleteNotification}
                 handleDeleteBubble={handleDeleteBubble}
                 handleMarkAsDone={handleMarkAsDone}
-                handleSaveBubble={(payload) => handleSaveBubble({ ...payload, editDueDate, editNotifications, editRecurrence, manuallyStoppedPulsingRef, setEditDueDate })}
+                handleSaveBubble={(payload) => handleSaveBubble({ ...payload, editDue, editReminders, editRepeat, manuallyStoppedPulsingRef, setEditDue })}
                 onStopPulsing={handleStopPulsing}
                 showStopPulsing={editDialogShowStopPulsing}
-                handleSetEditRecurrence={handleSetEditRecurrence}
                 handleOpenTagDialog={handleOpenTagDialog}
                 handleDeleteTag={handleDeleteTag}
                 handleCloseTagDialog={handleCloseTagDialog}
@@ -808,9 +764,7 @@ const BubblesPage = ({ user, themeMode }) => {
                 handleLogout={handleLogout}
                 createDialog={createDialog}
                 setCreateDialog={setCreateDialog}
-                handleSetCreateRecurrence={handleSetCreateRecurrence}
-                handleDeleteCreateNotification={handleDeleteCreateNotification}
-                createNewBubble={(payload) => createNewBubble({ ...payload, canvasSize, dueDate, createNotifications, createRecurrence, setDueDate })}
+                createNewBubble={(payload) => createNewBubble({ ...payload, canvasSize, createDue, createReminders, createRepeat, setCreateDue })}
                 handleUndoDeleteTag={handleUndoDeleteTag}
                 handleFontSizeChange={handleFontSizeChange}
                 confirmLogout={confirmLogout}
