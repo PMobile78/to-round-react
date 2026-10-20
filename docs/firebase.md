@@ -1,6 +1,6 @@
 # Firebase
 
-To-Round использует Firebase как бэкенд: **Auth** (email/пароль), **Firestore**
+ToDo-Round использует Firebase как бэкенд: **Auth** (email/пароль), **Firestore**
 (клиентский SDK), **Cloud Functions Gen2** (планировщик уведомлений) и **FCM** (push).
 
 Где взять и как задать конфигурацию — см. [environment.md](environment.md).
@@ -32,7 +32,9 @@ export const auth = getAuth(app);
 - `loginUser(email, password)` — вход;
 - `logoutUser()` — выход (чистит локальные данные пользователя);
 - `resetPassword(email, languageCode)` — письмо для сброса пароля на языке интерфейса со ссылкой
-  «Continue» обратно в приложение;
+  «Continue» обратно в приложение. Имя приложения в письме (`%APP_NAME%` шаблона Firebase) берётся
+  не из кода, а из Firebase Console → Project settings → General → **Public-facing name**: при смене
+  `APP_NAME` в `src/appName.js` поменяйте его и там;
 - `onAuthStateChange(cb)` — подписка на состояние входа.
 
 `src/App.jsx` подписывается на `onAuthStateChanged` и рендерит `AuthForm` для гостя или

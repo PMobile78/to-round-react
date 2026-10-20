@@ -1,5 +1,6 @@
 import packageJson from '../../package.json';
 import logger from './logger';
+import { APP_NAME } from '../appName';
 
 // Конфигурация приложения из переменных окружения
 export const config = {
@@ -17,7 +18,7 @@ export const config = {
 
     // App Configuration
     app: {
-        name: import.meta.env.REACT_APP_NAME || 'To-Round',
+        name: APP_NAME,
         version: import.meta.env.REACT_APP_VERSION || packageJson.version || '0.0.2',
         environment: import.meta.env.REACT_APP_ENVIRONMENT || 'development'
     }

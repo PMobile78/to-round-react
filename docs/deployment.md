@@ -62,7 +62,7 @@ Workflow `Deploy Prod` (`.github/workflows/deploy-prod.yml`, только `workf
 2. **Bump version** — `npm run version:${{ inputs.version_bump }}` (уровень выбирается при запуске:
    `patch` / `minor` / `major`, по умолчанию `patch`), новая версия пишется в output шага.
 3. **Commit version bump** — коммит `package.json` с `[skip ci]` и push.
-4. **Create `.env.production`** — из GitHub Secrets + `REACT_APP_NAME=To-Round`,
+4. **Create `.env.production`** — из GitHub Secrets +
    `REACT_APP_VERSION=<bumped>`, `REACT_APP_BUILD_TIME=<время сборки, UTC>`,
    `REACT_APP_ENVIRONMENT=production`. Время показывает окно «О программе» (строка `Deployed`):
    сборка идёт прямо перед публикацией, так что это время деплоя.

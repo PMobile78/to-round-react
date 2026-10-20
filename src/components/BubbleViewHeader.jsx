@@ -55,7 +55,7 @@ const BubbleViewHeader = ({
                         color: themeMode === 'light' ? '#2C3E50' : 'white',
                         fontWeight: 'bold'
                     }}>
-                        {t('bubbles.title')}
+                        {APP_NAME}
                     </Typography> */}
                 </Box>
                 <Button

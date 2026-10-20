@@ -43,10 +43,11 @@ npm start
 
 | Переменная | По умолчанию | Назначение |
 |---|---|---|
-| `REACT_APP_NAME` | `To-Round` | Имя приложения |
 | `REACT_APP_VERSION` | версия из `package.json` | Версия (в проде проставляется CI) |
 | `REACT_APP_BUILD_TIME` | нет (в окне «-») | Время сборки, UTC ISO; ставит CI при деплое, окно «О программе» показывает его в местном времени (`Deployed`) |
 | `REACT_APP_ENVIRONMENT` | `development` | Имя окружения |
+
+Имя приложения — не переменная окружения: оно задаётся только константой `APP_NAME` в `src/appName.js` (её используют UI и `vite.config.js` для `index.html` и `site.webmanifest`).
 
 ## Как получить значения Firebase
 
@@ -64,7 +65,7 @@ npm start
 ```javascript
 import { config, validateConfig } from './utils/config';
 config.firebase.apiKey   // и т.д.
-config.app.name          // 'To-Round' по умолчанию
+config.app.name          // = APP_NAME из src/appName.js
 ```
 
 При старте `src/firebase.js` вызывает `validateConfig()`; если отсутствует любой из
