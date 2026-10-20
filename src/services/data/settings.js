@@ -6,9 +6,13 @@ import { newUserDocData, settingsFromUserDoc, settingsUpdateData } from './conve
 
 const userRef = (db, uid) => doc(db, 'users', uid);
 
-/** Live settings: onSettings(settings), or onSettings(null) while users/{uid} does not exist. */
-export const subscribeUserDoc = (db, uid, onSettings, onError) => onSnapshot(userRef(db, uid), (snapshot) => {
-    onSettings(snapshot.exists() ? settingsFromUserDoc(snapshot.data()) : null);
+/**
+ * Live settings: onSettings(settings) while users/{uid} exists, onSettings(null, { fromCache })
+ * while it does not; fromCache false means the server says so, not only this device's cache.
+ */
+export const subscribeUserDoc = (db, uid, onSettings, onError) => onSnapshot(userRef(db, uid), { includeMetadataChanges: true }, (snapshot) => {
+    if (snapshot.exists()) onSettings(settingsFromUserDoc(snapshot.data()));
+    else onSettings(null, { fromCache: snapshot.metadata.fromCache });
 }, onError);
 
 /**

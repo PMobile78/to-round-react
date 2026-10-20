@@ -15,6 +15,8 @@ vi.mock('../services/data/settings', () => ({
     updateSettings: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('../utils/logger', () => ({ default: { error: vi.fn() } }));
+// The language the sign-in screen shows (the device's, or the one picked there).
+vi.mock('../i18n', () => ({ default: { language: 'uk' } }));
 
 const DEFAULTS = settingsFixtures.valid.find((f) => f.name === 'defaults').value;
 const flush = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
@@ -29,7 +31,7 @@ describe('useUserSettings (users/{uid}.settings, spec 3.4-3.5)', () => {
         return null;
     }
     const render = (uid) => act(() => root.render(<Probe uid={uid} />));
-    const deliver = (settings) => act(() => subscribeUserDoc.mock.calls.at(-1)[2](settings));
+    const deliver = (settings, meta) => act(() => subscribeUserDoc.mock.calls.at(-1)[2](settings, meta));
 
     beforeEach(() => {
         localStorage.clear();
@@ -87,5 +89,45 @@ describe('useUserSettings (users/{uid}.settings, spec 3.4-3.5)', () => {
         await flush();
         expect(api.settings).toMatchObject({ design: 'clay' });
         expect(localStorage.getItem('app-design')).toBe('clay');
+    });
+
+    it('gives a new account the language of the sign-in screen', () => {
+        render('u1');
+        expect(ensureUserDoc).toHaveBeenCalledWith('db', 'u1', expect.objectContaining({ language: 'uk' }));
+    });
+
+    it('keeps the language this browser had in v1', () => {
+        localStorage.setItem('i18nextLng', 'en');
+        render('u1');
+        expect(ensureUserDoc).toHaveBeenCalledWith('db', 'u1', expect.objectContaining({ language: 'en' }));
+    });
+
+    it('creates the user document again once the server says it is still missing (first start offline)', async () => {
+        ensureUserDoc.mockReturnValueOnce(Promise.reject(new Error('offline')));
+        localStorage.setItem('app-design', 'clay');
+        render('u1');
+        await flush();
+        deliver(null, { fromCache: true }); // only this device's cache knows nothing yet
+        await flush();
+        expect(ensureUserDoc).toHaveBeenCalledTimes(1);
+        deliver(null, { fromCache: false }); // the server: there is no users/{uid}
+        await flush();
+        expect(ensureUserDoc).toHaveBeenCalledTimes(2);
+        expect(ensureUserDoc).toHaveBeenLastCalledWith('db', 'u1', expect.objectContaining({ design: 'clay' }));
+        expect(localStorage.getItem('app-design')).toBeNull();
+    });
+
+    it('creates the user document once when StrictMode runs the effect twice', async () => {
+        act(() => root.render(<React.StrictMode><Probe uid="u1" /></React.StrictMode>));
+        await flush();
+        expect(ensureUserDoc).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the settings object when a delivery brings the same settings', () => {
+        render('u1');
+        deliver(DEFAULTS);
+        const shown = api.settings;
+        deliver({ ...DEFAULTS });
+        expect(api.settings).toBe(shown);
     });
 });
