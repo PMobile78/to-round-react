@@ -46,6 +46,7 @@ describe('MigrationGate: the app waits for the move from v1 (spec 9.1)', () => {
     });
 
     afterEach(() => {
+        vi.useRealTimers();
         act(() => root.unmount());
         container.remove();
     });
@@ -116,6 +117,45 @@ describe('MigrationGate: the app waits for the move from v1 (spec 9.1)', () => {
         await mount();
         expect(text()).toContain('migration.checkFailed');
         await act(async () => button('migration.retry').click());
+        expect(text()).toContain('the app');
+    });
+
+    // Right after a sign-in another open tab of the app can still answer for this one with the
+    // previous account (the Firestore cache shared by the tabs) until it wakes up, about once a
+    // minute in the background, and the rules refuse the check until then.
+    const refusal = () => Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
+
+    it('checks again while the check right after sign-in is refused, then shows the app', async () => {
+        vi.useFakeTimers();
+        checkMigration.mockRejectedValueOnce(refusal()).mockRejectedValueOnce(refusal())
+            .mockRejectedValueOnce(refusal()).mockResolvedValueOnce(null);
+        await mount();
+        await act(async () => vi.advanceTimersByTimeAsync(6000));
+        expect(text()).not.toContain('migration.checkFailed');
+        expect(document.querySelector('[role="progressbar"]')).not.toBeNull();
+        await act(async () => vi.advanceTimersByTimeAsync(3000));
+        expect(checkMigration).toHaveBeenCalledTimes(4);
+        expect(text()).toContain('the app');
+    });
+
+    it('says the old data cannot be read when the check is still refused after a minute and a half', async () => {
+        vi.useFakeTimers();
+        checkMigration.mockRejectedValue(refusal());
+        await mount();
+        await act(async () => vi.advanceTimersByTimeAsync(87000));
+        expect(text()).not.toContain('migration.checkFailed');
+        await act(async () => vi.advanceTimersByTimeAsync(3000));
+        expect(checkMigration).toHaveBeenCalledTimes(31);
+        expect(text()).toContain('migration.checkFailed');
+    });
+
+    it('stops checking for an account that signed out', async () => {
+        vi.useFakeTimers();
+        checkMigration.mockImplementation((db, uid) => (uid === 'u1' ? Promise.reject(refusal()) : Promise.resolve(null)));
+        await mount();
+        await act(async () => root.render(<MigrationGate uid="u2" settings={SETTINGS}><p>the app</p></MigrationGate>));
+        await act(async () => vi.advanceTimersByTimeAsync(90000));
+        expect(checkMigration.mock.calls.filter(([, uid]) => uid === 'u1')).toHaveLength(1);
         expect(text()).toContain('the app');
     });
 });

@@ -17,6 +17,13 @@ const legacyStorage = {
     removeItem: (key) => window.localStorage.removeItem(key),
 };
 
+// Right after a sign-in another open tab of the app can still answer for this one with the
+// previous account (the Firestore cache shared by the tabs) until it wakes up, which a tab in the
+// background does about once a minute, and the rules refuse the listener, which the SDK then
+// drops: it listens again every 3 seconds for a minute and a half.
+const LISTEN_AGAIN_MS = 3000;
+const LISTEN_AGAIN_TIMES = 30;
+
 // One creation of users/{uid} at a time, also across the effect re-runs of StrictMode.
 const creating = new Map();
 const createOnce = (uid, settings) => {
@@ -55,11 +62,25 @@ export function useUserSettings(uid) {
                 if (!latest.current) apply(initial);
             });
         create();
-        return subscribeUserDoc(db, uid, (next, meta) => {
-            // The same settings again (the server confirming this device's write): nothing to show.
-            if (next && JSON.stringify(next) !== JSON.stringify(latest.current)) apply(next);
-            if (!next && meta && !meta.fromCache) create();
-        }, (e) => logger.error('Settings listener error:', e));
+        let unsubscribe;
+        let again;
+        const listen = (againLeft) => {
+            unsubscribe = subscribeUserDoc(db, uid, (next, meta) => {
+                // The same settings again (the server confirming this device's write): nothing to show.
+                if (next && JSON.stringify(next) !== JSON.stringify(latest.current)) apply(next);
+                if (!next && meta && !meta.fromCache) create();
+            }, (e) => {
+                logger.error('Settings listener error:', e);
+                if (againLeft > 0 && e && e.code === 'permission-denied') {
+                    again = setTimeout(() => listen(againLeft - 1), LISTEN_AGAIN_MS);
+                }
+            });
+        };
+        listen(LISTEN_AGAIN_TIMES);
+        return () => {
+            clearTimeout(again);
+            unsubscribe();
+        };
     }, [uid, apply]);
 
     const updateSettings = useCallback((changes) => {

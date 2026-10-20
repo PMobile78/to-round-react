@@ -41,6 +41,7 @@ describe('useUserSettings (users/{uid}.settings, spec 3.4-3.5)', () => {
     });
 
     afterEach(() => {
+        vi.useRealTimers();
         act(() => root.unmount());
         container.remove();
         vi.clearAllMocks();
@@ -129,5 +130,42 @@ describe('useUserSettings (users/{uid}.settings, spec 3.4-3.5)', () => {
         const shown = api.settings;
         deliver({ ...DEFAULTS });
         expect(api.settings).toBe(shown);
+    });
+
+    // Right after a sign-in another open tab of the app can still answer for this one with the
+    // previous account (the Firestore cache shared by the tabs) until it wakes up, about once a
+    // minute in the background, and the rules refuse the listener until then.
+    const refuse = () => act(() => subscribeUserDoc.mock.calls.at(-1)[3](
+        Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' })));
+
+    it('listens again while the listener right after sign-in is refused', async () => {
+        vi.useFakeTimers();
+        render('u1');
+        refuse();
+        await act(async () => vi.advanceTimersByTimeAsync(3000));
+        refuse();
+        await act(async () => vi.advanceTimersByTimeAsync(3000));
+        expect(subscribeUserDoc).toHaveBeenCalledTimes(3);
+        deliver({ ...DEFAULTS, design: 'clay' });
+        expect(api.settings).toMatchObject({ design: 'clay' });
+    });
+
+    it('stops listening again after a minute and a half of refusals', async () => {
+        vi.useFakeTimers();
+        render('u1');
+        for (let i = 0; i < 31; i += 1) {
+            refuse();
+            await act(async () => vi.advanceTimersByTimeAsync(3000));
+        }
+        expect(subscribeUserDoc).toHaveBeenCalledTimes(31);
+    });
+
+    it('does not listen again after sign-out', async () => {
+        vi.useFakeTimers();
+        render('u1');
+        refuse();
+        render(null);
+        await act(async () => vi.advanceTimersByTimeAsync(3000));
+        expect(subscribeUserDoc).toHaveBeenCalledTimes(1);
     });
 });
