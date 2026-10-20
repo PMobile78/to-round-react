@@ -5,6 +5,7 @@ import { Box, CircularProgress } from '@mui/material';
 import BubblesPage from './pages/BubblesPage';
 const MindMapPage = React.lazy(() => import('./pages/MindMapPage'));
 import AuthForm from './components/AuthForm';
+import MigrationGate from './components/MigrationGate';
 import { onAuthStateChange } from './services/authService';
 import { useThemeMode } from './hooks/useThemeMode';
 import i18n from './i18n';
@@ -81,36 +82,39 @@ function App() {
             <CssBaseline />
             {user ? (
                 <SettingsContext.Provider value={userSettings}>
-                    {screen === 'mindmap' ? (
-                        <React.Suspense fallback={
-                            <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: theme.palette.background.bubbleView }}>
-                                <CircularProgress size={60} sx={{ color: 'white' }} />
-                            </Box>
-                        }>
-                            <MindMapPage
-                                onBack={() => navigate('main')}
-                                themeMode={actualTheme}
-                            />
-                        </React.Suspense>
-                    ) : (
-                        <BubblesDataProvider>
-                            <BubblesUiProvider
-                                themeModeState={themeMode}
-                                setThemeMode={setThemeMode}
-                                design={design}
-                                setDesign={setDesign}
-                                designs={designs}
-                                toggleTheme={toggleTheme}
-                                themeToggleProps={{ themeMode, actualTheme }}
-                                onOpenMindMap={() => navigate('mindmap')}
-                            >
-                                <BubblesPage
-                                    user={user}
+                    {/* The move from v1 comes first (spec 9.1) */}
+                    <MigrationGate uid={user.uid} settings={settings}>
+                        {screen === 'mindmap' ? (
+                            <React.Suspense fallback={
+                                <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: theme.palette.background.bubbleView }}>
+                                    <CircularProgress size={60} sx={{ color: 'white' }} />
+                                </Box>
+                            }>
+                                <MindMapPage
+                                    onBack={() => navigate('main')}
                                     themeMode={actualTheme}
                                 />
-                            </BubblesUiProvider>
-                        </BubblesDataProvider>
-                    )}
+                            </React.Suspense>
+                        ) : (
+                            <BubblesDataProvider>
+                                <BubblesUiProvider
+                                    themeModeState={themeMode}
+                                    setThemeMode={setThemeMode}
+                                    design={design}
+                                    setDesign={setDesign}
+                                    designs={designs}
+                                    toggleTheme={toggleTheme}
+                                    themeToggleProps={{ themeMode, actualTheme }}
+                                    onOpenMindMap={() => navigate('mindmap')}
+                                >
+                                    <BubblesPage
+                                        user={user}
+                                        themeMode={actualTheme}
+                                    />
+                                </BubblesUiProvider>
+                            </BubblesDataProvider>
+                        )}
+                    </MigrationGate>
                 </SettingsContext.Provider>
             ) : (
                 <AuthForm

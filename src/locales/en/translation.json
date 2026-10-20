@@ -319,5 +319,22 @@
         "readFailed": "Your current data could not be read. Nothing was changed.",
         "writeFailed": "The import stopped: {{done}} of {{total}} changes are saved. Import the same file again to finish.",
         "exportFailed": "The backup could not be exported."
+    },
+    "migration": {
+        "title": "Move to the new version",
+        "intro": "The new version keeps your data in a new form. Your tasks and categories are moved once: nothing is written until you press “Move”, and the old data stays as it is.",
+        "counts": "To move — tasks: {{tasks}}, categories: {{categories}}.",
+        "rounded": "Reminders and repeats rounded up to whole hours:",
+        "lostFormatting": "Descriptions that lose formatting the new editor does not keep:",
+        "changed": "A due date, a reminder or a text that cannot be kept as it is:",
+        "recolored": "Categories that get another colour:",
+        "skipped": "Records that cannot be read are skipped — tasks: {{tasks}}, categories: {{categories}}.",
+        "postponeHint": "“Postpone” signs you out; this window shows again at the next sign-in.",
+        "move": "Move",
+        "postpone": "Postpone",
+        "moving": "Moving: {{done}} of {{total}}",
+        "checkFailed": "Your old data could not be read. Check the connection and try again.",
+        "moveFailed": "The move stopped. Try again: what is already moved is not written twice.",
+        "retry": "Try again"
     }
 }
