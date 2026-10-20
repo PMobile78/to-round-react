@@ -43,6 +43,8 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
             handleSaveBubble: vi.fn(),
             onStopPulsing: vi.fn(),
             showStopPulsing: false,
+            handleFinishSeries: vi.fn(),
+            showFinishSeries: false,
             ...overrides,
         };
         act(() => root.render(<BubbleDialog {...props} />));
@@ -83,6 +85,14 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
         render({ editDue: new Date(Date.now() + HOUR) });
         expect(button('bubbles.remindMe').disabled).toBe(false);
         expect(document.querySelector('input[type="checkbox"]').disabled).toBe(false);
+    });
+
+    it('offers "Finish series" next to "Done" only when asked to (a repeating task)', () => {
+        render();
+        expect(button('bubbles.finishSeries')).toBeUndefined();
+        render({ showFinishSeries: true });
+        act(() => button('bubbles.finishSeries').click());
+        expect(props.handleFinishSeries).toHaveBeenCalledTimes(1);
     });
 
     it('clears the reminders and the repeat together with the due', () => {

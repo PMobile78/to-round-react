@@ -3,7 +3,8 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bubbleFromTask } from '../services/data/bubbleModel';
-import { completeTask, trashTask } from '../services/data/tasks';
+import { completeTask, finishSeries, trashTask } from '../services/data/tasks';
+import logger from '../utils/logger';
 import TaskListDrawer from './ListViewDrawer';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -13,8 +14,10 @@ vi.mock('../i18n', () => ({ default: { language: 'en' } }));
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key) => key, i18n: { language: 'en' } }),
 }));
+vi.mock('../utils/logger', () => ({ default: { error: vi.fn() } }));
 vi.mock('../services/data/tasks', () => ({
     completeTask: vi.fn(() => Promise.resolve()),
+    finishSeries: vi.fn(() => Promise.resolve()),
     deleteTaskForever: vi.fn(() => Promise.resolve()),
     restoreTask: vi.fn(() => Promise.resolve()),
     trashTask: vi.fn(() => Promise.resolve()),
@@ -97,6 +100,22 @@ describe('TaskListDrawer: list actions of the signed-in user', () => {
     it('marks a task done for the signed-in user', () => {
         click('bubbles.markAsDone');
         expect(completeTask).toHaveBeenCalledWith('db', 'u1', expect.objectContaining({ id: 't1' }));
+    });
+
+    it('logs the error and keeps the list when "Done" cannot be saved', async () => {
+        const error = new Error('Invalid local date-time: 2026-02-30T09:00');
+        completeTask.mockReturnValueOnce(Promise.reject(error));
+        click('bubbles.markAsDone');
+        await vi.waitFor(() => expect(logger.error).toHaveBeenCalledWith('Error marking task as done:', error));
+        expect(document.body.textContent).toContain('Pay bills');
+    });
+
+    it('finishes the series of a repeating task, and offers it for no other task', () => {
+        expect(document.querySelector('button[title="bubbles.finishSeries"]')).toBeNull();
+        const repeating = bubbleFromTask({ ...TASK, id: 't2', due: { local: '2026-10-10T09:00', tz: 'Europe/Kyiv' }, repeat: { every: 1, unit: 'days' } });
+        renderList({ bubbles: [repeating] });
+        click('bubbles.finishSeries');
+        expect(finishSeries).toHaveBeenCalledWith('db', 'u1', 't2');
     });
 
     it('lists under "Planned" only the active tasks whose due is still ahead', () => {

@@ -60,6 +60,7 @@
         "reset": "Reset",
         "done": "Done",
         "markAsDone": "Mark as Done",
+        "finishSeries": "Finish series",
         "listView": "Tasks list",
         "bubblesView": "Bubbles View",
         "mainViewTasks": "Tasks list as main screen",

@@ -12,7 +12,7 @@ import { logoutUser } from '../services/authService';
 import { db } from '../firebase';
 import { muteTaskPulse, subscribeTasks } from '../services/data/tasks';
 import { deepLinkTaskId } from '../utils/deepLink';
-import { BUBBLE_STATUS, isPlannedTask } from '../utils/bubbleStatus';
+import { BUBBLE_STATUS, canFinishSeries, isPlannedTask } from '../utils/bubbleStatus';
 
 import TasksCategoriesPanel from '../components/TasksCategoriesPanel';
 import MobileCategorySelector from '../components/MobileCategorySelector';
@@ -117,6 +117,7 @@ const BubblesPage = ({ user, themeMode }) => {
         handleSaveBubble,
         handleDeleteBubble,
         handleMarkAsDone,
+        handleFinishSeries,
         handleCloseDialog
     } = useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme, isMobile, uid: user.uid });
 
@@ -749,6 +750,8 @@ const BubblesPage = ({ user, themeMode }) => {
                 setEditDialog={setEditDialog}
                 handleDeleteBubble={handleDeleteBubble}
                 handleMarkAsDone={handleMarkAsDone}
+                handleFinishSeries={handleFinishSeries}
+                showFinishSeries={Boolean(selectedBubble) && canFinishSeries(selectedBubble)}
                 handleSaveBubble={(payload) => handleSaveBubble({ ...payload, editDue, editReminders, editRepeat, manuallyStoppedPulsingRef, setEditDue })}
                 onStopPulsing={handleStopPulsing}
                 showStopPulsing={editDialogShowStopPulsing}

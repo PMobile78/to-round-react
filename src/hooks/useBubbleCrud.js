@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Matter from 'matter-js';
 import { db } from '../firebase';
-import { completionChanges, createTask, newTaskId, trashTask, updateTask } from '../services/data/tasks';
+import { completionChanges, createTask, finishSeries, newTaskId, trashTask, updateTask } from '../services/data/tasks';
 import { bubbleFromTask, withTaskChanges } from '../services/data/bubbleModel';
 import { taskChangesFromForm, taskFieldsFromForm } from '../services/data/taskForm';
 import logger from '../utils/logger';
@@ -169,6 +169,94 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         updateTask(db, uid, selectedBubble.id, changes).catch(e => logger.error('Error marking bubble as done:', e));
     };
 
+    // The pop of a task that is done: the bubble swells and fades with a splash and a sound,
+    // leaves the world, and then onPopped runs.
+    const popBubble = (bubble, onPopped) => {
+        const body = bubble.body;
+        // Воспроизвести звук лопанья
+        try {
+            const popAudio = new window.Audio(`${import.meta.env.BASE_URL}pop.mp3`);
+            popAudio.currentTime = 0;
+            popAudio.play();
+        } catch (e) { /* ignore */ }
+        if (!body) {
+            onPopped();
+            return;
+        }
+        // Быстрое увеличение радиуса и исчезновение
+        let frame = 0;
+        const totalFrames = 15;
+        const initialRadius = body.circleRadius;
+        const maxRadius = initialRadius * 2.2;
+        const initialOpacity = body.render.opacity !== undefined ? body.render.opacity : 1;
+        const center = { x: body.position.x, y: body.position.y };
+        const splashParticles = [];
+        const splashCount = 12;
+        // Цвет брызг совпадает с цветом тега, если есть тег, иначе красный
+        let splashColor = 'rgba(255,0,0,0.7)';
+        if (bubble.tagId) {
+            const tag = tags.find(t => t.id === bubble.tagId);
+            if (tag) {
+                // Преобразуем hex в rgba
+                const hex = tag.color;
+                const rgb = hex.length === 7
+                    ? [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
+                    : [255, 0, 0];
+                splashColor = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.7)`;
+            }
+        }
+        const splashMinSpeed = 6;
+        const splashMaxSpeed = 11;
+        const splashRadius = Math.max(3, Math.min(7, Math.round(initialRadius * 0.18)));
+
+        // Создать брызги
+        for (let i = 0; i < splashCount; i++) {
+            const angle = (2 * Math.PI * i) / splashCount + Math.random() * 0.2;
+            const speed = splashMinSpeed + Math.random() * (splashMaxSpeed - splashMinSpeed);
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+            const particle = Matter.Bodies.circle(center.x, center.y, splashRadius, {
+                isSensor: true,
+                render: {
+                    fillStyle: splashColor,
+                    strokeStyle: splashColor,
+                    opacity: 1,
+                    lineWidth: 0
+                }
+            });
+            Matter.Body.setVelocity(particle, { x: vx, y: vy });
+            splashParticles.push(particle);
+        }
+        Matter.World.add(engineRef.current.world, splashParticles);
+
+        // Анимация пузыря
+        const animatePop = () => {
+            frame++;
+            // Увеличиваем радиус
+            const newRadius = initialRadius + (maxRadius - initialRadius) * (frame / totalFrames);
+            const scale = newRadius / body.circleRadius;
+            Matter.Body.scale(body, scale, scale);
+            // Уменьшаем прозрачность
+            body.render.opacity = initialOpacity * (1 - frame / totalFrames);
+            // Анимация брызг: fade out
+            splashParticles.forEach(p => {
+                if (p.render) {
+                    p.render.opacity = 1 - frame / totalFrames;
+                }
+            });
+            if (frame < totalFrames) {
+                requestAnimationFrame(animatePop);
+            } else {
+                // После анимации удаляем из мира пузырь и брызги
+                Matter.World.remove(engineRef.current.world, body);
+                Matter.World.remove(engineRef.current.world, splashParticles);
+                // Обновляем статус в Firestore
+                onPopped();
+            }
+        };
+        animatePop();
+    };
+
     // Mark bubble as done
     const handleMarkAsDone = async () => {
         if (selectedBubble && engineRef.current && selectedBubble.repeat && selectedBubble.due) {
@@ -181,92 +269,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         } else if (selectedBubble && engineRef.current) {
             try {
                 // Анимация лопания с брызгами и звуком
-                const bubble = selectedBubble;
-                const body = bubble.body;
-                // Воспроизвести звук лопанья
-                try {
-                    const popAudio = new window.Audio(`${import.meta.env.BASE_URL}pop.mp3`);
-                    popAudio.currentTime = 0;
-                    popAudio.play();
-                } catch (e) { /* ignore */ }
-                if (body) {
-                    // Быстрое увеличение радиуса и исчезновение
-                    let frame = 0;
-                    const totalFrames = 15;
-                    const initialRadius = body.circleRadius;
-                    const maxRadius = initialRadius * 2.2;
-                    const initialOpacity = body.render.opacity !== undefined ? body.render.opacity : 1;
-                    const center = { x: body.position.x, y: body.position.y };
-                    const splashParticles = [];
-                    const splashCount = 12;
-                    // Цвет брызг совпадает с цветом тега, если есть тег, иначе красный
-                    let splashColor = 'rgba(255,0,0,0.7)';
-                    if (bubble.tagId) {
-                        const tag = tags.find(t => t.id === bubble.tagId);
-                        if (tag) {
-                            // Преобразуем hex в rgba
-                            const hex = tag.color;
-                            const rgb = hex.length === 7
-                                ? [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
-                                : [255, 0, 0];
-                            splashColor = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.7)`;
-                        }
-                    }
-                    const splashMinSpeed = 6;
-                    const splashMaxSpeed = 11;
-                    const splashRadius = Math.max(3, Math.min(7, Math.round(initialRadius * 0.18)));
-
-                    // Создать брызги
-                    for (let i = 0; i < splashCount; i++) {
-                        const angle = (2 * Math.PI * i) / splashCount + Math.random() * 0.2;
-                        const speed = splashMinSpeed + Math.random() * (splashMaxSpeed - splashMinSpeed);
-                        const vx = Math.cos(angle) * speed;
-                        const vy = Math.sin(angle) * speed;
-                        const particle = Matter.Bodies.circle(center.x, center.y, splashRadius, {
-                            isSensor: true,
-                            render: {
-                                fillStyle: splashColor,
-                                strokeStyle: splashColor,
-                                opacity: 1,
-                                lineWidth: 0
-                            }
-                        });
-                        Matter.Body.setVelocity(particle, { x: vx, y: vy });
-                        splashParticles.push(particle);
-                    }
-                    Matter.World.add(engineRef.current.world, splashParticles);
-
-                    // Анимация пузыря
-                    const animatePop = () => {
-                        frame++;
-                        // Увеличиваем радиус
-                        const newRadius = initialRadius + (maxRadius - initialRadius) * (frame / totalFrames);
-                        const scale = newRadius / body.circleRadius;
-                        Matter.Body.scale(body, scale, scale);
-                        // Уменьшаем прозрачность
-                        body.render.opacity = initialOpacity * (1 - frame / totalFrames);
-                        // Анимация брызг: fade out
-                        splashParticles.forEach(p => {
-                            if (p.render) {
-                                p.render.opacity = 1 - frame / totalFrames;
-                            }
-                        });
-                        if (frame < totalFrames) {
-                            requestAnimationFrame(animatePop);
-                        } else {
-                            // После анимации удаляем из мира пузырь и брызги
-                            Matter.World.remove(engineRef.current.world, body);
-                            Matter.World.remove(engineRef.current.world, splashParticles);
-                            // Обновляем статус в Firestore
-                            completeSelected();
-                        }
-                    };
-                    animatePop();
-                } else {
-                    // Если нет тела, просто удаляем
-                    Matter.World.remove(engineRef.current.world, selectedBubble.body);
-                    completeSelected();
-                }
+                popBubble(selectedBubble, completeSelected);
             } catch (error) {
                 logger.error('Error marking bubble as done:', error);
             }
@@ -274,6 +277,19 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         setEditDialog(false);
         setSelectedBubble(null);
         // Не сбрасываем размер - он будет установлен при следующем открытии диалога
+    };
+
+    // "Finish series" of a repeating task (spec 4.1): done like a one-off task, so it pops
+    const handleFinishSeries = () => {
+        if (selectedBubble && engineRef.current) {
+            const { id } = selectedBubble;
+            popBubble(selectedBubble, () => {
+                setBubbles(prev => prev.map(b => (b.id === id ? withTaskChanges(b, { status: 'done' }) : b)));
+                finishSeries(db, uid, id).catch(e => logger.error('Error finishing the series:', e));
+            });
+        }
+        setEditDialog(false);
+        setSelectedBubble(null);
     };
 
     // Close dialog without saving
@@ -313,6 +329,7 @@ export function useBubbleCrud({ engineRef, renderRef, bubbles, setBubbles, theme
         handleSaveBubble,
         handleDeleteBubble,
         handleMarkAsDone,
+        handleFinishSeries,
         handleCloseDialog
     };
 }

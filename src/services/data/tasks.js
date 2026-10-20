@@ -56,7 +56,8 @@ export const restoreTask = (db, uid, id) => updateTask(db, uid, id, { status: 'a
 
 export const deleteTaskForever = (db, uid, id) => deleteDoc(taskRef(db, uid, id));
 
-export const completeTask = (db, uid, task, now = new Date()) => updateTask(db, uid, task.id, completionChanges(task, now));
+/** "Done"; a due or repeat this browser cannot step through rejects the promise instead of throwing. */
+export const completeTask = async (db, uid, task, now = new Date()) => updateTask(db, uid, task.id, completionChanges(task, now));
 
 /** "Finish series" of a repeating task (spec 4.1): done, like a one-off task. */
 export const finishSeries = (db, uid, id) => updateTask(db, uid, id, { status: 'done' });

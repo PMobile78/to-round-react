@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { completionChanges } from './tasks';
+import { completeTask, completionChanges } from './tasks';
 
 const task = (overrides) => ({
     id: 't1',
@@ -41,5 +41,14 @@ describe('completionChanges ("Done", spec 4.1)', () => {
     it('lets a muted repeating task pulse again at its next due', () => {
         expect(completionChanges(task({ repeat: { every: 1, unit: 'weeks' }, pulseMuted: true }), NOW))
             .toEqual({ due: { local: '2026-10-17T09:00', tz: 'Europe/Berlin' }, pulseMuted: false });
+    });
+});
+
+describe('completeTask', () => {
+    it('rejects instead of throwing when the next due of a repeating task cannot be found', async () => {
+        const unreadable = task({ due: { local: '2026-02-30T09:00', tz: 'Europe/Berlin' }, repeat: { every: 1, unit: 'days' } });
+        let done;
+        expect(() => { done = completeTask({}, 'u1', unreadable, NOW); }).not.toThrow();
+        await expect(done).rejects.toThrow('Invalid local date-time: 2026-02-30T09:00');
     });
 });

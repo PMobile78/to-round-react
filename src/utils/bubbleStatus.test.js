@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getBubblesByStatus, isPlannedTask } from './bubbleStatus';
+import { canFinishSeries, getBubblesByStatus, isPlannedTask } from './bubbleStatus';
 
 const NOW = Date.parse('2026-06-15T12:00:00.000Z');
 const HOUR = 60 * 60 * 1000;
@@ -19,6 +19,18 @@ describe('isPlannedTask: an active task whose due is still ahead', () => {
     it('is not planned when done or deleted, even with a due ahead', () => {
         expect(isPlannedTask(task('a', 'done', NOW + HOUR), NOW)).toBe(false);
         expect(isPlannedTask(task('a', 'deleted', NOW + HOUR), NOW)).toBe(false);
+    });
+});
+
+describe('canFinishSeries: "Finish series" for an active repeating task (spec 4.1)', () => {
+    it('is offered for an active task with a repeat', () => {
+        expect(canFinishSeries({ status: 'active', repeat: { every: 1, unit: 'days' } })).toBe(true);
+    });
+
+    it('is not offered without a repeat or once the task is done or deleted', () => {
+        expect(canFinishSeries({ status: 'active', repeat: null })).toBe(false);
+        expect(canFinishSeries({ status: 'done', repeat: { every: 1, unit: 'days' } })).toBe(false);
+        expect(canFinishSeries({ status: 'deleted', repeat: { every: 1, unit: 'days' } })).toBe(false);
     });
 });
 
