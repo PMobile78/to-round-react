@@ -1,7 +1,8 @@
 # Перенос данных и резервная копия (контракт данных v2)
 
-> Здесь описан веб ветки `stage-0-data-contract-v2` (подплан 0.6). В проде до переезда
-> (подплан 0.7) работает v1 с её «Export JSON» и «Import JSON».
+> Прод работает на v2 с переезда ([подплан 0.7](superpowers/plans/2026-10-21-stage-0-7-move.md)): данные
+> владельца перенесены. Перенос при первом входе срабатывает у любого аккаунта, у которого есть
+> данные v1 и нет метки переноса.
 
 Спецификация: [разделы 9 и 10](superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md).
 
@@ -50,8 +51,8 @@
 Перед переездом (раздел 9.3, шаг 2) перенос прогоняется на эмуляторе с настоящим экспортом.
 Нужны Java 21+ и Firebase CLI 15+.
 
-1. В текущей версии прода — меню → «Export JSON»; файл положить в `/media/big_disk/Backup/to-round/`
-   (вне git).
+1. Взять экспорт v1 — файл «Export JSON» веба v1 (перед переездом его сохранили в
+   `/media/big_disk/Backup/to-round/`, вне git).
 2. `npm run start:emulator`, открыть <http://localhost:3000/to-round-react/> и зарегистрировать
    тестовый аккаунт (он живёт только в Auth-эмуляторе). Окна переноса пока нет: старых данных нет.
 3. Загрузить экспорт в старые коллекции этого аккаунта:
@@ -72,3 +73,32 @@
    читалось), не сравнивается.
 6. Сверить вручную 3–5 задач: в списке и в окне задачи.
 7. Остановить эмулятор: при следующем запуске его данные пусты. Повторять, пока всё не совпадёт.
+
+## Старые коллекции
+
+После переезда `user-bubbles/{uid}` (с подколлекцией `bubbles`), `user-tags/{uid}` и
+`user-fcm-tokens/{uid}/tokens` только читаются: их читает перенос, и на них держится откат на v1.
+Удаляет их владелец вручную, когда Android-приложение уже в работе (спецификация, раздел 9.3, шаг 6):
+
+1. Сделать свежую резервную копию (главное меню → «Экспорт резервной копии») и положить файл в
+   `/media/big_disk/Backup/to-round/`. После удаления откат на v1 невозможен: v1 не найдёт своих
+   данных.
+2. Удалить три коллекции вместе с подколлекциями — в Firebase Console (Firestore Database → Data →
+   меню коллекции → Delete collection) или из терминала; каждая команда переспрашивает:
+
+   ```bash
+   firebase firestore:delete user-bubbles --recursive --project todo-flutter-fb8bf
+   firebase firestore:delete user-tags --recursive --project todo-flutter-fb8bf
+   firebase firestore:delete user-fcm-tokens --recursive --project todo-flutter-fb8bf
+   ```
+
+   `users` и `user-mindmaps` не трогать.
+3. Отдельным изменением в `main` убрать старые коллекции из кода: их правила в `firestore.rules`
+   (без правил путь закрыт, как любой неизвестный) вместе с тестами правил, а индекс и
+   `fieldOverrides` группы `bubbles` — из `firestore.indexes.json`. Затем выкатить правила и
+   индексы; `--force` удаляет индексы, которых больше нет в файле:
+
+   ```bash
+   firebase deploy --only firestore:rules --project todo-flutter-fb8bf
+   firebase deploy --only firestore:indexes --force --project todo-flutter-fb8bf
+   ```

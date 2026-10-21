@@ -46,9 +46,9 @@ export const auth = getAuth(app);
 
 ## Модель данных Firestore
 
-Все пользовательские данные изолированы по `uid` владельца. В ветке этапа 0 веб работает
-только с форматом v2 ([спецификация](superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md),
-раздел 3); код — в `src/services/data/`.
+Все пользовательские данные изолированы по `uid` владельца. Веб работает только с форматом v2
+([спецификация](superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md), раздел 3); код —
+в `src/services/data/`.
 
 | Путь | Что лежит | Доступ |
 |---|---|---|
@@ -58,7 +58,7 @@ export const auth = getAuth(app);
 | `users/{uid}/devices/{deviceId}` | устройства (id установки Firebase) | только владелец |
 | `user-mindmaps/{uid}/{document=**}` | карты mindmap | только владелец |
 | `notification-sent/{key}` | ключи дедупликации | только Cloud Functions (admin SDK); в правилах `if false` |
-| `user-bubbles`, `user-tags`, `user-fcm-tokens` | данные v1 | владелец только читает: их читает перенос ([migration.md](migration.md)), они нужны для отката |
+| `user-bubbles`, `user-tags`, `user-fcm-tokens` | данные v1 | владелец только читает: их читает перенос ([migration.md](migration.md)), они нужны для отката; удаляются вручную ([migration.md](migration.md#старые-коллекции)) |
 
 Слой данных создаёт документы с `serverTimestamp()` и меняет их только частичными
 обновлениями с `updatedAt: serverTimestamp()`; `setDoc` поверх существующего документа правила
@@ -71,9 +71,8 @@ export const auth = getAuth(app);
 Правила — в [`firestore.rules`](../firestore.rules), путь к ним прописан в
 [`firebase.json`](../firebase.json) (`firestore.rules`). Держите их синхронными.
 
-В ветке этапа 0 правила уже описывают формат данных v2
-([спецификация](superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md), раздел 7);
-в прод они выходят вместе с переездом данных:
+Правила описывают формат данных v2
+([спецификация](superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md), раздел 7):
 
 - `users/{uid}` и подколлекции `tasks`, `categories`, `devices` — только владелец, с проверкой
   формата каждого документа: набор полей, типы, допустимые значения, `schemaVersion == 2`;
@@ -86,11 +85,15 @@ export const auth = getAuth(app);
 - `user-mindmaps` — владелец читает и пишет, как раньше;
 - `notification-sent` и все остальные пути закрыты.
 
-> ⚠️ Пока не прошёл переезд (подплан 0.7), из ветки `stage-0-data-contract-v2` не запускайте
-> `firebase deploy`: прод-веб v1 пишет в `user-bubbles`, `user-tags` и `user-fcm-tokens`, а эти
-> правила закрывают их для записи — изменения перестанут сохраняться. Срочные правки прод-функций
-> и индексов деплоятся из `main`. Технически деплой из ветки блокирует
-> `scripts/stage0-deploy-guard.js` (predeploy-хук в `firebase.json`); подплан 0.7 его удаляет.
+Правила и индексы выкатываются из `main`:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes --project todo-flutter-fb8bf
+```
+
+В `firestore.indexes.json` остаются индекс и `fieldOverrides` группы `bubbles` — их запрос
+функций v1 нужен откату, пока не удалены старые коллекции
+([migration.md](migration.md#старые-коллекции)).
 
 > ⚠️ Не используйте `allow read, write: if true` — это открывает базу всему интернету.
 > Коллекция `notification-sent` закрыта для клиента полностью: к ней обращается только
@@ -114,8 +117,10 @@ export const auth = getAuth(app);
 Firebase (`getId`). Известному устройству обновляется только токен, новое создаётся с
 включённым `notificationsEnabled`; без разрешения токен `null`. Если FCM не выдал токен из-за
 ошибки (например, нет сети), известное устройство сохраняет прежний токен, а новое
-регистрируется с `null`. При выходе документ устройства удаляется до `signOut`. Язык напоминаний — `settings.language` пользователя, у устройства его
-нет. Foreground-сообщения показываются через service worker, чтобы клик открывал нужный URL
+регистрируется с `null`. При выходе документ устройства удаляется до `signOut`. Без сети удаление
+ждёт не дольше 2 секунд, и выход продолжается: документ остаётся на сервере, пока этот же аккаунт
+снова не войдёт в этом браузере, и браузер может получать его напоминания (так было и в v1). Язык
+напоминаний — `settings.language` пользователя, у устройства его нет. Foreground-сообщения показываются через service worker, чтобы клик открывал нужный URL
 (`?taskId=<id>`; старые ссылки `?bubbleId=` тоже открываются). VAPID-ключ берётся из
 `config.firebase.vapidKey` (см. [environment.md](environment.md)).
 

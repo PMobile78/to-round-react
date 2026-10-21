@@ -100,11 +100,11 @@ Data contract v2 ([spec](docs/superpowers/specs/2026-10-14-stage-0-data-contract
 
 Clients write creates with `serverTimestamp()` and partial updates with `updatedAt: serverTimestamp()`; an existing document is never overwritten with `setDoc` (the rules reject it). Settings, tasks and categories live only in Firestore — localStorage keeps just the FAB position, the last open mind map and the mind map copies.
 
-On branch `stage-0-data-contract-v2` the web and the Cloud Functions use only `users/{uid}/…` (the functions query `collectionGroup('tasks')` by `status` + `nextNotifyAt`, only under the root path `users/{uid}/tasks`); production keeps v1 on `user-bubbles` until sub-plan 0.7, and `scripts/stage0-deploy-guard.js` blocks `firebase deploy` from this branch until then. See [docs/notifications.md](docs/notifications.md).
+The web and the Cloud Functions use only `users/{uid}/…` (the functions query `collectionGroup('tasks')` by `status` + `nextNotifyAt`, only under the root path `users/{uid}/tasks`). Production moved from v1 in sub-plan 0.7 ([plan](docs/superpowers/plans/2026-10-21-stage-0-7-move.md): the move and its rollback); the v1 collections stay read-only until the owner deletes them by hand ([docs/migration.md](docs/migration.md)). See [docs/notifications.md](docs/notifications.md).
 
 ### Cloud Functions
 
-`functions/index.js` exports **five** functions (region `europe-west1`; data contract v2, in production only after sub-plan 0.7):
+`functions/index.js` exports **five** functions (region `europe-west1`; data contract v2):
 - `scheduleNotifications` — `onSchedule` every minute (`* * * * *`); active tasks with `nextNotifyAt <= now` get FCM **reminder** / **overdue** on the user's devices with `notificationsEnabled` and a token, in `settings.language`; dedups via `notification-sent`; an undelivered notification is retried for 10 minutes (#93)
 - `onTaskWritten` — `onDocumentWritten` on `users/{uid}/tasks/{taskId}`; keeps `nextNotifyAt`, `overdueAt` (silent overdue) and `pulseMuted` in step with the task's schedule
 - `onCategoryDeleted` — `onDocumentDeleted` on `users/{uid}/categories/{categoryId}`; sets `categoryId = null` on that category's tasks unless the category exists again

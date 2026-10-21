@@ -1,10 +1,7 @@
 {
     "firestore": {
         "rules": "firestore.rules",
-        "indexes": "firestore.indexes.json",
-        "predeploy": [
-            "node \"$PROJECT_DIR/scripts/stage0-deploy-guard.js\""
-        ]
+        "indexes": "firestore.indexes.json"
     },
     "functions": [
         {
@@ -15,9 +12,6 @@
                 ".git",
                 "firestore-debug.log",
                 "test"
-            ],
-            "predeploy": [
-                "node \"$PROJECT_DIR/scripts/stage0-deploy-guard.js\""
             ]
         }
     ],
