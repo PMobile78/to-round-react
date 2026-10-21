@@ -2,6 +2,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import uk from '../locales/uk/translation.json';
 import MigrationDialog from './MigrationDialog';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -79,5 +80,11 @@ describe('MigrationDialog: the preview of the move (spec 9.1)', () => {
         expect(handlers.onRetry).toHaveBeenCalledTimes(1);
         act(() => button('migration.postpone').click());
         expect(handlers.onPostpone).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('MigrationDialog: the Ukrainian texts', () => {
+    it('names the due date the way the task window does («Термін виконання»)', () => {
+        expect(uk.migration.changed).toMatch(new RegExp(`^${uk.bubbles.dueDateLabel}, `));
     });
 });
