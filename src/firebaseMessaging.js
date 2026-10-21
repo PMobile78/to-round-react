@@ -1,6 +1,6 @@
 import { getMessaging, getToken, onMessage, isSupported, deleteToken } from 'firebase/messaging';
 import { getId, getInstallations } from 'firebase/installations';
-import app, { db } from './firebase';
+import app, { auth, db } from './firebase';
 import { registerDevice, unregisterDevice } from './services/data/devices';
 import { config } from './utils/config';
 import logger from './utils/logger';
@@ -8,6 +8,14 @@ import logger from './utils/logger';
 // VAPID Key from configuration
 const VAPID_KEY = config.firebase.vapidKey;
 let foregroundMessageUnsubscribe = null;
+
+// Right after a sign-in another open tab of the app can still answer for this one with the
+// previous account (the Firestore cache shared by the tabs) until it wakes up, which a tab in the
+// background does about once a minute, and the rules refuse until then: a refused registration
+// tries again every 3 seconds for a minute and a half.
+const REGISTER_AGAIN_MS = 3000;
+const REGISTER_AGAIN_TIMES = 30;
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function setupForegroundMessageListener(messaging) {
     if (foregroundMessageUnsubscribe) return;
@@ -54,7 +62,8 @@ async function messagingToken() {
 /**
  * Registration after sign-in (spec 3.3): the permission is asked for, then this device is
  * written with its FCM token, or with null without permission or push support. When FCM fails
- * to give a token, a registered device keeps the one it has. Errors are only logged.
+ * to give a token, a registered device keeps the one it has. A registration refused right after
+ * the sign-in is tried again while the account stays signed in. Errors are only logged.
  */
 export async function registerThisDevice(uid) {
     // Stays undefined when FCM fails: that says nothing about the token the device already has.
@@ -65,7 +74,18 @@ export async function registerThisDevice(uid) {
         logger.error('[FCM] token error:', e);
     }
     try {
-        await registerDevice(db, uid, await thisDeviceId(), fcmToken);
+        const deviceId = await thisDeviceId();
+        for (let again = 0; ; again += 1) {
+            try {
+                await registerDevice(db, uid, deviceId, fcmToken);
+                return;
+            } catch (e) {
+                if (!e || e.code !== 'permission-denied' || again === REGISTER_AGAIN_TIMES) throw e;
+            }
+            await pause(REGISTER_AGAIN_MS);
+            // Signed out, or another account signed in: this registration stops.
+            if (auth.currentUser?.uid !== uid) return;
+        }
     } catch (e) {
         logger.error('[FCM] device registration error:', e);
     }

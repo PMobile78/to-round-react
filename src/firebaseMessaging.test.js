@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+    auth: { currentUser: null },
     deleteToken: vi.fn(),
     getId: vi.fn(),
     getInstallations: vi.fn(() => 'installations'),
@@ -28,11 +29,12 @@ vi.mock('./services/data/devices', () => ({
     registerDevice: mocks.registerDevice,
     unregisterDevice: mocks.unregisterDevice,
 }));
-vi.mock('./firebase', () => ({ default: 'app', db: 'db' }));
+vi.mock('./firebase', () => ({ default: 'app', db: 'db', auth: mocks.auth }));
 vi.mock('./utils/config', () => ({ config: { firebase: { vapidKey: 'vapid-key' } } }));
 vi.mock('./utils/logger', () => ({ default: { error: vi.fn() } }));
 
 import { registerThisDevice, teardownForegroundMessageListener, unregisterThisDevice } from './firebaseMessaging';
+import logger from './utils/logger';
 
 describe('firebaseMessaging: this device in users/{uid}/devices (spec 3.3)', () => {
     let activeHandlers;
@@ -55,6 +57,7 @@ describe('firebaseMessaging: this device in users/{uid}/devices (spec 3.3)', () 
             get permission() { return permission; },
         });
 
+        mocks.auth.currentUser = { uid: 'user-1' };
         mocks.isSupported.mockResolvedValue(true);
         mocks.getId.mockResolvedValue('fid-1');
         mocks.getToken.mockResolvedValue('token-1');
@@ -69,6 +72,7 @@ describe('firebaseMessaging: this device in users/{uid}/devices (spec 3.3)', () 
     });
 
     afterEach(() => {
+        vi.useRealTimers();
         teardownForegroundMessageListener();
         vi.unstubAllGlobals();
         vi.clearAllMocks();
@@ -133,5 +137,64 @@ describe('firebaseMessaging: this device in users/{uid}/devices (spec 3.3)', () 
 
         expect(mocks.onMessage).toHaveBeenCalledTimes(2);
         expect(activeHandlers.size).toBe(1);
+    });
+
+    // Right after a sign-in another open tab of the app can still answer for this one with the
+    // previous account (the Firestore cache shared by the tabs) until it wakes up, about once a
+    // minute in the background, and the rules refuse the registration until then.
+    const refusal = () => Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
+
+    it('registers this device once the refusals right after sign-in are over', async () => {
+        vi.useFakeTimers();
+        mocks.registerDevice.mockRejectedValueOnce(refusal()).mockRejectedValueOnce(refusal());
+        registerThisDevice('user-1');
+        await vi.advanceTimersByTimeAsync(6000);
+        expect(mocks.registerDevice).toHaveBeenCalledTimes(3);
+        expect(mocks.registerDevice).toHaveBeenLastCalledWith('db', 'user-1', 'fid-1', 'token-1');
+        expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('says the device could not be registered when it is still refused after a minute and a half', async () => {
+        vi.useFakeTimers();
+        mocks.registerDevice.mockRejectedValue(refusal());
+        registerThisDevice('user-1');
+        await vi.advanceTimersByTimeAsync(87000);
+        expect(logger.error).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(mocks.registerDevice).toHaveBeenCalledTimes(31);
+        expect(logger.error).toHaveBeenCalledWith('[FCM] device registration error:', expect.objectContaining({ code: 'permission-denied' }));
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(mocks.registerDevice).toHaveBeenCalledTimes(31);
+    });
+
+    it('stops trying again for an account that signed out', async () => {
+        vi.useFakeTimers();
+        mocks.registerDevice.mockRejectedValue(refusal());
+        registerThisDevice('user-1');
+        mocks.auth.currentUser = null;
+        await vi.advanceTimersByTimeAsync(90000);
+        expect(mocks.registerDevice).toHaveBeenCalledTimes(1);
+        expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('stops trying again for the previous account when another one signs in', async () => {
+        vi.useFakeTimers();
+        mocks.registerDevice.mockImplementation((db, uid) => (uid === 'user-1' ? Promise.reject(refusal()) : Promise.resolve(true)));
+        registerThisDevice('user-1');
+        mocks.auth.currentUser = { uid: 'user-2' };
+        registerThisDevice('user-2');
+        await vi.advanceTimersByTimeAsync(90000);
+        expect(mocks.registerDevice.mock.calls.filter(([, uid]) => uid === 'user-1')).toHaveLength(1);
+        expect(mocks.registerDevice).toHaveBeenLastCalledWith('db', 'user-2', 'fid-1', 'token-1');
+        expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('logs any other error at once and does not try again', async () => {
+        vi.useFakeTimers();
+        mocks.registerDevice.mockRejectedValueOnce(Object.assign(new Error('Failed to get document because the client is offline.'), { code: 'unavailable' }));
+        registerThisDevice('user-1');
+        await vi.advanceTimersByTimeAsync(90000);
+        expect(mocks.registerDevice).toHaveBeenCalledTimes(1);
+        expect(logger.error).toHaveBeenCalledWith('[FCM] device registration error:', expect.objectContaining({ code: 'unavailable' }));
     });
 });
