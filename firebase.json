@@ -10,6 +10,12 @@
         {
             "source": "functions",
             "codebase": "default",
+            "ignore": [
+                "node_modules",
+                ".git",
+                "firestore-debug.log",
+                "test"
+            ],
             "predeploy": [
                 "node \"$PROJECT_DIR/scripts/stage0-deploy-guard.js\""
             ]
