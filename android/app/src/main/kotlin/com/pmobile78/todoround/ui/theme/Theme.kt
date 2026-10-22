@@ -1,4 +1,4 @@
-package com.pmobile78.toround.ui.theme
+package com.pmobile78.todoround.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -92,6 +92,6 @@ private val DarkColors = darkColorScheme(
 
 /** Material 3 in the colours of To-Round; Android's wallpaper colours (Material You) are not used. */
 @Composable
-fun ToRoundTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun ToDoRoundTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = if (darkTheme) DarkColors else LightColors, content = content)
 }

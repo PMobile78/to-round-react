@@ -1,14 +1,14 @@
-package com.pmobile78.toround.core.model
+package com.pmobile78.todoround.core.model
 
-import com.pmobile78.toround.core.Contract
-import com.pmobile78.toround.core.contract.Design
-import com.pmobile78.toround.core.contract.Language
-import com.pmobile78.toround.core.contract.MainView
-import com.pmobile78.toround.core.contract.RepeatUnit
-import com.pmobile78.toround.core.contract.SortField
-import com.pmobile78.toround.core.contract.SortOrder
-import com.pmobile78.toround.core.contract.TaskStatus
-import com.pmobile78.toround.core.contract.ThemeMode
+import com.pmobile78.todoround.core.Contract
+import com.pmobile78.todoround.core.contract.Design
+import com.pmobile78.todoround.core.contract.Language
+import com.pmobile78.todoround.core.contract.MainView
+import com.pmobile78.todoround.core.contract.RepeatUnit
+import com.pmobile78.todoround.core.contract.SortField
+import com.pmobile78.todoround.core.contract.SortOrder
+import com.pmobile78.todoround.core.contract.TaskStatus
+import com.pmobile78.todoround.core.contract.ThemeMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test

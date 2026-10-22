@@ -1,9 +1,9 @@
-package com.pmobile78.toround.core.model
+package com.pmobile78.todoround.core.model
 
-import com.pmobile78.toround.core.contract.RepeatUnit
-import com.pmobile78.toround.core.contract.TaskStatus
-import com.pmobile78.toround.core.contract.fromWire
-import com.pmobile78.toround.core.contract.validateTask
+import com.pmobile78.todoround.core.contract.RepeatUnit
+import com.pmobile78.todoround.core.contract.TaskStatus
+import com.pmobile78.todoround.core.contract.fromWire
+import com.pmobile78.todoround.core.contract.validateTask
 import java.time.Instant
 
 /** The due of a task: wall-clock [local] ("YYYY-MM-DDTHH:mm") understood in zone [tz] (spec 4.2). */

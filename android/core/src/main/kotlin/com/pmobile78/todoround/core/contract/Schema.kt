@@ -1,4 +1,4 @@
-package com.pmobile78.toround.core.contract
+package com.pmobile78.todoround.core.contract
 
 /*
  * Data contract v2: shared constants, limits and the values of its enumerations.

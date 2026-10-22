@@ -1,4 +1,4 @@
-package com.pmobile78.toround.core.contract
+package com.pmobile78.todoround.core.contract
 
 import java.time.Instant
 import java.time.format.DateTimeParseException

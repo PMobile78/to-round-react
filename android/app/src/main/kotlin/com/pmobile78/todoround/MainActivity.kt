@@ -1,4 +1,4 @@
-package com.pmobile78.toround
+package com.pmobile78.todoround
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -23,14 +23,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.pmobile78.toround.ui.theme.ToRoundTheme
+import com.pmobile78.todoround.ui.theme.ToDoRoundTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ToRoundTheme {
+            ToDoRoundTheme {
                 FoundationScreen()
             }
         }
@@ -73,7 +73,7 @@ fun FoundationScreen() {
 @Preview(showBackground = true)
 @Composable
 private fun FoundationScreenPreview() {
-    ToRoundTheme {
+    ToDoRoundTheme {
         FoundationScreen()
     }
 }

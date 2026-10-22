@@ -20,7 +20,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "to-round-android"
+rootProject.name = "todo-round-android"
 
 include(":app")
 include(":core")

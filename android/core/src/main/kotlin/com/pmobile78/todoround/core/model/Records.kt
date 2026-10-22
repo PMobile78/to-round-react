@@ -1,4 +1,4 @@
-package com.pmobile78.toround.core.model
+package com.pmobile78.todoround.core.model
 
 import java.time.Instant
 

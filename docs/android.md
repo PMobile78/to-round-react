@@ -76,16 +76,16 @@ android/gradlew -p android :app:assembleDebug
 android/gradlew -p android --stop
 emulator -avd ToRound_API37 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect &
 adb -e wait-for-device; until [ "$(adb -e shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; do sleep 5; done
-adb -e uninstall com.pmobile78.toround
+adb -e uninstall com.pmobile78.todoround
 adb -e install android/app/build/outputs/apk/debug/app-debug.apk
-adb -e shell am start -n com.pmobile78.toround/.MainActivity
+adb -e shell am start -n com.pmobile78.todoround/.MainActivity
 mkdir -p /media/big_disk/android/work && adb -e exec-out screencap -p > /media/big_disk/android/work/screen.png
 adb -e emu kill
 ```
 
 - Эмулятор загружается около двух минут. Под нагрузкой система эмулятора может показать окно «… isn't responding» (службы Google, лончер или интерфейс системы) — нажать «Wait»; к приложению это не относится.
 - `-no-snapshot` означает полную загрузку, а не чистый эмулятор: поставленные приложения и настройки сохраняются между запусками. Поэтому перед установкой прежнее приложение удаляют — сборка с другим ключом поверх не встанет. Совсем чистый старт — флаг `-wipe-data`.
-- Тёмная тема: `adb -e shell cmd uimode night yes` (вернуть — `night no`); украинский язык приложения: `adb -e shell cmd locale set-app-locales com.pmobile78.toround --locales uk-UA`.
+- Тёмная тема: `adb -e shell cmd uimode night yes` (вернуть — `night no`); украинский язык приложения: `adb -e shell cmd locale set-app-locales com.pmobile78.todoround --locales uk-UA`.
 
 ## Релизный ключ
 
@@ -95,17 +95,17 @@ adb -e emu kill
 
    ```bash
    mkdir -p /media/big_disk/android/keys
-   /media/big_disk/android/android-studio/jbr/bin/keytool -genkeypair -keystore /media/big_disk/android/keys/toround-release.jks -storetype PKCS12 -alias toround -keyalg RSA -keysize 4096 -validity 10000
+   /media/big_disk/android/android-studio/jbr/bin/keytool -genkeypair -keystore /media/big_disk/android/keys/todoround-release.jks -storetype PKCS12 -alias todoround -keyalg RSA -keysize 4096 -validity 10000
    ```
 
 2. Сохранить файл ключа и пароль в надёжном месте (например, бэкап на другом диске и менеджер паролей). Без ключа нельзя выпустить обновление приложения, подписанного им.
 3. Дописать в `~/.gradle/gradle.properties` (после этого файл не показывать целиком — в нём пароли):
 
    ```properties
-   toround.release.storeFile=/media/big_disk/android/keys/toround-release.jks
-   toround.release.storePassword=<пароль>
-   toround.release.keyAlias=toround
-   toround.release.keyPassword=<пароль>
+   todoround.release.storeFile=/media/big_disk/android/keys/todoround-release.jks
+   todoround.release.storePassword=<пароль>
+   todoround.release.keyAlias=todoround
+   todoround.release.keyPassword=<пароль>
    ```
 
 4. Проверить: `android/gradlew -p android :app:assembleRelease` даёт `app-release.apk`, а `apksigner verify --print-certs` (из `/media/big_disk/android/sdk/build-tools/<версия>/`) показывает сертификат ключа.

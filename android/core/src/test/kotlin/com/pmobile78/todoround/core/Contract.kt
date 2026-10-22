@@ -1,4 +1,4 @@
-package com.pmobile78.toround.core
+package com.pmobile78.todoround.core
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -16,7 +16,7 @@ import java.io.File
  * to Android: maps, lists, String, Boolean, Long for whole numbers, Double otherwise, and null.
  */
 object Contract {
-    private val dir = File(System.getProperty("toround.contractDir") ?: error("toround.contractDir is not set"))
+    private val dir = File(System.getProperty("todoround.contractDir") ?: error("todoround.contractDir is not set"))
 
     /** The whole file, e.g. read("palette.json"). */
     fun read(path: String): Any? = plain(Json.parseToJsonElement(File(dir, path).readText()))

@@ -1,6 +1,6 @@
-package com.pmobile78.toround.core.model
+package com.pmobile78.todoround.core.model
 
-import com.pmobile78.toround.core.contract.validateCategory
+import com.pmobile78.todoround.core.contract.validateCategory
 
 /** A category of users/{uid}/categories (spec 3.2): [color] is one of the palette, [order] ascends. */
 data class Category(val id: String, val name: String, val color: String, val order: Double)

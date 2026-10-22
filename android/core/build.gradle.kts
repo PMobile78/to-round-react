@@ -32,7 +32,7 @@ val contractDir = rootDir.resolve("../contract").normalize()
 
 tasks.test {
     useJUnitPlatform()
-    systemProperty("toround.contractDir", contractDir.path)
+    systemProperty("todoround.contractDir", contractDir.path)
     inputs.dir(contractDir).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("contract")
     testLogging {
         events("failed")

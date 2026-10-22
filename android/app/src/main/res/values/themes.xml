@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The window behind Compose; the screens take their colours from ToRoundTheme. -->
-    <style name="Theme.ToRound" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- The window behind Compose; the screens take their colours from ToDoRoundTheme. -->
+    <style name="Theme.ToDoRound" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
     </style>
 </resources>

@@ -12,14 +12,14 @@ val appName: String = rootDir.resolve("../src/appName.js").readText()
 // The release key stays outside the repository: its path and passwords come from Gradle
 // properties, normally ~/.gradle/gradle.properties (docs/android.md). Without them the release
 // build is left unsigned.
-val releaseStoreFile: String? = providers.gradleProperty("toround.release.storeFile").orNull
+val releaseStoreFile: String? = providers.gradleProperty("todoround.release.storeFile").orNull
 
 android {
-    namespace = "com.pmobile78.toround"
+    namespace = "com.pmobile78.todoround"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.pmobile78.toround"
+        applicationId = "com.pmobile78.todoround"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
@@ -31,9 +31,9 @@ android {
         if (releaseStoreFile != null) {
             create("release") {
                 storeFile = file(releaseStoreFile)
-                storePassword = providers.gradleProperty("toround.release.storePassword").get()
-                keyAlias = providers.gradleProperty("toround.release.keyAlias").get()
-                keyPassword = providers.gradleProperty("toround.release.keyPassword").get()
+                storePassword = providers.gradleProperty("todoround.release.storePassword").get()
+                keyAlias = providers.gradleProperty("todoround.release.keyAlias").get()
+                keyPassword = providers.gradleProperty("todoround.release.keyPassword").get()
             }
         }
     }

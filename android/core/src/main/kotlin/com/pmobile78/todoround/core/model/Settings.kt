@@ -1,13 +1,13 @@
-package com.pmobile78.toround.core.model
+package com.pmobile78.todoround.core.model
 
-import com.pmobile78.toround.core.contract.Design
-import com.pmobile78.toround.core.contract.Language
-import com.pmobile78.toround.core.contract.MainView
-import com.pmobile78.toround.core.contract.SortField
-import com.pmobile78.toround.core.contract.SortOrder
-import com.pmobile78.toround.core.contract.ThemeMode
-import com.pmobile78.toround.core.contract.fromWire
-import com.pmobile78.toround.core.contract.validateSettings
+import com.pmobile78.todoround.core.contract.Design
+import com.pmobile78.todoround.core.contract.Language
+import com.pmobile78.todoround.core.contract.MainView
+import com.pmobile78.todoround.core.contract.SortField
+import com.pmobile78.todoround.core.contract.SortOrder
+import com.pmobile78.todoround.core.contract.ThemeMode
+import com.pmobile78.todoround.core.contract.fromWire
+import com.pmobile78.todoround.core.contract.validateSettings
 
 /** Which tasks the bubbles show; categoryIds null means every category. */
 data class BubbleFilter(val categoryIds: List<String>?, val showUncategorized: Boolean, val plannedOnly: Boolean)

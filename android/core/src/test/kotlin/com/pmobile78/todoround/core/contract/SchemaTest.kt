@@ -1,6 +1,6 @@
-package com.pmobile78.toround.core.contract
+package com.pmobile78.todoround.core.contract
 
-import com.pmobile78.toround.core.Contract
+import com.pmobile78.todoround.core.Contract
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
