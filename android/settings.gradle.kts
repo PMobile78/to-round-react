@@ -22,4 +22,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "to-round-android"
 
+include(":app")
 include(":core")

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The bubbles of ic_launcher_foreground as outlines, for icons tinted by the system theme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M58,52.5a13.7,13.7 0,1 0,27.4 0a13.7,13.7 0,1 0,-27.4 0"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FF000000" />
+    <path
+        android:pathData="M26.3,44.9a18.1,18.1 0,1 0,36.2 0a18.1,18.1 0,1 0,-36.2 0"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FF000000" />
+    <path
+        android:pathData="M41.2,72.8a12.7,12.7 0,1 0,25.4 0a12.7,12.7 0,1 0,-25.4 0"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FF000000" />
+</vector>

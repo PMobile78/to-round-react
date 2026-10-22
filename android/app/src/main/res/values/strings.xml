@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- app_name comes from src/appName.js (app/build.gradle.kts). -->
+<resources>
+    <string name="foundation_ready">The app foundation is ready. Sign-in comes in the next update.</string>
+</resources>
