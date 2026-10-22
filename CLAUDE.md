@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Human-facing documentation lives in [`docs/`](docs/README.md) (setup, Firebase, notifications, deployment, i18n, migration and backup).
+Human-facing documentation lives in [`docs/`](docs/README.md) (setup, Firebase, notifications, deployment, i18n, migration and backup, the Android app).
 
 ## Commands
 
@@ -22,6 +22,11 @@ npm run deploy         # build + push to gh-pages branch
 npm run version:patch
 npm run version:minor
 npm run version:major
+
+# Android app (android/; Gradle runs on Android Studio's JBR, see docs/android.md)
+android/gradlew -p android check              # core contract tests on contract/ + Android Lint
+android/gradlew -p android :core:test         # contract tests only
+android/gradlew -p android :app:assembleDebug # debug APK
 ```
 
 **Install:** always use `npm ci --legacy-peer-deps` — there are peer dependency conflicts between packages.
@@ -84,6 +89,14 @@ functions/
   locales/                   # notification text: notifications.en.json, notifications.uk.json
 ```
 
+### Android app
+
+`android/` is the native app (Kotlin, Jetpack Compose, Material 3; [roadmap](docs/superpowers/specs/2026-10-14-android-roadmap.md), stage 1 [spec](docs/superpowers/specs/2026-10-22-stage-1-android-foundation-design.md)). It uses the same Firebase project and data contract v2 as the web. Two Gradle modules: `core` — plain Kotlin, no Android or Firebase: the contract's schema, time zones, record validation and models, with JUnit tests on `contract/`; `app` — the Android application. Android tests are not part of `npm run verify` or CI. Setup, phone and release key: [docs/android.md](docs/android.md).
+
+- Never print `~/.gradle/gradle.properties` whole (`cat`, `less`, an unanchored `grep`): it holds the release key passwords. Read one non-secret line at a time, e.g. `grep '^org.gradle.java.home' ~/.gradle/gradle.properties`.
+- `core` compiles against the JDK but runs on Android 8+: `-Xjdk-release=17` keeps out Java 18+ methods, not the Java 9–17 ones Android 8 lacks (`List.of` …). Use `java.time` and the Kotlin standard library there.
+- With a phone and the emulator both connected, address one: `adb -e` (the emulator), `adb -d` (the USB phone).
+
 ### Firestore data model
 
 Data contract v2 ([spec](docs/superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md), section 3); the rules check every document's shape (`firestore.rules`).
@@ -131,4 +144,4 @@ Project work is tracked in [GitHub Issues](https://github.com/PMobile78/to-round
 - `HtmlRenderer.jsx` uses DOMPurify — any HTML rendering must go through it
 - `firestore.rules` is now in the repo and must be kept in sync with `firebase.json` (`"firestore": { "rules": "firestore.rules" }`)
 - Window/panel/header backgrounds come from the MUI theme (`hooks/useThemeMode.js`), never hardcoded hex/rgba. Wrap a standalone panel in `<Paper>` with no explicit `backgroundColor` (e.g. `TasksCategoriesPanel`, list-as-main-screen `Paper elevation={16}`); a window header (`DialogTitle` / header `Box`) must **not** set its own `backgroundColor` — it inherits the window's Paper background. Header text uses `text.primary`, not `'white'`. Dialog body bg comes from `getDialogPaperStyles()` (`rgba(...,0.95)`).
-- The app's display name lives only in `src/appName.js` (`APP_NAME`): the UI imports it, and `appNamePlugin` in `vite.config.js` fills the `%APP_NAME%` placeholders in `index.html` and generates `site.webmanifest` (there is no static `public/site.webmanifest`). Never hardcode the name — `src/appName.test.js` fails on a literal. The name in Firebase Auth emails is the Firebase Console *Public-facing name* (Project settings → General) and is changed there by hand.
+- The app's display name lives only in `src/appName.js` (`APP_NAME`): the UI imports it, and `appNamePlugin` in `vite.config.js` fills the `%APP_NAME%` placeholders in `index.html` and generates `site.webmanifest` (there is no static `public/site.webmanifest`); the Android build reads it too (`android/app/build.gradle.kts`). Never hardcode the name — `src/appName.test.js` fails on a literal. The name in Firebase Auth emails is the Firebase Console *Public-facing name* (Project settings → General) and is changed there by hand.

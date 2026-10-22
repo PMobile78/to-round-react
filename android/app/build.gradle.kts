@@ -9,6 +9,11 @@ val appName: String = rootDir.resolve("../src/appName.js").readText()
     ?.groupValues?.get(1)
     ?: error("APP_NAME not found in src/appName.js")
 
+// The release key stays outside the repository: its path and passwords come from Gradle
+// properties, normally ~/.gradle/gradle.properties (docs/android.md). Without them the release
+// build is left unsigned.
+val releaseStoreFile: String? = providers.gradleProperty("toround.release.storeFile").orNull
+
 android {
     namespace = "com.pmobile78.toround"
     compileSdk = 37
@@ -22,11 +27,23 @@ android {
         resValue("string", "app_name", appName)
     }
 
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = providers.gradleProperty("toround.release.storePassword").get()
+                keyAlias = providers.gradleProperty("toround.release.keyAlias").get()
+                keyPassword = providers.gradleProperty("toround.release.keyPassword").get()
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

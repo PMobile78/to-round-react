@@ -10,6 +10,7 @@
 | [firebase.md](firebase.md) | Firebase: аутентификация, модель данных Firestore, правила доступа |
 | [deployment.md](deployment.md) | Ручной деплой на GitHub Pages через GitHub Actions и управление версиями |
 | [favicon.md](favicon.md) | Набор иконок и web-манифест |
+| [android.md](android.md) | Android-приложение: сборка, телефон и эмулятор, релизный ключ |
 
 ## Как устроены фичи
 
