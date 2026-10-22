@@ -1,8 +1,8 @@
 # Уведомления: напоминания и просрочка (контракт данных v2)
 
-> Здесь описаны Cloud Functions ветки `stage-0-data-contract-v2`. В проде до переезда
-> (подплан 0.7) работают функции v1 на `user-bubbles`; их описание — в версии этого файла
-> в `main` (`git show main:docs/notifications.md`).
+> Функции v1 (`scheduleDueDateNotifications` и `maintainNextNotifyAt` на `user-bubbles`) удалены
+> при переезде прода на v2 ([подплан 0.7](superpowers/plans/2026-10-21-stage-0-7-move.md)); их описание —
+> `git show 6f4df41:docs/notifications.md`.
 
 Спецификация: [разделы 4.4 и 6](superpowers/specs/2026-10-14-stage-0-data-contract-v2-design.md).
 
@@ -175,11 +175,16 @@
 
 ## Эксплуатация
 
-> ⚠️ Из ветки `stage-0-data-contract-v2` до переезда (подплан 0.7) `firebase deploy` не
-> запускать: правила Firestore и функции там уже под формат v2 и сломают прод-веб v1.
-> Технически деплой блокирует `scripts/stage0-deploy-guard.js` (predeploy-хук в `firebase.json`),
-> подплан 0.7 его удаляет. Срочные правки прод-функций — из `main`. Порядок выкатки v2 описывает
-> подплан 0.7; при деплое функций под нагрузкой нужен `FUNCTIONS_DISCOVERY_TIMEOUT=60`.
+Функции выкатываются из `main`:
+
+```bash
+FUNCTIONS_DISCOVERY_TIMEOUT=60 firebase deploy --only functions --project todo-flutter-fb8bf
+```
+
+Под нагрузкой CLI не успевает за 10 секунд прочитать описание функций — отсюда
+`FUNCTIONS_DISCOVERY_TIMEOUT=60` (секунды). Функцию, которой больше нет в коде, CLI удаляет только
+с `--force` или после ответа «да»; иначе старая продолжает работать. Тесты (`test/`) и
+`firestore-debug.log` в архив функций не попадают (`ignore` в `firebase.json`).
 
 ### Диагностика
 
