@@ -40,6 +40,8 @@
 
 ### Этап 1 — основа Android-приложения
 
+Спецификация: [2026-10-22-stage-1-android-foundation-design.md](2026-10-22-stage-1-android-foundation-design.md).
+
 - Проект `android/`: Gradle, Kotlin, Compose, Material 3, тема в цветах To-Round, ресурсы en/uk.
 - Подпись: debug-ключ для разработки, ключ release хранится вне git.
 - Firebase: вход, регистрация, сброс пароля, выход; Firestore с офлайн-кэшем.
