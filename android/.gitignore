@@ -1,0 +1,17 @@
+# Gradle and Kotlin build state
+.gradle/
+.kotlin/
+build/
+local.properties
+
+# Android Studio
+.idea/
+*.iml
+captures/
+
+# Firebase settings of this machine (docs/android.md)
+app/google-services.json
+
+# Signing keys live outside the repository (docs/android.md)
+*.jks
+*.keystore
