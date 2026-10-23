@@ -1,6 +1,8 @@
 package com.pmobile78.todoround
 
+import android.os.ParcelFileDescriptor
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.MetadataChanges
@@ -51,6 +53,22 @@ suspend fun DocumentReference.fromServer(): DocumentSnapshot {
     } finally {
         registration.remove()
     }
+}
+
+/**
+ * A screenshot of the device as /data/local/tmp/todoround-screens/[name].png, which
+ * android/device-tests.sh brings back to android/app/build/device-screens. The checks before it
+ * prove the tree of the screen, not the picture on the display: the screenshot is looked at.
+ */
+fun screenshot(name: String) {
+    shell("mkdir -p /data/local/tmp/todoround-screens")
+    shell("screencap -p /data/local/tmp/todoround-screens/$name.png")
+}
+
+/** Runs [command] as the shell of the device and waits for it to end. */
+private fun shell(command: String) {
+    val output = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command)
+    ParcelFileDescriptor.AutoCloseInputStream(output).use { it.readBytes() }
 }
 
 /** The emails the Auth emulator would have sent: its emulator/v1/…/oobCodes, newest last. */

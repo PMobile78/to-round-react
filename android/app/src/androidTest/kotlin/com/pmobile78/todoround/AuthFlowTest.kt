@@ -7,7 +7,6 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
@@ -97,8 +96,8 @@ class AuthFlowTest {
         type("password", "secret-1")
         type("confirm", "secret-1")
         press("submit")
-        waitFor("home")
-        compose.onNodeWithText(text(R.string.home_signed_in_as, email)).assertExists()
+        // A new account has no tasks yet, and the list says so.
+        waitFor("empty")
 
         signOutOnScreen()
         signInOnScreen(email, "secret-1")

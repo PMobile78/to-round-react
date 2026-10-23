@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
@@ -35,9 +36,25 @@ sealed interface Session {
 
     data object SignedOut : Session
 
-    /** [data] is null until the settings, the tasks and the categories have all been read. */
-    data class SignedIn(val email: String, val data: UserData?) : Session
+    /**
+     * [data] is null until the settings, the tasks and the categories have all been read, and
+     * when they could not be: then [failed], and they no longer change.
+     */
+    data class SignedIn(val email: String, val data: UserData?, val failed: Boolean = false) : Session
 }
+
+/**
+ * The session of the user [email] over the flow of their [data]: loading first, then the data.
+ * A failure of the flow, a refusal of the rules say, stays on the screen as one (spec 7) instead
+ * of loading for ever.
+ */
+fun signedInSession(email: String, data: Flow<UserData?>): Flow<Session.SignedIn> =
+    data.map { Session.SignedIn(email, it) }
+        .onStart { emit(Session.SignedIn(email, null)) }
+        .catch {
+            Log.w("AppViewModel", "the data of the account could not be read", it)
+            emit(Session.SignedIn(email, null, failed = true))
+        }
 
 /** The session of the app: who is signed in and their data, live (spec 6). */
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -62,13 +79,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // A new account gets the language of the sign-in screen (spec 8).
     private fun signedIn(user: FirebaseUser): Flow<Session> =
-        combine(
-            settings.settings(user.uid, appLanguage().wire),
-            tasks.tasks(user.uid),
-            categories.categories(user.uid),
-        ) { settings, tasks, categories ->
-            Session.SignedIn(user.email.orEmpty(), settings?.let { UserData(it, tasks, categories) })
-        }
-            .onStart { emit(Session.SignedIn(user.email.orEmpty(), null)) }
-            .catch { Log.w("AppViewModel", "the data of the account could not be read", it) }
+        signedInSession(
+            user.email.orEmpty(),
+            combine(
+                settings.settings(user.uid, appLanguage().wire),
+                tasks.tasks(user.uid),
+                categories.categories(user.uid),
+            ) { settings, tasks, categories -> settings?.let { UserData(it, tasks, categories) } },
+        )
 }
