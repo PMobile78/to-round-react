@@ -15,9 +15,20 @@ fun emulatorBackend(): Backend {
     return ApplicationProvider.getApplicationContext<ToDoRoundApp>().backend
 }
 
+/** A second client of the same emulators, which the tests use as the web: its changes reach the app through the server. */
+fun webBackend(): Backend = web
+
+private val web: Backend by lazy { Backend.emulators(ApplicationProvider.getApplicationContext(), name = "web") }
+
+/** A fresh address for an account on the Auth emulator. */
+fun newEmail(): String = "user-${UUID.randomUUID()}@example.com"
+
+/** A new account [email] with the password "secret-1", signed in on this client; returns its uid. */
+suspend fun Backend.signUp(email: String): String =
+    auth.createUserWithEmailAndPassword(email, "secret-1").await().user!!.uid
+
 /** A fresh account on the Auth emulator, signed in; returns its uid. */
-suspend fun Backend.signUpNewUser(): String =
-    auth.createUserWithEmailAndPassword("user-${UUID.randomUUID()}@example.com", "secret-1").await().user!!.uid
+suspend fun Backend.signUpNewUser(): String = signUp(newEmail())
 
 /**
  * The document as the server has it. A listener waits for the server, where a one-off read gives
