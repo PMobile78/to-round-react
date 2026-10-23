@@ -1,79 +1,50 @@
 package com.pmobile78.todoround
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pmobile78.todoround.ui.AppViewModel
+import com.pmobile78.todoround.ui.AuthScreen
+import com.pmobile78.todoround.ui.HomeScreen
+import com.pmobile78.todoround.ui.Session
+import com.pmobile78.todoround.ui.appearanceOf
+import com.pmobile78.todoround.ui.apply
 import com.pmobile78.todoround.ui.theme.ToDoRoundTheme
 
-class MainActivity : ComponentActivity() {
+// AppCompat switches the language of the app on Android before 13 too (spec 8).
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             ToDoRoundTheme {
-                FoundationScreen()
+                AppContent()
             }
         }
     }
 }
 
-/** The only screen of sub-plan 1.1: the name and the promise of sign-in (sub-plan 1.2). */
+/** The sign-in screen or the screen of the signed-in user, in the language and the theme of the session (spec 8). */
 @Composable
-fun FoundationScreen() {
-    Scaffold { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = null,
-                modifier = Modifier.size(160.dp),
-            )
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = stringResource(R.string.foundation_ready),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
+fun AppContent(viewModel: AppViewModel = viewModel()) {
+    val session by viewModel.session.collectAsStateWithLifecycle()
+    val appearance = when (val current = session) {
+        Session.Starting -> null
+        Session.SignedOut -> appearanceOf(null)
+        is Session.SignedIn -> current.data?.let { appearanceOf(it.settings) }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun FoundationScreenPreview() {
-    ToDoRoundTheme {
-        FoundationScreen()
+    LaunchedEffect(appearance) {
+        appearance?.apply()
+    }
+    when (val current = session) {
+        Session.Starting -> Unit
+        Session.SignedOut -> AuthScreen(viewModel.accounts)
+        is Session.SignedIn -> HomeScreen(current, onSignOut = viewModel::signOut)
     }
 }
