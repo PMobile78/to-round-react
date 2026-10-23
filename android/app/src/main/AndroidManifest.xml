@@ -3,6 +3,7 @@
 
     <!-- Everything lives in Firestore; a restored copy of the app's files would only be stale. -->
     <application
+        android:name=".ToDoRoundApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"

@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.google.services)
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -14,6 +15,10 @@ val appName: String = rootDir.resolve("../src/appName.js").readText()
 // build is left unsigned.
 val releaseStoreFile: String? = providers.gradleProperty("todoround.release.storeFile").orNull
 
+// A debug build works with the local Firebase emulators instead of the project when asked:
+// -Ptodoround.emulators=true (docs/android.md).
+val emulators: Boolean = providers.gradleProperty("todoround.emulators").orNull == "true"
+
 android {
     namespace = "com.pmobile78.todoround"
     compileSdk = 37
@@ -25,6 +30,7 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         resValue("string", "app_name", appName)
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -39,11 +45,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "EMULATORS", emulators.toString())
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             signingConfig = signingConfigs.findByName("release")
+            buildConfigField("boolean", "EMULATORS", "false")
         }
     }
 
@@ -53,6 +63,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         resValues = true
     }
@@ -66,8 +77,14 @@ android {
 dependencies {
     implementation(project(":core"))
     implementation(platform(libs.androidx.compose.bom))
+    implementation(platform(libs.firebase.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.kotlinx.coroutines.play.services)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }

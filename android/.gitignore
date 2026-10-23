@@ -10,7 +10,7 @@ local.properties
 captures/
 
 # Firebase settings of this machine (docs/android.md)
-app/google-services.json
+google-services.json
 
 # Signing keys live outside the repository (docs/android.md)
 *.jks
