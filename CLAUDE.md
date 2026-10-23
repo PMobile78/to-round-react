@@ -97,8 +97,8 @@ functions/
 
 - Never print `~/.gradle/gradle.properties` whole (`cat`, `less`, an unanchored `grep`): it holds the release key passwords. Read one non-secret line at a time, e.g. `grep '^org.gradle.java.home' ~/.gradle/gradle.properties`.
 - `core` compiles against the JDK but runs on Android 8+: `-Xjdk-release=17` keeps out Java 18+ methods, not the Java 9–17 ones Android 8 lacks (`List.of` …). Use `java.time` and the Kotlin standard library there.
-- With a phone and the emulator both connected, address one: `adb -e` (the emulator), `adb -d` (the USB phone).
-- A debug build with `-Ptodoround.emulators=true` works with the Auth and Firestore emulators of `firebase.json` (project `demo-to-round`), reached at the device's own 127.0.0.1 through `adb reverse`: Android 17 keeps apps out of the local network, 10.0.2.2 included. The device tests (`app/src/androidTest`) run that way through `android/device-tests.sh`. Never run Gradle while the Android emulator is up (14 GB of RAM): build, `--stop`, then boot it.
+- With a phone and the emulator both connected, address one: `adb -e` (the emulator), `adb -d` (the USB phone). A phone on Wi-Fi debugging is a TCP device like the emulator, and `adb -e` cannot tell them apart: `adb disconnect` it before emulator work.
+- A debug build with `-Ptodoround.emulators=true` works with the Auth and Firestore emulators of `firebase.json` (project `demo-to-round`), reached at the device's own 127.0.0.1 through `adb reverse`: Android 17 keeps apps out of the local network, 10.0.2.2 included. The device tests (`app/src/androidTest`) run that way through `android/device-tests.sh`, on the emulator only (the script removes the app before and after a run), and bring their screenshots back to `android/app/build/device-screens/`: look at them, the checks see the UI tree, not the picture. Never run Gradle while the Android emulator is up (14 GB of RAM): build, `--stop`, then boot it.
 - Device test names are camelCase: D8 refuses spaces in method names before DEX 040 (minSdk 26). JVM tests may keep backtick names.
 
 ### Firestore data model
