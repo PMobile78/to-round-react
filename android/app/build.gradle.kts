@@ -68,6 +68,12 @@ android {
         resValues = true
     }
 
+    // Firebase's exceptions check their message with android.text.TextUtils, which plain JVM tests
+    // only have as a stub: let the stubs answer with default values instead of throwing.
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     // The app speaks English and Ukrainian only, also in the texts of its libraries.
     androidResources {
         localeFilters += listOf("en", "uk")

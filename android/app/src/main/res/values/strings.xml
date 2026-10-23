@@ -2,4 +2,15 @@
 <!-- app_name comes from src/appName.js (app/build.gradle.kts). -->
 <resources>
     <string name="foundation_ready">The app foundation is ready. Sign-in comes in the next update.</string>
+
+    <!-- Failures of Firebase Auth: the texts of the web's authService.js (spec 5). -->
+    <string name="auth_error_user_not_found">User not found.</string>
+    <string name="auth_error_wrong_password">Incorrect password.</string>
+    <string name="auth_error_invalid_credential">Incorrect email or password.</string>
+    <string name="auth_error_email_in_use">Email is already registered.</string>
+    <string name="auth_error_weak_password">Password is too weak.</string>
+    <string name="auth_error_invalid_email">Invalid email address.</string>
+    <string name="auth_error_too_many_requests">Too many attempts. Please try again later.</string>
+    <string name="auth_error_network">Network error. Please check your connection.</string>
+    <string name="auth_error_unexpected">An unexpected error occurred.</string>
 </resources>

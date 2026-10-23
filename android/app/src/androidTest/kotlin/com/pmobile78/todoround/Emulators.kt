@@ -6,7 +6,13 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.MetadataChanges
 import com.pmobile78.todoround.data.Backend
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.UUID
 
 /** The app's Firebase for the device tests, which may only ever be the local emulators (docs/android.md). */
@@ -45,4 +51,16 @@ suspend fun DocumentReference.fromServer(): DocumentSnapshot {
     } finally {
         registration.remove()
     }
+}
+
+/** The emails the Auth emulator would have sent: its emulator/v1/…/oobCodes, newest last. */
+suspend fun sentEmails(): List<JSONObject> = withContext(Dispatchers.IO) {
+    val connection = URL("http://127.0.0.1:9099/emulator/v1/projects/demo-to-round/oobCodes").openConnection() as HttpURLConnection
+    val body = try {
+        connection.inputStream.bufferedReader().readText()
+    } finally {
+        connection.disconnect()
+    }
+    val codes = JSONObject(body).optJSONArray("oobCodes") ?: JSONArray()
+    List(codes.length()) { codes.getJSONObject(it) }
 }

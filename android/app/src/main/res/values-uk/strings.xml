@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="foundation_ready">Основу застосунку готово. Вхід з’явиться в наступному оновленні.</string>
+
+    <string name="auth_error_user_not_found">Користувача не знайдено.</string>
+    <string name="auth_error_wrong_password">Неправильний пароль.</string>
+    <string name="auth_error_invalid_credential">Неправильна електронна пошта або пароль.</string>
+    <string name="auth_error_email_in_use">Ця електронна пошта вже зареєстрована.</string>
+    <string name="auth_error_weak_password">Пароль занадто простий.</string>
+    <string name="auth_error_invalid_email">Неправильна адреса електронної пошти.</string>
+    <string name="auth_error_too_many_requests">Забагато спроб. Спробуйте пізніше.</string>
+    <string name="auth_error_network">Помилка мережі. Перевірте з’єднання.</string>
+    <string name="auth_error_unexpected">Сталася неочікувана помилка.</string>
 </resources>
