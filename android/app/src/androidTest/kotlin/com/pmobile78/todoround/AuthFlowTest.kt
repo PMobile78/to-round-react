@@ -2,6 +2,7 @@ package com.pmobile78.todoround
 
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -46,8 +47,10 @@ class AuthFlowTest {
 
     // The screen shrinks above the keyboard, which changes its height even after it has opened (the
     // password layout is taller): a tap aimed a moment earlier can hit the part of the button the
-    // screen has just cut off. The buttons of the form are pressed through their click action.
-    private fun press(tag: String) = compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.OnClick)
+    // screen has just cut off. The buttons of the form are pressed through their click action, and
+    // only while they are enabled, as a tap would be.
+    private fun press(tag: String) =
+        compose.onNodeWithTag(tag).assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick)
 
     private fun signInOnScreen(email: String, password: String) {
         waitFor("auth")
