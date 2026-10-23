@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
@@ -64,17 +65,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val categories = CategoriesRepository(backend.db)
     private val settings = SettingsRepository(backend.db)
 
-    // Lazily: the listeners stay while the app is in the background, so a return to the app
-    // keeps the screen instead of loading it again from the cache.
+    private var wasSignedIn = false
+
+    // Signed out, the app speaks the language of the phone again, as the web does (spec 8): after
+    // the menu's Logout and also when Firebase ends the session by itself. Lazily: the listeners
+    // stay while the app is in the background, so a return to the app keeps the screen instead of
+    // loading it again from the cache.
     @OptIn(ExperimentalCoroutinesApi::class)
     val session: StateFlow<Session> = accounts.user
+        .onEach { user ->
+            if (user == null && wasSignedIn) followPhoneLanguage()
+            wasSignedIn = user != null
+        }
         .flatMapLatest { user -> if (user == null) flowOf(Session.SignedOut) else signedIn(user) }
         .stateIn(viewModelScope, SharingStarted.Lazily, Session.Starting)
 
-    /** Signs out; the app takes the language of the phone again, as the web does (spec 8). */
+    /** Signs out; [session] then takes the language of the phone again. */
     fun signOut() {
         accounts.signOut()
-        followPhoneLanguage()
     }
 
     // A new account gets the language of the sign-in screen (spec 8).

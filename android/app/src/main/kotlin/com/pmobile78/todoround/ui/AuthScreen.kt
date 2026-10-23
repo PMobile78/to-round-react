@@ -80,9 +80,13 @@ fun AuthScreen(accounts: AccountRepository) {
     var notice by rememberSaveable { mutableStateOf<Int?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    // The address without the spaces around it, as the web's email field gives it: a keyboard
+    // leaves a space after an address it suggests.
+    val address = email.trim()
 
-    // As on the web, another tab starts with empty fields.
+    // As on the web, another tab starts with empty fields; the tab shown keeps them.
     fun switchTo(registerTab: Boolean) {
+        if (registerTab == register) return
         register = registerTab
         name = ""
         email = ""
@@ -165,9 +169,9 @@ fun AuthScreen(accounts: AccountRepository) {
             Button(
                 onClick = {
                     if (register) {
-                        submit(signUpProblem(email, password, confirm)) { accounts.signUp(name, email, password) }
+                        submit(signUpProblem(address, password, confirm)) { accounts.signUp(name, address, password) }
                     } else {
-                        submit(signInProblem(email, password)) { accounts.signIn(email, password) }
+                        submit(signInProblem(address, password)) { accounts.signIn(address, password) }
                     }
                 },
                 enabled = !busy,
@@ -185,8 +189,8 @@ fun AuthScreen(accounts: AccountRepository) {
             if (!register) {
                 TextButton(
                     onClick = {
-                        submit(resetProblem(email), R.string.auth_reset_email_sent) {
-                            accounts.sendPasswordReset(email, appLanguage())
+                        submit(resetProblem(address), R.string.auth_reset_email_sent) {
+                            accounts.sendPasswordReset(address, appLanguage())
                         }
                     },
                     enabled = !busy,

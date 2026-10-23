@@ -2,8 +2,10 @@ package com.pmobile78.todoround
 
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -19,6 +21,7 @@ import com.pmobile78.todoround.core.model.defaultSettings
 import com.pmobile78.todoround.data.SettingsRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Before
 import org.junit.Rule
@@ -51,9 +54,11 @@ class AuthFlowTest {
     private fun press(tag: String) =
         compose.onNodeWithTag(tag).assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick)
 
+    // A keyboard leaves a space after an address it suggests; the app drops it, as the web's email
+    // field does, so every address here is typed with one.
     private fun signInOnScreen(email: String, password: String) {
         waitFor("auth")
-        type("email", email)
+        type("email", "$email ")
         type("password", password)
         press("submit")
     }
@@ -92,12 +97,13 @@ class AuthFlowTest {
         waitFor("auth")
         compose.onNodeWithTag("tab_register").performClick()
         type("name", "Olena")
-        type("email", email)
+        type("email", "$email ")
         type("password", "secret-1")
         type("confirm", "secret-1")
         press("submit")
         // A new account has no tasks yet, and the list says so.
         waitFor("empty")
+        assertEquals(email, backend.auth.currentUser?.email)
 
         signOutOnScreen()
         signInOnScreen(email, "secret-1")
@@ -140,5 +146,28 @@ class AuthFlowTest {
             AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM &&
                 AppCompatDelegate.getApplicationLocales().isEmpty
         }
+    }
+
+    @Test
+    fun aSessionThatEndsByItselfTakesThePhoneLanguageAgain() {
+        val email = newEmail()
+        webAccount(email, defaultSettings("uk"))
+        signInOnScreen(email, "secret-1")
+        compose.waitUntil(60_000) { AppCompatDelegate.getApplicationLocales().toLanguageTags() == "uk" }
+        waitFor("home")
+
+        // Firebase ends the session without the menu, as when the password is changed elsewhere.
+        backend.auth.signOut()
+        waitFor("auth")
+        compose.waitUntil(60_000) { AppCompatDelegate.getApplicationLocales().isEmpty }
+    }
+
+    @Test
+    fun theTabShownKeepsWhatIsTyped() {
+        waitFor("auth")
+        type("email", "olena@example.com")
+        // As on the web, only another tab starts with empty fields.
+        compose.onNodeWithTag("tab_sign_in").performClick()
+        compose.onNodeWithTag("email").assert(hasText("olena@example.com"))
     }
 }
