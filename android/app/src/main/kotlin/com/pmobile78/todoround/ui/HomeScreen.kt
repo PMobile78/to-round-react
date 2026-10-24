@@ -46,11 +46,14 @@ import com.pmobile78.todoround.R
 import com.pmobile78.todoround.core.contract.Language
 import com.pmobile78.todoround.core.contract.deviceTimeZone
 import com.pmobile78.todoround.core.model.Category
+import com.pmobile78.todoround.core.model.ListOptions
+import com.pmobile78.todoround.core.model.ListTab
 import com.pmobile78.todoround.core.model.Task
-import com.pmobile78.todoround.core.model.activeList
 import com.pmobile78.todoround.core.model.defaultSettings
 import com.pmobile78.todoround.core.model.dueView
+import com.pmobile78.todoround.core.model.holds
 import com.pmobile78.todoround.core.model.listDateTime
+import com.pmobile78.todoround.core.model.tabTasks
 import com.pmobile78.todoround.data.Loaded
 import com.pmobile78.todoround.ui.theme.ToDoRoundTheme
 import java.time.Instant
@@ -129,11 +132,13 @@ fun HomeScreen(session: Session.SignedIn, onSignOut: () -> Unit) {
 @Composable
 private fun TaskList(data: UserData) {
     val settings = data.settings
-    val list = remember(data) { activeList(data.tasks.items, data.categories.items, settings.listFilter, settings.listSort) }
-    val categories = remember(data) { data.categories.items.associateBy { it.id } }
-    val invalid = data.tasks.invalid + data.categories.invalid
     val zone = deviceTimeZone()
     val now = Instant.now()
+    val options = ListOptions(ListTab.ACTIVE, settings.listFilter, settings.listSort, query = "")
+    val tasks = remember(data) { tabTasks(data.tasks.items, data.categories.items, options, zone, now) }
+    val all = remember(data) { data.tasks.items.count { ListTab.ACTIVE.holds(it, zone, now) } }
+    val categories = remember(data) { data.categories.items.associateBy { it.id } }
+    val invalid = data.tasks.invalid + data.categories.invalid
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -142,20 +147,20 @@ private fun TaskList(data: UserData) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = stringResource(R.string.list_count, list.tasks.size),
+                    text = stringResource(R.string.list_count, tasks.size),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.testTag("count"),
                 )
                 val quiet = MaterialTheme.colorScheme.onSurfaceVariant
-                if (list.tasks.size < list.all) Note(stringResource(R.string.list_shown, list.tasks.size, list.all), quiet, "shown")
+                if (tasks.size < all) Note(stringResource(R.string.list_shown, tasks.size, all), quiet, "shown")
                 if (invalid > 0) Note(stringResource(R.string.list_invalid, invalid), MaterialTheme.colorScheme.error, "invalid")
                 if (data.tasks.fromCache || data.categories.fromCache) Note(stringResource(R.string.list_offline), quiet, "offline")
             }
         }
-        if (list.tasks.isEmpty()) {
+        if (tasks.isEmpty()) {
             item { Note(stringResource(R.string.list_empty), MaterialTheme.colorScheme.onSurfaceVariant, "empty") }
         }
-        items(list.tasks, key = { it.id }) { task ->
+        items(tasks, key = { it.id }) { task ->
             TaskRow(task, task.categoryId?.let(categories::get), settings.language, zone, now)
         }
     }
