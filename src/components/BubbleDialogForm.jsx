@@ -221,20 +221,6 @@ export default function BubbleDialogForm(props) {
                     }}
                 />
             </Box>
-            {isMobile && showStopPulsing ? (
-                <Tooltip title={t('bubbles.stopPulsingHint')} describeChild placement="top">
-                    <Button
-                        onClick={onStopPulsing}
-                        variant="outlined"
-                        color="warning"
-                        fullWidth
-                        size="small"
-                        sx={{ borderRadius: 2, marginTop: 1 }}
-                    >
-                        {t('bubbles.stopPulsing') || 'Stop pulsing'}
-                    </Button>
-                </Tooltip>
-            ) : null}
         </>
     );
 }

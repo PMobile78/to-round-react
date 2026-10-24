@@ -155,7 +155,9 @@ export default function BubbleDialog(props) {
                 display: 'flex',
                 justifyContent: 'space-between',
                 flexDirection: isSmallScreen ? 'column' : 'row',
-                gap: isSmallScreen ? 1 : 0
+                // Buttons wider than the dialog (Ukrainian, a repeating task) go on to the next line, the dialog does not scroll sideways
+                flexWrap: isSmallScreen ? 'nowrap' : 'wrap',
+                rowGap: 1
             }}>
                 {mode === 'create' ? (
                     <>
@@ -168,7 +170,7 @@ export default function BubbleDialog(props) {
                     </>
                 ) : (
                     <>
-                        <Box sx={{ display: 'flex', gap: isSmallScreen ? 0.75 : 1, flexDirection: isSmallScreen ? 'column' : 'row', order: isSmallScreen ? 3 : 1, width: isSmallScreen ? '100%' : 'auto' }}>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: isSmallScreen ? 0.75 : 1, flexDirection: isSmallScreen ? 'column' : 'row', order: isSmallScreen ? 3 : 1, width: isSmallScreen ? '100%' : 'auto' }}>
                             <Button
                                 onClick={handleDeleteBubble}
                                 variant="outlined"
@@ -227,7 +229,8 @@ export default function BubbleDialog(props) {
                                 </Tooltip>
                             ) : null}
                         </Box>
-                        <Box sx={{ display: 'flex', gap: isSmallScreen ? 0.75 : 1, flexDirection: isSmallScreen ? 'column' : 'row', width: isSmallScreen ? '100%' : 'auto', order: isSmallScreen ? 1 : 2 }}>
+                        {/* On a line of their own Cancel and Save stay on the right */}
+                        <Box sx={{ display: 'flex', flexGrow: 1, justifyContent: 'flex-end', gap: isSmallScreen ? 0.75 : 1, flexDirection: isSmallScreen ? 'column' : 'row', width: isSmallScreen ? '100%' : 'auto', order: isSmallScreen ? 1 : 2 }}>
                             <Button onClick={onClose} color="inherit" fullWidth={isSmallScreen} size={isSmallScreen ? 'small' : 'medium'} sx={{ order: isSmallScreen ? 2 : 1, ...(!isSmallScreen && { minHeight: 36 }) }}>
                                 {t('bubbles.cancel')}
                             </Button>

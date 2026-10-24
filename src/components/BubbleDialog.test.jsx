@@ -133,13 +133,20 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
         expect(document.body.textContent).toContain('bubbles.repeatActionsHint');
     });
 
-    it('says on "Stop pulsing" that only the pulsing stops, by the due and on a phone', () => {
+    it('has one "Stop pulsing", by the due on a wide screen and among the actions on a phone; it says only the pulsing stops', () => {
         vi.useFakeTimers();
-        [false, true].forEach((isMobile) => {
-            render({ showStopPulsing: true, isMobile });
+        [
+            { isMobile: false, isSmallScreen: false, place: '.MuiDialogContent-root' },
+            { isMobile: true, isSmallScreen: false, place: '.MuiDialogActions-root' },
+            { isMobile: true, isSmallScreen: true, place: '.MuiDialogActions-root' },
+        ].forEach(({ place, ...screen }) => {
+            render({ showStopPulsing: true, ...screen });
             const stopPulsing = buttons('bubbles.stopPulsing');
-            expect(stopPulsing.length).toBeGreaterThan(0);
-            stopPulsing.forEach((el) => expect(longPressHint(el)).toBe('bubbles.stopPulsingHint'));
+            expect(stopPulsing).toHaveLength(1);
+            expect(stopPulsing[0].closest(place)).not.toBeNull();
+            expect(longPressHint(stopPulsing[0])).toBe('bubbles.stopPulsingHint');
+            act(() => stopPulsing[0].click());
+            expect(props.onStopPulsing).toHaveBeenCalledTimes(1);
         });
     });
 
