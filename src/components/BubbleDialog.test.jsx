@@ -2,6 +2,8 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import en from '../locales/en/translation.json';
+import uk from '../locales/uk/translation.json';
 import BubbleDialog from './BubbleDialog';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -50,6 +52,16 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
         act(() => root.render(<BubbleDialog {...props} />));
     };
     const button = (text) => Array.from(document.querySelectorAll('button')).find((el) => el.textContent === text);
+    const buttons = (text) => Array.from(document.querySelectorAll('button')).filter((el) => el.textContent === text);
+    // What a long press shows by the element, as on a phone: the text the opened hint describes it with
+    const longPressHint = (element) => {
+        act(() => {
+            element.dispatchEvent(new window.Event('touchstart', { bubbles: true }));
+            vi.advanceTimersByTime(1000);
+        });
+        const id = element.getAttribute('aria-describedby');
+        return id ? document.getElementById(id).textContent : null;
+    };
 
     beforeEach(() => {
         container = document.createElement('div');
@@ -60,6 +72,7 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
     afterEach(() => {
         act(() => root.unmount());
         container.remove();
+        vi.useRealTimers();
     });
 
     it('takes a title of at most 1000 characters', () => {
@@ -98,6 +111,45 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
         render({ showFinishSeries: true });
         act(() => button('bubbles.finishSeries').click());
         expect(props.handleFinishSeries).toHaveBeenCalledTimes(1);
+    });
+
+    it('says on "Done" of a one-off task that it goes to the completed ones', () => {
+        vi.useFakeTimers();
+        render();
+        expect(longPressHint(button('bubbles.markAsDone'))).toBe('bubbles.markAsDoneHint');
+    });
+
+    it('says on "Done" of a repeating task that its due moves on, and on "Finish series" that the repeats end', () => {
+        vi.useFakeTimers();
+        render({ showFinishSeries: true });
+        expect(longPressHint(button('bubbles.markAsDone'))).toBe('bubbles.markAsDoneRepeatHint');
+        expect(longPressHint(button('bubbles.finishSeries'))).toBe('bubbles.finishSeriesHint');
+    });
+
+    it('says under the buttons of a repeating task, without a long press, how "Done" and "Finish series" differ', () => {
+        render();
+        expect(document.body.textContent).not.toContain('bubbles.repeatActionsHint');
+        render({ showFinishSeries: true });
+        expect(document.body.textContent).toContain('bubbles.repeatActionsHint');
+    });
+
+    it('says on "Stop pulsing" that only the pulsing stops, by the due and on a phone', () => {
+        vi.useFakeTimers();
+        [false, true].forEach((isMobile) => {
+            render({ showStopPulsing: true, isMobile });
+            const stopPulsing = buttons('bubbles.stopPulsing');
+            expect(stopPulsing.length).toBeGreaterThan(0);
+            stopPulsing.forEach((el) => expect(longPressHint(el)).toBe('bubbles.stopPulsingHint'));
+        });
+    });
+
+    it('has the hints in English and Ukrainian; the line names the buttons by their labels', () => {
+        [en, uk].forEach(({ bubbles }) => {
+            ['markAsDoneHint', 'markAsDoneRepeatHint', 'finishSeriesHint', 'stopPulsingHint', 'repeatActionsHint']
+                .forEach((key) => expect(bubbles[key]).toMatch(/\S/));
+            expect(bubbles.repeatActionsHint).toContain(bubbles.markAsDone);
+            expect(bubbles.repeatActionsHint).toContain(bubbles.finishSeries);
+        });
     });
 
     it('clears the reminders and the repeat together with the due', () => {

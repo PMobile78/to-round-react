@@ -64,6 +64,10 @@
         "done": "Done",
         "markAsDone": "Mark as Done",
         "finishSeries": "Finish series",
+        "markAsDoneHint": "The task is done and moves to “Completed”.",
+        "markAsDoneRepeatHint": "The due date moves to the next time; the series goes on.",
+        "finishSeriesHint": "The repeats end: the task moves to “Completed” and gets no new due dates.",
+        "repeatActionsHint": "“Mark as Done” moves the due date to the next time; “Finish series” ends the repeats.",
         "listView": "Tasks list",
         "bubblesView": "Bubbles View",
         "mainViewTasks": "Tasks list as main screen",
@@ -139,6 +143,7 @@
         "unit": "Unit",
         "tags": "Tags",
         "stopPulsing": "Stop pulsing",
+        "stopPulsingHint": "Only stops the bubble from pulsing. The task and its due date stay as they are; pulsing turns back on when the due date changes.",
         "remindMeDisabled": "Set due date to add reminders",
         "custom": "Custom...",
         "reminderBefore": {

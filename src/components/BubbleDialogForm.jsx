@@ -9,6 +9,7 @@ import {
     Slider,
     Button,
     IconButton,
+    Tooltip,
     Typography
 } from '@mui/material';
 import { Clear } from '@mui/icons-material';
@@ -166,14 +167,16 @@ export default function BubbleDialogForm(props) {
                     </LocalizationProvider>
                 </Box>
                 {!isMobile && showStopPulsing ? (
-                    <Button
-                        onClick={onStopPulsing}
-                        variant="outlined"
-                        color="warning"
-                        sx={{ mt: 1, ml: 0.5, whiteSpace: 'nowrap' }}
-                    >
-                        {t('bubbles.stopPulsing') || 'Stop pulsing'}
-                    </Button>
+                    <Tooltip title={t('bubbles.stopPulsingHint')} describeChild placement="top">
+                        <Button
+                            onClick={onStopPulsing}
+                            variant="outlined"
+                            color="warning"
+                            sx={{ mt: 1, ml: 0.5, whiteSpace: 'nowrap' }}
+                        >
+                            {t('bubbles.stopPulsing') || 'Stop pulsing'}
+                        </Button>
+                    </Tooltip>
                 ) : null}
                 {due && (
                     <IconButton onClick={clearDue} sx={{ mt: 1 }}>
@@ -219,16 +222,18 @@ export default function BubbleDialogForm(props) {
                 />
             </Box>
             {isMobile && showStopPulsing ? (
-                <Button
-                    onClick={onStopPulsing}
-                    variant="outlined"
-                    color="warning"
-                    fullWidth
-                    size="small"
-                    sx={{ borderRadius: 2, marginTop: 1 }}
-                >
-                    {t('bubbles.stopPulsing') || 'Stop pulsing'}
-                </Button>
+                <Tooltip title={t('bubbles.stopPulsingHint')} describeChild placement="top">
+                    <Button
+                        onClick={onStopPulsing}
+                        variant="outlined"
+                        color="warning"
+                        fullWidth
+                        size="small"
+                        sx={{ borderRadius: 2, marginTop: 1 }}
+                    >
+                        {t('bubbles.stopPulsing') || 'Stop pulsing'}
+                    </Button>
+                </Tooltip>
             ) : null}
         </>
     );

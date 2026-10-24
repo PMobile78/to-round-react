@@ -7,7 +7,9 @@ import {
     Box,
     Button,
     IconButton,
-    Divider
+    Divider,
+    Tooltip,
+    Typography
 } from '@mui/material';
 import { CloseOutlined, DeleteOutlined, CheckCircle, DoneAll } from '@mui/icons-material';
 import { LIMITS } from '../contract/schema';
@@ -86,6 +88,9 @@ export default function BubbleDialog(props) {
     // While its sections spell a date that does not exist (02/31), the picker hands over an Invalid Date.
     const dueInvalid = Number.isNaN(formDue?.getTime());
     const cannotSave = !title.trim() || descriptionTooLong || dueInvalid;
+    // "Finish series" is there for a repeating task, whose "Done" moves the due on (spec 4.1):
+    // a line under the buttons tells the two apart, for phones have no hover
+    const repeatActionsHint = mode === 'edit' && showFinishSeries;
 
     return (
         <Dialog
@@ -146,6 +151,7 @@ export default function BubbleDialog(props) {
             <Divider />
             <DialogActions sx={{
                 padding: isMobile ? 2 : 3,
+                ...(repeatActionsHint && { paddingBottom: 1 }),
                 display: 'flex',
                 justifyContent: 'space-between',
                 flexDirection: isSmallScreen ? 'column' : 'row',
@@ -174,44 +180,51 @@ export default function BubbleDialog(props) {
                             >
                                 {t('bubbles.deleteBubble')}
                             </Button>
-                            <Button
-                                onClick={handleMarkAsDone}
-                                variant="outlined"
-                                color="success"
-                                startIcon={<CheckCircle />}
-                                fullWidth={isSmallScreen}
-                                size={isSmallScreen ? 'small' : 'medium'}
-                                sx={{ borderRadius: 2, ...(!isSmallScreen && { minHeight: 36 }) }}
-                            >
-                                {t('bubbles.markAsDone')}
-                            </Button>
-                            {showFinishSeries && (
+                            {/* The hints also open on a long press; above the button they stay clear of the finger */}
+                            <Tooltip title={t(showFinishSeries ? 'bubbles.markAsDoneRepeatHint' : 'bubbles.markAsDoneHint')} describeChild placement="top">
                                 <Button
-                                    onClick={handleFinishSeries}
+                                    onClick={handleMarkAsDone}
                                     variant="outlined"
                                     color="success"
-                                    startIcon={<DoneAll />}
+                                    startIcon={<CheckCircle />}
                                     fullWidth={isSmallScreen}
                                     size={isSmallScreen ? 'small' : 'medium'}
                                     sx={{ borderRadius: 2, ...(!isSmallScreen && { minHeight: 36 }) }}
                                 >
-                                    {t('bubbles.finishSeries')}
+                                    {t('bubbles.markAsDone')}
                                 </Button>
+                            </Tooltip>
+                            {showFinishSeries && (
+                                <Tooltip title={t('bubbles.finishSeriesHint')} describeChild placement="top">
+                                    <Button
+                                        onClick={handleFinishSeries}
+                                        variant="outlined"
+                                        color="success"
+                                        startIcon={<DoneAll />}
+                                        fullWidth={isSmallScreen}
+                                        size={isSmallScreen ? 'small' : 'medium'}
+                                        sx={{ borderRadius: 2, ...(!isSmallScreen && { minHeight: 36 }) }}
+                                    >
+                                        {t('bubbles.finishSeries')}
+                                    </Button>
+                                </Tooltip>
                             )}
                             {isMobile && showStopPulsing ? (
-                                <Button
-                                    onClick={onStopPulsing}
-                                    variant="outlined"
-                                    color="warning"
-                                    fullWidth={isSmallScreen}
-                                    size="small"
-                                    sx={{
-                                        borderRadius: 2,
-                                        ...(!isSmallScreen ? { alignSelf: 'flex-start', whiteSpace: 'nowrap' } : {})
-                                    }}
-                                >
-                                    {t('bubbles.stopPulsing') || 'Stop pulsing'}
-                                </Button>
+                                <Tooltip title={t('bubbles.stopPulsingHint')} describeChild placement="top">
+                                    <Button
+                                        onClick={onStopPulsing}
+                                        variant="outlined"
+                                        color="warning"
+                                        fullWidth={isSmallScreen}
+                                        size="small"
+                                        sx={{
+                                            borderRadius: 2,
+                                            ...(!isSmallScreen ? { alignSelf: 'flex-start', whiteSpace: 'nowrap' } : {})
+                                        }}
+                                    >
+                                        {t('bubbles.stopPulsing') || 'Stop pulsing'}
+                                    </Button>
+                                </Tooltip>
                             ) : null}
                         </Box>
                         <Box sx={{ display: 'flex', gap: isSmallScreen ? 0.75 : 1, flexDirection: isSmallScreen ? 'column' : 'row', width: isSmallScreen ? '100%' : 'auto', order: isSmallScreen ? 1 : 2 }}>
@@ -225,6 +238,11 @@ export default function BubbleDialog(props) {
                     </>
                 )}
             </DialogActions>
+            {repeatActionsHint && (
+                <Typography variant="caption" color="text.secondary" component="p" sx={{ paddingX: isMobile ? 2 : 3, paddingBottom: isMobile ? 2 : 3 }}>
+                    {t('bubbles.repeatActionsHint')}
+                </Typography>
+            )}
         </Dialog>
     );
 }

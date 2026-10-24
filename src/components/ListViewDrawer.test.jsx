@@ -90,7 +90,7 @@ describe('TaskListDrawer: list actions of the signed-in user', () => {
         vi.clearAllMocks();
     });
 
-    const click = (title) => act(() => document.querySelector(`button[title="${title}"]`).click());
+    const click = (name) => act(() => document.querySelector(`button[aria-label="${name}"]`).click());
 
     it('moves a task to the trash of the signed-in user', () => {
         click('bubbles.deleteBubble');
@@ -111,7 +111,7 @@ describe('TaskListDrawer: list actions of the signed-in user', () => {
     });
 
     it('finishes the series of a repeating task, and offers it for no other task', () => {
-        expect(document.querySelector('button[title="bubbles.finishSeries"]')).toBeNull();
+        expect(document.querySelector('button[aria-label="bubbles.finishSeries"]')).toBeNull();
         const repeating = bubbleFromTask({ ...TASK, id: 't2', due: { local: '2026-10-10T09:00', tz: 'Europe/Kyiv' }, repeat: { every: 1, unit: 'days' } });
         renderList({ bubbles: [repeating] });
         click('bubbles.finishSeries');
