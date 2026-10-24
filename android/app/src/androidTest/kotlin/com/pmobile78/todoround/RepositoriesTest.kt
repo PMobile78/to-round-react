@@ -5,9 +5,13 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.pmobile78.todoround.core.contract.Language
+import com.pmobile78.todoround.core.contract.SortField
+import com.pmobile78.todoround.core.contract.SortOrder
 import com.pmobile78.todoround.core.contract.TaskStatus
 import com.pmobile78.todoround.core.model.Category
 import com.pmobile78.todoround.core.model.Due
+import com.pmobile78.todoround.core.model.ListFilter
+import com.pmobile78.todoround.core.model.ListSort
 import com.pmobile78.todoround.core.model.defaultSettings
 import com.pmobile78.todoround.core.model.toRecord
 import com.pmobile78.todoround.data.CategoriesRepository
@@ -130,6 +134,51 @@ class RepositoriesTest {
             settings.settings(uid, "en").filterNotNull().first()
 
             val refused = runCatching { settings.createUserDoc(uid, defaultSettings("uk")) }
+            assertEquals(
+                FirebaseFirestoreException.Code.PERMISSION_DENIED,
+                (refused.exceptionOrNull() as FirebaseFirestoreException).code,
+            )
+        }
+    }
+
+    @Test
+    fun theSortAndTheFilterOfTheListAreWrittenAsTheWebWritesThem() = runBlocking {
+        withTimeout(60_000) {
+            val uid = backend.signUpNewUser()
+            val settings = SettingsRepository(backend.db)
+            settings.settings(uid, "en").filterNotNull().first()
+            backend.db.document("users/$uid").fromServer()
+
+            settings.setListSort(uid, ListSort(SortField.CATEGORY, SortOrder.ASC))
+            settings.setListFilter(uid, ListFilter(listOf("c2", "c1"), showUncategorized = false))
+            val written = backend.db.document("users/$uid").fromServer()
+            assertEquals(mapOf("by" to "category", "order" to "asc"), written.get("settings.listSort"))
+            assertEquals(mapOf("categoryIds" to listOf("c2", "c1"), "showUncategorized" to false), written.get("settings.listFilter"))
+            // The other settings stay as they were.
+            val expected = defaultSettings("en").copy(
+                listSort = ListSort(SortField.CATEGORY, SortOrder.ASC),
+                listFilter = ListFilter(listOf("c2", "c1"), showUncategorized = false),
+            )
+            assertEquals(expected.toRecord(), written.get("settings"))
+
+            settings.setListFilter(uid, ListFilter(null, showUncategorized = true))
+            assertEquals(
+                mapOf("categoryIds" to null, "showUncategorized" to true),
+                backend.db.document("users/$uid").fromServer().get("settings.listFilter"),
+            )
+        }
+    }
+
+    @Test
+    fun aWriteTheRulesRefuseFailsForTheCaller() = runBlocking {
+        withTimeout(60_000) {
+            val uid = backend.signUpNewUser()
+            val settings = SettingsRepository(backend.db)
+            settings.settings(uid, "en").filterNotNull().first()
+            backend.db.document("users/$uid").fromServer()
+
+            // The rules take at most 100 ids in a filter.
+            val refused = runCatching { settings.setListFilter(uid, ListFilter(List(101) { "c$it" }, showUncategorized = true)) }
             assertEquals(
                 FirebaseFirestoreException.Code.PERMISSION_DENIED,
                 (refused.exceptionOrNull() as FirebaseFirestoreException).code,

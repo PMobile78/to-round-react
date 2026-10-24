@@ -9,6 +9,8 @@ import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.pmobile78.todoround.core.model.Category
+import com.pmobile78.todoround.core.model.ListFilter
+import com.pmobile78.todoround.core.model.ListSort
 import com.pmobile78.todoround.core.model.Settings
 import com.pmobile78.todoround.core.model.Task
 import com.pmobile78.todoround.core.model.categoryFromRecord
@@ -62,6 +64,16 @@ class SettingsRepository(private val db: FirebaseFirestore) {
      */
     suspend fun createUserDoc(uid: String, settings: Settings) {
         db.collection("users").document(uid).set(newUserDoc(settings)).await()
+    }
+
+    /** Writes the sort of the list of [uid], shared with the web (stage 2 spec, 2.2 №7); returns once the server has it. */
+    suspend fun setListSort(uid: String, sort: ListSort) {
+        db.collection("users").document(uid).update(listSortUpdate(sort)).await()
+    }
+
+    /** Writes the filter of the list of [uid], shared with the web; returns once the server has it. */
+    suspend fun setListFilter(uid: String, filter: ListFilter) {
+        db.collection("users").document(uid).update(listFilterUpdate(filter)).await()
     }
 
     private suspend fun createQuietly(uid: String, settings: Settings) {

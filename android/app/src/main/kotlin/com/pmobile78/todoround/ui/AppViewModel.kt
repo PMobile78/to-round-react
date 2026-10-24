@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
 import com.pmobile78.todoround.ToDoRoundApp
 import com.pmobile78.todoround.core.model.Category
+import com.pmobile78.todoround.core.model.ListFilter
+import com.pmobile78.todoround.core.model.ListSort
 import com.pmobile78.todoround.core.model.Settings
 import com.pmobile78.todoround.core.model.Task
 import com.pmobile78.todoround.data.AccountRepository
@@ -83,6 +85,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** Signs out; [session] then takes the language of the phone again. */
     fun signOut() {
         accounts.signOut()
+    }
+
+    private val writes = Writes(viewModelScope)
+
+    /** Writes the server refused: the screen shows a message for each (stage 2 spec, 2.2 №17). */
+    val writeFailures: Flow<Unit> = writes.failures
+
+    /** The sort of the list, shared with the web (stage 2 spec, 2.2 №7). */
+    fun setListSort(sort: ListSort) = write { uid -> settings.setListSort(uid, sort) }
+
+    /** The filter of the list, shared with the web. */
+    fun setListFilter(filter: ListFilter) = write { uid -> settings.setListFilter(uid, filter) }
+
+    // A write for the signed-in user; signed out, there is nothing to write.
+    private fun write(change: suspend (uid: String) -> Unit) {
+        val uid = backend.auth.currentUser?.uid ?: return
+        writes.launch { change(uid) }
     }
 
     // A new account gets the language of the sign-in screen (spec 8).

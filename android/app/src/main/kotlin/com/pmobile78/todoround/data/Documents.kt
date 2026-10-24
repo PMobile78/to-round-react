@@ -4,6 +4,8 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.pmobile78.todoround.core.contract.SCHEMA_VERSION
 import com.pmobile78.todoround.core.contract.validateSettings
+import com.pmobile78.todoround.core.model.ListFilter
+import com.pmobile78.todoround.core.model.ListSort
 import com.pmobile78.todoround.core.model.Settings
 import com.pmobile78.todoround.core.model.defaultSettings
 import com.pmobile78.todoround.core.model.settingsFromRecord
@@ -68,3 +70,14 @@ fun newUserDoc(settings: Settings): Map<String, Any?> = mapOf(
     "createdAt" to FieldValue.serverTimestamp(),
     "updatedAt" to FieldValue.serverTimestamp(),
 )
+
+/** The change of users/{uid} that writes [sort] as the list's sort (contract, 3.5). */
+fun listSortUpdate(sort: ListSort): Map<String, Any?> = settingsUpdate("listSort", sort.toRecord())
+
+/** The change of users/{uid} that writes [filter] as the list's filter (contract, 3.5). */
+fun listFilterUpdate(filter: ListFilter): Map<String, Any?> = settingsUpdate("listFilter", filter.toRecord())
+
+// As the web's settingsUpdateData: one setting by its field path, and the time of the server, so
+// that two devices do not undo each other's changes of other settings.
+private fun settingsUpdate(key: String, value: Any?): Map<String, Any?> =
+    mapOf("settings.$key" to value, "updatedAt" to FieldValue.serverTimestamp())
