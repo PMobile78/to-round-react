@@ -2,6 +2,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from '../i18n';
 import en from '../locales/en/translation.json';
 import uk from '../locales/uk/translation.json';
 import BubbleDialog from './BubbleDialog';
@@ -11,6 +12,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 vi.mock('../i18n', () => ({ default: { language: 'en' } }));
 
 const HOUR = 60 * 60 * 1000;
+const RED = '#f44336';
 const t = (key, options) => (options && 'count' in options ? `${key}:${options.count}` : key);
 
 describe('BubbleDialog: the edit dialog on the v2 form', () => {
@@ -53,6 +55,9 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
     };
     const button = (text) => Array.from(document.querySelectorAll('button')).find((el) => el.textContent === text);
     const buttons = (text) => Array.from(document.querySelectorAll('button')).filter((el) => el.textContent === text);
+    const dueField = () => document.querySelector('.MuiPickersTextField-root');
+    const dueOutline = () => dueField().querySelector('.MuiPickersOutlinedInput-notchedOutline');
+    const dueText = () => dueField().querySelector('input').value;
     // What a long press shows by the element, as on a phone: the text the opened hint describes it with
     const longPressHint = (element) => {
         act(() => {
@@ -73,6 +78,7 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
         act(() => root.unmount());
         container.remove();
         vi.useRealTimers();
+        i18n.language = 'en';
     });
 
     it('takes a title of at most 1000 characters', () => {
@@ -94,6 +100,37 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
     it('marks a due that has passed as overdue', () => {
         render({ editDue: new Date(Date.now() - HOUR) });
         expect(document.body.textContent).toContain('bubbles.overdue');
+    });
+
+    it('lets the due field fill its row up to the clear button, with room above and below', () => {
+        render({ editDue: new Date(Date.now() + HOUR) });
+        const style = window.getComputedStyle(dueField());
+        expect(style.width).toBe('100%');
+        expect([style.marginTop, style.marginBottom]).toEqual(['16px', '16px']);
+    });
+
+    it('outlines a due that has passed in red and a due ahead in the usual colour', () => {
+        render({ editDue: new Date(Date.now() - HOUR) });
+        expect(window.getComputedStyle(dueOutline()).borderColor).toBe(RED);
+        render({ editDue: new Date(Date.now() + HOUR) });
+        expect(window.getComputedStyle(dueOutline()).borderColor).not.toBe(RED);
+    });
+
+    it('keeps the red outline of a passed due while the due is being typed in', () => {
+        render({ editDue: new Date(Date.now() - HOUR) });
+        act(() => dueField().querySelector('.MuiPickersSectionList-root').focus());
+        expect(dueField().contains(document.activeElement)).toBe(true);
+        expect(window.getComputedStyle(dueOutline()).borderColor).toBe(RED);
+    });
+
+    it('writes the due as dd.MM.yyyy HH:mm in Ukrainian and as MM/dd/yyyy HH:mm in English', () => {
+        const due = new Date(2026, 9, 24, 15, 30);
+        i18n.language = 'uk';
+        render({ editDue: due });
+        expect(dueText()).toBe('24.10.2026 15:30');
+        i18n.language = 'en';
+        render({ editDue: due });
+        expect(dueText()).toBe('10/24/2026 15:30');
     });
 
     it('offers reminders and a repeat only once there is a due', () => {

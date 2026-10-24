@@ -142,27 +142,29 @@ export default function BubbleDialogForm(props) {
                                 minutes: renderTimeViewClock,
                                 seconds: renderTimeViewClock,
                             }}
-                            inputFormat={currentLang.startsWith('uk') ? "dd.MM.yyyy HH:mm" : "MM/dd/yyyy HH:mm"}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    fullWidth
-                                    margin="dense"
-                                    sx={{
+                            format={currentLang.startsWith('uk') ? "dd.MM.yyyy HH:mm" : "MM/dd/yyyy HH:mm"}
+                            slotProps={{
+                                textField: {
+                                    fullWidth: true,
+                                    margin: 'dense',
+                                    sx: {
                                         marginTop: 2,
                                         marginBottom: 2,
-                                        '& .MuiInputBase-root': {
-                                            borderColor: overdue ? '#f44336' : undefined,
-                                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        '& .MuiPickersOutlinedInput-root': {
+                                            '& .MuiPickersOutlinedInput-notchedOutline': {
                                                 borderColor: overdue ? '#f44336' : undefined,
                                             },
-                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            '&:hover .MuiPickersOutlinedInput-notchedOutline': {
+                                                borderColor: overdue ? '#f44336' : undefined,
+                                            },
+                                            // with .Mui-focused alone this loses to the picker's own focus colour (.Mui-focused:not(.Mui-error))
+                                            '&.Mui-focused:not(.Mui-error) .MuiPickersOutlinedInput-notchedOutline': {
                                                 borderColor: overdue ? '#f44336' : undefined,
                                             }
                                         }
-                                    }}
-                                />
-                            )}
+                                    }
+                                }
+                            }}
                         />
                     </LocalizationProvider>
                 </Box>
