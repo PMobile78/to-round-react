@@ -94,6 +94,8 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.kotlinx.coroutines.play.services)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    // The activity in which the device tests show one screen on its own (createComposeRule).
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

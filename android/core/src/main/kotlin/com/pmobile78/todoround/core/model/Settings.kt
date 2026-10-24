@@ -98,9 +98,12 @@ fun Settings.toRecord(): Map<String, Any?> = mapOf(
         "showUncategorized" to bubbleFilter.showUncategorized,
         "plannedOnly" to bubbleFilter.plannedOnly,
     ),
-    "listFilter" to mapOf(
-        "categoryIds" to listFilter.categoryIds,
-        "showUncategorized" to listFilter.showUncategorized,
-    ),
-    "listSort" to mapOf("by" to listSort.by.wire, "order" to listSort.order.wire),
+    "listFilter" to listFilter.toRecord(),
+    "listSort" to listSort.toRecord(),
 )
+
+/** The record of this filter, as settings.listFilter keeps it. */
+fun ListFilter.toRecord(): Map<String, Any?> = mapOf("categoryIds" to categoryIds, "showUncategorized" to showUncategorized)
+
+/** The record of this sort, as settings.listSort keeps it. */
+fun ListSort.toRecord(): Map<String, Any?> = mapOf("by" to by.wire, "order" to order.wire)

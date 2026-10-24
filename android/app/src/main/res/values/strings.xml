@@ -34,14 +34,37 @@
     <string name="auth_error_network">Network error. Please check your connection.</string>
     <string name="auth_error_unexpected">An unexpected error occurred.</string>
 
-    <!-- The task list: the web's "Active" tab (spec 7), with the texts of the web's bubbles.* where it has them. -->
-    <string name="list_count">Active Tasks (%1$d)</string>
-    <string name="list_shown">Showing %1$d of %2$d</string>
-    <string name="list_empty">No active tasks</string>
+    <!-- The task list of the web (stage 2 spec, section 6), with the texts of the web's bubbles.* where it has them. -->
+    <string name="list_tab_active">Active Tasks (%1$d)</string>
+    <string name="list_tab_done">Completed Tasks (%1$d)</string>
+    <string name="list_tab_deleted">Deleted Tasks (%1$d)</string>
+    <string name="list_tab_planned">Planned Tasks (%1$d)</string>
+    <string name="list_empty_active">No active tasks</string>
+    <string name="list_empty_done">No completed tasks</string>
+    <string name="list_empty_deleted">No deleted tasks</string>
+    <string name="list_empty_planned">No postponed tasks</string>
+    <string name="list_trash_note">⚠️ Deleted tasks will be permanently removed after 30 days</string>
+    <string name="list_search">Search tasks</string>
+    <string name="list_search_clear">Clear the search</string>
+    <string name="list_filter">Filter</string>
+    <string name="list_categories">Categories</string>
+    <string name="list_select_all">Select All</string>
+    <string name="list_clear_all">Clear All</string>
+    <string name="list_sort_by">Sort by: %1$s</string>
+    <string name="list_sort_created">Created</string>
+    <string name="list_sort_updated">Updated</string>
+    <string name="list_sort_title">Title</string>
+    <string name="list_sort_category">Category</string>
+    <string name="list_sort_ascending">Sort ascending</string>
+    <string name="list_sort_descending">Sort descending</string>
+    <string name="list_created">Created: %1$s</string>
+    <string name="list_updated">Updated: %1$s</string>
+    <string name="list_deleted">Deleted: %1$s</string>
     <string name="list_due">Due date: %1$s</string>
     <string name="list_overdue">Overdue</string>
     <string name="list_no_category">No Tag</string>
     <string name="list_invalid">Documents that failed the check: %1$d</string>
     <string name="list_offline">No connection to the server: these are the data saved on this device.</string>
     <string name="list_failed">The data could not be read. Sign out and sign in again.</string>
+    <string name="write_failed">The change could not be saved.</string>
 </resources>

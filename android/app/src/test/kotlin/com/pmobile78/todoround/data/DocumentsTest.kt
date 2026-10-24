@@ -12,6 +12,7 @@ import com.pmobile78.todoround.core.contract.ThemeMode
 import com.pmobile78.todoround.core.contract.validateTask
 import com.pmobile78.todoround.core.model.Category
 import com.pmobile78.todoround.core.model.Due
+import com.pmobile78.todoround.core.model.ListFilter
 import com.pmobile78.todoround.core.model.ListSort
 import com.pmobile78.todoround.core.model.Repeat
 import com.pmobile78.todoround.core.model.Task
@@ -165,6 +166,26 @@ class DocumentsTest {
                 "updatedAt" to FieldValue.serverTimestamp(),
             ),
             newUserDoc(settings),
+        )
+    }
+
+    @Test
+    fun `the list's sort and filter are written as the web's updateSettings writes them`() {
+        assertEquals(
+            mapOf("settings.listSort" to mapOf("by" to "category", "order" to "asc"), "updatedAt" to FieldValue.serverTimestamp()),
+            listSortUpdate(ListSort(SortField.CATEGORY, SortOrder.ASC)),
+        )
+        assertEquals(
+            mapOf(
+                "settings.listFilter" to mapOf("categoryIds" to listOf("c2", "c1"), "showUncategorized" to false),
+                "updatedAt" to FieldValue.serverTimestamp(),
+            ),
+            listFilterUpdate(ListFilter(listOf("c2", "c1"), showUncategorized = false)),
+        )
+        // Every category is null, not a list.
+        assertEquals(
+            mapOf("categoryIds" to null, "showUncategorized" to true),
+            listFilterUpdate(ListFilter(null, showUncategorized = true))["settings.listFilter"],
         )
     }
 }

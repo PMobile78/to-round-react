@@ -14,6 +14,9 @@ private val Blue = Color(0xFF3B7DED)
 private val Coral = Color(0xFFFF6B6B)
 private val Red = Color(0xFFF44336)
 
+/** The green of a done task in the list, where the web uses its theme's success colour; Material 3 has no such role. */
+val DoneGreen = Color(0xFF4CAF50)
+
 private val LightColors = lightColorScheme(
     primary = Blue,
     onPrimary = Color.White,
