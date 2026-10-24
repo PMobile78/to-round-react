@@ -109,9 +109,13 @@ class ActiveListTest {
     }
 
     @Test
-    fun `a due zone this phone does not know is shown as written and never overdue`() {
+    fun `a due zone this phone does not know is read in the zone of the phone, as the web reads it`() {
+        // 09:30 in Berlin on 23 October 2026 (CEST, UTC+2) is 07:30 UTC.
         val due = Due("2026-10-23T09:30", "Mars/Olympus_Mons")
-        assertEquals(DueView("2026-10-23T09:30", overdue = false), dueView(due, "UTC", Instant.parse("2030-01-01T00:00:00Z")))
+        assertEquals(DueView("2026-10-23T09:30", overdue = false), dueView(due, "Europe/Berlin", Instant.parse("2026-10-23T07:30:00Z")))
+        assertEquals(DueView("2026-10-23T09:30", overdue = true), dueView(due, "Europe/Berlin", Instant.parse("2026-10-23T07:30:00.001Z")))
+        // An offset is not a zone of the base either.
+        assertEquals(Instant.parse("2026-10-23T09:30:00Z"), dueMoment(Due("2026-10-23T09:30", "+05:00"), "UTC"))
     }
 
     @Test

@@ -32,16 +32,16 @@ fun parseLocal(local: Any?): LocalDateTime? {
 /** "YYYY-MM-DDTHH:mm" of a date and time; seconds are dropped. */
 fun formatLocal(dateTime: LocalDateTime): String = dateTime.truncatedTo(ChronoUnit.MINUTES).format(LOCAL_FORMAT)
 
-/** True when [tz] is a zone java.time knows, at most 64 characters long. */
-fun isValidTimeZone(tz: Any?): Boolean {
-    if (tz !is String || tz.isEmpty() || tz.length > 64) return false
-    return try {
-        ZoneId.of(tz)
-        true
-    } catch (e: DateTimeException) {
-        false
-    }
-}
+// The zones of the base, read once: getAvailableZoneIds() builds a new set on every call.
+private val KNOWN_ZONES: Set<String> by lazy { ZoneId.getAvailableZoneIds() }
+
+/**
+ * True when [tz] is a zone of the base of java.time, at most 64 characters long. Ids such as
+ * "GMT+03:00", which Android gives a zone set by hand and ZoneId.of takes too, are not: the web
+ * and the functions do not know them (stage 2 spec, 2.2 №5). Nor are "+05:00" and a name in
+ * another case, which the web's Intl does know; no client writes such zones.
+ */
+fun isValidTimeZone(tz: Any?): Boolean = tz is String && tz.length in 1..64 && tz in KNOWN_ZONES
 
 /** The instant of [local] in zone [tz]; throws on a malformed time or an unknown zone. */
 fun toInstant(local: String, tz: String): Instant {

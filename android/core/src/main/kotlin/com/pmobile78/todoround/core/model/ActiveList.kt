@@ -52,15 +52,18 @@ private fun listOrder(sort: ListSort, categories: Map<String, Category>): Compar
 /** A due as the list shows it: the date and time on this phone ("YYYY-MM-DDTHH:mm"), and whether its moment has passed. */
 data class DueView(val local: String, val overdue: Boolean)
 
-/**
- * [due] in [zone], the zone of this phone, at [now]. A due zone this phone does not know is shown
- * as written and is never overdue (spec 7): its moment is unknown here.
- */
+/** [due] in [zone], the zone of this phone, at [now]. */
 fun dueView(due: Due, zone: String, now: Instant): DueView {
-    if (!isValidTimeZone(due.tz)) return DueView(due.local, overdue = false)
-    val moment = toInstant(due.local, due.tz)
+    val moment = dueMoment(due, zone)
     return DueView(toLocal(moment, zone), overdue = moment < now)
 }
+
+/**
+ * The moment of [due]: its local time in its zone. A zone this phone does not know reads the time
+ * in [zone], the zone of this phone, as the web does (src/services/data/bubbleModel.js; stage 2
+ * spec, 2.2 №4).
+ */
+fun dueMoment(due: Due, zone: String): Instant = toInstant(due.local, if (isValidTimeZone(due.tz)) due.tz else zone)
 
 private val ENGLISH_DATE_TIME = DateTimeFormatter.ofPattern("MM/dd/uuuu, HH:mm", Locale.ROOT)
 private val UKRAINIAN_DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.uuuu, HH:mm", Locale.ROOT)

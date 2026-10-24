@@ -57,6 +57,14 @@ class TimeTest {
     }
 
     @Test
+    fun `isValidTimeZone takes the zones of the base, not offsets that ZoneId takes too`() {
+        assertTrue(isValidTimeZone("Etc/GMT-3"))
+        assertFalse(isValidTimeZone("+05:00"))
+        assertFalse(isValidTimeZone("GMT+03:00"))
+        assertFalse(isValidTimeZone("UTC+3"))
+    }
+
+    @Test
     fun `toInstant refuses a malformed time and an unknown zone`() {
         assertThrows<IllegalArgumentException> { toInstant("2026-10-14 09:00", "UTC") }
         assertThrows<DateTimeException> { toInstant("2026-10-14T09:00", "Mars/Olympus") }

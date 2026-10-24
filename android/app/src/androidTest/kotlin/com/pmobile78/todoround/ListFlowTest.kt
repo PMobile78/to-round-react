@@ -154,7 +154,8 @@ class ListFlowTest {
                 web.task(uid, "t1", "buy milk", "home", Due("2026-10-01T09:30", here))
                 web.task(uid, "t2", "Call the bank", "home", Due("2099-12-31T08:00", here))
                 web.task(uid, "t3", "Apples", null)
-                web.task(uid, "t4", "Mars trip", "gone", Due("2026-10-23T09:30", "Mars/Olympus_Mons"))
+                // A zone this phone does not know: the due is read in the zone of the phone, as the web reads it.
+                web.task(uid, "t4", "Mars trip", "gone", Due("2026-10-01T09:30", "Mars/Olympus_Mons"))
                 web.task(uid, "t5", "Report", "work")
                 web.task(uid, "t6", "Done before", "home", status = "done")
                 // The rules leave the elements of reminders to the clients; the core wants whole hours.
@@ -169,7 +170,7 @@ class ListFlowTest {
                 "Apples",
                 "buy milk|Due date: 10/01/2026, 09:30|Overdue|Home",
                 "Call the bank|Due date: 12/31/2099, 08:00|Home",
-                "Mars trip|Due date: 10/23/2026, 09:30|No Tag",
+                "Mars trip|Due date: 10/01/2026, 09:30|Overdue|No Tag",
             ),
         )
         compose.onNodeWithTag("count").assertTextEquals("Active Tasks (4)")
