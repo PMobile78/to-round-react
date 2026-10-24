@@ -45,6 +45,12 @@ fun AppContent(viewModel: AppViewModel = viewModel()) {
     when (val current = session) {
         Session.Starting -> Unit
         Session.SignedOut -> AuthScreen(viewModel.accounts)
-        is Session.SignedIn -> HomeScreen(current, onSignOut = viewModel::signOut)
+        is Session.SignedIn -> HomeScreen(
+            current,
+            onSignOut = viewModel::signOut,
+            onSort = viewModel::setListSort,
+            onFilter = viewModel::setListFilter,
+            writeFailures = viewModel.writeFailures,
+        )
     }
 }
