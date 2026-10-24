@@ -45,6 +45,7 @@ export default function BubbleDialog(props) {
         setEditBubbleSize,
         handleDeleteBubble,
         handleMarkAsDone,
+        showMarkAsDone,
         handleFinishSeries,
         showFinishSeries,
         handleSaveBubble,
@@ -183,19 +184,21 @@ export default function BubbleDialog(props) {
                                 {t('bubbles.deleteBubble')}
                             </Button>
                             {/* The hints also open on a long press; above the button they stay clear of the finger */}
-                            <Tooltip title={t(showFinishSeries ? 'bubbles.markAsDoneRepeatHint' : 'bubbles.markAsDoneHint')} describeChild placement="top">
-                                <Button
-                                    onClick={handleMarkAsDone}
-                                    variant="outlined"
-                                    color="success"
-                                    startIcon={<CheckCircle />}
-                                    fullWidth={isSmallScreen}
-                                    size={isSmallScreen ? 'small' : 'medium'}
-                                    sx={{ borderRadius: 2, ...(!isSmallScreen && { minHeight: 36 }) }}
-                                >
-                                    {t('bubbles.markAsDone')}
-                                </Button>
-                            </Tooltip>
+                            {showMarkAsDone && (
+                                <Tooltip title={t(showFinishSeries ? 'bubbles.markAsDoneRepeatHint' : 'bubbles.markAsDoneHint')} describeChild placement="top">
+                                    <Button
+                                        onClick={handleMarkAsDone}
+                                        variant="outlined"
+                                        color="success"
+                                        startIcon={<CheckCircle />}
+                                        fullWidth={isSmallScreen}
+                                        size={isSmallScreen ? 'small' : 'medium'}
+                                        sx={{ borderRadius: 2, ...(!isSmallScreen && { minHeight: 36 }) }}
+                                    >
+                                        {t('bubbles.markAsDone')}
+                                    </Button>
+                                </Tooltip>
+                            )}
                             {showFinishSeries && (
                                 <Tooltip title={t('bubbles.finishSeriesHint')} describeChild placement="top">
                                     <Button

@@ -580,6 +580,8 @@ const BubblesPage = ({ user, themeMode }) => {
     // task that pulses now (a reminder has come or the due has passed) and is not
     // stopped yet. Computed each render from selectedBubble.
     const editDialogShowStopPulsing = shouldShowStopPulsing(selectedBubble, Date.now());
+    // The list opens done and deleted tasks in the edit dialog too: "Done" is for an active one.
+    const editDialogShowMarkAsDone = selectedBubble?.status === BUBBLE_STATUS.ACTIVE;
 
     return (
         <Box sx={{
@@ -750,6 +752,7 @@ const BubblesPage = ({ user, themeMode }) => {
                 setEditDialog={setEditDialog}
                 handleDeleteBubble={handleDeleteBubble}
                 handleMarkAsDone={handleMarkAsDone}
+                showMarkAsDone={editDialogShowMarkAsDone}
                 handleFinishSeries={handleFinishSeries}
                 showFinishSeries={Boolean(selectedBubble) && canFinishSeries(selectedBubble)}
                 handleSaveBubble={(payload) => handleSaveBubble({ ...payload, editDue, editReminders, editRepeat, manuallyStoppedPulsingRef, setEditDue })}

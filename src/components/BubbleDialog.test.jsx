@@ -44,6 +44,7 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
             setSelectedTagId: vi.fn(),
             handleDeleteBubble: vi.fn(),
             handleMarkAsDone: vi.fn(),
+            showMarkAsDone: true,
             handleSaveBubble: vi.fn(),
             onStopPulsing: vi.fn(),
             showStopPulsing: false,
@@ -140,6 +141,14 @@ describe('BubbleDialog: the edit dialog on the v2 form', () => {
         render({ editDue: new Date(Date.now() + HOUR) });
         expect(button('bubbles.remindMe').disabled).toBe(false);
         expect(document.querySelector('input[type="checkbox"]').disabled).toBe(false);
+    });
+
+    it('offers "Done" only when asked to (an active task, not a done or deleted one)', () => {
+        render({ showMarkAsDone: false });
+        expect(button('bubbles.markAsDone')).toBeUndefined();
+        render();
+        act(() => button('bubbles.markAsDone').click());
+        expect(props.handleMarkAsDone).toHaveBeenCalledTimes(1);
     });
 
     it('offers "Finish series" next to "Done" only when asked to (a repeating task)', () => {
