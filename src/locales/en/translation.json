@@ -16,6 +16,7 @@
         "createTag": "Create New Tag",
         "editTag": "Edit Tag",
         "tagName": "Tag Name",
+        "tagNameExists": "A tag with this name already exists",
         "color": "Color",
         "create": "Create",
         "selectColor": "Select Color",

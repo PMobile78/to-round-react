@@ -17,6 +17,7 @@ import {
     isColorAvailable as isColorAvailablePure,
     canCreateMoreTags as canCreateMoreTagsPure
 } from './tagColors';
+import { isTagNameTaken } from './tagNames';
 
 /**
  * Tag state + behaviour extracted from BubblesPage (Task 2/6 of #38).
@@ -90,6 +91,10 @@ export function useTags({ user }) {
 
         if (editingTag && editingTag.color !== tagColor && !isColorAvailable(tagColor)) {
             return; // Цвет уже занят при редактировании
+        }
+
+        if (isTagNameTaken(tags, tagName, editingTag)) {
+            return; // Имя уже есть у другой категории
         }
 
         const name = tagName.trim();

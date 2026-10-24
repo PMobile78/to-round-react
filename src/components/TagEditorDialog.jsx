@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Box, Typography, Button } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { isTagNameTaken } from '../hooks/tagNames';
 
 const TagEditorDialog = ({
     open,
@@ -8,6 +9,7 @@ const TagEditorDialog = ({
     isSmallScreen,
     isMobile,
     colorPalette,
+    tags,
     editingTag,
     tagName,
     setTagName,
@@ -19,7 +21,8 @@ const TagEditorDialog = ({
 }) => {
     const { t } = useTranslation();
 
-    const isSaveDisabled = !tagName?.trim() ||
+    const isNameTaken = isTagNameTaken(tags, tagName, editingTag);
+    const isSaveDisabled = !tagName?.trim() || isNameTaken ||
         (!editingTag && !isColorAvailable(tagColor)) ||
         (editingTag && editingTag.color !== tagColor && !isColorAvailable(tagColor));
 
@@ -43,6 +46,8 @@ const TagEditorDialog = ({
                     variant="outlined"
                     value={tagName}
                     onChange={(e) => setTagName(e.target.value)}
+                    error={isNameTaken}
+                    helperText={isNameTaken ? t('bubbles.tagNameExists') : undefined}
                     sx={{
                         marginBottom: 2,
                         '& .MuiInputBase-input': { fontSize: isMobile ? 16 : 14 }

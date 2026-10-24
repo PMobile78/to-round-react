@@ -119,6 +119,34 @@ describe('useTags: categories as v2 documents', () => {
         expect(updateCategory).not.toHaveBeenCalled();
     });
 
+    it('does not create a category with the name of another one, and keeps the dialog open', () => {
+        ui.tagName = ' b ';
+        ui.tagColor = '#fd8b2b';
+        render({ uid: 'user-a' });
+        act(() => handlers.handleSaveTag());
+        expect(createCategory).not.toHaveBeenCalled();
+        expect(ui.includeCategoryInFilters).not.toHaveBeenCalled();
+        expect(ui.setTagDialog).not.toHaveBeenCalled();
+    });
+
+    it('does not rename a category to the name of another one', () => {
+        ui.editingTag = TAG_A;
+        ui.tagName = 'b';
+        ui.tagColor = TAG_A.color;
+        render({ uid: 'user-a' });
+        act(() => handlers.handleSaveTag());
+        expect(updateCategory).not.toHaveBeenCalled();
+    });
+
+    it('lets a category change the case of its own name', () => {
+        ui.editingTag = TAG_A;
+        ui.tagName = 'a';
+        ui.tagColor = TAG_A.color;
+        render({ uid: 'user-a' });
+        act(() => handlers.handleSaveTag());
+        expect(updateCategory).toHaveBeenCalledWith('db', 'user-a', 'tag-a', { name: 'a' });
+    });
+
     it('saves a drag-and-drop through the order planner', () => {
         render({ uid: 'user-a' });
         act(() => handlers.handleReorderTags([TAG_B, TAG_A]));

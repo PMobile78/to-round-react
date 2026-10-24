@@ -212,6 +212,7 @@ const BubblesDialogs = ({
                 isSmallScreen={isSmallScreen}
                 isMobile={isMobile}
                 colorPalette={COLOR_PALETTE}
+                tags={tags}
                 editingTag={editingTag}
                 tagName={tagName}
                 setTagName={setTagName}
