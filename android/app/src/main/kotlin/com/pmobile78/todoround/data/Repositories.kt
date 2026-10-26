@@ -20,6 +20,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.tasks.await
@@ -87,6 +88,33 @@ class SettingsRepository(private val db: FirebaseFirestore) {
     private companion object {
         const val TAG = "SettingsRepository"
     }
+}
+
+/** The devices of a user, users/{uid}/devices/{deviceId} (contract, 3.3), as the web's devices.js. */
+class DevicesRepository(private val db: FirebaseFirestore) {
+    /**
+     * Writes this phone as the device [deviceId] of [uid] with [address]: a new device with
+     * notifications on, a known one only its new address (stage 3 spec, 2.3 №2). It waits for the
+     * server's copy of the document, so without a connection it waits. True when it wrote.
+     */
+    suspend fun register(uid: String, deviceId: String, address: String?): Boolean {
+        val device = device(uid, deviceId)
+        val known = device.changes().first { !it.metadata.isFromCache }
+        when {
+            !known.exists() -> device.set(newDeviceDoc(address)).await()
+            known.getString("fcmToken") != address -> device.update(deviceAddressUpdate(address)).await()
+            else -> return false
+        }
+        return true
+    }
+
+    /** Removes the device [deviceId] of [uid], as before the sign-out (contract, 3.3); returns once the server has it. */
+    suspend fun unregister(uid: String, deviceId: String) {
+        device(uid, deviceId).delete().await()
+    }
+
+    private fun device(uid: String, deviceId: String) =
+        db.collection("users").document(uid).collection("devices").document(deviceId)
 }
 
 // Only the latest snapshot matters: a slow collector skips the ones in between (conflate).
