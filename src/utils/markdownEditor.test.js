@@ -36,4 +36,22 @@ describe('description editor: Markdown in, the same Markdown out (spec 5)', () =
         expect(opened.getHTML()).not.toContain('<img');
         expect(markdownOf(opened)).toBe('**raw**');
     });
+
+    // marked re-reads the list at the end of a quote with its own tokenizer, which knows no letters (TypeError).
+    it.each([
+        ['> a. first\nnext', '<blockquote><ol type="a"><li><p>first\nnext</p></li></ol></blockquote>'],
+        ['> ii. second\nnext', '<blockquote><ol start="2" type="i"><li><p>second\nnext</p></li></ol></blockquote>'],
+    ])('opens a quote whose list of letters goes on in a line without ">": %j', (markdown, html) => {
+        expect(open(markdown).getHTML()).toBe(html);
+    });
+
+    it.each([
+        ['text\n\n  ```\ncode\n  ```', '<p>text</p><pre><code>code</code></pre>', 'text\n\n```\ncode\n```'],
+        ['- item\n\n    ```\n    code\n    ```', '<ul><li><p>item</p><pre><code>code</code></pre></li></ul>',
+            '- item\n\n  ```\n  code\n  ```'],
+    ])('shows and keeps a code block whose fence starts after spaces: %j', (markdown, html, saved) => {
+        const opened = open(markdown);
+        expect(opened.getHTML()).toBe(html);
+        expect(markdownOf(opened)).toBe(saved);
+    });
 });
