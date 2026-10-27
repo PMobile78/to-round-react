@@ -67,4 +67,7 @@
     <string name="list_offline">No connection to the server: these are the data saved on this device.</string>
     <string name="list_failed">The data could not be read. Sign out and sign in again.</string>
     <string name="write_failed">The change could not be saved.</string>
+
+    <!-- Notifications (stage 3 spec): the texts of the pushes come from the server. -->
+    <string name="reminders_channel">Reminders</string>
 </resources>

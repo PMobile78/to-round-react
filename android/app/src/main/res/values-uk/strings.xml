@@ -64,4 +64,6 @@
     <string name="list_offline">Немає зв’язку із сервером: це дані, збережені на цьому пристрої.</string>
     <string name="list_failed">Не вдалося прочитати дані. Вийдіть і увійдіть знову.</string>
     <string name="write_failed">Не вдалося зберегти зміну.</string>
+
+    <string name="reminders_channel">Нагадування</string>
 </resources>

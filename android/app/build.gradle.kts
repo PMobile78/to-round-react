@@ -47,6 +47,8 @@ android {
     buildTypes {
         debug {
             buildConfigField("boolean", "EMULATORS", emulators.toString())
+            // A build for the emulators never registers with FCM: the emulators send no pushes.
+            manifestPlaceholders["fcmAutoInit"] = (!emulators).toString()
         }
         release {
             isMinifyEnabled = true
@@ -54,6 +56,7 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             signingConfig = signingConfigs.findByName("release")
             buildConfigField("boolean", "EMULATORS", "false")
+            manifestPlaceholders["fcmAutoInit"] = "true"
         }
     }
 
@@ -92,6 +95,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.installations)
+    implementation(libs.firebase.messaging)
     implementation(libs.kotlinx.coroutines.play.services)
     debugImplementation(libs.androidx.compose.ui.tooling)
     // The activity in which the device tests show one screen on its own (createComposeRule).
@@ -105,4 +110,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    // The notification shade of the system, where a test taps a notification.
+    androidTestImplementation(libs.androidx.test.uiautomator)
 }
