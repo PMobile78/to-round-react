@@ -12,6 +12,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pmobile78.todoround.ui.AppViewModel
 import com.pmobile78.todoround.ui.AuthScreen
 import com.pmobile78.todoround.ui.HomeScreen
+import com.pmobile78.todoround.ui.RegisterThisDevice
 import com.pmobile78.todoround.ui.Session
 import com.pmobile78.todoround.ui.appearanceOf
 import com.pmobile78.todoround.ui.apply
@@ -42,6 +43,8 @@ fun AppContent(viewModel: AppViewModel = viewModel()) {
     LaunchedEffect(appearance) {
         appearance?.apply()
     }
+    // After the sign-in: the permission to notify, then this phone as a device (stage 3 spec, 2.3 №1).
+    if (session is Session.SignedIn) RegisterThisDevice(viewModel::registerDevice)
     when (val current = session) {
         Session.Starting -> Unit
         Session.SignedOut -> AuthScreen(viewModel.accounts)

@@ -39,14 +39,15 @@ suspend fun Backend.signUp(email: String): String =
 suspend fun Backend.signUpNewUser(): String = signUp(newEmail())
 
 /**
- * The document as the server has it. A listener waits for the server, where a one-off read gives
- * up after 10 s of a slow start ("the client is offline"); a refusal of the rules is thrown.
+ * The document as the server has it, once it is [until] that. A listener waits for the server,
+ * where a one-off read gives up after 10 s of a slow start ("the client is offline"); a refusal of
+ * the rules is thrown.
  */
-suspend fun DocumentReference.fromServer(): DocumentSnapshot {
+suspend fun DocumentReference.fromServer(until: (DocumentSnapshot) -> Boolean = { true }): DocumentSnapshot {
     val result = CompletableDeferred<DocumentSnapshot>()
     val registration = addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
         if (error != null) result.completeExceptionally(error)
-        else if (snapshot != null && !snapshot.metadata.isFromCache) result.complete(snapshot)
+        else if (snapshot != null && !snapshot.metadata.isFromCache && until(snapshot)) result.complete(snapshot)
     }
     try {
         return result.await()
