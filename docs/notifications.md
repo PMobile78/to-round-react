@@ -147,6 +147,14 @@
 (`scripts/generate-sw.js`), на открытой вкладке — `onMessage` в `src/firebaseMessaging.js`;
 клик открывает `url`, и приложение открывает задачу по `?taskId=` (и по старому `?bubbleId=`).
 
+Android-приложение показывает его в своей службе FCM (`RemindersService`, [android.md](android.md)):
+заголовок и текст как есть, у задачи одно уведомление (следующее событие заменяет прежнее),
+нажатие открывает приложение. Адрес Android-устройства в `fcmToken` — то, что FCM сообщил
+приложению после регистрации (`FirebaseMessaging.register()` и `onRegistered`, firebase-messaging
+25.1+): с сервисами Google Play 26.12 и новее это id установки (FID), с более старыми — токен FCM.
+Поле `token` сообщения на время перехода FCM принимает и FID. Когда FCM уберёт поле `token`,
+сервер должен будет слать FID полем `fid` (Admin SDK 14.1+); срока Google пока не назвал.
+
 Ошибки FCM `messaging/registration-token-not-registered` и
 `messaging/invalid-registration-token` означают мёртвый токен: устройству ставится
 `fcmToken = null` — в транзакции и только если у устройства всё ещё этот токен (оно могло
