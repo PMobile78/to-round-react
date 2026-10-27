@@ -65,6 +65,72 @@
     <string name="list_failed">Не вдалося прочитати дані. Вийдіть і увійдіть знову.</string>
     <string name="write_failed">Не вдалося зберегти зміну.</string>
 
+    <string name="task_title">Завдання</string>
+    <string name="task_back">Назад</string>
+    <string name="task_status_active">Активне</string>
+    <string name="task_status_done">Завершене</string>
+    <string name="task_status_deleted">Видалене</string>
+    <string name="task_done">Позначити як готове</string>
+    <string name="task_finish_series">Завершити серію</string>
+    <string name="task_delete">Видалити завдання</string>
+    <string name="task_restore">Відновити завдання</string>
+    <string name="task_delete_forever">Видалити назавжди</string>
+    <string name="task_delete_forever_confirm">Видалити назавжди?</string>
+    <string name="task_delete_forever_message">Завдання буде видалено, і відновити його не можна.</string>
+    <string name="task_repeat_actions_hint">«Позначити як готове» переносить термін на наступний раз, «Завершити серію» зупиняє повтори.</string>
+    <string name="task_actions">Дії</string>
+    <string name="task_gone">Цього завдання більше немає.</string>
+    <plurals name="task_reminder_hours">
+        <item quantity="one">За %d годину</item>
+        <item quantity="few">За %d години</item>
+        <item quantity="many">За %d годин</item>
+        <item quantity="other">За %d години</item>
+    </plurals>
+    <plurals name="task_reminder_days">
+        <item quantity="one">За %d день</item>
+        <item quantity="few">За %d дні</item>
+        <item quantity="many">За %d днів</item>
+        <item quantity="other">За %d дня</item>
+    </plurals>
+    <plurals name="task_reminder_weeks">
+        <item quantity="one">За %d тиждень</item>
+        <item quantity="few">За %d тижні</item>
+        <item quantity="many">За %d тижнів</item>
+        <item quantity="other">За %d тижня</item>
+    </plurals>
+    <plurals name="task_repeat_hours">
+        <item quantity="one">Кожну %d годину</item>
+        <item quantity="few">Кожні %d години</item>
+        <item quantity="many">Кожні %d годин</item>
+        <item quantity="other">Кожні %d години</item>
+    </plurals>
+    <plurals name="task_repeat_days">
+        <item quantity="one">Кожен %d день</item>
+        <item quantity="few">Кожні %d дні</item>
+        <item quantity="many">Кожні %d днів</item>
+        <item quantity="other">Кожні %d дня</item>
+    </plurals>
+    <plurals name="task_repeat_weeks">
+        <item quantity="one">Кожен %d тиждень</item>
+        <item quantity="few">Кожні %d тижні</item>
+        <item quantity="many">Кожні %d тижнів</item>
+        <item quantity="other">Кожні %d тижня</item>
+    </plurals>
+    <plurals name="task_repeat_months">
+        <item quantity="one">Кожен %d місяць</item>
+        <item quantity="few">Кожні %d місяці</item>
+        <item quantity="many">Кожні %d місяців</item>
+        <item quantity="other">Кожні %d місяця</item>
+    </plurals>
+    <string name="task_repeat_on">%1$s: %2$s</string>
+    <string name="task_monday">ПН</string>
+    <string name="task_tuesday">ВТ</string>
+    <string name="task_wednesday">СР</string>
+    <string name="task_thursday">ЧТ</string>
+    <string name="task_friday">ПТ</string>
+    <string name="task_saturday">СБ</string>
+    <string name="task_sunday">НД</string>
+
     <string name="reminders_channel">Нагадування</string>
     <string name="reminders_title">Нагадування на цьому пристрої</string>
     <string name="reminders_on">Сповіщення увімкнено: нагадування й прострочені завдання приходять на цей телефон.</string>

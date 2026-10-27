@@ -12,7 +12,12 @@ import com.pmobile78.todoround.core.model.Category
 import com.pmobile78.todoround.core.model.Due
 import com.pmobile78.todoround.core.model.ListFilter
 import com.pmobile78.todoround.core.model.ListSort
+import com.pmobile78.todoround.core.model.Task
+import com.pmobile78.todoround.core.model.TaskAction
+import com.pmobile78.todoround.core.model.changes
+import com.pmobile78.todoround.core.model.completionChanges
 import com.pmobile78.todoround.core.model.defaultSettings
+import com.pmobile78.todoround.core.model.descriptionChanges
 import com.pmobile78.todoround.core.model.toRecord
 import com.pmobile78.todoround.data.CategoriesRepository
 import com.pmobile78.todoround.data.SettingsRepository
@@ -27,6 +32,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Instant
 
 /** The repositories on the Firestore emulator, under the rules of the repository. */
 @RunWith(AndroidJUnit4::class)
@@ -34,7 +40,7 @@ class RepositoriesTest {
     private val backend = emulatorBackend()
 
     // A task as the web's newTaskData writes it (src/services/data/convert.js).
-    private fun webTask(title: String, due: Map<String, Any>?, reminders: List<Int>) = mapOf(
+    private fun webTask(title: String, due: Map<String, Any>?, reminders: List<Int>, repeat: Map<String, Any>? = null) = mapOf(
         "schemaVersion" to 2,
         "title" to title,
         "description" to "",
@@ -42,7 +48,7 @@ class RepositoriesTest {
         "status" to "active",
         "due" to due,
         "reminders" to reminders,
-        "repeat" to null,
+        "repeat" to repeat,
         "radius" to 45,
         "pulseMuted" to false,
         "overdueAt" to null,
@@ -209,6 +215,84 @@ class RepositoriesTest {
                 .first { it.language == Language.EN }
             assertEquals(defaultSettings("en"), changed)
             web.auth.signOut()
+        }
+    }
+
+    // The task [id] as the core reads it from the server: it passed the check, or this fails.
+    private suspend fun readBack(uid: String, id: String, until: (Task) -> Boolean): Task {
+        val tasks = TasksRepository(backend.db).tasks(uid).first { loaded ->
+            !loaded.fromCache && loaded.items.any { it.id == id && until(it) }
+        }
+        assertEquals(0, tasks.invalid)
+        return tasks.items.single { it.id == id }
+    }
+
+    @Test
+    fun theChangesOfEachActionAreWrittenAsTheWebWritesThemAndPassTheRules() = runBlocking {
+        withTimeout(120_000) {
+            val uid = backend.signUpNewUser()
+            val repository = TasksRepository(backend.db)
+            // A daily task whose due has passed, its pulse stopped.
+            write(
+                "users/$uid/tasks/t1",
+                webTask("Water", mapOf("local" to "2026-10-01T09:30", "tz" to "Europe/Kyiv"), listOf(60), mapOf("every" to 1, "unit" to "days")) +
+                    ("pulseMuted" to true),
+            )
+            var task = readBack(uid, "t1") { true }
+            val created = backend.db.document("users/$uid/tasks/t1").fromServer().getTimestamp("createdAt")
+
+            // Done moves the due to the first time after now and lets the task pulse again.
+            val done = completionChanges(task, "Europe/Kyiv", Instant.now())
+            repository.update(uid, "t1", done)
+            task = readBack(uid, "t1") { it.due?.local == (done["due"] as Map<*, *>)["local"] }
+            assertEquals(TaskStatus.ACTIVE, task.status)
+            assertEquals(false, task.pulseMuted)
+            assertEquals("Europe/Kyiv", task.due?.tz)
+
+            repository.update(uid, "t1", TaskAction.FINISH_SERIES.changes(task, "UTC", Instant.now())!!)
+            task = readBack(uid, "t1") { it.status == TaskStatus.DONE }
+            repository.update(uid, "t1", TaskAction.RESTORE.changes(task, "UTC", Instant.now())!!)
+            task = readBack(uid, "t1") { it.status == TaskStatus.ACTIVE }
+            repository.update(uid, "t1", TaskAction.DELETE.changes(task, "UTC", Instant.now())!!)
+            task = readBack(uid, "t1") { it.status == TaskStatus.DELETED }
+            assertTrue(task.deletedAt != null)
+            repository.update(uid, "t1", TaskAction.RESTORE.changes(task, "UTC", Instant.now())!!)
+            task = readBack(uid, "t1") { it.status == TaskStatus.ACTIVE && it.deletedAt == null }
+            repository.update(uid, "t1", descriptionChanges("- [x] the big pot"))
+            task = readBack(uid, "t1") { it.description == "- [x] the big pot" }
+
+            // The document keeps its time of creation and the fields of the server; updatedAt is the server's.
+            val doc = backend.db.document("users/$uid/tasks/t1").fromServer()
+            assertEquals(2L, doc.getLong("schemaVersion"))
+            assertEquals(created, doc.getTimestamp("createdAt"))
+            assertEquals(null, doc.get("overdueAt"))
+            assertTrue(doc.getTimestamp("updatedAt")!! > created!!)
+            assertEquals("- [x] the big pot", task.description)
+        }
+    }
+
+    @Test
+    fun deleteForeverRemovesTheTask() = runBlocking {
+        withTimeout(60_000) {
+            val uid = backend.signUpNewUser()
+            write("users/$uid/tasks/t1", webTask("Old", null, emptyList()))
+            backend.db.document("users/$uid/tasks/t1").fromServer()
+
+            TasksRepository(backend.db).delete(uid, "t1")
+            assertEquals(false, backend.db.document("users/$uid/tasks/t1").fromServer().exists())
+        }
+    }
+
+    @Test
+    fun aChangeOfATaskDeletedForeverFailsForTheCaller() = runBlocking {
+        withTimeout(60_000) {
+            val uid = backend.signUpNewUser()
+            // The rules check the task the change would leave: with no document there is none.
+            val refused = runCatching { TasksRepository(backend.db).update(uid, "gone", mapOf("status" to "done")) }
+            assertEquals(
+                FirebaseFirestoreException.Code.PERMISSION_DENIED,
+                (refused.exceptionOrNull() as FirebaseFirestoreException).code,
+            )
         }
     }
 }
