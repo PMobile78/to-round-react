@@ -3,11 +3,9 @@ package com.pmobile78.todoround.ui
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,7 +22,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -71,11 +68,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleStartEffect
 import com.pmobile78.todoround.R
 import com.pmobile78.todoround.core.contract.Language
 import com.pmobile78.todoround.core.contract.SortField
@@ -90,10 +85,11 @@ import com.pmobile78.todoround.core.model.ListTab
 import com.pmobile78.todoround.core.model.SHOW_ALL
 import com.pmobile78.todoround.core.model.SHOW_NONE
 import com.pmobile78.todoround.core.model.Task
+import com.pmobile78.todoround.core.model.TaskAction
+import com.pmobile78.todoround.core.model.actions
 import com.pmobile78.todoround.core.model.changedAfterCreation
 import com.pmobile78.todoround.core.model.chosen
 import com.pmobile78.todoround.core.model.defaultSettings
-import com.pmobile78.todoround.core.model.dueView
 import com.pmobile78.todoround.core.model.filterCounts
 import com.pmobile78.todoround.core.model.hidesSome
 import com.pmobile78.todoround.core.model.inOrder
@@ -108,13 +104,16 @@ import com.pmobile78.todoround.ui.theme.ToDoRoundTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import java.time.Clock
 import java.time.Instant
 
 /**
  * The screen of a signed-in user: the top bar with the menu "Logout" and the task list of the web
  * with its tabs, search, sort and category filter (stage 2 spec, section 6). It follows the data
  * live. The sort and the filter are settings of the account, shared with the web: [onSort] and
- * [onFilter] write them, and a write the server refused comes out of [writeFailures].
+ * [onFilter] write them, and a write the server refused comes out of [writeFailures]. A row opens
+ * its task ([onOpen]) and does the actions of its status ([onAction]); [taskGone] tells that the
+ * screen of a task closed because the task is no longer there. [clock] tells the time.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,13 +123,21 @@ fun HomeScreen(
     onSort: (ListSort) -> Unit = {},
     onFilter: (ListFilter) -> Unit = {},
     writeFailures: Flow<Unit> = emptyFlow(),
+    onOpen: (String) -> Unit = {},
+    onAction: (Task, TaskAction) -> Unit = { _, _ -> },
+    taskGone: Flow<Unit> = emptyFlow(),
+    clock: Clock = Clock.systemUTC(),
 ) {
     var menu by remember { mutableStateOf(false) }
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     val snackbars = remember { SnackbarHostState() }
     val notSaved = stringResource(R.string.write_failed)
+    val gone = stringResource(R.string.task_gone)
     LaunchedEffect(writeFailures) {
         writeFailures.collect { snackbars.showSnackbar(notSaved) }
+    }
+    LaunchedEffect(taskGone) {
+        taskGone.collect { snackbars.showSnackbar(gone) }
     }
     Scaffold(
         modifier = Modifier.testTag("home"),
@@ -167,7 +174,7 @@ fun HomeScreen(
             when {
                 session.failed -> Note(stringResource(R.string.list_failed), MaterialTheme.colorScheme.error, "failed", Modifier.padding(16.dp))
                 data == null -> CircularProgressIndicator(Modifier.align(Alignment.Center).testTag("loading"))
-                else -> TaskList(data, onSort, onFilter)
+                else -> TaskList(data, onSort, onFilter, onOpen, onAction, clock)
             }
         }
     }
@@ -202,7 +209,14 @@ fun HomeScreen(
  * search follows the field 300 ms after the last key, as on the web (stage 2 spec, 2.2 №6, №8).
  */
 @Composable
-private fun TaskList(data: UserData, onSort: (ListSort) -> Unit, onFilter: (ListFilter) -> Unit) {
+private fun TaskList(
+    data: UserData,
+    onSort: (ListSort) -> Unit,
+    onFilter: (ListFilter) -> Unit,
+    onOpen: (String) -> Unit,
+    onAction: (Task, TaskAction) -> Unit,
+    clock: Clock,
+) {
     val settings = data.settings
     var tab by rememberSaveable { mutableStateOf(ListTab.ACTIVE) }
     var typed by rememberSaveable { mutableStateOf("") }
@@ -213,7 +227,7 @@ private fun TaskList(data: UserData, onSort: (ListSort) -> Unit, onFilter: (List
     }
     var filtering by rememberSaveable { mutableStateOf(false) }
     val zone = deviceTimeZone()
-    val now = currentMinute()
+    val now = currentMinute(clock)
     val categories = remember(data) { inOrder(data.categories.items) }
     val known = remember(categories) { categories.associateBy { it.id } }
     val options = ListOptions(tab, settings.listFilter, settings.listSort, query)
@@ -245,7 +259,7 @@ private fun TaskList(data: UserData, onSort: (ListSort) -> Unit, onFilter: (List
         // change of the data the list keeps its place by position, as the web's list does, and does
         // not follow the row that was first to wherever it moved.
         key(tab, settings.listSort, query) {
-            TaskRows(data, tasks, tab, known, zone, now)
+            TaskRows(data, tasks, tab, known, zone, now, onOpen, onAction)
         }
     }
     if (filtering) {
@@ -254,11 +268,31 @@ private fun TaskList(data: UserData, onSort: (ListSort) -> Unit, onFilter: (List
     }
 }
 
-/** The rows of [tasks] under the notes about the data, the note of the trash and the text of an empty tab. */
+/**
+ * The rows of [tasks] under the notes about the data, the note of the trash and the text of an empty
+ * tab. The rows hold no state of their own: the open menu and the question before "Delete forever"
+ * belong to a task by its id, so neither moves to another task when the data change under them.
+ */
 @Composable
-private fun TaskRows(data: UserData, tasks: List<Task>, tab: ListTab, categories: Map<String, Category>, zone: String, now: Instant) {
+private fun TaskRows(
+    data: UserData,
+    tasks: List<Task>,
+    tab: ListTab,
+    categories: Map<String, Category>,
+    zone: String,
+    now: Instant,
+    onOpen: (String) -> Unit,
+    onAction: (Task, TaskAction) -> Unit,
+) {
     val invalid = data.tasks.invalid + data.categories.invalid
     val offline = data.tasks.fromCache || data.categories.fromCache
+    var menuOf by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmForeverOf by rememberSaveable { mutableStateOf<String?>(null) }
+    // A menu or a question whose task left the tab goes with it, and does not open again when the task comes back.
+    LaunchedEffect(tasks) {
+        if (tasks.none { it.id == menuOf }) menuOf = null
+        if (tasks.none { it.id == confirmForeverOf }) confirmForeverOf = null
+    }
     LazyColumn(
         state = rememberLazyListState(),
         modifier = Modifier.fillMaxSize(),
@@ -280,32 +314,30 @@ private fun TaskRows(data: UserData, tasks: List<Task>, tab: ListTab, categories
             item { Note(stringResource(tab.empty), MaterialTheme.colorScheme.onSurfaceVariant, "empty") }
         }
         items(tasks) { task ->
-            TaskRow(task, task.categoryId?.let(categories::get), data.settings.language, zone, now)
+            TaskRow(
+                task = task,
+                category = task.categoryId?.let(categories::get),
+                language = data.settings.language,
+                zone = zone,
+                now = now,
+                menuOpen = menuOf == task.id,
+                onMenu = { open -> menuOf = if (open) task.id else null },
+                onOpen = { onOpen(task.id) },
+                onAction = { action -> if (action == TaskAction.DELETE_FOREVER) confirmForeverOf = task.id else onAction(task, action) },
+            )
         }
     }
-}
-
-/**
- * Now, taken again at every full minute while the list is shown (stage 2 spec, 2.2 №9), and when
- * the screen comes back: delay does not count the time the phone sleeps.
- */
-@Composable
-private fun currentMinute(): Instant {
-    var now by remember { mutableStateOf(Instant.now()) }
-    LifecycleStartEffect(Unit) {
-        now = Instant.now()
-        onStopOrDispose {}
+    val confirming = confirmForeverOf?.let { id -> tasks.firstOrNull { it.id == id } }
+    if (confirming != null) {
+        DeleteForeverDialog(
+            onConfirm = {
+                confirmForeverOf = null
+                onAction(confirming, TaskAction.DELETE_FOREVER)
+            },
+            onDismiss = { confirmForeverOf = null },
+        )
     }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(MINUTE_MS - System.currentTimeMillis() % MINUTE_MS)
-            now = Instant.now()
-        }
-    }
-    return now
 }
-
-private const val MINUTE_MS = 60_000L
 
 @get:StringRes
 private val ListTab.label: Int
@@ -498,56 +530,78 @@ private fun FilterRow(checked: Boolean, color: Color, name: String, number: Int,
 /**
  * A task as the web's list shows it: the icon of its status, the title, the due (red and "Overdue"
  * once passed, whatever the status, as on the web), the category, and the times of creation,
- * change and deletion. A done or deleted task is tinted as on the web.
+ * change and deletion. A done or deleted task is tinted as on the web. A tap opens the task; the
+ * button of the row does the first action of its status, and the menu the others (2.2 №10).
  */
 @Composable
-private fun TaskRow(task: Task, category: Category?, language: Language, zone: String, now: Instant) {
+private fun TaskRow(
+    task: Task,
+    category: Category?,
+    language: Language,
+    zone: String,
+    now: Instant,
+    menuOpen: Boolean,
+    onMenu: (Boolean) -> Unit,
+    onOpen: () -> Unit,
+    onAction: (TaskAction) -> Unit,
+) {
     val surface = MaterialTheme.colorScheme.surface
     val tint = when (task.status) {
         TaskStatus.ACTIVE -> surface
         TaskStatus.DONE -> DoneGreen.copy(alpha = 0.12f).compositeOver(surface)
         TaskStatus.DELETED -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f).compositeOver(surface)
     }
+    val actions = task.actions()
     OutlinedCard(
+        onClick = onOpen,
         colors = CardDefaults.outlinedCardColors(containerColor = tint),
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("task")
-            .semantics(mergeDescendants = true) {},
+            .testTag("task"),
     ) {
-        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            StatusIcon(task.status)
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Box(Modifier.padding(top = 12.dp)) { StatusIcon(task.status) }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(top = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Text(task.title, style = MaterialTheme.typography.titleMedium)
-                task.due?.let { due ->
-                    val view = dueView(due, zone, now)
-                    // A mark that does not fit beside the due goes whole to the next line.
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        itemVerticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.list_due, listDateTime(view.local, language)),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (view.overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                        )
-                        if (view.overdue) OverdueMark()
-                    }
-                }
-                when {
-                    category != null -> Chip(category.name, paletteColor(category.color), Color.White)
-                    // The category is gone: the web shows "No Tag" in grey.
-                    task.categoryId != null -> Chip(
-                        stringResource(R.string.list_no_category),
-                        MaterialTheme.colorScheme.surfaceVariant,
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                task.due?.let { DueLine(it, language, zone, now) }
+                CategoryChip(task.categoryId, category)
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Time(stringResource(R.string.list_created, listDateTime(task.createdAt, zone, language)))
                     if (task.changedAfterCreation()) Time(stringResource(R.string.list_updated, listDateTime(task.updatedAt, zone, language)))
                     task.deletedAt?.let { Time(stringResource(R.string.list_deleted, listDateTime(it, zone, language))) }
+                }
+            }
+            Row {
+                val first = actions.first()
+                IconButton(onClick = { onAction(first) }, modifier = Modifier.testTag("row_${first.tag}")) {
+                    Icon(
+                        painterResource(first.icon),
+                        contentDescription = stringResource(first.label),
+                        tint = if (first == TaskAction.DONE) DoneGreen else MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Box {
+                    IconButton(onClick = { onMenu(true) }, modifier = Modifier.testTag("row_menu")) {
+                        Icon(painterResource(R.drawable.ic_more_vert), contentDescription = stringResource(R.string.task_actions))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { onMenu(false) }) {
+                        actions.drop(1).forEach { action ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(action.label)) },
+                                leadingIcon = { Icon(painterResource(action.icon), contentDescription = null) },
+                                onClick = {
+                                    onMenu(false)
+                                    onAction(action)
+                                },
+                                modifier = Modifier.testTag("menu_${action.tag}"),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -555,57 +609,9 @@ private fun TaskRow(task: Task, category: Category?, language: Language, zone: S
 }
 
 @Composable
-private fun StatusIcon(status: TaskStatus) {
-    Icon(
-        painter = painterResource(if (status == TaskStatus.DELETED) R.drawable.ic_delete_outline else R.drawable.ic_check_circle),
-        contentDescription = null,
-        tint = when (status) {
-            TaskStatus.ACTIVE -> MaterialTheme.colorScheme.primary
-            TaskStatus.DONE -> DoneGreen
-            TaskStatus.DELETED -> MaterialTheme.colorScheme.error
-        },
-    )
-}
-
-@Composable
-private fun Time(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
-@Composable
-private fun OverdueMark() {
-    val red = MaterialTheme.colorScheme.error
-    Text(
-        text = stringResource(R.string.list_overdue),
-        color = red,
-        fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.labelSmall,
-        modifier = Modifier
-            .background(red.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
-            .border(1.dp, red.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-    )
-}
-
-@Composable
-private fun Chip(text: String, background: Color, content: Color) {
-    Text(
-        text = text,
-        color = content,
-        style = MaterialTheme.typography.labelMedium,
-        modifier = Modifier
-            .background(background, RoundedCornerShape(16.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-    )
-}
-
-@Composable
 private fun Note(text: String, color: Color, tag: String, modifier: Modifier = Modifier) {
     Text(text = text, color = color, style = MaterialTheme.typography.bodyMedium, modifier = modifier.testTag(tag))
 }
-
-/** A colour of the palette, "#rrggbb". */
-private fun paletteColor(hex: String): Color = Color(0xFF000000 or hex.removePrefix("#").toLong(16))
 
 @Preview(showBackground = true)
 @Composable

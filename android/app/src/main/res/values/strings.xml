@@ -67,4 +67,57 @@
     <string name="list_offline">No connection to the server: these are the data saved on this device.</string>
     <string name="list_failed">The data could not be read. Sign out and sign in again.</string>
     <string name="write_failed">The change could not be saved.</string>
+
+    <!-- The screen of a task and the actions of its status (stage 2 spec, section 7), the web's texts with "task" for "bubble". -->
+    <string name="task_title">Task</string>
+    <string name="task_back">Back</string>
+    <string name="task_status_active">Active</string>
+    <string name="task_status_done">Completed</string>
+    <string name="task_status_deleted">Deleted</string>
+    <string name="task_done">Mark as Done</string>
+    <string name="task_finish_series">Finish series</string>
+    <string name="task_delete">Delete Task</string>
+    <string name="task_restore">Restore Task</string>
+    <string name="task_delete_forever">Delete Forever</string>
+    <string name="task_delete_forever_confirm">Delete forever?</string>
+    <string name="task_delete_forever_message">The task will be deleted, and it cannot be restored.</string>
+    <string name="task_repeat_actions_hint">“Mark as Done” moves the due date to the next time; “Finish series” ends the repeats.</string>
+    <string name="task_actions">Actions</string>
+    <string name="task_gone">The task is no longer here.</string>
+    <plurals name="task_reminder_hours">
+        <item quantity="one">%d hour before</item>
+        <item quantity="other">%d hours before</item>
+    </plurals>
+    <plurals name="task_reminder_days">
+        <item quantity="one">%d day before</item>
+        <item quantity="other">%d days before</item>
+    </plurals>
+    <plurals name="task_reminder_weeks">
+        <item quantity="one">%d week before</item>
+        <item quantity="other">%d weeks before</item>
+    </plurals>
+    <plurals name="task_repeat_hours">
+        <item quantity="one">Every %d hour</item>
+        <item quantity="other">Every %d hours</item>
+    </plurals>
+    <plurals name="task_repeat_days">
+        <item quantity="one">Every %d day</item>
+        <item quantity="other">Every %d days</item>
+    </plurals>
+    <plurals name="task_repeat_weeks">
+        <item quantity="one">Every %d week</item>
+        <item quantity="other">Every %d weeks</item>
+    </plurals>
+    <plurals name="task_repeat_months">
+        <item quantity="one">Every %d month</item>
+        <item quantity="other">Every %d months</item>
+    </plurals>
+    <string name="task_repeat_on">%1$s: %2$s</string>
+    <string name="task_monday">MON</string>
+    <string name="task_tuesday">TUE</string>
+    <string name="task_wednesday">WED</string>
+    <string name="task_thursday">THU</string>
+    <string name="task_friday">FRI</string>
+    <string name="task_saturday">SAT</string>
+    <string name="task_sunday">SUN</string>
 </resources>
