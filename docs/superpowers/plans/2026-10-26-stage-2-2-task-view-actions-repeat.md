@@ -8,12 +8,12 @@
 
 **Tech Stack:** как в 2.1 — Kotlin 2.4.21, Compose BOM 2026.09.00 (Material 3), Firebase BoM 35.1.0, AppCompat 1.8.0, Lifecycle 2.11.0; тесты JVM — JUnit 6, на устройстве — Compose UI test (правила v2), AndroidX Test. Новых библиотек нет. Разбор Markdown написан в `core`, а не взят готовым (спецификация, раздел 15, оставляет выбор подплану): библиотеки Kotlin читают Markdown по CommonMark, а квадратик должен стоять там, где его ставит веб (раздел 8), — у веба свои правила (marked и токенизаторы TipTap: пункты с буквами, «Ok. Thanks» как нумерованный список и другие). Эмуляторам Firebase нужны Firebase CLI 15 и Java 21+.
 
-**Spec:** [docs/superpowers/specs/2026-10-24-stage-2-tasks-design.md](../specs/2026-10-24-stage-2-tasks-design.md) — разделы 2.2 (№ 1, 2, 9, 11–13, 16, 17, 21, 23), 3 (№ 5–10, 16), 4, 5, 7, 8, 11. Обзор — [2026-10-24-stage-2-overview.md](2026-10-24-stage-2-overview.md). Основа — подплан 2.1 (`main` b507ebf) и его план [2.1](2026-10-24-stage-2-1-list-tabs-search-sort-filter.md) (раздел «Итог подплана 2.1 и передача в 2.2»). Эталоны веба — `src/contract/recurrence.js`, `completionChanges` в `src/services/data/tasks.js`, показ описания — `src/utils/markdownEditor.js` (TipTap 3.32 с `@tiptap/markdown` поверх marked 17.0.6), диалог задачи — `src/components/BubbleEditDialog.jsx`. Весь код плана прогнан в черновой копии ветки: числа тестов и строки `Expected` — настоящие, тесты на устройстве — на эмуляторе `ToRound_API37` (Android 17), проверка с вебом на эмуляторах — тоже.
+**Spec:** [docs/superpowers/specs/2026-10-24-stage-2-tasks-design.md](../specs/2026-10-24-stage-2-tasks-design.md) — разделы 2.2 (№ 1, 2, 9, 11–13, 16, 17, 21, 23), 3 (№ 5–10, 16), 4, 5, 7, 8, 11. Обзор — [2026-10-24-stage-2-overview.md](2026-10-24-stage-2-overview.md). Основа — подплан 2.1 (`main` b507ebf) и его план [2.1](2026-10-24-stage-2-1-list-tabs-search-sort-filter.md) (раздел «Итог подплана 2.1 и передача в 2.2»). Эталоны веба — `src/contract/recurrence.js`, `completionChanges` в `src/services/data/tasks.js`, показ описания — `src/utils/markdownEditor.js` (TipTap 3.32 с `@tiptap/markdown` поверх marked 17.0.6) в `main` 360a45d (прод 0.2.7, исправление dfa19aa: цитата, которая кончается списком с буквами, и ограждение кода после пробелов; в `stage-2-tasks` от b507ebf его ещё нет — оно придёт при слиянии с `main`), диалог задачи — `src/components/BubbleEditDialog.jsx`. Весь код плана прогнан в черновой копии ветки: числа тестов и строки `Expected` — настоящие, тесты на устройстве — на эмуляторе `ToRound_API37` (Android 17), проверка с вебом на эмуляторах — тоже.
 
 ## Global Constraints
 
 - Ветка `stage-2-tasks` от `b507ebf` (`main` после слияния 2.1 и версии 0.2.6); план — в ней. В `main` не коммитить, ничего не пушить без слова владельца.
-- Веб, `contract/`, правила Firestore, Cloud Functions и CI не меняются. Исключение — документация в задаче 5: `docs/android.md` и `CLAUDE.md`. Новых общих примеров в `contract/` правила этого подплана не требуют: тесты `core` проверяют их на своих примерах и на 23 примерах `recurrence.json`, а совпадение с вебом проверено в черновике разовыми сверками через настоящий код веба. Следующий срок и «Готово» — 2000 случайных задач и «сейчас» в 14 зонах, треть — в дни перехода на летнее время и обратно, через `completionChanges` веба: 0 расхождений. Описание — 10 600 случайных описаний через редактор веба: квадратики и их места в тексте — 0 расхождений, 6416 отметок (описание после касания) — 0; показ 7300 описаний без HTML и таблиц совпал везде, кроме 7, которые веб целиком читает как HTML (решение 1, раздел 8: сырой HTML и таблицы телефон показывает текстом, такое описание — его текстом одним абзацем).
+- Веб, `contract/`, правила Firestore, Cloud Functions и CI не меняются. Исключение — документация в задаче 5: `docs/android.md` и `CLAUDE.md`. Новых общих примеров в `contract/` правила этого подплана не требуют: тесты `core` проверяют их на своих примерах и на 23 примерах `recurrence.json`, а совпадение с вебом проверено в черновике разовыми сверками через настоящий код веба. Следующий срок и «Готово» — 2000 случайных задач и «сейчас» в 14 зонах, треть — в дни перехода на летнее время и обратно, через `completionChanges` веба: 0 расхождений. Описание — 10 600 случайных описаний через редактор веба 0.2.7: квадратики и их места в тексте — 0 расхождений (6416 отметок, то есть описаний после касания, сверены с вебом 0.2.6 — тоже 0); показ 7300 описаний без HTML и таблиц совпал полностью, а в 3300 описаниях с HTML и таблицами показ расходится только из-за них (решение 1, раздел 8: сырой HTML и таблицы телефон показывает текстом).
 - Все команды — из корня репозитория; Gradle — `android/gradlew -p android --no-daemon …`, на JBR Android Studio, как в этапе 1. Без демона процесс сборки кончается вместе с ней и не держит память, которая нужна эмулятору; а `--stop`, которым это делали в 2.1, останавливает демоны Gradle всех сессий машины — и чужую сборку посреди работы.
 - `android/app/google-services.json` — вне git; в копии, где его нет, его скачивает шаг 1 задачи 3 (задачам 1 и 2 он не нужен: они собирают только `core`). Регистрацию приложения в Firebase не повторять, проект Firebase не менять.
 - Эмуляторы Firebase — из `firebase.json`: Auth на 9099, Firestore на 8180, проект `demo-to-round`; `emulators:exec` занимает ещё 4400, 4500 и 9150. Перед запуском порты свободны: `ss -ltn | grep -E ':(9099|8180|4400|4500|9150)\b'` ничего не печатает. Их может держать другая сессия: её процессы не трогать — подождать, пока порты освободятся. Если ждать долго, тесты можно прогнать на своих портах — вне репозитория: копия `firebase.json` с портами 19099, 18180, 14400, 14500, 19150 (`firebase emulators:exec --config <копия> …`) и копия `android/device-tests.sh` с `adb -e reverse tcp:9099 tcp:19099` и `adb -e reverse tcp:8180 tcp:18180`.
@@ -33,7 +33,7 @@
 
 - **Отметка пункта и чужая правка.** Касание меняет один символ — тот, что между скобками этого пункта в описании, которое сейчас на экране; остальной текст не меняется ни на символ, в том числе переводы строк `\r\n`. Если описание тем временем изменилось и на этом месте уже нет той отметки, телефон не пишет ничего; если изменение другого устройства ещё в пути, побеждает последняя запись, как в вебе (раздел 8). `MarkdownTest` (задача 2: вложенные пункты, `[X]`, `\r\n`, сдвинутая отметка), `TaskFlowTest` (задача 4: веб отмечает второй пункт — открытый экран показывает это сам).
 - **«Готово» у повторяющейся задачи.** Срок, прошедший давно (шаг `hours` перематывается — иначе предохранитель в 100 000 шагов), осенний час (второй проход пропускается), 31-е число и февраль, зона, которой телефон не знает (шаг — в зоне телефона, `tz` остаётся прежним), и `pulseMuted: true`, который сбрасывается. `RecurrenceTest` (23 примера `recurrence.json`), `TaskChangesTest` (задачи 1 и 3), `TaskFlowTest` (задача 4: записанный срок — тот, что ядро даёт до или после нажатия).
-- **Описание, которое веб показывает по-своему.** Пункты с буквами и римскими числами, «Ok. Thanks» как нумерованный список, такой список и после пустых строк, пять переводов строки — один пустой абзац, блок кода с пробелами перед ```` ``` ```` пропадает, вложенный текст пункта чек-листа теряет символы отступа; сырой HTML и таблицы — текстом (решение 1); описание без единого блока веб читает как HTML. Регулярные выражения Android (ICU) не совпадают с JDK, на котором идут тесты JVM, поэтому правила блоков написаны без регулярных выражений, а в строчных классы JavaScript выписаны явно. `MarkdownTest` (задача 2), `MarkdownOnDeviceTest` (задача 4: те же описания дают те же блоки на устройстве).
+- **Описание, которое веб показывает по-своему.** Пункты с буквами и римскими числами, «Ok. Thanks» как нумерованный список, такой список и после пустых строк, пять переводов строки — один пустой абзац, вложенный текст пункта чек-листа теряет символы отступа; блок кода с пробелами перед ```` ``` ```` и цитата, которая кончается списком с буквами, а за ней строки без пустой, — так, как их показывает веб с 0.2.7; сырой HTML и таблицы — текстом (решение 1); описание без единого блока веб читает как HTML. Регулярные выражения Android (ICU) не совпадают с JDK, на котором идут тесты JVM, поэтому правила блоков написаны без регулярных выражений, а в строчных классы JavaScript выписаны явно. `MarkdownTest` (задача 2), `MarkdownOnDeviceTest` (задача 4: те же описания дают те же блоки на устройстве).
 - **Задача уходит из-под экрана и меню.** Задачу удалили навсегда на другом устройстве — экран закрывается с сообщением; запись в такую задачу правила отклоняют (`PERMISSION_DENIED`), и экран говорит «The change could not be saved.»; список сдвинулся, пока открыто меню строки, — меню остаётся у своей задачи; после действия на экране список возвращается на ту же вкладку. `RepositoriesTest` (задача 3), `TaskFlowTest` (задача 4).
 - **Необратимое и отклонённое.** «Удалить навсегда» спрашивает и в меню строки, и на экране задачи; «Cancel» ничего не пишет. Запись, которую не пропустила проверка ядра (решение 16), не уходит, а экран говорит то же «The change could not be saved.»; незнакомая телефону зона срока, которую пользователь не менял, проверку проходит. `TaskChangesTest`, `WritesTest` (задача 3), `TaskFlowTest` (задача 4: «Готово» задачи со сроком 31.12.9999 ядро не пропускает, и список это говорит).
 
@@ -409,7 +409,7 @@ EOF
 
 - [ ] **Step 1: Написать падающие тесты**
 
-Каждый пример `MarkdownTest` — то, что показывает редактор веба (`src/utils/markdownEditor.js`): чек-листы и места их отметок, в том числе во вложенных списках, в цитатах и в нумерованных списках; касание меняет один символ, переводы строк `\r\n` и `[X]` остаются; квадратика нет там, где его нет у веба (блок кода, экранированные скобки, `- [ ]текст` без пробела, пустой `- [ ]`, сырой HTML, «ленивая» строка); блоки и выделение текста; сырой HTML и таблица — текстом; особенности веба — пункты с буквами и римскими числами, «Ok. Thanks», пять переводов строки, блок кода с пробелами перед ограждением, текст картинки; ссылки, которые открываются.
+Каждый пример `MarkdownTest` — то, что показывает редактор веба (`src/utils/markdownEditor.js`): чек-листы и места их отметок, в том числе во вложенных списках, в цитатах и в нумерованных списках; касание меняет один символ, переводы строк `\r\n` и `[X]` остаются; квадратика нет там, где его нет у веба (блок кода, экранированные скобки, `- [ ]текст` без пробела, пустой `- [ ]`, сырой HTML, «ленивая» строка); блоки и выделение текста; сырой HTML и таблица — текстом; особенности веба — пункты с буквами и римскими числами, «Ok. Thanks», пять переводов строки, текст картинки; блок кода с пробелами перед ограждением и цитата, которая кончается списком с буквами, — как их показывает веб с 0.2.7; ссылки, которые открываются.
 
 Файл `android/core/src/test/kotlin/com/pmobile78/todoround/core/markdown/MarkdownTest.kt`:
 
@@ -548,9 +548,12 @@ class MarkdownTest {
         assertEquals(listOf(OrderedList(2, null, listOf(listOf(p("two")), listOf(p("then letters"))))), parseMarkdown("2. two\n\nab. then letters"))
         assertEquals(listOf(OrderedList(1, null, listOf(listOf(p("Thanks\nNext"))))), parseMarkdown("Ok. Thanks\nNext"))
         assertEquals(listOf(TaskList(listOf(TaskItem(false, 3, listOf(p("a"))))), p("b")), parseMarkdown("- [ ] a\nb"))
-        // Four blank lines are one empty paragraph; a fence with spaces before it shows nothing.
+        // Four blank lines are one empty paragraph.
         assertEquals(listOf(p("a"), Paragraph(emptyList()), p("b")), parseMarkdown("a\n\n\n\n\nb"))
-        assertEquals(listOf(p("text")), parseMarkdown("text\n\n  ```\ncode\n  ```"))
+        // Since the web's 0.2.7: a fence with spaces before it is a code block, and a quote that ends in a
+        // list numbered by letters takes the lines after it into its last item.
+        assertEquals(listOf(p("text"), CodeBlock(null, "code")), parseMarkdown("text\n\n  ```\ncode\n  ```"))
+        assertEquals(listOf(Quote(listOf(OrderedList(1, "a", listOf(listOf(p("first\nnext"))))))), parseMarkdown("> a. first\nnext"))
         // An image shows its text.
         assertEquals(listOf(p("cat")), parseMarkdown("![cat](https://example.com/cat.png)"))
     }
@@ -774,7 +777,7 @@ internal sealed class Tok {
 
 internal class SpaceTok(override var raw: Src) : Tok()
 
-internal class CodeTok(override var raw: Src, val text: String, val lang: String?, val indented: Boolean) : Tok()
+internal class CodeTok(override var raw: Src, val text: String, val lang: String?) : Tok()
 
 internal class HeadingTok(override var raw: Src, val depth: Int, val inline: MutableList<Inl>) : Tok()
 
@@ -1053,7 +1056,7 @@ internal class Lexer {
                 else -> line
             }
         }.trimEnd('\n')
-        return CodeTok(raw, text, lang = null, indented = true)
+        return CodeTok(raw, text, lang = null)
     }
 
     // The start of the code after the indentation of an indented code line at [at], or -1.
@@ -1106,7 +1109,7 @@ internal class Lexer {
         }
         val raw = src.upTo(end)
         val lang = if (info.isEmpty()) null else unescapePunctuation(info.jsTrim())
-        return CodeTok(raw, indentCodeCompensation(raw.toString(), content ?: ""), lang, indented = false)
+        return CodeTok(raw, indentCodeCompensation(raw.toString(), content ?: ""), lang)
     }
 
     // The end of a closing fence ` {0,3}<opening>[~`]* *` that starts a line at [at] and fills it, or -1.
@@ -1220,9 +1223,9 @@ internal class Lexer {
                 break
             } else if (last is ListTok) {
                 val newText = Src.join(listOf(last.raw) + lines, "\n")
-                // marked's own list tokenizer reads the list again; one numbered by letters it cannot, and
-                // the web stops there with an error (a TypeError of marked). The quote ends before the rest.
-                val newToken = list(newText) ?: break
+                // marked's own list tokenizer reads the list again; one numbered by letters it cannot, and the
+                // web (0.2.7) reads it with the tokenizer of TipTap instead: the lines go into its last item.
+                val newToken = list(newText) ?: orderedList(newText) ?: break
                 tokens[tokens.lastIndex] = newToken
                 raw = raw.upTo(raw.length - last.raw.length) + newToken.raw
                 lines = newText.from(newToken.raw.length).lines()
@@ -3224,10 +3227,8 @@ private class Mapper(private val lexer: Lexer, private val description: String) 
         return listOf(BlockNode(Block.Paragraph(content)))
     }
 
-    // CodeBlock.parseMarkdown: a fence with spaces before it is no code block of TipTap, and shows nothing.
+    // CodeBlock.parseMarkdown, and since the web's 0.2.7 a fence with spaces before it too.
     private fun code(token: CodeTok): List<Node> {
-        val raw = token.raw.toString()
-        if (!raw.startsWith("```") && !raw.startsWith("~~~") && !token.indented) return emptyList()
         return listOf(BlockNode(Block.CodeBlock(token.lang?.ifEmpty { null }, token.text)))
     }
 
@@ -3449,9 +3450,11 @@ character a tap changes; toggleTask changes it and nothing else, or
 nothing when the mark has moved. The block rules use no regular
 expressions and the inline ones spell out the classes of JavaScript:
 Android's ICU regex differs from the JDK's. Raw HTML and tables show as
-their text, and only http, https and mailto links open. On 10600 random
-descriptions the checkboxes, their places and 6416 taps are the web's (a
-check of the draft, not committed).
+their text, and only http, https and mailto links open; a quote ending
+in a lettered list and a fence after spaces show as the web shows them
+since 0.2.7. On 10600 random descriptions the checkboxes and their
+places are the web's, and so is the display except for raw HTML and
+tables (a check of the draft, not committed).
 EOF
 ```
 
@@ -6712,7 +6715,7 @@ console.log('seeded');
 - **Записи.** Изменение задачи — `TasksRepository.update` (`taskUpdate`: поля, `ServerTime` как время сервера и `updatedAt` сервера), удаление — `delete`; перед каждой записью — `changeErrors`, отказ ядра или сервера — `Writes` и сообщение. Подплан 2.3 пишет правку тем же путём (изменения формы → `changeErrors` → `update`), а создание — `set` нового документа (спецификация, раздел 5).
 - **Экраны.** `TaskScreen` открывается по id задачи и ждёт данных с сервера, если в кэше её нет — этап 3 откроет его по нажатию на уведомление. Кнопка «Изменить», экран «Правка» и кнопка «+» — в 2.3. Список хранит вкладку, поиск и место, пока открыт другой экран (`SaveableStateProvider("list")` в `MainActivity`): экран «Правка» встанет туда же.
 - **Сборки.** Gradle — с `--no-daemon`, без `--stop`: на машине работают и другие сессии, их эмулятор и сборки не трогают (`docs/android.md`, раздел «Эмулятор»).
-- **Находки в вебе, не для этого подплана** (кандидаты в задачи веба): редактор веба не открывает описание, где цитата кончается списком с буквами или римскими числами и за ней идут строки без пустой строки (`TypeError` в marked: «Cannot read properties of undefined (reading 'raw')»); блок кода с пробелами перед ограждением ```` ``` ```` веб не показывает вовсе. Телефон в первом случае показывает описание, во втором — так же, как веб.
+- **Находки в вебе исправлены** при написании этого плана — коммит dfa19aa в `main` (прод 0.2.7): редактор веба открывает описание, где цитата кончается списком с буквами или римскими числами и за ней идут строки без пустой строки (раньше — `TypeError` в marked и описание не открывалось), и показывает блок кода с пробелами перед ограждением ```` ``` ```` (раньше пропадал). Телефон показывает оба случая так же, как веб 0.2.7 (задача 2).
 - **Мелочи ревью этого плана, оставленные как есть:** номер нумерованного списка больше 2 147 483 647 телефон начинает с 1, а веб — с этого числа; касание квадратика в те миллисекунды, пока описание после изменения с другого устройства ещё разбирается, проверяет отметку только по месту в тексте; у квадратика и строки нет подписей для TalkBack (вместе с `selected` кнопки фильтра); пока длинное описание разбирается в первый раз, на его месте пусто, без индикатора; длинная цепочка `theActionsOfTheRowsAndOfTheScreenAreWrittenAsTheWebReadsThem` — первый кандидат на разделение, если начнёт падать; остановку таймера в остановленном приложении проверяет устройство `repeatOnLifecycle`, а не тест.
 - **Мелочи ревью 2.1, оставленные дальше:** панель фильтра не видит чужих изменений, пока открыта (№ 3, → 2.4); `selected` у кнопки фильтра (№ 5, вместе со сверкой на Redmi 9).
 - **Остаются из прежних ревью:** високосная секунда и 29 февраля в `isIsoTimestamp`, годы 0000–0099 в `parseLocal` (этап 5, импорт бэкапа); поток данных после сбоя не перезапускается — помогают выход и вход; `addTestListener` и кэш конфигурации Gradle; копия списка в `Records.stringsOrNull`; приведение `as FirebaseFirestoreException` в тестах; кэш Firestore после выхода остаётся на устройстве, как в вебе.
