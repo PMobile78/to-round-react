@@ -149,6 +149,10 @@ private fun TaskDetails(task: Task, data: UserData, clock: Clock, onAction: (Tas
     val language = data.settings.language
     val category = task.categoryId?.let { id -> data.categories.items.firstOrNull { it.id == id } }
     var confirmForever by rememberSaveable { mutableStateOf(false) }
+    // The question goes with the status that has "Delete forever", as the list's does: a task restored
+    // elsewhere meanwhile is not deleted for good, and the question does not come back with the status.
+    val canDeleteForever = TaskAction.DELETE_FOREVER in task.actions()
+    LaunchedEffect(canDeleteForever) { if (!canDeleteForever) confirmForever = false }
     // The description is read away from the main thread: the web's Markdown takes long on a few
     // pathological texts. A parse that fails shows the text as it is.
     val blocks by produceState<List<Block>?>(null, task.description) {
@@ -234,7 +238,7 @@ private fun TaskDetails(task: Task, data: UserData, clock: Clock, onAction: (Tas
             )
         }
     }
-    if (confirmForever) {
+    if (confirmForever && canDeleteForever) {
         DeleteForeverDialog(onConfirm = {
             confirmForever = false
             onAction(TaskAction.DELETE_FOREVER)
