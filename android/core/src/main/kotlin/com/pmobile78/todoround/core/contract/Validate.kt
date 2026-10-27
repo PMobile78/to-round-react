@@ -23,6 +23,7 @@ private val SETTINGS_KEYS = setOf(
     "themeMode", "design", "language", "mainView", "labelFontSize", "bubbleBackground",
     "showCategoriesPanel", "showInstructions", "bubbleFilter", "listFilter", "listSort",
 )
+private val DEVICE_KEYS = setOf("id", "platform", "fcmToken", "notificationsEnabled", "createdAt", "updatedAt")
 
 // The characters String.prototype.trim() removes in JavaScript: white space and line ends.
 private val JS_SPACES: Set<Int> =
@@ -200,6 +201,21 @@ fun validateSettings(settings: Any?): List<String> {
         fromWire<SortOrder>(listSort.field("order")) == null
     ) {
         errors += "listSort: invalid"
+    }
+    return errors
+}
+
+/** Errors of a device record: the checks of validDevice in firestore.rules (spec 3.3), which has no validate.js counterpart. */
+fun validateDevice(device: Any?): List<String> {
+    if (device !is Map<*, *>) return listOf("device: not an object")
+    val errors = unknownKeys(device, DEVICE_KEYS).map { "$it: unknown field" }.toMutableList()
+    if (!isValidId(device.field("id"))) errors += "id: invalid"
+    if (fromWire<Platform>(device.field("platform")) == null) errors += "platform: invalid"
+    val token = device.field("fcmToken")
+    if (!(token == null || (token is String && token.length in 1..Limits.FCM_TOKEN_MAX_LENGTH))) errors += "fcmToken: invalid"
+    if (device.field("notificationsEnabled") !is Boolean) errors += "notificationsEnabled: invalid"
+    listOf("createdAt", "updatedAt").forEach { key ->
+        if (!isIsoTimestamp(device.field(key))) errors += "$key: invalid"
     }
     return errors
 }

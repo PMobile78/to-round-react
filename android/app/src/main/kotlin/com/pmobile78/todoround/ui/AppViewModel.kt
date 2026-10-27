@@ -2,6 +2,7 @@ package com.pmobile78.todoround.ui
 
 import android.app.Application
 import android.util.Log
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
@@ -16,6 +17,7 @@ import com.pmobile78.todoround.data.CategoriesRepository
 import com.pmobile78.todoround.data.Loaded
 import com.pmobile78.todoround.data.SettingsRepository
 import com.pmobile78.todoround.data.TasksRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,6 +30,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** The data of the signed-in user that the screens show. */
 data class UserData(val settings: Settings, val tasks: Loaded<Task>, val categories: Loaded<Category>)
@@ -61,7 +65,8 @@ fun signedInSession(email: String, data: Flow<UserData?>): Flow<Session.SignedIn
 
 /** The session of the app: who is signed in and their data, live (spec 6). */
 class AppViewModel(application: Application) : AndroidViewModel(application) {
-    private val backend = (application as ToDoRoundApp).backend
+    private val app = application as ToDoRoundApp
+    private val backend = app.backend
     val accounts = AccountRepository(backend.auth)
     private val tasks = TasksRepository(backend.db)
     private val categories = CategoriesRepository(backend.db)
@@ -82,9 +87,35 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         .flatMapLatest { user -> if (user == null) flowOf(Session.SignedOut) else signedIn(user) }
         .stateIn(viewModelScope, SharingStarted.Lazily, Session.Starting)
 
-    /** Signs out; [session] then takes the language of the phone again. */
+    /**
+     * Removes this phone from the devices of the account, waiting for it 2 s at most (stage 3
+     * spec, 2.3 №5), and the account's reminders from the shade, then signs out; [session] then
+     * takes the language of the phone again. It runs in the scope of the app, so leaving the screen
+     * does not stop it halfway.
+     */
     fun signOut() {
-        accounts.signOut()
+        val uid = backend.auth.currentUser?.uid
+        app.scope.launch {
+            if (uid != null) withTimeoutOrNull(2_000) { quietly("the device was not removed") { app.thisDevice.unregister(uid) } }
+            NotificationManagerCompat.from(app).cancelAll()
+            accounts.signOut()
+        }
+    }
+
+    /** Writes this phone as a device of the signed-in user (stage 3 spec, 2.3 №1); a failure waits for the next time. */
+    fun registerDevice() {
+        val uid = backend.auth.currentUser?.uid ?: return
+        viewModelScope.launch { quietly("the device was not written") { app.thisDevice.register(uid) } }
+    }
+
+    private suspend fun quietly(failure: String, write: suspend () -> Unit) {
+        try {
+            write()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("AppViewModel", failure, e)
+        }
     }
 
     private val writes = Writes(viewModelScope)

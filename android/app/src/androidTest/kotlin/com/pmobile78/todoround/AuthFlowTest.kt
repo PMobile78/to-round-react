@@ -15,13 +15,17 @@ import androidx.compose.ui.test.performTextInput
 import androidx.core.os.LocaleListCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.google.firebase.installations.FirebaseInstallations
 import com.pmobile78.todoround.core.contract.ThemeMode
 import com.pmobile78.todoround.core.model.Settings
 import com.pmobile78.todoround.core.model.defaultSettings
 import com.pmobile78.todoround.data.SettingsRepository
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Before
 import org.junit.Rule
@@ -160,6 +164,30 @@ class AuthFlowTest {
         backend.auth.signOut()
         waitFor("auth")
         compose.waitUntil(60_000) { AppCompatDelegate.getApplicationLocales().isEmpty }
+    }
+
+    @Test
+    fun thisPhoneIsADeviceOfTheAccountUntilItSignsOut() = runBlocking {
+        val email = newEmail()
+        webAccount(email, defaultSettings("en"))
+        signInOnScreen(email, "secret-1")
+        waitFor("home")
+        val uid = backend.auth.currentUser!!.uid
+        val fid = FirebaseInstallations.getInstance().id.await()
+
+        // The web's client sees the device the app wrote after the sign-in (stage 3 spec, section 5).
+        val web = webBackend()
+        web.auth.signInWithEmailAndPassword(email, "secret-1").await()
+        val device = web.db.document("users/$uid/devices/$fid")
+        val written = withTimeout(60_000) { device.fromServer { it.exists() } }
+        assertEquals("android", written.getString("platform"))
+        assertEquals(fid, written.getString("fcmToken"))
+        assertEquals(true, written.getBoolean("notificationsEnabled"))
+
+        // The sign-out removes it; a slow server may still be deleting it when the session ends.
+        signOutOnScreen()
+        assertFalse(withTimeout(60_000) { device.fromServer { !it.exists() } }.exists())
+        web.auth.signOut()
     }
 
     @Test

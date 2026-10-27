@@ -111,10 +111,11 @@ import kotlinx.coroutines.flow.emptyFlow
 import java.time.Instant
 
 /**
- * The screen of a signed-in user: the top bar with the menu "Logout" and the task list of the web
- * with its tabs, search, sort and category filter (stage 2 spec, section 6). It follows the data
- * live. The sort and the filter are settings of the account, shared with the web: [onSort] and
- * [onFilter] write them, and a write the server refused comes out of [writeFailures].
+ * The screen of a signed-in user: the top bar with the menu ("Reminders on this device", "Logout")
+ * and the task list of the web with its tabs, search, sort and category filter (stage 2 spec,
+ * section 6). It follows the data live. The sort and the filter are settings of the account,
+ * shared with the web: [onSort] and [onFilter] write them, and a write the server refused comes
+ * out of [writeFailures].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,6 +128,7 @@ fun HomeScreen(
 ) {
     var menu by remember { mutableStateOf(false) }
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
+    var reminders by rememberSaveable { mutableStateOf(false) }
     val snackbars = remember { SnackbarHostState() }
     val notSaved = stringResource(R.string.write_failed)
     LaunchedEffect(writeFailures) {
@@ -142,6 +144,14 @@ fun HomeScreen(
                         Icon(painterResource(R.drawable.ic_more_vert), contentDescription = stringResource(R.string.menu))
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.reminders_title)) },
+                            onClick = {
+                                menu = false
+                                reminders = true
+                            },
+                            modifier = Modifier.testTag("reminders"),
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.auth_logout)) },
                             onClick = {
@@ -194,6 +204,7 @@ fun HomeScreen(
             },
         )
     }
+    if (reminders) RemindersWindow(onClose = { reminders = false })
 }
 
 /**

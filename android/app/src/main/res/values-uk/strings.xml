@@ -64,4 +64,14 @@
     <string name="list_offline">Немає зв’язку із сервером: це дані, збережені на цьому пристрої.</string>
     <string name="list_failed">Не вдалося прочитати дані. Вийдіть і увійдіть знову.</string>
     <string name="write_failed">Не вдалося зберегти зміну.</string>
+
+    <string name="reminders_channel">Нагадування</string>
+    <string name="reminders_title">Нагадування на цьому пристрої</string>
+    <string name="reminders_on">Сповіщення увімкнено: нагадування й прострочені завдання приходять на цей телефон.</string>
+    <string name="reminders_off">Сповіщення для цього застосунку не дозволені, тож нагадування сюди не прийдуть.</string>
+    <string name="reminders_notification_settings">Відкрити налаштування сповіщень</string>
+    <string name="reminders_xiaomi">Щоб нагадування приходили, коли застосунок закрито, у MIUI потрібні три налаштування:\n1. «Автозапуск» — увімкнути.\n2. «Контроль активності» — «Без обмежень».\n3. У недавніх застосунках закріпити картку застосунку.\nПерші два — у налаштуваннях застосунку.</string>
+    <string name="reminders_battery">Якщо нагадування запізнюються, зніміть для застосунку обмеження батареї в його налаштуваннях.</string>
+    <string name="reminders_app_settings">Налаштування застосунку</string>
+    <string name="close">Закрити</string>
 </resources>

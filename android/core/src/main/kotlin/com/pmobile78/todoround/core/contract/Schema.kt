@@ -31,6 +31,7 @@ object Limits {
     const val RADIUS_MAX = 80
     const val FONT_SIZE_MIN = 8
     const val FONT_SIZE_MAX = 20
+    const val FCM_TOKEN_MAX_LENGTH = 4096
 }
 
 /** A value of the contract kept as a string: [wire] is how Firestore and backups store it. */
@@ -72,4 +73,8 @@ enum class SortField(override val wire: String) : WireValue {
 
 enum class SortOrder(override val wire: String) : WireValue {
     ASC("asc"), DESC("desc"),
+}
+
+enum class Platform(override val wire: String) : WireValue {
+    WEB("web"), ANDROID("android"),
 }

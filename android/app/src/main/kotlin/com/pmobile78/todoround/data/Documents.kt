@@ -2,6 +2,7 @@ package com.pmobile78.todoround.data
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
+import com.pmobile78.todoround.core.contract.Platform
 import com.pmobile78.todoround.core.contract.SCHEMA_VERSION
 import com.pmobile78.todoround.core.contract.validateSettings
 import com.pmobile78.todoround.core.model.ListFilter
@@ -81,3 +82,19 @@ fun listFilterUpdate(filter: ListFilter): Map<String, Any?> = settingsUpdate("li
 // that two devices do not undo each other's changes of other settings.
 private fun settingsUpdate(key: String, value: Any?): Map<String, Any?> =
     mapOf("settings.$key" to value, "updatedAt" to FieldValue.serverTimestamp())
+
+/**
+ * A new users/{uid}/devices/{FID} for this phone (contract, 3.3): notifications on, [address] for
+ * the pushes (its FID once registered with FCM, or null) and the times of the server.
+ */
+fun newDeviceDoc(address: String?): Map<String, Any?> = mapOf(
+    "platform" to Platform.ANDROID.wire,
+    "fcmToken" to address,
+    "notificationsEnabled" to true,
+    "createdAt" to FieldValue.serverTimestamp(),
+    "updatedAt" to FieldValue.serverTimestamp(),
+)
+
+/** The change of a known device: its new [address] and the time of the server; the switch stays as it is (contract, 3.3). */
+fun deviceAddressUpdate(address: String?): Map<String, Any?> =
+    mapOf("fcmToken" to address, "updatedAt" to FieldValue.serverTimestamp())

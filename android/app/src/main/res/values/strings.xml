@@ -67,4 +67,16 @@
     <string name="list_offline">No connection to the server: these are the data saved on this device.</string>
     <string name="list_failed">The data could not be read. Sign out and sign in again.</string>
     <string name="write_failed">The change could not be saved.</string>
+
+    <!-- Notifications (stage 3 spec): the texts of the pushes come from the server; the menu item
+         is the one of the web's main menu (deviceReminders). -->
+    <string name="reminders_channel">Reminders</string>
+    <string name="reminders_title">Reminders on this device</string>
+    <string name="reminders_on">Notifications are on: reminders and overdue tasks come to this phone.</string>
+    <string name="reminders_off">Notifications are not allowed for this app, so reminders cannot reach this phone.</string>
+    <string name="reminders_notification_settings">Open notification settings</string>
+    <string name="reminders_xiaomi">So that reminders come while the app is closed, MIUI needs three settings:\n1. Autostart: on.\n2. Battery saver: No restrictions.\n3. In the recent apps, lock the card of the app.\nThe first two are in the settings of the app.</string>
+    <string name="reminders_battery">If reminders come late, remove the battery restrictions of the app in its settings.</string>
+    <string name="reminders_app_settings">App settings</string>
+    <string name="close">Close</string>
 </resources>

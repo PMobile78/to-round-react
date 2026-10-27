@@ -34,6 +34,12 @@ class ValidateTest {
     @TestFactory
     fun `invalid settings of the contract`() = rejects("fixtures/settings.json", ::validateSettings)
 
+    @TestFactory
+    fun `valid devices of the contract`() = accepts("fixtures/devices.json", ::validateDevice)
+
+    @TestFactory
+    fun `invalid devices of the contract`() = rejects("fixtures/devices.json", ::validateDevice)
+
     // "minimal-without-due": no due, no category, active.
     @Suppress("UNCHECKED_CAST")
     private val task = Contract.cases("fixtures/tasks.json", "valid").first().second as Map<String, Any?>
@@ -44,6 +50,7 @@ class ValidateTest {
         assertEquals(listOf("task: not an object"), validateTask(listOf(task)))
         assertEquals(listOf("category: not an object"), validateCategory("c1"))
         assertEquals(listOf("settings: not an object"), validateSettings(emptyList<Any>()))
+        assertEquals(listOf("device: not an object"), validateDevice(null))
     }
 
     @Test
@@ -83,6 +90,18 @@ class ValidateTest {
         assertEquals(emptyList<String>(), validateTask(task + ("createdAt" to "2026-10-01T08:00:00Z")))
         assertEquals(listOf("createdAt: invalid"), validateTask(task + ("createdAt" to "2026-10-01T08:00:00.000+02:00")))
         assertEquals(listOf("createdAt: invalid"), validateTask(task + ("createdAt" to "2026-13-01T08:00:00.000Z")))
+    }
+
+    // "android-without-permission": an Android device whose token is null.
+    @Suppress("UNCHECKED_CAST")
+    private val device = Contract.cases("fixtures/devices.json", "valid")[1].second as Map<String, Any?>
+
+    @Test
+    fun `a device token is null or 1 to 4096 characters, as the rules allow, and is always there`() {
+        assertEquals(emptyList<String>(), validateDevice(device + ("fcmToken" to "x".repeat(4096))))
+        assertEquals(listOf("fcmToken: invalid"), validateDevice(device + ("fcmToken" to "x".repeat(4097))))
+        assertEquals(listOf("fcmToken: invalid"), validateDevice(device - "fcmToken"))
+        assertEquals(listOf("updatedAt: invalid"), validateDevice(device + ("updatedAt" to "2026-10-02")))
     }
 
     @Test

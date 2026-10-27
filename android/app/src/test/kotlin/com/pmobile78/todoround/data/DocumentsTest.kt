@@ -9,6 +9,7 @@ import com.pmobile78.todoround.core.contract.SortField
 import com.pmobile78.todoround.core.contract.SortOrder
 import com.pmobile78.todoround.core.contract.TaskStatus
 import com.pmobile78.todoround.core.contract.ThemeMode
+import com.pmobile78.todoround.core.contract.validateDevice
 import com.pmobile78.todoround.core.contract.validateTask
 import com.pmobile78.todoround.core.model.Category
 import com.pmobile78.todoround.core.model.Due
@@ -187,5 +188,31 @@ class DocumentsTest {
             mapOf("categoryIds" to null, "showUncategorized" to true),
             listFilterUpdate(ListFilter(null, showUncategorized = true))["settings.listFilter"],
         )
+    }
+
+    @Test
+    fun `a new device is this phone with notifications on, and the contract takes its record`() {
+        assertEquals(
+            mapOf(
+                "platform" to "android",
+                "fcmToken" to "fid-1",
+                "notificationsEnabled" to true,
+                "createdAt" to FieldValue.serverTimestamp(),
+                "updatedAt" to FieldValue.serverTimestamp(),
+            ),
+            newDeviceDoc("fid-1"),
+        )
+        // The record of the document once the server has put in its times.
+        for (address in listOf("fid-1", null)) {
+            val doc: Map<String, Any?> = newDeviceDoc(address)
+            val record = doc.mapValues { if (it.value is FieldValue) "2026-10-24T10:00:00Z" else it.value } + ("id" to "fid-1")
+            assertEquals(emptyList<String>(), validateDevice(record))
+        }
+    }
+
+    @Test
+    fun `a known device changes only its address, and the switch stays as it is`() {
+        assertEquals(mapOf("fcmToken" to "fid-2", "updatedAt" to FieldValue.serverTimestamp()), deviceAddressUpdate("fid-2"))
+        assertEquals(mapOf("fcmToken" to null, "updatedAt" to FieldValue.serverTimestamp()), deviceAddressUpdate(null))
     }
 }
