@@ -15,6 +15,7 @@ import com.pmobile78.todoround.core.model.Due
 import com.pmobile78.todoround.core.model.ListFilter
 import com.pmobile78.todoround.core.model.ListSort
 import com.pmobile78.todoround.core.model.Repeat
+import com.pmobile78.todoround.core.model.ServerTime
 import com.pmobile78.todoround.core.model.Task
 import com.pmobile78.todoround.core.model.categoryFromRecord
 import com.pmobile78.todoround.core.model.defaultSettings
@@ -187,5 +188,27 @@ class DocumentsTest {
             mapOf("categoryIds" to null, "showUncategorized" to true),
             listFilterUpdate(ListFilter(null, showUncategorized = true))["settings.listFilter"],
         )
+    }
+
+    @Test
+    fun `a change of a task is its fields, the time of the server for ServerTime, and updatedAt`() {
+        assertEquals(
+            mapOf("status" to "deleted", "deletedAt" to FieldValue.serverTimestamp(), "updatedAt" to FieldValue.serverTimestamp()),
+            taskUpdate(mapOf("status" to "deleted", "deletedAt" to ServerTime)),
+        )
+        assertEquals(
+            mapOf("status" to "active", "deletedAt" to null, "updatedAt" to FieldValue.serverTimestamp()),
+            taskUpdate(mapOf("status" to "active", "deletedAt" to null)),
+        )
+        // "Done" of a repeating task: the due as a map of the contract, and the pulse on again.
+        assertEquals(
+            mapOf(
+                "due" to mapOf("local" to "2026-10-25T09:00", "tz" to "Europe/Kyiv"),
+                "pulseMuted" to false,
+                "updatedAt" to FieldValue.serverTimestamp(),
+            ),
+            taskUpdate(mapOf("due" to mapOf("local" to "2026-10-25T09:00", "tz" to "Europe/Kyiv"), "pulseMuted" to false)),
+        )
+        assertEquals(mapOf("description" to "- [x] milk", "updatedAt" to FieldValue.serverTimestamp()), taskUpdate(mapOf("description" to "- [x] milk")))
     }
 }

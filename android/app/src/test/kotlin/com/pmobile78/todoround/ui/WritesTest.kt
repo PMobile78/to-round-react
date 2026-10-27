@@ -1,6 +1,7 @@
 package com.pmobile78.todoround.ui
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
@@ -28,11 +29,27 @@ class WritesTest {
 
     @Test
     fun `a write cancelled with its screen is not a failure`() = runBlocking {
-        val scope = CoroutineScope(Job())
+        // Unconfined: the write has started and waits when the scope is cancelled.
+        val scope = CoroutineScope(Dispatchers.Unconfined + Job())
         val writes = Writes(scope)
-        writes.launch { awaitCancellation() }
+        var started = false
+        writes.launch {
+            started = true
+            awaitCancellation()
+        }
+        assertTrue(started)
         scope.cancel()
 
+        assertNull(withTimeoutOrNull(200) { writes.failures.first() })
+    }
+
+    @Test
+    fun `a write the core refused comes out of the failures, and several are one`() = runBlocking {
+        val writes = Writes(this)
+        writes.refuse()
+        writes.refuse()
+
+        assertEquals(Unit, withTimeout(5_000) { writes.failures.first() })
         assertNull(withTimeoutOrNull(200) { writes.failures.first() })
     }
 }

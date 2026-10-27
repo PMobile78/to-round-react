@@ -6,11 +6,18 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
 import com.pmobile78.todoround.ToDoRoundApp
+import com.pmobile78.todoround.core.contract.deviceTimeZone
+import com.pmobile78.todoround.core.markdown.TaskItem
+import com.pmobile78.todoround.core.markdown.toggleTask
 import com.pmobile78.todoround.core.model.Category
 import com.pmobile78.todoround.core.model.ListFilter
 import com.pmobile78.todoround.core.model.ListSort
 import com.pmobile78.todoround.core.model.Settings
 import com.pmobile78.todoround.core.model.Task
+import com.pmobile78.todoround.core.model.TaskAction
+import com.pmobile78.todoround.core.model.changeErrors
+import com.pmobile78.todoround.core.model.changes
+import com.pmobile78.todoround.core.model.descriptionChanges
 import com.pmobile78.todoround.data.AccountRepository
 import com.pmobile78.todoround.data.CategoriesRepository
 import com.pmobile78.todoround.data.Loaded
@@ -28,6 +35,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import java.time.Instant
 
 /** The data of the signed-in user that the screens show. */
 data class UserData(val settings: Settings, val tasks: Loaded<Task>, val categories: Loaded<Category>)
@@ -89,7 +97,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val writes = Writes(viewModelScope)
 
-    /** Writes the server refused: the screen shows a message for each (stage 2 spec, 2.2 №17). */
+    /** Writes the server or the core refused: the screen shows a message (stage 2 spec, 2.2 №16, №17). */
     val writeFailures: Flow<Unit> = writes.failures
 
     /** The sort of the list, shared with the web (stage 2 spec, 2.2 №7). */
@@ -97,6 +105,41 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     /** The filter of the list, shared with the web. */
     fun setListFilter(filter: ListFilter) = write { uid -> settings.setListFilter(uid, filter) }
+
+    /** [action] on [task] (stage 2 spec, 2.2 №12); the core checks the task it leaves first (2.2 №16). */
+    fun act(task: Task, action: TaskAction) {
+        if (action == TaskAction.DELETE_FOREVER) {
+            write { uid -> tasks.delete(uid, task.id) }
+            return
+        }
+        val now = Instant.now()
+        val changes = try {
+            action.changes(task, deviceTimeZone(), now)!!
+        } catch (e: RuntimeException) {
+            // A due the core cannot step, beyond the years of the contract say, writes nothing.
+            Log.w(TAG, "task ${task.id}: no changes for ${action.name}", e)
+            writes.refuse()
+            return
+        }
+        writeChanges(task, changes, now)
+    }
+
+    /** [item] of the description of [task] ticked or unticked (2.2 №2): the description is written whole. */
+    fun toggle(task: Task, item: TaskItem) {
+        val description = toggleTask(task.description, item) ?: return
+        writeChanges(task, descriptionChanges(description), Instant.now())
+    }
+
+    // Changes the core accepts are written; the others are not sent, and the screen says so.
+    private fun writeChanges(task: Task, changes: Map<String, Any?>, now: Instant) {
+        val errors = changeErrors(task, changes, now)
+        if (errors.isNotEmpty()) {
+            Log.w(TAG, "task ${task.id}: ${errors.joinToString("; ")}")
+            writes.refuse()
+            return
+        }
+        write { uid -> tasks.update(uid, task.id, changes) }
+    }
 
     // A write for the signed-in user; signed out, there is nothing to write.
     private fun write(change: suspend (uid: String) -> Unit) {
@@ -114,4 +157,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 categories.categories(user.uid),
             ) { settings, tasks, categories -> settings?.let { UserData(it, tasks, categories) } },
         )
+
+    private companion object {
+        const val TAG = "AppViewModel"
+    }
 }

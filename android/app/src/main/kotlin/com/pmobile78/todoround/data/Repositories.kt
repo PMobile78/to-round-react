@@ -36,6 +36,18 @@ class TasksRepository(private val db: FirebaseFirestore) {
     fun tasks(uid: String): Flow<Loaded<Task>> =
         db.collection("users").document(uid).collection("tasks")
             .loaded { id, data -> taskFromRecord(taskRecord(id, data), acceptUnknownZone = true) }
+
+    /** Writes [changes] of the core to the task [id] of [uid] (stage 2 spec, section 5); returns once the server has them. */
+    suspend fun update(uid: String, id: String, changes: Map<String, Any?>) {
+        task(uid, id).update(taskUpdate(changes)).await()
+    }
+
+    /** Deletes the task [id] of [uid] for good ("Delete forever"); returns once the server has done it. */
+    suspend fun delete(uid: String, id: String) {
+        task(uid, id).delete().await()
+    }
+
+    private fun task(uid: String, id: String) = db.collection("users").document(uid).collection("tasks").document(id)
 }
 
 /** The categories of a user, users/{uid}/categories. */
