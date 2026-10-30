@@ -214,6 +214,33 @@ class DocumentsTest {
     }
 
     @Test
+    fun `a new task is its fields and the rest of the contract with the times of the server, as the web writes it`() {
+        val fields = mapOf<String, Any?>(
+            "title" to "Water",
+            "description" to "",
+            "categoryId" to null,
+            "due" to mapOf("local" to "2026-11-02T09:30", "tz" to "Europe/Kyiv"),
+            "reminders" to listOf(60L),
+            "repeat" to mapOf("every" to 1L, "unit" to "days"),
+            "radius" to 45L,
+        )
+        assertEquals(
+            fields + mapOf(
+                "schemaVersion" to 2,
+                "status" to "active",
+                "pulseMuted" to false,
+                "overdueAt" to null,
+                "createdAt" to FieldValue.serverTimestamp(),
+                "updatedAt" to FieldValue.serverTimestamp(),
+                "deletedAt" to null,
+            ),
+            newTaskDoc(fields),
+        )
+        // The server writes nextNotifyAt.
+        assertFalse("nextNotifyAt" in newTaskDoc(fields))
+    }
+
+    @Test
     fun `a new device is this phone with notifications on, and the contract takes its record`() {
         assertEquals(
             mapOf(

@@ -5,6 +5,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.pmobile78.todoround.core.contract.Language
+import com.pmobile78.todoround.core.contract.RepeatUnit
 import com.pmobile78.todoround.core.contract.SortField
 import com.pmobile78.todoround.core.contract.SortOrder
 import com.pmobile78.todoround.core.contract.TaskStatus
@@ -12,13 +13,21 @@ import com.pmobile78.todoround.core.model.Category
 import com.pmobile78.todoround.core.model.Due
 import com.pmobile78.todoround.core.model.ListFilter
 import com.pmobile78.todoround.core.model.ListSort
+import com.pmobile78.todoround.core.model.NEW_TASK_FORM
+import com.pmobile78.todoround.core.model.Repeat
 import com.pmobile78.todoround.core.model.Task
 import com.pmobile78.todoround.core.model.TaskAction
+import com.pmobile78.todoround.core.model.changeErrors
 import com.pmobile78.todoround.core.model.changes
 import com.pmobile78.todoround.core.model.completionChanges
 import com.pmobile78.todoround.core.model.defaultSettings
 import com.pmobile78.todoround.core.model.descriptionChanges
+import com.pmobile78.todoround.core.model.formChanges
+import com.pmobile78.todoround.core.model.newTaskErrors
+import com.pmobile78.todoround.core.model.newTaskFields
+import com.pmobile78.todoround.core.model.toForm
 import com.pmobile78.todoround.core.model.toRecord
+import com.pmobile78.todoround.core.model.withoutDue
 import com.pmobile78.todoround.data.CategoriesRepository
 import com.pmobile78.todoround.data.SettingsRepository
 import com.pmobile78.todoround.data.TasksRepository
@@ -29,6 +38,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -268,6 +278,108 @@ class RepositoriesTest {
             assertEquals(null, doc.get("overdueAt"))
             assertTrue(doc.getTimestamp("updatedAt")!! > created!!)
             assertEquals("- [x] the big pot", task.description)
+        }
+    }
+
+    @Test
+    fun aNewTaskIsWrittenAsTheWebWritesItAndPassesTheRules() = runBlocking {
+        withTimeout(60_000) {
+            val uid = backend.signUpNewUser()
+            val repository = TasksRepository(backend.db)
+            val form = NEW_TASK_FORM.copy(
+                title = " Water the plants ",
+                description = "- [ ] the big pot",
+                categoryId = "c1",
+                due = "2026-11-02T09:30",
+                reminders = listOf(1440, 60),
+                repeat = Repeat(2, RepeatUnit.WEEKS, weekdays = listOf(5, 1)),
+                radius = 60,
+            )
+            val fields = newTaskFields(form, "Europe/Kyiv")
+            val id = repository.newId(uid)
+            assertEquals(emptyList<String>(), newTaskErrors(id, fields, Instant.now()))
+            repository.create(uid, id, fields)
+
+            val task = readBack(uid, id) { true }
+            assertEquals(
+                Task(
+                    id = id,
+                    title = "Water the plants",
+                    description = "- [ ] the big pot",
+                    categoryId = "c1",
+                    status = TaskStatus.ACTIVE,
+                    due = Due("2026-11-02T09:30", "Europe/Kyiv"),
+                    reminders = listOf(60, 1440),
+                    repeat = Repeat(2, RepeatUnit.WEEKS, weekdays = listOf(1, 5)),
+                    radius = 60,
+                    pulseMuted = false,
+                    createdAt = task.createdAt,
+                    updatedAt = task.updatedAt,
+                    deletedAt = null,
+                ),
+                task,
+            )
+            // The fields of the server: overdueAt is null, nextNotifyAt is for Cloud Functions, both times are the server's.
+            val doc = backend.db.document("users/$uid/tasks/$id").fromServer()
+            assertEquals(2L, doc.getLong("schemaVersion"))
+            assertTrue(doc.contains("overdueAt") && doc.get("overdueAt") == null)
+            assertFalse(doc.contains("nextNotifyAt"))
+            assertEquals(doc.getTimestamp("createdAt"), doc.getTimestamp("updatedAt"))
+
+            // A title alone, as a new form gives it: no due, reminders, repeat or category, and the size 45.
+            val plain = repository.newId(uid)
+            repository.create(uid, plain, newTaskFields(NEW_TASK_FORM.copy(title = "Call mum"), "Europe/Kyiv"))
+            val called = readBack(uid, plain) { true }
+            assertEquals(listOf(null, emptyList<Int>(), null, null, 45), listOf(called.due, called.reminders, called.repeat, called.categoryId, called.radius))
+        }
+    }
+
+    @Test
+    fun theChangesOfTheFormAreWrittenAsTheWebWritesThemAndPassTheRules() = runBlocking {
+        withTimeout(120_000) {
+            val uid = backend.signUpNewUser()
+            val repository = TasksRepository(backend.db)
+            // A monthly task of the 31st that "Done" moved to the 30th, its pulse stopped.
+            write(
+                "users/$uid/tasks/t1",
+                webTask("Rent", mapOf("local" to "2026-11-30T09:00", "tz" to "Europe/Kyiv"), listOf(60), mapOf("every" to 1, "unit" to "months", "monthDay" to 31)) +
+                    ("pulseMuted" to true),
+            )
+            var task = readBack(uid, "t1") { true }
+
+            // Every field but the due, on a phone in Tokyo: the due and its zone, the month day and the stopped pulse stay.
+            var opened = task.toForm("Asia/Tokyo")
+            val edited = opened.copy(
+                title = "Pay rent",
+                description = "**soon**",
+                categoryId = null,
+                reminders = listOf(2880, 60),
+                repeat = Repeat(2, RepeatUnit.MONTHS),
+                radius = 70,
+            )
+            val changes = formChanges(task, opened, edited, "Asia/Tokyo")
+            assertEquals(emptyList<String>(), changeErrors(task, changes, Instant.now()))
+            repository.update(uid, "t1", changes)
+            task = readBack(uid, "t1") { it.title == "Pay rent" }
+            assertEquals(
+                listOf("**soon**", null, Due("2026-11-30T09:00", "Europe/Kyiv"), listOf(60, 2880), Repeat(2, RepeatUnit.MONTHS, monthDay = 31), 70, true),
+                listOf(task.description, task.categoryId, task.due, task.reminders, task.repeat, task.radius, task.pulseMuted),
+            )
+
+            // A new due: the zone of the phone, the day of the monthly repeat from it, and the pulse again.
+            opened = task.toForm("Asia/Tokyo")
+            repository.update(uid, "t1", formChanges(task, opened, opened.copy(due = "2026-12-15T10:00"), "Asia/Tokyo"))
+            task = readBack(uid, "t1") { it.due?.tz == "Asia/Tokyo" }
+            assertEquals(
+                listOf(Due("2026-12-15T10:00", "Asia/Tokyo"), Repeat(2, RepeatUnit.MONTHS, monthDay = 15), false),
+                listOf(task.due, task.repeat, task.pulseMuted),
+            )
+
+            // No due: the reminders and the repeat go with it.
+            opened = task.toForm("Asia/Tokyo")
+            repository.update(uid, "t1", formChanges(task, opened, opened.withoutDue(), "Asia/Tokyo"))
+            task = readBack(uid, "t1") { it.due == null }
+            assertEquals(listOf(emptyList<Int>(), null), listOf(task.reminders, task.repeat))
         }
     }
 

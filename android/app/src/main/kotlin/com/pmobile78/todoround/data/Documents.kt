@@ -4,6 +4,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.pmobile78.todoround.core.contract.Platform
 import com.pmobile78.todoround.core.contract.SCHEMA_VERSION
+import com.pmobile78.todoround.core.contract.TaskStatus
 import com.pmobile78.todoround.core.contract.validateSettings
 import com.pmobile78.todoround.core.model.ListFilter
 import com.pmobile78.todoround.core.model.ListSort
@@ -92,6 +93,21 @@ private fun settingsUpdate(key: String, value: Any?): Map<String, Any?> =
 fun taskUpdate(changes: Map<String, Any?>): Map<String, Any?> =
     changes.mapValues { (_, value) -> if (value == ServerTime) FieldValue.serverTimestamp() else value } +
         ("updatedAt" to FieldValue.serverTimestamp())
+
+/**
+ * A new task document with [fields] of the core (newTaskFields; stage 2 spec, section 5), as the
+ * web's newTaskData writes it: schema 2, active, pulsing, not overdue, not deleted, and the times of
+ * the server; nextNotifyAt is for the server to write.
+ */
+fun newTaskDoc(fields: Map<String, Any?>): Map<String, Any?> = fields + mapOf(
+    "schemaVersion" to SCHEMA_VERSION,
+    "status" to TaskStatus.ACTIVE.wire,
+    "pulseMuted" to false,
+    "overdueAt" to null,
+    "createdAt" to FieldValue.serverTimestamp(),
+    "updatedAt" to FieldValue.serverTimestamp(),
+    "deletedAt" to null,
+)
 
 /**
  * A new users/{uid}/devices/{FID} for this phone (contract, 3.3): notifications on, [address] for

@@ -38,6 +38,14 @@ class TasksRepository(private val db: FirebaseFirestore) {
         db.collection("users").document(uid).collection("tasks")
             .loaded { id, data -> taskFromRecord(taskRecord(id, data), acceptUnknownZone = true) }
 
+    /** A new automatic id for a task of [uid], known before the task is written (stage 2 spec, section 5). */
+    fun newId(uid: String): String = db.collection("users").document(uid).collection("tasks").document().id
+
+    /** Writes the new task [id] of [uid] with [fields] of the core (newTaskFields); returns once the server has it. */
+    suspend fun create(uid: String, id: String, fields: Map<String, Any?>) {
+        task(uid, id).set(newTaskDoc(fields)).await()
+    }
+
     /** Writes [changes] of the core to the task [id] of [uid] (stage 2 spec, section 5); returns once the server has them. */
     suspend fun update(uid: String, id: String, changes: Map<String, Any?>) {
         task(uid, id).update(taskUpdate(changes)).await()
