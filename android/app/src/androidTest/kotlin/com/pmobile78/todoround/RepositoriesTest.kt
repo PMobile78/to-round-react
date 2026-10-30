@@ -31,6 +31,8 @@ import com.pmobile78.todoround.core.model.withoutDue
 import com.pmobile78.todoround.data.CategoriesRepository
 import com.pmobile78.todoround.data.SettingsRepository
 import com.pmobile78.todoround.data.TasksRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
@@ -380,6 +382,67 @@ class RepositoriesTest {
             repository.update(uid, "t1", formChanges(task, opened, opened.withoutDue(), "Asia/Tokyo"))
             task = readBack(uid, "t1") { it.due == null }
             assertEquals(listOf(emptyList<Int>(), null), listOf(task.reminders, task.repeat))
+        }
+    }
+
+    @Test
+    fun aTaskWhoseRepeatChangesUnitStaysReadableBeforeTheServerAnswers() = runBlocking {
+        withTimeout(120_000) {
+            val uid = backend.signUpNewUser()
+            // As EditFlowTest changes every field of a weekly task of Mondays with two reminders, its pulse stopped.
+            write(
+                "users/$uid/tasks/t1",
+                webTask("Rent", mapOf("local" to "2026-11-30T09:00", "tz" to "Europe/Kyiv"), listOf(60, 1440), mapOf("every" to 1, "unit" to "weeks", "weekdays" to listOf(1))) +
+                    mapOf("description" to "pay", "pulseMuted" to true),
+            )
+            var task = readBack(uid, "t1") { true }
+            var opened = task.toForm("Europe/Kyiv")
+            val monthly = opened.copy(
+                title = "Pay rent",
+                description = "pay **soon**",
+                categoryId = null,
+                due = "2026-12-15T10:00",
+                reminders = listOf(60),
+                repeat = opened.repeat!!.copy(unit = RepeatUnit.MONTHS),
+                radius = 70,
+            )
+            // The weekdays go with the weeks.
+            assertEquals(Repeat(1, RepeatUnit.MONTHS, monthDay = 15), writtenOffline(uid, "t1", formChanges(task, opened, monthly, "Europe/Kyiv")) { it.title == "Pay rent" }.repeat)
+            task = readBack(uid, "t1") { it.title == "Pay rent" }
+            assertEquals(Repeat(1, RepeatUnit.MONTHS, monthDay = 15), task.repeat)
+
+            // Weeks again, on Mondays and Fridays: the month day goes with the months.
+            opened = task.toForm("Europe/Kyiv")
+            val weekly = opened.copy(repeat = Repeat(1, RepeatUnit.WEEKS, listOf(1, 5)))
+            assertEquals(Repeat(1, RepeatUnit.WEEKS, listOf(1, 5)), writtenOffline(uid, "t1", formChanges(task, opened, weekly, "Europe/Kyiv")) { it.repeat?.unit == RepeatUnit.WEEKS }.repeat)
+            task = readBack(uid, "t1") { it.repeat?.unit == RepeatUnit.WEEKS }
+            assertEquals(Repeat(1, RepeatUnit.WEEKS, listOf(1, 5)), task.repeat)
+
+            // No repeat, then every 2 days: a repeat written key by key onto none.
+            opened = task.toForm("Europe/Kyiv")
+            assertEquals(null, writtenOffline(uid, "t1", formChanges(task, opened, opened.copy(repeat = null), "Europe/Kyiv")) { it.repeat == null }.repeat)
+            task = readBack(uid, "t1") { it.repeat == null }
+            opened = task.toForm("Europe/Kyiv")
+            val daily = opened.copy(repeat = Repeat(2, RepeatUnit.DAYS))
+            assertEquals(Repeat(2, RepeatUnit.DAYS), writtenOffline(uid, "t1", formChanges(task, opened, daily, "Europe/Kyiv")) { it.repeat != null }.repeat)
+            assertEquals(Repeat(2, RepeatUnit.DAYS), readBack(uid, "t1") { it.repeat != null }.repeat)
+        }
+    }
+
+    // The task [id] as the phone shows it once [changes] are written offline, before the server has them, [until] that:
+    // the core takes it, or this fails. Then the phone is online again and the server takes the write.
+    private suspend fun writtenOffline(uid: String, id: String, changes: Map<String, Any?>, until: (Task) -> Boolean): Task = coroutineScope {
+        val repository = TasksRepository(backend.db)
+        backend.db.disableNetwork().await()
+        try {
+            val sent = async { repository.update(uid, id, changes) }
+            val shown = repository.tasks(uid).first { loaded -> loaded.invalid > 0 || loaded.items.any { it.id == id && until(it) } }
+            assertEquals(0, shown.invalid)
+            backend.db.enableNetwork().await()
+            sent.await()
+            shown.items.single { it.id == id }
+        } finally {
+            backend.db.enableNetwork().await()
         }
     }
 

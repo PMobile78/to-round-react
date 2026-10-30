@@ -8,6 +8,7 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.SetOptions
 import com.pmobile78.todoround.core.model.Category
 import com.pmobile78.todoround.core.model.ListFilter
 import com.pmobile78.todoround.core.model.ListSort
@@ -48,7 +49,16 @@ class TasksRepository(private val db: FirebaseFirestore) {
 
     /** Writes [changes] of the core to the task [id] of [uid] (stage 2 spec, section 5); returns once the server has them. */
     suspend fun update(uid: String, id: String, changes: Map<String, Any?>) {
-        task(uid, id).update(taskUpdate(changes)).await()
+        val update = taskUpdate(changes)
+        // update() puts the keys of a repeat into its field mask beside the repeat, and Firestore's
+        // Android SDK (27.1) may then show, until the server answers, the new repeat merged onto the old
+        // one (the weekdays of weeks beside months), which the core does not read. The fields of set's
+        // mergeFields are replaced whole on the phone too; the server and the rules see the same change.
+        if (changes["repeat"] is Map<*, *>) {
+            task(uid, id).set(update, SetOptions.mergeFields(update.keys.toList())).await()
+        } else {
+            task(uid, id).update(update).await()
+        }
     }
 
     /** Deletes the task [id] of [uid] for good ("Delete forever"); returns once the server has done it. */
