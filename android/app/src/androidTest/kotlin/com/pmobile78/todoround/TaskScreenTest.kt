@@ -3,6 +3,7 @@ package com.pmobile78.todoround
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -86,5 +87,35 @@ class TaskScreenTest {
         compose.onNodeWithTag("action_delete_forever").assertExists()
         compose.onNodeWithTag("delete_forever_confirm").assertDoesNotExist()
         assertEquals(0, actions)
+    }
+
+    @Test
+    fun theFormOfTheTaskOpensFromItsScreenInAnyStatus() {
+        val deleted = Instant.parse("2026-10-24T09:00:00Z")
+        val inTrash = Task(
+            id = "t1", title = "Old note", description = "", categoryId = null, status = TaskStatus.DELETED,
+            due = null, reminders = emptyList(), repeat = null, radius = 45, pulseMuted = false,
+            createdAt = deleted, updatedAt = deleted, deletedAt = deleted,
+        )
+        var tasks by mutableStateOf(Loaded(emptyList<Task>(), 0, true))
+        var edited = 0
+        compose.setContent {
+            ToDoRoundTheme {
+                TaskScreen(
+                    "t1",
+                    Session.SignedIn("olena@example.com", UserData(defaultSettings("en"), tasks, Loaded(emptyList(), 0, false))),
+                    onBack = {},
+                    onAction = { _, _ -> },
+                    onToggle = { _, _ -> },
+                    onGone = {},
+                    onEdit = { edited++ },
+                )
+            }
+        }
+        // No form before the task is there.
+        compose.onNodeWithTag("edit").assertDoesNotExist()
+        tasks = Loaded(listOf(inTrash), 0, false)
+        compose.onNodeWithTag("edit").assertContentDescriptionEquals("Edit Task").performClick()
+        assertEquals(1, edited)
     }
 }

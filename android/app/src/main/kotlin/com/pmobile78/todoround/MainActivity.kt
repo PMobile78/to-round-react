@@ -18,6 +18,7 @@ import com.pmobile78.todoround.core.model.Task
 import com.pmobile78.todoround.core.model.TaskAction
 import com.pmobile78.todoround.ui.AppViewModel
 import com.pmobile78.todoround.ui.AuthScreen
+import com.pmobile78.todoround.ui.EditScreen
 import com.pmobile78.todoround.ui.HomeScreen
 import com.pmobile78.todoround.ui.RegisterThisDevice
 import com.pmobile78.todoround.ui.Session
@@ -42,8 +43,8 @@ class MainActivity : AppCompatActivity() {
 }
 
 /**
- * The sign-in screen, or for the signed-in user the list and the screen of the task it opens, in
- * the language and the theme of the session (spec 8).
+ * The sign-in screen, or for the signed-in user the list, the screen of the task it opens and the
+ * form of a task, in the language and the theme of the session (spec 8).
  */
 @Composable
 fun AppContent(viewModel: AppViewModel = viewModel()) {
@@ -62,8 +63,11 @@ fun AppContent(viewModel: AppViewModel = viewModel()) {
         Session.Starting -> Unit
         Session.SignedOut -> AuthScreen(viewModel.accounts)
         is Session.SignedIn -> {
-            // The task open on its screen, by its id: kept over a turn of the phone and an unloading of the app.
+            // The task open on its screen, by its id, and the form open over it or, for a new task, over
+            // the list: kept over a turn of the phone and an unloading of the app.
             var openTask by rememberSaveable { mutableStateOf<String?>(null) }
+            var editing by rememberSaveable { mutableStateOf(false) }
+            var creating by rememberSaveable { mutableStateOf(false) }
             // The list keeps its tab, search and place while a task is open.
             val screens = rememberSaveableStateHolder()
             val gone = remember { Channel<Unit>(Channel.CONFLATED) }
@@ -71,7 +75,36 @@ fun AppContent(viewModel: AppViewModel = viewModel()) {
             // refuses at once is then said by the list, not by the screen that is going away.
             var pending by remember { mutableStateOf<Pair<Task, TaskAction>?>(null) }
             val taskId = openTask
-            if (taskId != null) {
+            // The form closes once its write is sent: a write the core refuses stays in the form, which says
+            // so, and a write the server refuses later is said by the screen the form went back to.
+            if (creating) {
+                EditScreen(
+                    taskId = null,
+                    session = current,
+                    onSave = { edit ->
+                        val sent = viewModel.create(edit.form)
+                        if (sent) creating = false
+                        sent
+                    },
+                    onClose = { creating = false },
+                )
+            } else if (taskId != null && editing) {
+                EditScreen(
+                    taskId = taskId,
+                    session = current,
+                    onSave = { edit ->
+                        val sent = edit.task?.let { viewModel.save(it, edit.opened, edit.form) } != false
+                        if (sent) editing = false
+                        sent
+                    },
+                    onClose = { editing = false },
+                    onGone = {
+                        editing = false
+                        openTask = null
+                        gone.trySend(Unit)
+                    },
+                )
+            } else if (taskId != null) {
                 TaskScreen(
                     taskId,
                     current,
@@ -83,6 +116,7 @@ fun AppContent(viewModel: AppViewModel = viewModel()) {
                         gone.trySend(Unit)
                     },
                     writeFailures = viewModel.writeFailures,
+                    onEdit = { editing = true },
                 )
             } else {
                 screens.SaveableStateProvider("list") {
@@ -95,6 +129,7 @@ fun AppContent(viewModel: AppViewModel = viewModel()) {
                         onOpen = { openTask = it },
                         onAction = viewModel::act,
                         taskGone = remember(gone) { gone.receiveAsFlow() },
+                        onNew = { creating = true },
                     )
                 }
                 LaunchedEffect(pending) {

@@ -33,6 +33,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -113,8 +114,8 @@ import java.time.Instant
  * section 6). It follows the data live. The sort and the filter are settings of the account,
  * shared with the web: [onSort] and [onFilter] write them, and a write the server refused comes
  * out of [writeFailures]. A row opens its task ([onOpen]) and does the actions of its status
- * ([onAction]); [taskGone] tells that the screen of a task closed because the task is no longer
- * there. [clock] tells the time.
+ * ([onAction]); "+" opens the form of a new task ([onNew]); [taskGone] tells that the screen of a
+ * task closed because the task is no longer there. [clock] tells the time.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,6 +128,7 @@ fun HomeScreen(
     onOpen: (String) -> Unit = {},
     onAction: (Task, TaskAction) -> Unit = { _, _ -> },
     taskGone: Flow<Unit> = emptyFlow(),
+    onNew: () -> Unit = {},
     clock: Clock = Clock.systemUTC(),
 ) {
     var menu by remember { mutableStateOf(false) }
@@ -172,6 +174,13 @@ fun HomeScreen(
             )
         },
         snackbarHost = { SnackbarHost(snackbars) },
+        floatingActionButton = {
+            if (session.data != null) {
+                FloatingActionButton(onClick = onNew, modifier = Modifier.testTag("new_task")) {
+                    Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.edit_new_title))
+                }
+            }
+        },
     ) { padding ->
         val data = session.data
         Box(
@@ -307,7 +316,8 @@ private fun TaskRows(
     LazyColumn(
         state = rememberLazyListState(),
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        // Room at the end, so that "+" covers no row's buttons there.
+        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (invalid > 0 || offline) {

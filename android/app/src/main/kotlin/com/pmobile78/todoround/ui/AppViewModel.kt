@@ -16,9 +16,13 @@ import com.pmobile78.todoround.core.model.ListSort
 import com.pmobile78.todoround.core.model.Settings
 import com.pmobile78.todoround.core.model.Task
 import com.pmobile78.todoround.core.model.TaskAction
+import com.pmobile78.todoround.core.model.TaskForm
 import com.pmobile78.todoround.core.model.changeErrors
 import com.pmobile78.todoround.core.model.changes
 import com.pmobile78.todoround.core.model.descriptionChanges
+import com.pmobile78.todoround.core.model.formChanges
+import com.pmobile78.todoround.core.model.newTaskErrors
+import com.pmobile78.todoround.core.model.newTaskFields
 import com.pmobile78.todoround.data.AccountRepository
 import com.pmobile78.todoround.data.CategoriesRepository
 import com.pmobile78.todoround.data.Loaded
@@ -157,19 +161,59 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     /** [item] of the description of [task] ticked or unticked (2.2 №2): the description is written whole. */
     fun toggle(task: Task, item: TaskItem) {
-        val description = toggleTask(task.description, item) ?: return
+        val description = toggleTask(task.description, item)
+        if (description == null) {
+            // The description changed under the screen and the mark is not where it was: nothing is written.
+            Log.i(TAG, "task ${task.id}: no mark at ${item.mark} any more")
+            return
+        }
         writeChanges(task, descriptionChanges(description), Instant.now())
+    }
+
+    /**
+     * A new task from [form] (stage 2 spec, section 5): its document with an id known before the
+     * write. The core checks its record first (2.2 №16): false if it refused, and nothing is sent.
+     */
+    fun create(form: TaskForm): Boolean {
+        val uid = backend.auth.currentUser?.uid ?: return true
+        val fields = newTaskFields(form, deviceTimeZone())
+        val id = tasks.newId(uid)
+        val errors = newTaskErrors(id, fields, Instant.now())
+        if (errors.isNotEmpty()) {
+            Log.w(TAG, "new task: ${errors.joinToString("; ")}")
+            return false
+        }
+        writes.launch { tasks.create(uid, id, fields) }
+        return true
+    }
+
+    /**
+     * The changes [form] makes to [task], the task as the form opened on it, [opened] the form as it
+     * opened (2.2 №15): only those are written, after the core has checked the task they leave as it
+     * is now — another device may have changed it meanwhile (2.2 №16). False if the core refused
+     * them, and nothing is sent; no change, no write.
+     */
+    fun save(task: Task, opened: TaskForm, form: TaskForm): Boolean {
+        val changes = formChanges(task, opened, form, deviceTimeZone())
+        if (changes.isEmpty()) return true
+        val current = (session.value as? Session.SignedIn)?.data?.tasks?.items?.firstOrNull { it.id == task.id }
+        return sent(current ?: task, changes, Instant.now())
     }
 
     // Changes the core accepts are written; the others are not sent, and the screen says so.
     private fun writeChanges(task: Task, changes: Map<String, Any?>, now: Instant) {
+        if (!sent(task, changes, now)) writes.refuse()
+    }
+
+    // Whether the core accepted the task [changes] leave of [task], and they were sent.
+    private fun sent(task: Task, changes: Map<String, Any?>, now: Instant): Boolean {
         val errors = changeErrors(task, changes, now)
         if (errors.isNotEmpty()) {
             Log.w(TAG, "task ${task.id}: ${errors.joinToString("; ")}")
-            writes.refuse()
-            return
+            return false
         }
         write { uid -> tasks.update(uid, task.id, changes) }
+        return true
     }
 
     // A write for the signed-in user; signed out, there is nothing to write.

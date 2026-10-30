@@ -1,5 +1,9 @@
 package com.pmobile78.todoround
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -20,6 +24,7 @@ import com.pmobile78.todoround.ui.Session
 import com.pmobile78.todoround.ui.UserData
 import com.pmobile78.todoround.ui.theme.ToDoRoundTheme
 import kotlinx.coroutines.flow.flowOf
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,6 +61,21 @@ class HomeScreenTest {
         }
         compose.waitUntil(10_000) { compose.onAllNodesWithText("The change could not be saved.").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("The change could not be saved.").assertExists()
+    }
+
+    @Test
+    fun thePlusShowsOnceTheDataAreReadAndOpensTheFormOfANewTask() {
+        var session by mutableStateOf(Session.SignedIn("olena@example.com", data = null))
+        var opened = 0
+        compose.setContent {
+            ToDoRoundTheme {
+                HomeScreen(session, onSignOut = {}, onNew = { opened++ })
+            }
+        }
+        compose.onNodeWithTag("new_task").assertDoesNotExist()
+        session = Session.SignedIn("olena@example.com", data)
+        compose.onNodeWithTag("new_task").assertContentDescriptionEquals("Create New Task").performClick()
+        assertEquals(1, opened)
     }
 
     @Test

@@ -70,8 +70,9 @@ import java.time.Clock
  * The screen of the task [taskId] (stage 2 spec, section 7): its status, title, due, category,
  * reminders, repeat, description with the formatting and the checkboxes of the web, its times, and
  * the actions of its status (2.2 №12). It follows the data live. An action closes it ([onBack]), as
- * it closes the web's dialog; a task that is no longer there, deleted forever on another device
- * say, closes it through [onGone]. A write the server or the core refused comes out of [writeFailures].
+ * it closes the web's dialog; "Edit" opens its form ([onEdit]); a task that is no longer there,
+ * deleted forever on another device say, closes it through [onGone]. A write the server or the core
+ * refused comes out of [writeFailures].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +84,7 @@ fun TaskScreen(
     onToggle: (Task, TaskItem) -> Unit,
     onGone: () -> Unit,
     writeFailures: Flow<Unit> = emptyFlow(),
+    onEdit: () -> Unit = {},
     clock: Clock = Clock.systemUTC(),
 ) {
     BackHandler(onBack = onBack)
@@ -106,6 +108,14 @@ fun TaskScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("back")) {
                         Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.task_back))
+                    }
+                },
+                actions = {
+                    // Any task can be edited, whatever its status (2.2 №12).
+                    if (task != null) {
+                        IconButton(onClick = onEdit, modifier = Modifier.testTag("edit")) {
+                            Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.edit_title))
+                        }
                     }
                 },
             )
