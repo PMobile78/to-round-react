@@ -62,9 +62,11 @@ private fun isIsoTimestamp(value: Any?): Boolean {
 
 private fun trimmedLengthIn(value: Any?, max: Int): Boolean {
     if (value !is String) return false
-    val length = value.trim { it.code in JS_SPACES }.length
-    return length in 1..max
+    return jsTrim(value).length in 1..max
 }
+
+/** [value] without the white space and line ends around it, as String.prototype.trim() of JavaScript leaves it. */
+internal fun jsTrim(value: String): String = value.trim { it.code in JS_SPACES }
 
 /** Firestore-safe document id: 1..128 characters, no "/". */
 fun isValidId(value: Any?): Boolean =

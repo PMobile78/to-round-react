@@ -80,19 +80,23 @@ fun Task.toRecord(): Map<String, Any?> = mapOf(
     "description" to description,
     "categoryId" to categoryId,
     "status" to status.wire,
-    "due" to due?.let { mapOf("local" to it.local, "tz" to it.tz) },
+    "due" to due?.toRecord(),
     "reminders" to reminders.map(Int::toLong),
-    "repeat" to repeat?.let { repeat ->
-        buildMap {
-            put("every", repeat.every.toLong())
-            put("unit", repeat.unit.wire)
-            repeat.weekdays?.let { put("weekdays", it.map(Int::toLong)) }
-            repeat.monthDay?.let { put("monthDay", it.toLong()) }
-        }
-    },
+    "repeat" to repeat?.toRecord(),
     "radius" to radius.toLong(),
     "pulseMuted" to pulseMuted,
     "createdAt" to createdAt.toString(),
     "updatedAt" to updatedAt.toString(),
     "deletedAt" to deletedAt?.toString(),
 )
+
+/** The record of this due, as tasks keep it. */
+internal fun Due.toRecord(): Map<String, Any?> = mapOf("local" to local, "tz" to tz)
+
+/** The record of this repeat, as tasks keep it: weekdays and monthDay only when it has them. Whole numbers are Long. */
+internal fun Repeat.toRecord(): Map<String, Any?> = buildMap {
+    put("every", every.toLong())
+    put("unit", unit.wire)
+    weekdays?.let { put("weekdays", it.map(Int::toLong)) }
+    monthDay?.let { put("monthDay", it.toLong()) }
+}
