@@ -4,8 +4,9 @@ package com.pmobile78.todoround.core.markdown
  * A description as the web shows it (stage 2 spec, section 8; data contract, section 5): the
  * document the web's editor builds from the Markdown (@tiptap/markdown 3.32 over marked 17.0.6,
  * src/utils/markdownEditor.js). Three things differ on purpose: raw HTML shows as the text it is
- * (2.2 №1) where the web reads it as formatting; a table of GFM shows as its text, which the web
- * leaves out; and a description that gives no block at all shows as one paragraph of its text,
+ * (2.2 №1) where the web reads it as formatting; a table of GFM shows as its text, line by line,
+ * where the web leaves it out beside other blocks and runs its lines together when it is all the
+ * description; and a description that gives no block at all shows as one paragraph of its text,
  * which the web reads as HTML. Each checkbox knows where its mark is in the description, so a tap
  * changes that one character and nothing else (2.2 №2).
  */

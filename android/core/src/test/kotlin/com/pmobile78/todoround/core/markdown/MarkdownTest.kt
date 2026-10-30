@@ -115,10 +115,12 @@ class MarkdownTest {
     }
 
     @Test
-    fun `raw html and a table show as the text they are`() {
+    fun `raw html and a table show as the text they are, line by line`() {
         assertEquals(listOf(Paragraph(listOf(Text("a <b>b</b> c")))), parseMarkdown("a <b>b</b> c"))
         assertEquals(listOf(p("<div>\nx\n</div>")), parseMarkdown("<div>\nx\n</div>"))
+        // The web runs the lines of a table together when it is all the description, and leaves it out beside other blocks.
         assertEquals(listOf(p("| a | b |\n|---|---|\n| 1 | 2 |")), parseMarkdown("| a | b |\n|---|---|\n| 1 | 2 |"))
+        assertEquals(listOf(p("x"), p("| a | b |\n|---|---|\n| 1 | 2 |")), parseMarkdown("x\n\n| a | b |\n|---|---|\n| 1 | 2 |"))
     }
 
     @Test
@@ -140,6 +142,21 @@ class MarkdownTest {
         assertEquals(listOf(Quote(listOf(OrderedList(1, "a", listOf(listOf(p("first\nnext"))))))), parseMarkdown("> a. first\nnext"))
         // An image shows its text.
         assertEquals(listOf(p("cat")), parseMarkdown("![cat](https://example.com/cat.png)"))
+    }
+
+    @Test
+    fun `an indented line under a task is a second paragraph of it`() {
+        assertEquals(
+            listOf(TaskList(listOf(TaskItem(false, 3, listOf(p("a"), p("nested text"))), TaskItem(false, 25, listOf(p("b")))))),
+            parseMarkdown("- [ ] a\n  nested text\n- [ ] b"),
+        )
+    }
+
+    @Test
+    fun `a checklist indented as code ends a paragraph of one character, as on the web`() {
+        // marked cuts a paragraph where a block starts after its first character, and TipTap's checklist starts there.
+        assertEquals(listOf(p("a"), TaskList(listOf(TaskItem(false, 9, listOf(p("b")))))), parseMarkdown("a\n    - [ ] b"))
+        assertEquals(listOf(p("ab\n    - [ ] b")), parseMarkdown("ab\n    - [ ] b"))
     }
 
     @Test
