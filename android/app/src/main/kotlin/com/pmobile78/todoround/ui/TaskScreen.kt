@@ -54,13 +54,11 @@ import com.pmobile78.todoround.core.markdown.Inline
 import com.pmobile78.todoround.core.markdown.TaskItem
 import com.pmobile78.todoround.core.markdown.parseMarkdown
 import com.pmobile78.todoround.core.model.Repeat
-import com.pmobile78.todoround.core.model.ReminderUnit
 import com.pmobile78.todoround.core.model.Task
 import com.pmobile78.todoround.core.model.TaskAction
 import com.pmobile78.todoround.core.model.actions
 import com.pmobile78.todoround.core.model.changedAfterCreation
 import com.pmobile78.todoround.core.model.listDateTime
-import com.pmobile78.todoround.core.model.reminderParts
 import com.pmobile78.todoround.core.model.reminderPassed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -273,18 +271,6 @@ private val TaskStatus.label: Int
         TaskStatus.DELETED -> R.string.task_status_deleted
     }
 
-// "1 hour before", "2 days before": the largest whole unit, as the web writes it.
-@Composable
-private fun reminderLabel(minutes: Int): String {
-    val parts = reminderParts(minutes)
-    val plural = when (parts.unit) {
-        ReminderUnit.HOURS -> R.plurals.task_reminder_hours
-        ReminderUnit.DAYS -> R.plurals.task_reminder_days
-        ReminderUnit.WEEKS -> R.plurals.task_reminder_weeks
-    }
-    return pluralStringResource(plural, parts.count, parts.count)
-}
-
 // "Every 2 weeks: MON, FRI".
 @Composable
 private fun repeatText(repeat: Repeat): String {
@@ -300,8 +286,3 @@ private fun repeatText(repeat: Repeat): String {
     val names = weekdays.map { stringResource(WEEKDAYS[it - 1]) }
     return stringResource(R.string.task_repeat_on, every, names.joinToString(", "))
 }
-
-private val WEEKDAYS = listOf(
-    R.string.task_monday, R.string.task_tuesday, R.string.task_wednesday, R.string.task_thursday,
-    R.string.task_friday, R.string.task_saturday, R.string.task_sunday,
-)

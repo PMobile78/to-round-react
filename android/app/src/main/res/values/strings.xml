@@ -121,6 +121,51 @@
     <string name="task_saturday">SAT</string>
     <string name="task_sunday">SUN</string>
 
+    <!-- The form of a task (stage 2 spec, section 7): the web's texts with "task" for "bubble" (the
+         size keeps "bubble": it is the size of the task's bubble on the web) and an ellipsis for "...". -->
+    <string name="edit_new_title">Create New Task</string>
+    <string name="edit_title">Edit Task</string>
+    <string name="edit_create">Create</string>
+    <string name="edit_save">Save</string>
+    <string name="edit_task_title">Title</string>
+    <string name="edit_description">Description</string>
+    <string name="edit_description_placeholder">Enter description…</string>
+    <string name="edit_description_too_long">The description is longer than 100 000 characters. Shorten it to save the task.</string>
+    <string name="edit_bold">Bold</string>
+    <string name="edit_italic">Italic</string>
+    <string name="edit_strikethrough">Strikethrough</string>
+    <string name="edit_bullet_list">Bullet List</string>
+    <string name="edit_numbered_list">Numbered List</string>
+    <string name="edit_task_list">Task List</string>
+    <string name="edit_link">Link</string>
+    <string name="edit_enter_url">Enter URL:</string>
+    <string name="edit_category">Category (tag)</string>
+    <string name="edit_no_category">No category</string>
+    <string name="edit_due">Due date</string>
+    <string name="edit_due_clear">Clear the due date</string>
+    <string name="edit_remind_me">Remind me</string>
+    <string name="edit_remind_me_disabled">Set due date to add reminders</string>
+    <string name="edit_reminders_max">At most 10 reminders</string>
+    <string name="edit_reminder_delete">Delete the reminder</string>
+    <string name="edit_add_notification">Add notification</string>
+    <string name="edit_custom">Custom…</string>
+    <string name="edit_value">Value</string>
+    <string name="edit_hours">Hours</string>
+    <string name="edit_days">Days</string>
+    <string name="edit_weeks">Weeks</string>
+    <string name="edit_months">Months</string>
+    <string name="edit_reminder_range">From 1 hour to 52 weeks</string>
+    <string name="edit_repeat_every">Repeat every</string>
+    <string name="edit_every">Every</string>
+    <string name="edit_unit">Unit</string>
+    <string name="edit_select_week_days">Select days of the week</string>
+    <string name="edit_size">Bubble size: %1$dpx</string>
+    <string name="edit_discard_confirm">Discard the changes?</string>
+    <string name="edit_discard_message">The changes you made will not be saved.</string>
+    <string name="edit_discard">Discard</string>
+    <string name="edit_keep_editing">Keep editing</string>
+    <string name="ok">OK</string>
+
     <!-- Notifications (stage 3 spec): the texts of the pushes come from the server; the menu item
          is the one of the web's main menu (deviceReminders). -->
     <string name="reminders_channel">Reminders</string>

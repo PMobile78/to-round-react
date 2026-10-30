@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,15 +25,18 @@ import com.pmobile78.todoround.core.contract.Language
 import com.pmobile78.todoround.core.contract.TaskStatus
 import com.pmobile78.todoround.core.model.Category
 import com.pmobile78.todoround.core.model.Due
+import com.pmobile78.todoround.core.model.ReminderUnit
 import com.pmobile78.todoround.core.model.TaskAction
 import com.pmobile78.todoround.core.model.dueView
 import com.pmobile78.todoround.core.model.listDateTime
+import com.pmobile78.todoround.core.model.reminderParts
 import com.pmobile78.todoround.ui.theme.DoneGreen
 import java.time.Instant
 
 /*
- * The parts the row of the list and the screen of a task show alike: the icon of the status, the
- * due with "Overdue", the category, the times, and the actions with their texts and icons.
+ * The parts the row of the list, the screen of a task and its form show alike: the icon of the
+ * status, the due with "Overdue", the category, the times, the reminders and the days of the week,
+ * and the actions with their texts and icons.
  */
 
 @Composable
@@ -85,8 +89,9 @@ internal fun Time(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
+/** The red "Overdue" of the web, beside a due or under it. */
 @Composable
-private fun OverdueMark() {
+internal fun OverdueMark() {
     val red = MaterialTheme.colorScheme.error
     Text(
         text = stringResource(R.string.list_overdue),
@@ -111,6 +116,24 @@ private fun Chip(text: String, background: Color, content: Color) {
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
+
+/** A reminder as the web writes it: "1 hour before", "2 days before", in its largest whole unit. */
+@Composable
+internal fun reminderLabel(minutes: Int): String {
+    val parts = reminderParts(minutes)
+    val plural = when (parts.unit) {
+        ReminderUnit.HOURS -> R.plurals.task_reminder_hours
+        ReminderUnit.DAYS -> R.plurals.task_reminder_days
+        ReminderUnit.WEEKS -> R.plurals.task_reminder_weeks
+    }
+    return pluralStringResource(plural, parts.count, parts.count)
+}
+
+/** The short names of the days of the week, Monday first, as the ISO days 1 to 7 count them. */
+internal val WEEKDAYS = listOf(
+    R.string.task_monday, R.string.task_tuesday, R.string.task_wednesday, R.string.task_thursday,
+    R.string.task_friday, R.string.task_saturday, R.string.task_sunday,
+)
 
 /** A colour of the palette, "#rrggbb". */
 internal fun paletteColor(hex: String): Color = Color(0xFF000000 or hex.removePrefix("#").toLong(16))
